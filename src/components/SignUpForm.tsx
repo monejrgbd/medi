@@ -32,12 +32,21 @@ export default function SignUpForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
+  const [interest, setInterest] = useState<"free_trial" | "demo">("free_trial");
 
   useEffect(() => {
     if (!supabase) return;
     supabase.rpc("get_waitlist_count").then(({ data }) => {
       if (data !== null && data > 0) setWaitlistCount(data);
     });
+  }, []);
+
+  // Auto-select "demo" when arriving via ?interest=demo
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("interest") === "demo") {
+      setInterest("demo");
+    }
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -67,12 +76,22 @@ export default function SignUpForm() {
       p_email: data.get("email") as string,
       p_phone: (data.get("phone") as string) || null,
       p_city: data.get("city") as string,
+      p_interest: data.get("interest") as string,
     });
 
     setLoading(false);
 
     if (dbError) {
-      setError("Something went wrong. Please try again.");
+      const msg = dbError.message?.toLowerCase() ?? "";
+      if (msg.includes("email")) {
+        setError("Please enter a valid email address.");
+      } else if (msg.includes("clinic name")) {
+        setError("Please enter your clinic name.");
+      } else if (msg.includes("contact name")) {
+        setError("Please enter your name.");
+      } else {
+        setError("Something went wrong. Please try again.");
+      }
       return;
     }
 
@@ -81,6 +100,19 @@ export default function SignUpForm() {
 
   return (
     <>
+      {!submitted && (
+        <div className="mb-10">
+          <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
+            {interest === "demo" ? "Request a demo" : "Start your free trial"}
+          </h2>
+          <p className="text-lg text-slate">
+            {interest === "demo"
+              ? "See how Hilthealth works for your clinic. We\u2019ll walk you through a 15-minute live demo."
+              : "Get 200 credits free. No credit card, no commitment. Tell us about your clinic and we\u2019ll get you set up."}
+          </p>
+        </div>
+      )}
+
       {waitlistCount !== null && !submitted && (
         <motion.p
           initial={{ opacity: 0 }}
@@ -195,6 +227,37 @@ export default function SignUpForm() {
             </div>
 
             <div className="relative">
+              <label htmlFor="interest" className="mb-1 block text-sm font-medium text-ink text-left">
+                I&apos;m interested in <span className="text-red-400">*</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setInterest("free_trial")}
+                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                    interest === "free_trial"
+                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
+                      : "border-gray-300 text-slate hover:border-gray-400"
+                  }`}
+                >
+                  Free Trial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInterest("demo")}
+                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                    interest === "demo"
+                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
+                      : "border-gray-300 text-slate hover:border-gray-400"
+                  }`}
+                >
+                  Live Demo
+                </button>
+              </div>
+              <input type="hidden" name="interest" value={interest} />
+            </div>
+
+            <div className="relative">
               <label htmlFor="city" className="mb-1 block text-sm font-medium text-ink text-left">
                 City <span className="text-red-400">*</span>
               </label>
@@ -243,6 +306,8 @@ export default function SignUpForm() {
                   <Spinner />
                   Submitting...
                 </>
+              ) : interest === "demo" ? (
+                "Request Demo"
               ) : (
                 "Request Free Trial"
               )}

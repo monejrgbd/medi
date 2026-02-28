@@ -1,0 +1,68 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.submit_prospect(
+  p_clinic_name text,
+  p_contact_name text,
+  p_email text,
+  p_phone text,
+  p_city text,
+  p_interest text DEFAULT 'free_trial'
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+BEGIN
+  -- Basic validation
+  IF p_clinic_name IS NULL OR length(trim(p_clinic_name)) = 0 THEN
+    RAISE EXCEPTION 'Clinic name is required';
+  END IF;
+  IF p_contact_name IS NULL OR length(trim(p_contact_name)) = 0 THEN
+    RAISE EXCEPTION 'Contact name is required';
+  END IF;
+  IF p_email IS NULL OR length(trim(p_email)) = 0 OR p_email NOT LIKE '%@%.%' THEN
+    RAISE EXCEPTION 'Valid email is required';
+  END IF;
+
+  INSERT INTO public.clinic_prospects (
+    clinic_name,
+    contact_name,
+    email,
+    phone,
+    city,
+    interest,
+    status,
+    notes,
+    created_at
+  ) VALUES (
+    trim(p_clinic_name),
+    trim(p_contact_name),
+    lower(trim(p_email)),
+    CASE WHEN p_phone IS NOT NULL AND length(trim(p_phone)) > 0 THEN trim(p_phone) ELSE NULL END,
+    trim(p_city),
+    CASE WHEN p_interest IN ('free_trial', 'demo') THEN p_interest ELSE 'free_trial' END,
+    'interested',
+    'Signed up via landing page',
+    now()
+  );
+END;
+$function$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.submit_prospect(
+  p_clinic_name text,
+  p_contact_name text,
+  p_email text,
+  p_phone text DEFAULT NULL,
+  p_city text DEFAULT NULL,
+  p_interest text DEFAULT 'free_trial'
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+BEGIN
+  PERFORM private.submit_prospect(p_clinic_name, p_contact_name, p_email, p_phone, p_city, p_interest);
+END;
+$function$;

@@ -1,0 +1,21 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_waitlist_count()
+RETURNS bigint
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  SELECT count(*) FROM public.clinic_prospects;
+$function$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_waitlist_count()
+RETURNS bigint
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  SELECT private.get_waitlist_count();
+$function$;

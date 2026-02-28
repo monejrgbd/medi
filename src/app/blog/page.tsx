@@ -119,6 +119,7 @@ export default function BlogPage() {
             </a>
           </div>
           <p className="text-xs text-ash">Built in Canada</p>
+          <p className="mt-2 text-xs text-ash">Powered by <a href="https://veldsystems.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate transition-colors underline">veldsystems.com</a></p>
         </div>
       </footer>
     </>

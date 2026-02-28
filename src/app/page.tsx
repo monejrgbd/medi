@@ -27,10 +27,16 @@ function HeroSection() {
               >
                 Request Free Trial
               </a>
-              <span className="text-sm text-slate">
-                200 credits free. No card required.
-              </span>
+              <a
+                href="?interest=demo#contact"
+                className="inline-block rounded-xl border-2 border-hilt-blue px-8 py-4 text-lg font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
+              >
+                Request Demo
+              </a>
             </div>
+            <p className="mt-3 text-sm text-slate">
+              200 credits free. No card required.
+            </p>
           </FadeIn>
 
           {/* Tablet mockup */}
@@ -293,6 +299,30 @@ function TrustStrip() {
   );
 }
 
+function DemoBanner() {
+  return (
+    <section className="bg-hilt-blue py-16">
+      <div className="mx-auto max-w-[1200px] px-6 text-center">
+        <FadeIn>
+          <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">
+            See Hilthealth in action
+          </h2>
+          <p className="mx-auto mb-8 max-w-xl text-lg text-white/80">
+            Book a 15-minute demo and we&apos;ll walk you through how Hilthealth
+            works for your clinic.
+          </p>
+          <a
+            href="?interest=demo#contact"
+            className="inline-block rounded-xl bg-white px-8 py-4 text-lg font-semibold text-hilt-blue transition-colors hover:bg-gray-50"
+          >
+            Request Demo
+          </a>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
 function BlogSection() {
   const posts = getAllPosts().slice(0, 3);
 
@@ -376,15 +406,6 @@ function ContactSection() {
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="mx-auto max-w-2xl text-center">
           <FadeIn>
-            <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
-              Start your free trial
-            </h2>
-            <p className="mb-10 text-lg text-slate">
-              Get 200 credits free. No credit card, no commitment.
-              Tell us about your clinic and we&apos;ll get you set up.
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.1}>
             <SignUpForm />
           </FadeIn>
         </div>
@@ -419,6 +440,7 @@ function Footer() {
           </a>
         </div>
         <p className="text-xs text-ash">Built in Canada</p>
+        <p className="mt-2 text-xs text-ash">Powered by <a href="https://veldsystems.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate transition-colors underline">veldsystems.com</a></p>
       </div>
     </footer>
   );
@@ -434,6 +456,7 @@ export default function Home() {
         <HowItWorksSection />
         <BenefitsSection />
         <TrustStrip />
+        <DemoBanner />
         <BlogSection />
         <ContactSection />
       </main>

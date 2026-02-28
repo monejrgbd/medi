@@ -8,7 +8,7 @@
 
 ## LinkedIn Messages
 
-### For clinic owners with confirmed LinkedIn (Dr. Jain, Dr. Bertolo, Dr. Ahmed)
+### For clinic owners with confirmed LinkedIn (Dr. Reka, Dr. Jain, Dr. Bertolo, Dr. Ahmed)
 
 ```
 Hi Dr. [Name],
@@ -142,13 +142,13 @@ The free trial (200 credits) is still the best way to see if it fits. Happy to s
 
 ---
 
-## In-Person Script (for Real Health + Grantham Medical)
+## In-Person Script (for Grantham Medical)
 
 Walk in during a quiet period (avoid Monday mornings and lunch hour). Ask for the clinic manager or owner by name if you have it.
 
 ```
 "Hi — I'm [name] from Hilthealth. We make a patient intake system for walk-in clinics.
-I was wondering if [Dr. Reka / the clinic manager] has 5 minutes?
+I was wondering if the clinic manager has 5 minutes?
 I'd love to show them something quick on my phone — it's a tablet system
 where patients describe symptoms to an AI while they wait, and the doctor gets a
 summary before the visit. We're expanding into Niagara and offering clinics a free trial."
@@ -169,9 +169,9 @@ Our website is hilthealth.com if they want to take a look."
 
 | Day | Action |
 |-----|--------|
-| Day 1 | Send LinkedIn messages to Dr. Jain, Dr. Bertolo, Dr. Ahmed |
+| Day 1 | Send LinkedIn messages to Dr. Reka, Dr. Jain, Dr. Bertolo, Dr. Ahmed |
 | Day 2 | Send emails to MedCare, Court Street, PromptDoc, Morrison |
-| Day 5 | Visit Real Health (Welland) and Grantham Medical (St. Catharines) in person |
+| Day 5 | Visit Grantham Medical (St. Catharines) in person |
 | Day 6 | Send follow-ups to any LinkedIn/email non-responders |
 | Day 10 | Second follow-up or escalate to next outreach step |
 
