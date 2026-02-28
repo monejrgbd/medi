@@ -1,5 +1,5 @@
 -- Private implementation
-CREATE OR REPLACE FUNCTION private.submit_prospect(
+CREATE OR REPLACE FUNCTION private.submit_contact(
   p_clinic_name text,
   p_contact_name text,
   p_email text,
@@ -24,8 +24,8 @@ BEGIN
     RAISE EXCEPTION 'Valid email is required';
   END IF;
 
-  INSERT INTO public.clinic_prospects (
-    clinic_name, contact_name, email, phone, city, interest, status, notes, created_at
+  INSERT INTO public.contact_submissions (
+    clinic_name, contact_name, email, phone, city, interest, notes, created_at
   ) VALUES (
     trim(p_clinic_name),
     trim(p_contact_name),
@@ -33,15 +33,14 @@ BEGIN
     CASE WHEN p_phone IS NOT NULL AND length(trim(p_phone)) > 0 THEN trim(p_phone) ELSE NULL END,
     trim(p_city),
     CASE WHEN p_interest IN ('free_trial', 'demo', 'custom_plan') THEN p_interest ELSE 'free_trial' END,
-    'interested',
-    CASE WHEN p_notes IS NOT NULL AND length(trim(p_notes)) > 0 THEN trim(p_notes) ELSE 'Signed up via landing page' END,
+    CASE WHEN p_notes IS NOT NULL AND length(trim(p_notes)) > 0 THEN trim(p_notes) ELSE NULL END,
     now()
   );
 END;
 $function$;
 
 -- Public wrapper
-CREATE OR REPLACE FUNCTION public.submit_prospect(
+CREATE OR REPLACE FUNCTION public.submit_contact(
   p_clinic_name text,
   p_contact_name text,
   p_email text,
@@ -56,6 +55,6 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $function$
 BEGIN
-  PERFORM private.submit_prospect(p_clinic_name, p_contact_name, p_email, p_phone, p_city, p_interest, p_notes);
+  PERFORM private.submit_contact(p_clinic_name, p_contact_name, p_email, p_phone, p_city, p_interest, p_notes);
 END;
 $function$;

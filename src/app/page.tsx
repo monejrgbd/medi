@@ -15,7 +15,7 @@ function HeroSection() {
               Neither should you.
             </h1>
             <p className="mb-8 max-w-xl text-lg leading-relaxed text-slate">
-              Hilthealth uses AI to gather patient symptoms before the appointment
+              Hilt Health uses AI to gather patient symptoms before the appointment
               so your doctor walks in prepared, not behind. The doctor stays in
               control. The AI just does the legwork. Built in Toronto
               and expanding across Canada.
@@ -47,7 +47,7 @@ function HeroSection() {
                 <div className="relative w-[320px] rounded-2xl border border-gray-200 bg-white p-6 shadow-xl rotate-1 sm:w-[380px]">
                   <div className="mb-4 flex items-center gap-2">
                     <div className="h-3 w-3 rounded-full bg-hilt-blue" />
-                    <span className="text-sm font-semibold text-hilt-blue">hilthealth</span>
+                    <span className="text-sm font-semibold text-hilt-blue">Hilt Health</span>
                   </div>
                   <div className="space-y-3">
                     <div className="rounded-xl bg-snow p-3">
@@ -73,7 +73,7 @@ function HeroSection() {
                     </div>
                     <div className="flex items-center gap-2 pt-1">
                       <div className="h-2 w-2 animate-pulse rounded-full bg-hilt-blue" />
-                      <span className="text-xs text-ash">Hilthealth is typing...</span>
+                      <span className="text-xs text-ash">Hilt Health is typing...</span>
                     </div>
                   </div>
                 </div>
@@ -163,7 +163,7 @@ function HowItWorksSection() {
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <h2 className="mb-16 text-center text-3xl font-bold text-ink sm:text-4xl">
-            How Hilthealth works
+            How Hilt Health works
           </h2>
         </FadeIn>
         <div className="grid gap-12 sm:grid-cols-3 sm:gap-8">
@@ -215,7 +215,7 @@ function BenefitsSection() {
     },
     {
       title: "Fully customizable",
-      desc: "Every clinic is different. Hilthealth adapts to your workflow with custom screening questions, specialty specific protocols, and your preferred summary format.",
+      desc: "Every clinic is different. Hilt Health adapts to your workflow with custom screening questions, specialty specific protocols, and your preferred summary format.",
       icon: (
         <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
@@ -229,7 +229,7 @@ function BenefitsSection() {
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <h2 className="mb-12 text-center text-3xl font-bold text-ink sm:text-4xl">
-            Why clinics choose Hilthealth
+            Why clinics choose Hilt Health
           </h2>
         </FadeIn>
         <div className="grid gap-6 sm:grid-cols-2">
@@ -305,10 +305,10 @@ function DemoBanner() {
       <div className="mx-auto max-w-[1200px] px-6 text-center">
         <FadeIn>
           <h2 className="mb-3 text-3xl font-bold text-white sm:text-4xl">
-            See Hilthealth in action
+            See Hilt Health in action
           </h2>
           <p className="mx-auto mb-8 max-w-xl text-lg text-white/80">
-            Book a 15-minute demo and we&apos;ll walk you through how Hilthealth
+            Book a 15-minute demo and we&apos;ll walk you through how Hilt Health
             works for your clinic.
           </p>
           <a
@@ -418,7 +418,7 @@ function Footer() {
   return (
     <footer className="bg-white py-12 border-t border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6 text-center">
-        <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">hilthealth</p>
+        <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">Hilt Health</p>
         <p className="mb-4 text-slate">
           Built in Toronto. Expanding across Canada.
         </p>
@@ -433,7 +433,7 @@ function Footer() {
             Pricing
           </a>
           <a
-            href="mailto:hello@hilthealth.com"
+            href="mailto:business@hilthealth.com"
             className="hover:text-slate transition-colors"
           >
             Contact

@@ -35,7 +35,7 @@ export default function Navbar() {
       >
         <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
           <a href="/" className="text-2xl font-bold text-hilt-blue tracking-tight">
-            hilthealth
+            Hilt Health
           </a>
 
           <div className="hidden sm:flex items-center gap-3">

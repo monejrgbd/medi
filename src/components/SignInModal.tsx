@@ -76,7 +76,7 @@ export default function SignInModal({ open, onClose }: SignInModalProps) {
             </button>
 
             <div>
-              <h2 className="mb-1 text-xl font-semibold text-ink">Sign in to Hilthealth</h2>
+              <h2 className="mb-1 text-xl font-semibold text-ink">Sign in to Hilt Health</h2>
               <p className="mb-6 text-sm text-slate">Access your clinic dashboard</p>
 
               <form onSubmit={handleSubmit} className="space-y-4">

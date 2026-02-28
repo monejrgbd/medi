@@ -70,13 +70,14 @@ export default function SignUpForm() {
       return;
     }
 
-    const { error: dbError } = await supabase.rpc("submit_prospect", {
+    const { error: dbError } = await supabase.rpc("submit_contact", {
       p_clinic_name: data.get("clinic_name") as string,
       p_contact_name: data.get("contact_name") as string,
       p_email: data.get("email") as string,
       p_phone: (data.get("phone") as string) || null,
       p_city: data.get("city") as string,
       p_interest: data.get("interest") as string,
+      p_notes: (data.get("notes") as string) || null,
     });
 
     setLoading(false);
@@ -107,7 +108,7 @@ export default function SignUpForm() {
           </h2>
           <p className="text-lg text-slate">
             {interest === "demo"
-              ? "See how Hilthealth works for your clinic. We\u2019ll walk you through a 15-minute live demo."
+              ? "See how Hilt Health works for your clinic. We\u2019ll walk you through a 15-minute live demo."
               : "Get 200 credits free. No credit card, no commitment. Tell us about your clinic and we\u2019ll get you set up."}
           </p>
         </div>
@@ -292,6 +293,19 @@ export default function SignUpForm() {
               </div>
             </div>
 
+            <div>
+              <label htmlFor="notes" className="mb-1 block text-sm font-medium text-ink text-left">
+                Notes <span className="text-ash font-normal">(optional)</span>
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors resize-none"
+                placeholder="Anything you'd like us to know"
+              />
+            </div>
+
             {error && (
               <p className="text-sm text-red-600">{error}</p>
             )}
@@ -315,7 +329,7 @@ export default function SignUpForm() {
 
             {/* CASL consent + privacy link */}
             <p className="text-xs text-ash text-center leading-relaxed">
-              By submitting, you consent to Hilthealth contacting you by email about
+              By submitting, you consent to Hilt Health contacting you by email about
               our services. You can unsubscribe at any time. See our{" "}
               <a href="/privacy" className="text-hilt-blue hover:underline">
                 Privacy Policy

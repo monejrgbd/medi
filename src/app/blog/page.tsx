@@ -3,7 +3,7 @@ import Navbar from "@/components/Navbar";
 import { getAllPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
-  title: "Blog — Hilthealth | Walk-In Clinic Insights for Canadian Healthcare",
+  title: "Blog — Hilt Health | Walk-In Clinic Insights for Canadian Healthcare",
   description:
     "Practical guides on walk-in clinic wait times, AI pre-screening, patient intake, and the family doctor shortage in Canada.",
 };
@@ -87,7 +87,7 @@ export default function BlogPage() {
       <footer className="bg-white py-12 border-t border-gray-100">
         <div className="mx-auto max-w-[1200px] px-6 text-center">
           <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">
-            hilthealth
+            Hilt Health
           </p>
           <p className="mb-4 text-slate">
             Built in Toronto. Expanding across Canada.
@@ -112,7 +112,7 @@ export default function BlogPage() {
               Pricing
             </a>
             <a
-              href="mailto:hello@hilthealth.com"
+              href="mailto:business@hilthealth.com"
               className="hover:text-slate transition-colors"
             >
               Contact

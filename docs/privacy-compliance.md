@@ -1,6 +1,6 @@
 # Privacy & Compliance Checklist
 
-What needs to happen before Hilthealth processes patient health information.
+What needs to happen before Hilt Health processes patient health information.
 
 The landing page is compliant today. This checklist is for when we build the actual product.
 
@@ -10,7 +10,7 @@ The landing page is compliant today. This checklist is for when we build the act
 
 - [ ] Set up `privacy@hilthealth.com` — the privacy policy lists this as the Privacy Officer contact
 - [ ] Use a transactional email provider (Resend, Mailgun, etc.) that automatically includes unsubscribe links
-- [ ] Every commercial email must include: Hilthealth's name, mailing address, contact info, and a working unsubscribe link (CASL s.6(2))
+- [ ] Every commercial email must include: Hilt Health's name, mailing address, contact info, and a working unsubscribe link (CASL s.6(2))
 - [ ] Process unsubscribe requests within 10 business days (CASL s.11)
 
 ---
@@ -21,8 +21,8 @@ The landing page is compliant today. This checklist is for when we build the act
 
 - [ ] **Sign Anthropic's DPA** — standard API terms say they don't train on your data, but a DPA formally binds them to PHIPA obligations (breach notification to Canadian regulators, data handling restrictions, audit rights)
 - [ ] **Sign Supabase's DPA** — available through their dashboard or sales team. Covers data storage obligations under PHIPA
-- [ ] **Create a clinic-facing Data Processing Agreement template** — PHIPA s.17(3) requires a written agreement with each clinic if Hilthealth acts as their agent. Must cover:
-  - What PHI Hilthealth can access and why
+- [ ] **Create a clinic-facing Data Processing Agreement template** — PHIPA s.17(3) requires a written agreement with each clinic if Hilt Health acts as their agent. Must cover:
+  - What PHI Hilt Health can access and why
   - Restrictions on use and disclosure
   - Required safeguards
   - Audit and compliance monitoring rights
@@ -100,7 +100,7 @@ The landing page is compliant today. This checklist is for when we build the act
 ## Legal Review
 
 - [ ] **Have a PHIPA lawyer review before launch** (~$500-1000, 1-2 hours). Key questions:
-  - Is Hilthealth an "agent" or "electronic service provider" under PHIPA? This affects downstream obligations.
+  - Is Hilt Health an "agent" or "electronic service provider" under PHIPA? This affects downstream obligations.
   - Is the clinic-facing DPA template sufficient?
   - Is the patient consent flow sufficient?
   - Any gaps in the privacy policy?

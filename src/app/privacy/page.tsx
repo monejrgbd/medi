@@ -1,8 +1,8 @@
 import Navbar from "@/components/Navbar";
 
 export const metadata = {
-  title: "Privacy Policy — Hilthealth",
-  description: "How Hilthealth collects, uses, and protects your personal and health information.",
+  title: "Privacy Policy — Hilt Health",
+  description: "How Hilt Health collects, uses, and protects your personal and health information.",
 };
 
 export default function PrivacyPage() {
@@ -18,7 +18,7 @@ export default function PrivacyPage() {
           <section>
             <h2>1. About This Policy</h2>
             <p>
-              Hilthealth (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;) provides AI-powered patient
+              Hilt Health (&ldquo;we,&rdquo; &ldquo;us,&rdquo; &ldquo;our&rdquo;) provides AI-powered patient
               pre-screening software for healthcare clinics. This policy explains how we collect,
               use, disclose, and protect your personal information and personal health information
               in compliance with the <em>Personal Information Protection and Electronic Documents
@@ -26,12 +26,12 @@ export default function PrivacyPage() {
               2004</em> (PHIPA).
             </p>
             <p>
-              Hilthealth is operated from Toronto, Ontario, Canada. If you have questions about this
+              Hilt Health is operated from Toronto, Ontario, Canada. If you have questions about this
               policy, contact our Privacy Officer:
             </p>
             <p>
               <strong>Privacy Officer</strong><br />
-              Hilthealth<br />
+              Hilt Health<br />
               Toronto, Ontario, Canada<br />
               <a href="mailto:privacy@hilthealth.com" className="text-hilt-blue hover:underline">privacy@hilthealth.com</a>
             </p>
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
             <ul>
               <li><strong>Personal Information (PI)</strong> — Information about an identifiable individual, such as name, email, phone number, and clinic affiliation.</li>
               <li><strong>Personal Health Information (PHI)</strong> — Information about an individual&rsquo;s physical or mental health, health care history, or information collected during the provision of health care, as defined by PHIPA Section 4.</li>
-              <li><strong>Health Information Custodian (HIC)</strong> — The clinic or healthcare provider that uses Hilthealth and is responsible for the patient&rsquo;s PHI under PHIPA.</li>
+              <li><strong>Health Information Custodian (HIC)</strong> — The clinic or healthcare provider that uses Hilt Health and is responsible for the patient&rsquo;s PHI under PHIPA.</li>
               <li><strong>De-identified Information</strong> — Information from which all identifying details have been removed such that it cannot reasonably be used to identify an individual.</li>
             </ul>
           </section>
@@ -50,14 +50,14 @@ export default function PrivacyPage() {
           <section>
             <h2>3. Our Role</h2>
             <p>
-              Hilthealth provides technology services to healthcare clinics (Health Information Custodians)
-              under PHIPA. Depending on the arrangement with each clinic, Hilthealth operates as either an
+              Hilt Health provides technology services to healthcare clinics (Health Information Custodians)
+              under PHIPA. Depending on the arrangement with each clinic, Hilt Health operates as either an
               <strong> electronic service provider</strong> (PHIPA Section 10(4)) or an <strong>agent</strong> of
               the HIC (PHIPA Section 17). In either role, we process PHI only as authorized by the
               clinic and in accordance with PHIPA.
             </p>
             <p>
-              The clinic remains the custodian of all patient health information. Hilthealth does not
+              The clinic remains the custodian of all patient health information. Hilt Health does not
               independently make health care decisions — the AI assists with information gathering
               only. All clinical decisions are made by the treating physician.
             </p>
@@ -119,10 +119,10 @@ export default function PrivacyPage() {
 
             <h3>Patient Consent</h3>
             <p>
-              Patient consent for the collection and use of PHI through Hilthealth is obtained by the
+              Patient consent for the collection and use of PHI through Hilt Health is obtained by the
               clinic (the Health Information Custodian) in accordance with PHIPA Section 18. Clinics
               are responsible for ensuring patients provide <strong>informed, express consent</strong> before
-              using Hilthealth&rsquo;s pre-screening service. This includes informing patients that:
+              using Hilt Health&rsquo;s pre-screening service. This includes informing patients that:
             </p>
             <ul>
               <li>An AI system will ask questions about their symptoms</li>
@@ -142,7 +142,7 @@ export default function PrivacyPage() {
             <h3>Clinic Consent</h3>
             <p>
               Clinics consent to the collection and use of their business information when they
-              register for Hilthealth or submit a contact form on our website. Clinics may withdraw
+              register for Hilt Health or submit a contact form on our website. Clinics may withdraw
               consent by contacting us at <a href="mailto:privacy@hilthealth.com" className="text-hilt-blue hover:underline">privacy@hilthealth.com</a>.
             </p>
           </section>
@@ -150,7 +150,7 @@ export default function PrivacyPage() {
           <section>
             <h2>7. AI Processing</h2>
             <p>
-              Hilthealth uses artificial intelligence to conduct patient pre-screening conversations. It
+              Hilt Health uses artificial intelligence to conduct patient pre-screening conversations. It
               is important to understand:
             </p>
             <ul>
@@ -227,11 +227,11 @@ export default function PrivacyPage() {
             <h2>10. Communications and CASL Compliance</h2>
             <p>
               When you submit a contact or trial request form, you expressly consent to receiving
-              commercial electronic messages from Hilthealth about our services, in compliance with
+              commercial electronic messages from Hilt Health about our services, in compliance with
               Canada&rsquo;s <em>Anti-Spam Legislation</em> (CASL, S.C. 2010, c. 23).
             </p>
             <ul>
-              <li>Every commercial message we send will identify Hilthealth as the sender and include our contact information</li>
+              <li>Every commercial message we send will identify Hilt Health as the sender and include our contact information</li>
               <li>Every message will contain a functional <strong>unsubscribe mechanism</strong></li>
               <li>Unsubscribe requests will be processed within <strong>10 business days</strong> as required by CASL s.11</li>
               <li>We will never send messages to addresses that have unsubscribed</li>
@@ -356,8 +356,8 @@ export default function PrivacyPage() {
           <section>
             <h2>15. Children&rsquo;s Privacy</h2>
             <p>
-              Hilthealth&rsquo;s patient pre-screening is used in clinical settings where patients of all
-              ages may be seen. When a patient under the age of 16 uses Hilthealth, the clinic is
+              Hilt Health&rsquo;s patient pre-screening is used in clinical settings where patients of all
+              ages may be seen. When a patient under the age of 16 uses Hilt Health, the clinic is
               responsible for obtaining consent from a parent or guardian (substitute decision-maker)
               in accordance with PHIPA Section 20 and the <em>Health Care Consent Act, 1996</em>.
             </p>
@@ -372,7 +372,7 @@ export default function PrivacyPage() {
             <p>
               We may update this policy from time to time. If we make material changes, we will
               notify affected clinics by email and update the &ldquo;Last updated&rdquo; date at the
-              top of this page. Continued use of Hilthealth after changes constitutes acceptance of the
+              top of this page. Continued use of Hilt Health after changes constitutes acceptance of the
               updated policy.
             </p>
           </section>
@@ -402,7 +402,7 @@ export default function PrivacyPage() {
 
       <footer className="bg-white py-12 border-t border-gray-100">
         <div className="mx-auto max-w-[1200px] px-6 text-center">
-          <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">hilthealth</p>
+          <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">Hilt Health</p>
           <p className="mb-4 text-slate">
             Built in Toronto. Expanding across Canada.
           </p>
@@ -417,7 +417,7 @@ export default function PrivacyPage() {
               Pricing
             </a>
             <a
-              href="mailto:hello@hilthealth.com"
+              href="mailto:business@hilthealth.com"
               className="hover:text-slate transition-colors"
             >
               Contact

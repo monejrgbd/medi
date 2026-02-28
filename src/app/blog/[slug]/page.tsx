@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return {};
 
   return {
-    title: `${post.title} — Hilthealth`,
+    title: `${post.title} — Hilt Health`,
     description: post.description,
     openGraph: {
       title: post.title,
@@ -76,7 +76,7 @@ export default async function BlogPostPage({ params }: Props) {
               Ready to reduce wait times at your clinic?
             </h2>
             <p className="mb-6 text-slate">
-              Hilthealth uses AI to pre-screen patients before they see the doctor.
+              Hilt Health uses AI to pre-screen patients before they see the doctor.
               Start with 200 free credits.
             </p>
             <a
@@ -93,7 +93,7 @@ export default async function BlogPostPage({ params }: Props) {
       <footer className="bg-white py-12 border-t border-gray-100">
         <div className="mx-auto max-w-[1200px] px-6 text-center">
           <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">
-            hilthealth
+            Hilt Health
           </p>
           <p className="mb-4 text-slate">
             Built in Toronto. Expanding across Canada.
@@ -118,7 +118,7 @@ export default async function BlogPostPage({ params }: Props) {
               Pricing
             </a>
             <a
-              href="mailto:hello@hilthealth.com"
+              href="mailto:business@hilthealth.com"
               className="hover:text-slate transition-colors"
             >
               Contact

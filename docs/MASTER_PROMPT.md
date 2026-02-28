@@ -61,11 +61,10 @@ CREATE TABLE public.clinic_prospects (
 
 ## High-Priority Clinics (12 clinics, 9 conversations)
 
-### Step 1: LinkedIn (4 clinics)
+### Step 1: LinkedIn (3 clinics)
 
 | ID | Clinic | Owner | LinkedIn |
 |----|--------|-------|----------|
-| 1 | Real Health, Welland | Dr. Altin Reka (CPSO #85196) | https://www.linkedin.com/in/altin-reka-4485b3151 |
 | 13 | Glenridge Walk-In Clinic, St. Catharines | Dr. Monica Bertolo | https://ca.linkedin.com/in/monica-bertolo-9bb884271 |
 | 18 | Ontario Street Medical Centre, St. Catharines | Dr. Salim Ahmed (CPSO #102753) | https://www.linkedin.com/in/salim-ahmed-18018055/ |
 | 24 | Niagara Region Medical, Niagara Falls | Dr. Vipul Jain (CPSO #97236) | https://www.linkedin.com/in/vipul-jain-80a747105/ |
@@ -79,10 +78,11 @@ CREATE TABLE public.clinic_prospects (
 | 14 | PromptDoc Urgent Care, St. Catharines | Dr. Nishan Jayawardene (Principal) | promptdocurgentcare@hotmail.com |
 | 22 | Morrison Walk-In + Walmart location, Niagara Falls | Dr. Douglas Munkley (Founder) | info@twogreatwalkinclinics.ca |
 
-### Step 3: In Person (1 clinic - no LinkedIn, no email)
+### Step 3: In Person (2 clinics - no LinkedIn, no email)
 
 | ID | Clinic | Owner | Phone | Address |
 |----|--------|-------|-------|---------|
+| 1 | Real Health, Welland | Dr. Altin Reka (CPSO #85196) | 905-732-4451 | 800 Niagara St N, Welland |
 | 15 | Grantham Medical, St. Catharines | Unknown - ask for manager | 905-937-0000 | 400 Scott Street, St. Catharines |
 
 ## Chain/Group Notes

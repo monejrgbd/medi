@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
 import FadeIn from "@/components/FadeIn";
+import CustomPlanModal from "@/components/CustomPlanModal";
 
 type AIModel = "standard" | "advanced";
 
@@ -142,9 +143,9 @@ function AIModelSelector({ model, setModel }: { model: AIModel; setModel: (m: AI
   );
 }
 
-function PricingCards({ model }: { model: AIModel }) {
+function PricingCards({ model, onContactCustom }: { model: AIModel; onContactCustom: () => void }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
       {PLANS.map((plan, i) => {
         const patientCount = patients(plan.credits, model);
         const perPatient = (plan.price / patientCount).toFixed(2);
@@ -212,6 +213,50 @@ function PricingCards({ model }: { model: AIModel }) {
           </FadeIn>
         );
       })}
+
+      {/* Custom plan */}
+      <FadeIn delay={PLANS.length * 0.1}>
+        <div className="relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
+          <h3 className="mb-1 text-lg font-semibold text-ink">Custom</h3>
+          <p className="mb-4 text-sm text-slate">Need something different? We&apos;ll build a plan around your clinic.</p>
+
+          <div className="mb-1">
+            <span className="text-4xl font-bold text-ink">Custom</span>
+          </div>
+          <p className="mb-5 text-sm font-medium text-slate">Volume pricing available</p>
+
+          <div className="mb-6 rounded-xl bg-snow p-4 space-y-3">
+            <div>
+              <p className="text-lg font-bold text-ink">Tailored to you</p>
+              <p className="text-sm text-slate">Custom credit volumes, dedicated support, SLAs, and multi-location management.</p>
+            </div>
+          </div>
+
+          <ul className="mb-8 flex-1 space-y-3 text-sm text-slate">
+            {FEATURES.map((f) => (
+              <li key={f} className="flex items-start gap-2">
+                <Check />
+                {f}
+              </li>
+            ))}
+            <li className="flex items-start gap-2">
+              <Check />
+              Dedicated account manager
+            </li>
+            <li className="flex items-start gap-2">
+              <Check />
+              Custom SLA
+            </li>
+          </ul>
+
+          <button
+            onClick={onContactCustom}
+            className="w-full rounded-xl border-2 border-hilt-blue py-3 text-center text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
+          >
+            Contact Us
+          </button>
+        </div>
+      </FadeIn>
     </div>
   );
 }
@@ -220,7 +265,7 @@ function FreeTrial() {
   return (
     <FadeIn>
       <div className="mx-auto mt-12 max-w-2xl rounded-2xl border-2 border-dashed border-hilt-blue/30 bg-hilt-blue/5 p-8 text-center">
-        <h3 className="mb-2 text-xl font-bold text-ink">Try Hilthealth free</h3>
+        <h3 className="mb-2 text-xl font-bold text-ink">Try Hilt Health free</h3>
         <p className="mb-4 text-slate">
           Start with <span className="font-semibold text-hilt-blue">200 free credits</span>, enough
           for ~130 patients on Standard AI or ~50 on Advanced. No credit card required.
@@ -265,6 +310,7 @@ function ComparisonTable({ model }: { model: AIModel }) {
                   {p.name}
                 </th>
               ))}
+              <th className="pb-4 px-4 font-semibold text-ink">Custom</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -273,12 +319,14 @@ function ComparisonTable({ model }: { model: AIModel }) {
               {PLANS.map((p) => (
                 <td key={p.name} className="px-4 py-3 font-medium text-ink">${p.price.toLocaleString()}</td>
               ))}
+              <td className="px-4 py-3 font-medium text-ink">Custom</td>
             </tr>
             <tr>
               <td className="py-3 pr-4 text-slate">Credits included</td>
               {PLANS.map((p) => (
                 <td key={p.name} className="px-4 py-3 font-medium text-ink">{p.credits.toLocaleString()}</td>
               ))}
+              <td className="px-4 py-3 font-medium text-ink">Custom</td>
             </tr>
             <tr>
               <td className="py-3 pr-4 text-slate">
@@ -287,6 +335,7 @@ function ComparisonTable({ model }: { model: AIModel }) {
               {PLANS.map((p) => (
                 <td key={p.name} className="px-4 py-3 font-medium text-hilt-blue">~{patients(p.credits, model).toLocaleString()}</td>
               ))}
+              <td className="px-4 py-3 font-medium text-hilt-blue">Unlimited</td>
             </tr>
             <tr>
               <td className="py-3 pr-4 text-slate">Cost per patient</td>
@@ -295,12 +344,14 @@ function ComparisonTable({ model }: { model: AIModel }) {
                   ${(p.price / patients(p.credits, model)).toFixed(2)}
                 </td>
               ))}
+              <td className="px-4 py-3 font-medium text-ink">Custom</td>
             </tr>
             <tr>
               <td className="py-3 pr-4 text-slate">Overuse rate</td>
               {PLANS.map((p) => (
                 <td key={p.name} className="px-4 py-3 text-ink">$1/credit</td>
               ))}
+              <td className="px-4 py-3 text-ink">Custom</td>
             </tr>
             {[
               "Standard + Advanced AI",
@@ -316,6 +367,11 @@ function ComparisonTable({ model }: { model: AIModel }) {
                     </svg>
                   </td>
                 ))}
+                <td className="px-4 py-3">
+                  <svg className="h-5 w-5 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -337,7 +393,7 @@ function FAQ() {
     },
     {
       q: "What\u2019s included in the free trial?",
-      a: "200 credits, no time limit. Use Standard or Advanced AI, access all features, and see how Hilthealth fits your clinic. No credit card required to start.",
+      a: "200 credits, no time limit. Use Standard or Advanced AI, access all features, and see how Hilt Health fits your clinic. No credit card required to start.",
     },
 {
       q: "Do unused credits roll over?",
@@ -370,7 +426,7 @@ function Footer() {
   return (
     <footer className="bg-white py-12 border-t border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6 text-center">
-        <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">hilthealth</p>
+        <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">Hilt Health</p>
         <p className="mb-4 text-slate">
           Built in Toronto. Expanding across Canada.
         </p>
@@ -385,7 +441,7 @@ function Footer() {
             Pricing
           </a>
           <a
-            href="mailto:hello@hilthealth.com"
+            href="mailto:business@hilthealth.com"
             className="hover:text-slate transition-colors"
           >
             Contact
@@ -400,6 +456,7 @@ function Footer() {
 
 export default function PricingPage() {
   const [model, setModel] = useState<AIModel>("standard");
+  const [customModalOpen, setCustomModalOpen] = useState(false);
 
   return (
     <>
@@ -417,13 +474,13 @@ export default function PricingPage() {
                 Simple, transparent pricing
               </h1>
               <p className="mx-auto mb-12 max-w-xl text-center text-lg text-slate">
-                Pay for what you use. Every plan includes the full Hilthealth platform.
+                Pay for what you use. Every plan includes the full Hilt Health platform.
                 Choose your AI model and see exactly what you get.
               </p>
             </FadeIn>
 
             <AIModelSelector model={model} setModel={setModel} />
-            <PricingCards model={model} />
+            <PricingCards model={model} onContactCustom={() => setCustomModalOpen(true)} />
             <FreeTrial />
             <PayAsYouGo />
             <ComparisonTable model={model} />
@@ -432,6 +489,7 @@ export default function PricingPage() {
         </section>
       </main>
       <Footer />
+      <CustomPlanModal open={customModalOpen} onClose={() => setCustomModalOpen(false)} />
     </>
   );
 }

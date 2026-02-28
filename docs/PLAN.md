@@ -1,4 +1,4 @@
-# Hilthealth - AI Clinic Pre-Screening System
+# Hilt Health - AI Clinic Pre-Screening System
 
 ## What Is This
 
