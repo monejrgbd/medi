@@ -1,4 +1,4 @@
-# Medi - AI Clinic Pre-Screening System
+# Hilthealth - AI Clinic Pre-Screening System
 
 ## What Is This
 

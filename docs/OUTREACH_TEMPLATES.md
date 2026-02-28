@@ -1,7 +1,7 @@
 # Outreach Templates
 
-**Website:** getmedi.ca (link in every message)
-**Contact:** hello@getmedi.ca
+**Website:** hilthealth.com (link in every message)
+**Contact:** hello@hilthealth.com
 **Free trial:** 200 credits, no card required
 
 ---
@@ -13,7 +13,7 @@
 ```
 Hi Dr. [Name],
 
-I run Medi (getmedi.ca) — a tablet-based intake system used by walk-in clinics. Patients describe their symptoms to an AI while they wait, and the doctor gets a full summary before the visit starts.
+I run Hilthealth (hilthealth.com) — a tablet-based intake system used by walk-in clinics. Patients describe their symptoms to an AI while they wait, and the doctor gets a full summary before the visit starts.
 
 We're expanding into Niagara and offering [Clinic Name] a free trial — 200 credits, no card required.
 
@@ -33,25 +33,25 @@ Worth a quick look?
 ```
 Hi [Name],
 
-I run Medi — we make a tablet-based intake system for walk-in clinics.
+I run Hilthealth — we make a tablet-based intake system for walk-in clinics.
 
 When a patient walks in, they describe their symptoms to an AI on the tablet. It asks follow-ups, narrows things down, and gives the doctor a summary before the visit starts. The doctor skips "what brings you in today?" and gets straight to examining.
 
 We're expanding into Niagara and offering your clinic a free trial — 200 credits, no card, no commitment.
 
-Here's a 30-second look at how it works: getmedi.ca
+Here's a 30-second look at how it works: hilthealth.com
 
 Would it be worth 10 minutes to walk through it? I can stop by [Clinic Name] or do a quick Zoom — whatever's easier.
 
 [Your name]
-hello@getmedi.ca
+hello@hilthealth.com
 [Phone]
 
 P.S. — We built this because we kept hearing from clinic staff that the first 5 minutes of every visit are the same conversation. If that's not true at [Clinic Name], ignore this entirely.
 ```
 
 **Why this works:**
-- Names the product (Medi) — they can Google it
+- Names the product (Hilthealth) — they can Google it
 - Links to the site — credibility
 - Specific CTA: "stop by or Zoom"
 - P.S. line gets read even if the body doesn't
@@ -64,7 +64,7 @@ P.S. — We built this because we kept hearing from clinic staff that the first 
 ```
 Hi Jessica,
 
-I run Medi (getmedi.ca) — a tablet-based intake system for walk-in clinics.
+I run Hilthealth (hilthealth.com) — a tablet-based intake system for walk-in clinics.
 
 Patients describe symptoms to an AI on the tablet when they arrive. It asks follow-ups and builds a summary for the doctor before the visit starts. Doctors skip the initial Q&A and go straight to examining.
 
@@ -73,7 +73,7 @@ Given MedCare's volume across Niagara, I think this could move the needle on thr
 Would you be the right person to discuss this, or could you point me to who handles clinic operations?
 
 [Your name]
-hello@getmedi.ca
+hello@hilthealth.com
 [Phone]
 ```
 
@@ -88,14 +88,14 @@ Hi Dr. Munkley,
 
 I know Morrison Walk-In has been serving Niagara Falls since 1988 — that's impressive longevity.
 
-I run Medi (getmedi.ca). We built a tablet where patients describe their symptoms to an AI while they wait, and the doctor gets a full summary before the visit. The goal is to let doctors spend more time diagnosing and less time on initial questions.
+I run Hilthealth (hilthealth.com). We built a tablet where patients describe their symptoms to an AI while they wait, and the doctor gets a full summary before the visit. The goal is to let doctors spend more time diagnosing and less time on initial questions.
 
 We're offering Niagara clinics a free trial — 200 credits, no card, no strings.
 
 Would it be worth a quick look? Happy to stop by Morrison St or do a 10-minute Zoom.
 
 [Your name]
-hello@getmedi.ca
+hello@hilthealth.com
 [Phone]
 ```
 
@@ -108,14 +108,14 @@ Dr. Jayawardene,
 
 With your ER background, you know better than most how much time gets spent on initial symptom gathering before the real work begins.
 
-I built Medi (getmedi.ca) — patients describe symptoms to an AI on a tablet while they wait. It asks follow-ups and gives you a summary before the visit starts. Think of it as triage that happens in the waiting room.
+I built Hilthealth (hilthealth.com) — patients describe symptoms to an AI on a tablet while they wait. It asks follow-ups and gives you a summary before the visit starts. Think of it as triage that happens in the waiting room.
 
 We're offering PromptDoc a free trial — 200 credits, no card.
 
 Worth 10 minutes? I can drop by PromptDoc or jump on Zoom.
 
 [Your name]
-hello@getmedi.ca
+hello@hilthealth.com
 [Phone]
 ```
 
@@ -130,7 +130,7 @@ hello@getmedi.ca
 ```
 Hi [Name],
 
-Following up — wanted to share that we just launched our pricing page if you're curious about what this looks like longer term: getmedi.ca/pricing
+Following up — wanted to share that we just launched our pricing page if you're curious about what this looks like longer term: hilthealth.com/pricing
 
 The free trial (200 credits) is still the best way to see if it fits. Happy to stop by [Clinic Name] for a quick walkthrough whenever works.
 
@@ -147,7 +147,7 @@ The free trial (200 credits) is still the best way to see if it fits. Happy to s
 Walk in during a quiet period (avoid Monday mornings and lunch hour). Ask for the clinic manager or owner by name if you have it.
 
 ```
-"Hi — I'm [name] from Medi. We make a patient intake system for walk-in clinics.
+"Hi — I'm [name] from Hilthealth. We make a patient intake system for walk-in clinics.
 I was wondering if [Dr. Reka / the clinic manager] has 5 minutes?
 I'd love to show them something quick on my phone — it's a tablet system
 where patients describe symptoms to an AI while they wait, and the doctor gets a
@@ -158,10 +158,10 @@ If they say the owner isn't available:
 ```
 "No worries at all. Could I leave my card? Or if you could share
 the best email to reach them, I'll send over a quick note.
-Our website is getmedi.ca if they want to take a look."
+Our website is hilthealth.com if they want to take a look."
 ```
 
-**Bring:** Business cards with getmedi.ca on them. Have the website open on your phone ready to show.
+**Bring:** Business cards with hilthealth.com on them. Have the website open on your phone ready to show.
 
 ---
 
@@ -180,7 +180,7 @@ Our website is getmedi.ca if they want to take a look."
 ## Rules
 
 - **Personalize every message.** Their clinic name, their background, their city. Generic = deleted.
-- **Always link to getmedi.ca.** Let the site do the heavy lifting on credibility.
+- **Always link to hilthealth.com.** Let the site do the heavy lifting on credibility.
 - **One follow-up max.** If they don't respond twice, move to the next step (email -> in person).
 - **Update the database.** After every touchpoint, update `outreach_step` and `status` in `clinic_prospects`.
 - **Track in notes.** Date sent, response received, next action.
