@@ -34,6 +34,7 @@ export default function SignUpForm() {
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
 
   useEffect(() => {
+    if (!supabase) return;
     supabase.rpc("get_waitlist_count").then(({ data }) => {
       if (data !== null && data > 0) setWaitlistCount(data);
     });
@@ -51,6 +52,12 @@ export default function SignUpForm() {
     if (data.get("company_url")) {
       setLoading(false);
       setSubmitted(true);
+      return;
+    }
+
+    if (!supabase) {
+      setLoading(false);
+      setError("Service unavailable. Please try again later.");
       return;
     }
 
