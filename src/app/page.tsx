@@ -436,7 +436,7 @@ function Footer() {
             href="mailto:business@hilthealth.com"
             className="hover:text-slate transition-colors"
           >
-            Contact
+            business@hilthealth.com
           </a>
         </div>
         <p className="text-xs text-ash">Built in Canada</p>
