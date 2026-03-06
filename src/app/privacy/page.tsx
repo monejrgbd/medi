@@ -68,10 +68,14 @@ export default function PrivacyPage() {
 
             <h3>A. Patient Health Information (collected on behalf of clinics)</h3>
             <ul>
+              <li>First name, last name, and date of birth (entered by the patient at check-in)</li>
+              <li>Phone number (SMS-verified, collected when the clinic has the SMS add-on enabled or when required for identity verification)</li>
               <li>Symptoms and health concerns described during AI pre-screening conversations</li>
               <li>Full transcript of the AI conversation</li>
               <li>AI-generated pre-screening summaries</li>
+              <li>Medications, allergies, and chronic conditions reported by the patient</li>
               <li>Date and time of the pre-screening session</li>
+              <li>SMS message delivery records (visit summaries, follow-up reminders, review requests)</li>
               <li>Device and browser information used during the session</li>
             </ul>
 
@@ -412,6 +416,9 @@ export default function PrivacyPage() {
             </a>
             <a href="/privacy" className="text-slate font-medium transition-colors">
               Privacy Policy
+            </a>
+            <a href="/terms" className="hover:text-slate transition-colors">
+              Terms of Service
             </a>
             <a href="/pricing" className="hover:text-slate transition-colors">
               Pricing

@@ -106,6 +106,12 @@ export default function BlogPage() {
               Privacy Policy
             </a>
             <a
+              href="/terms"
+              className="hover:text-slate transition-colors"
+            >
+              Terms of Service
+            </a>
+            <a
               href="/pricing"
               className="hover:text-slate transition-colors"
             >
