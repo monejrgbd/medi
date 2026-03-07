@@ -1,0 +1,62 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_organization_overview(p_caller_auth_uid uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_result jsonb;
+BEGIN
+  SELECT su.org_id INTO v_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_deleted = false
+  LIMIT 1;
+
+  IF v_org_id IS NULL THEN
+    RETURN '{}'::jsonb;
+  END IF;
+
+  SELECT jsonb_build_object(
+    'org', jsonb_build_object(
+      'id', o.id,
+      'name', o.name,
+      'slug', o.slug,
+      'subscription_plan', o.subscription_plan,
+      'credits_total', o.credits_total,
+      'credits_used', o.credits_used,
+      'credits_remaining', o.credits_total - o.credits_used,
+      'trial_end_date', o.trial_end_date,
+      'review_sms_addon', o.review_sms_addon,
+      'followup_sms_addon', o.followup_sms_addon,
+      'created_at', o.created_at
+    ),
+    'location_count', (SELECT count(*) FROM public.locations WHERE org_id = v_org_id),
+    'staff_count', (SELECT count(*) FROM public.staff_users WHERE org_id = v_org_id AND is_deleted = false),
+    'active_staff_count', (SELECT count(*) FROM public.staff_users WHERE org_id = v_org_id AND is_active = true AND is_deleted = false)
+  )
+  INTO v_result
+  FROM public.organizations o
+  WHERE o.id = v_org_id;
+
+  RETURN COALESCE(v_result, '{}'::jsonb);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_organization_overview()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_organization_overview(v_auth_uid);
+END;
+$$;

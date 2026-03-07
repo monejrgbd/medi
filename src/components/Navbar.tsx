@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import SignInModal from "./SignInModal";
 
 export default function Navbar() {
-  const [modalOpen, setModalOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -15,16 +13,6 @@ export default function Navbar() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
-
-  function scrollToContact() {
-    setMobileOpen(false);
-    const el = document.getElementById("contact");
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth" });
-    } else {
-      window.location.href = "/#contact";
-    }
-  }
 
   return (
     <>
@@ -51,18 +39,18 @@ export default function Navbar() {
             >
               Pricing
             </a>
-            <button
-              onClick={() => setModalOpen(true)}
+            <a
+              href="/login"
               className="rounded-xl border-2 border-hilt-blue px-5 py-2.5 text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
             >
               Sign In
-            </button>
-            <button
-              onClick={scrollToContact}
+            </a>
+            <a
+              href="/signup"
               className="rounded-xl bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
             >
               Request Free Trial
-            </button>
+            </a>
           </div>
 
           <button
@@ -90,23 +78,22 @@ export default function Navbar() {
             >
               Pricing
             </a>
-            <button
-              onClick={() => { setMobileOpen(false); setModalOpen(true); }}
-              className="w-full rounded-xl border-2 border-hilt-blue px-5 py-3 text-sm font-semibold text-hilt-blue"
+            <a
+              href="/login"
+              className="block w-full rounded-xl border-2 border-hilt-blue px-5 py-3 text-center text-sm font-semibold text-hilt-blue"
             >
               Sign In
-            </button>
-            <button
-              onClick={scrollToContact}
-              className="w-full rounded-xl bg-hilt-blue px-5 py-3 text-sm font-semibold text-white"
+            </a>
+            <a
+              href="/signup"
+              className="block w-full rounded-xl bg-hilt-blue px-5 py-3 text-center text-sm font-semibold text-white"
             >
               Request Free Trial
-            </button>
+            </a>
           </div>
         )}
       </nav>
 
-      <SignInModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }

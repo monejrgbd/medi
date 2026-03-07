@@ -1,0 +1,56 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.staff_check_out(
+  p_caller_auth_uid uuid,
+  p_staff_user_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_target_staff_id uuid;
+BEGIN
+  -- Determine target: self or specified staff user
+  IF p_staff_user_id IS NOT NULL THEN
+    v_target_staff_id := p_staff_user_id;
+  ELSE
+    SELECT su.id INTO v_target_staff_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_deleted = false;
+  END IF;
+
+  IF v_target_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
+  END IF;
+
+  -- NOTE: claimed-patient guard omitted until Phase 3 (visits table doesn't exist yet)
+
+  -- Close open checkins
+  UPDATE public.staff_checkins
+  SET checked_out_at = now()
+  WHERE staff_user_id = v_target_staff_id
+    AND checked_out_at IS NULL;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.staff_check_out(
+  p_staff_user_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.staff_check_out(v_auth_uid, p_staff_user_id);
+END;
+$$;

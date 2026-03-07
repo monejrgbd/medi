@@ -1,0 +1,42 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_my_roles(p_caller_auth_uid uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'role', sr.role,
+    'location_id', sr.location_id,
+    'location_name', l.name
+  )), '[]'::jsonb)
+  INTO v_result
+  FROM public.staff_roles sr
+  JOIN public.staff_users su ON su.id = sr.staff_user_id
+  JOIN public.locations l ON l.id = sr.location_id
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_my_roles()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_my_roles(v_auth_uid);
+END;
+$$;

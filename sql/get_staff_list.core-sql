@@ -1,0 +1,90 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_staff_list(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_location_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_owner_id uuid;
+  v_is_owner boolean;
+  v_caller_location_id uuid;
+  v_result jsonb;
+BEGIN
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = p_org_id;
+  v_is_owner := (v_owner_id = p_caller_auth_uid);
+
+  -- If not owner, check if manager and scope to their location
+  IF NOT v_is_owner THEN
+    SELECT sr.location_id INTO v_caller_location_id
+    FROM public.staff_roles sr
+    JOIN public.staff_users su ON su.id = sr.staff_user_id
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND sr.role = 'manager'
+      AND su.is_active = true AND su.is_deleted = false
+    LIMIT 1;
+
+    IF v_caller_location_id IS NULL THEN
+      RETURN '[]'::jsonb;
+    END IF;
+
+    -- Manager can only see staff at their location
+    p_location_id := v_caller_location_id;
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(staff_row), '[]'::jsonb) INTO v_result
+  FROM (
+    SELECT jsonb_build_object(
+      'id', su.id,
+      'auth_uid', su.auth_uid,
+      'full_name', su.full_name,
+      'username', su.username,
+      'is_active', su.is_active,
+      'is_deleted', su.is_deleted,
+      'created_at', su.created_at,
+      'roles', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'role', sr.role,
+          'location_id', sr.location_id,
+          'location_name', l.name
+        ))
+        FROM public.staff_roles sr
+        JOIN public.locations l ON l.id = sr.location_id
+        WHERE sr.staff_user_id = su.id
+      ), '[]'::jsonb)
+    ) AS staff_row
+    FROM public.staff_users su
+    WHERE su.org_id = p_org_id
+      AND su.is_deleted = false
+      AND (p_location_id IS NULL OR su.id IN (
+        SELECT sr2.staff_user_id FROM public.staff_roles sr2 WHERE sr2.location_id = p_location_id
+      ))
+    ORDER BY su.created_at
+  ) sub;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_staff_list(
+  p_org_id uuid,
+  p_location_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_staff_list(v_auth_uid, p_org_id, p_location_id);
+END;
+$$;

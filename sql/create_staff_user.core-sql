@@ -1,0 +1,109 @@
+-- Private implementation
+-- Creates auth user via vault+http, then creates staff_user + roles
+CREATE OR REPLACE FUNCTION private.create_staff_user(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_full_name text,
+  p_username text,
+  p_password text,
+  p_location_id uuid,
+  p_roles text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_staff_user_id uuid;
+  v_auth_uid uuid;
+  v_owner_id uuid;
+  v_is_manager boolean := false;
+  v_role text;
+  v_slug text;
+  v_synthetic_email text;
+BEGIN
+  -- Check if caller is owner
+  SELECT owner_id, slug INTO v_owner_id, v_slug
+  FROM public.organizations
+  WHERE id = p_org_id;
+
+  IF v_owner_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can create staff anywhere
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      JOIN public.staff_users su ON su.id = sr.staff_user_id
+      WHERE su.auth_uid = p_caller_auth_uid
+        AND sr.location_id = p_location_id
+        AND sr.role = 'manager'
+        AND su.is_active = true
+        AND su.is_deleted = false
+    ) INTO v_is_manager;
+
+    IF NOT v_is_manager THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Only owner or manager can create staff');
+    END IF;
+  END IF;
+
+  -- Build synthetic email
+  v_synthetic_email := p_username || '@' || v_slug || '.staff.hilt';
+
+  -- Create auth user via vault+http
+  BEGIN
+    v_auth_uid := private.create_auth_user(v_synthetic_email, p_password, p_full_name);
+  EXCEPTION WHEN OTHERS THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Failed to create auth user: ' || SQLERRM);
+  END;
+
+  -- Create staff_user
+  BEGIN
+    INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
+    VALUES (p_org_id, v_auth_uid, p_full_name, p_username)
+    RETURNING id INTO v_staff_user_id;
+
+    -- Create staff_roles
+    FOREACH v_role IN ARRAY p_roles LOOP
+      INSERT INTO public.staff_roles (staff_user_id, location_id, role)
+      VALUES (v_staff_user_id, p_location_id, v_role);
+    END LOOP;
+
+    -- Create default preferences
+    INSERT INTO public.staff_preferences (staff_user_id)
+    VALUES (v_staff_user_id);
+  EXCEPTION WHEN OTHERS THEN
+    -- Rollback: delete orphaned auth user
+    PERFORM private.delete_auth_user(v_auth_uid);
+    RETURN jsonb_build_object('success', false, 'error', 'Failed to create staff record: ' || SQLERRM);
+  END;
+
+  RETURN jsonb_build_object('success', true, 'staff_user_id', v_staff_user_id);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.create_staff_user(
+  p_org_id uuid,
+  p_full_name text,
+  p_username text,
+  p_password text,
+  p_location_id uuid,
+  p_roles text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.create_staff_user(v_auth_uid, p_org_id, p_full_name, p_username, p_password, p_location_id, p_roles);
+END;
+$$;

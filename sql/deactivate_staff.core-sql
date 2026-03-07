@@ -1,0 +1,68 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.deactivate_staff(
+  p_caller_auth_uid uuid,
+  p_staff_user_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_target_auth_uid uuid;
+BEGIN
+  -- Get staff's org and auth_uid
+  SELECT su.org_id, su.auth_uid INTO v_org_id, v_target_auth_uid
+  FROM public.staff_users su
+  WHERE su.id = p_staff_user_id AND su.is_deleted = false;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
+  END IF;
+
+  -- Only owner can deactivate
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_org_id;
+
+  IF v_owner_id <> p_caller_auth_uid THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only the organization owner can deactivate staff');
+  END IF;
+
+  -- Set inactive
+  UPDATE public.staff_users
+  SET is_active = false
+  WHERE id = p_staff_user_id;
+
+  -- Auto-check out
+  UPDATE public.staff_checkins
+  SET checked_out_at = now()
+  WHERE staff_user_id = p_staff_user_id
+    AND checked_out_at IS NULL;
+
+  -- Ban auth user via vault+http
+  IF v_target_auth_uid IS NOT NULL THEN
+    PERFORM private.ban_auth_user(v_target_auth_uid);
+  END IF;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.deactivate_staff(
+  p_staff_user_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.deactivate_staff(v_auth_uid, p_staff_user_id);
+END;
+$$;

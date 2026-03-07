@@ -1,4 +1,3 @@
-import Navbar from "@/components/Navbar";
 import SignUpForm from "@/components/SignUpForm";
 import FadeIn from "@/components/FadeIn";
 import { getAllPosts } from "@/lib/blog";
@@ -452,7 +451,6 @@ function Footer() {
 export default function Home() {
   return (
     <>
-      <Navbar />
       <main>
         <HeroSection />
         <ProblemSection />

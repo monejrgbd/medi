@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Navbar from "@/components/Navbar";
 import FadeIn from "@/components/FadeIn";
 import CustomPlanModal from "@/components/CustomPlanModal";
 
@@ -463,7 +462,6 @@ export default function PricingPage() {
 
   return (
     <>
-      <Navbar />
       <main>
         <section className="bg-gradient-to-b from-blue-50/60 to-white pt-16 pb-20">
           <div className="mx-auto max-w-[1200px] px-6">

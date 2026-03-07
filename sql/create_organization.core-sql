@@ -1,0 +1,122 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.create_organization(
+  p_owner_auth_uid uuid,
+  p_name text,
+  p_approval_code text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_slug text;
+  v_base_slug text;
+  v_suffix text;
+  v_plan text := 'standard_trial';
+  v_credits int := 20;
+  v_trial_days int := 14;
+  v_full_name text;
+  v_code_id uuid;
+BEGIN
+  -- Get full_name from auth.users metadata
+  SELECT COALESCE(raw_user_meta_data->>'full_name', 'Owner')
+  INTO v_full_name
+  FROM auth.users
+  WHERE id = p_owner_auth_uid;
+
+  -- Handle approval code for premium trial
+  IF p_approval_code IS NOT NULL AND p_approval_code <> '' THEN
+    SELECT id INTO v_code_id
+    FROM public.approval_codes
+    WHERE code = p_approval_code
+      AND used_by_org_id IS NULL;
+
+    IF v_code_id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid or already used approval code');
+    END IF;
+
+    v_plan := 'premium_trial';
+    v_credits := 200;
+    v_trial_days := 30;
+  END IF;
+
+  -- Generate slug: lowercase, replace non-alphanumeric with hyphens, trim, add random suffix
+  v_base_slug := lower(regexp_replace(trim(p_name), '[^a-zA-Z0-9]+', '-', 'g'));
+  v_base_slug := trim(BOTH '-' FROM v_base_slug);
+  v_suffix := substr(md5(random()::text), 1, 4);
+  v_slug := v_base_slug || '-' || v_suffix;
+
+  -- Create organization
+  INSERT INTO public.organizations (name, slug, owner_id, subscription_plan, credits_total, credits_used, trial_end_date, review_sms_addon, followup_sms_addon)
+  VALUES (p_name, v_slug, p_owner_auth_uid, v_plan, v_credits, 0, now() + (v_trial_days || ' days')::interval, true, true)
+  RETURNING id INTO v_org_id;
+
+  -- Mark approval code as used
+  IF v_code_id IS NOT NULL THEN
+    UPDATE public.approval_codes
+    SET used_by_org_id = v_org_id, used_at = now()
+    WHERE id = v_code_id;
+  END IF;
+
+  -- Create owner's staff_user record
+  INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
+  VALUES (v_org_id, p_owner_auth_uid, v_full_name, 'owner');
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'org_id', v_org_id,
+    'slug', v_slug,
+    'plan', v_plan,
+    'credits', v_credits,
+    'trial_days', v_trial_days
+  );
+
+EXCEPTION
+  WHEN unique_violation THEN
+    -- Slug collision: retry once with different suffix
+    v_suffix := substr(md5(random()::text || clock_timestamp()::text), 1, 4);
+    v_slug := v_base_slug || '-' || v_suffix;
+
+    INSERT INTO public.organizations (name, slug, owner_id, subscription_plan, credits_total, credits_used, trial_end_date, review_sms_addon, followup_sms_addon)
+    VALUES (p_name, v_slug, p_owner_auth_uid, v_plan, v_credits, 0, now() + (v_trial_days || ' days')::interval, true, true)
+    RETURNING id INTO v_org_id;
+
+    IF v_code_id IS NOT NULL THEN
+      UPDATE public.approval_codes
+      SET used_by_org_id = v_org_id, used_at = now()
+      WHERE id = v_code_id;
+    END IF;
+
+    INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
+    VALUES (v_org_id, p_owner_auth_uid, v_full_name, 'owner');
+
+    RETURN jsonb_build_object(
+      'success', true,
+      'org_id', v_org_id,
+      'slug', v_slug,
+      'plan', v_plan,
+      'credits', v_credits,
+      'trial_days', v_trial_days
+    );
+END;
+$$;
+
+-- Public wrapper (takes auth_uid as explicit parameter - called during signup before session exists)
+CREATE OR REPLACE FUNCTION public.create_organization(
+  p_owner_auth_uid uuid,
+  p_name text,
+  p_approval_code text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.create_organization(p_owner_auth_uid, p_name, p_approval_code);
+END;
+$$;

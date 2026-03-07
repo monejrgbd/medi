@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Navbar from "@/components/Navbar";
 import { getAllPosts } from "@/lib/blog";
 
 export const metadata: Metadata = {
@@ -16,7 +15,6 @@ export default function BlogPage() {
 
   return (
     <>
-      <Navbar />
       <main className="bg-white">
         {/* Hero */}
         <section className="bg-gradient-to-b from-blue-50/60 to-white pt-20 pb-16">

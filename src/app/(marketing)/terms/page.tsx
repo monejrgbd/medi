@@ -1,5 +1,3 @@
-import Navbar from "@/components/Navbar";
-
 export const metadata = {
   title: "Terms of Service — Hilt Health",
   description: "Terms and conditions for using the Hilt Health AI-powered patient pre-screening platform.",
@@ -8,7 +6,6 @@ export const metadata = {
 export default function TermsPage() {
   return (
     <>
-      <Navbar />
       <main className="mx-auto max-w-[800px] px-6 py-16">
         <h1 className="mb-2 text-4xl font-bold text-ink">Terms of Service</h1>
         <p className="mb-12 text-sm text-ash">Last updated: March 6, 2026</p>

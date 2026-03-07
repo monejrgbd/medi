@@ -15,7 +15,7 @@ An AI pre-screening platform for medical clinics. A patient scans a QR code, con
 ## The Patient Journey
 
 1. **Arrival & QR Scan** — Patient walks in and scans a location-specific QR code on their own phone. If they don't have a phone or internet, the receptionist gives them a clinic-owned tablet (tracked per location). QR check-in only works when at least one receptionist is checked in at that location. If none are checked in, the patient sees "This location is not currently accepting check-ins" with operating hours displayed if configured. Operating hours are informational, not a hard gate. Patient enters their first name, last name, and birthday. The system matches automatically:
-   - **Name + birthday matches an existing record** → returning patient → receptionist asks the patient if they've been here or at any of the organization's other locations before. If yes, receptionist approves. If no (patient claims to be new), verbal confirmation alone isn't enough — the receptionist clicks "Verify Phone" which prompts the patient to enter and SMS-verify their phone number on their device. If the existing record has a phone: match triggers a shared-phone check (receptionist asks if the phone is shared with someone who has the same name and date of birth — if no, same person, proceed as returning; if yes, that name + birthday + phone combination is blocked — each person must get a separate phone number for next time, visit handled manually), no match means confirmed collision — both records stay active (distinguishable by phone), name + birthday flagged permanently. If the existing record has no phone: it's orphaned (frozen, unmatchable) and the new patient's SMS-verified phone is used for a fresh record, name + birthday flagged permanently. Phone required on all future check-ins for flagged combos (system safety mechanism, independent of the SMS add-on).
+   - **Name + birthday matches an existing record** → returning patient → receptionist asks the patient if they've been here or at any of the organization's other locations before. If yes, receptionist approves. If no (patient claims to be new), verbal confirmation alone isn't enough — the receptionist clicks "Verify Phone" which prompts the patient to enter and SMS-verify their phone number on their device. If the existing record has a phone: match triggers a shared-phone check (receptionist asks if the phone is shared with someone who has the same name and date of birth — if no, same person, proceed as returning; if yes, that name + birthday + phone combination is blocked — each person must get a separate phone number for next time, visit handled manually), no match means confirmed collision — both records stay active (distinguishable by phone), name + birthday flagged permanently. If the existing record has no phone: it's orphaned (frozen, unmatchable) and the new patient's SMS-verified phone is used for a fresh record, name + birthday flagged permanently. Phone required on all future check-ins for flagged combos.
    - **Name + birthday flagged (phone required)** → patient is asked to enter and SMS-verify their phone number. Matched by phone to the correct record. If the phone doesn't match any record (e.g., the original patient returning for the first time since the collision), the receptionist sees a note explaining that orphaned records exist for this name + birthday and a new account is expected — patient provides phone, fresh record created.
    - **No match** → new patient registration → receptionist approves the new record
    - When approving a new patient, receptionist sees a "Similar patients" hint (same birthday or similar names) as a safety net for typos.
@@ -30,13 +30,13 @@ An AI pre-screening platform for medical clinics. A patient scans a QR code, con
    - **Supported languages:** 130+ languages via Google Translate API. UI strings also pre-translated via the API and stored. Quality issues fixed on a per-language basis as clinics report them.
    - **Language picker sorting:** Top languages shown first (English, Spanish, French, German, Portuguese, Italian, Japanese, Korean, Chinese, Dutch, Russian, Arabic, Hindi, Turkish, Vietnamese, Thai, Indonesian, Polish, Swedish, Ukrainian), then remaining 110+ alphabetically below. Searchable.
 4. **AI Conversation** — Greeting (system-generated, not from the AI): "Hello [Name], welcome to [Clinic]! Could you describe what you're feeling?" Patient can type or use **voice input** (tap mic, Google Cloud Speech-to-Text). For non-English patients: speech-to-text in their language → Google Translate to English → Claude processes in English → response in English → Google Translate to patient's language → displayed. For English patients: speech-to-text → straight to Claude, no translation calls. All Google ecosystem (Speech-to-Text + Translate API). The AI then takes over the conversation. See AI Behavior section below.
-5. **Phone number (add-on)** — if the clinic has the SMS add-on enabled and we don't already have this patient's phone number on file, a phone number field is shown after the AI conversation. The clinic configures this in location settings: **show/hide** (whether the field appears at all) and **optional vs required** (whether patients can skip it). SMS code verification to confirm it's real. Once verified, stored on their patient record — never asked again on future visits. If optional and they skip, goes straight to queue.
-6. **Queue** — When the AI finishes (and phone step is done/skipped), the patient sees: "You're in the queue. [X] people ahead of you. Estimated wait: ~[Y] minutes. This will update live — you'll be called when it's your turn." Status: `waiting_doctor_claim`.
+5. **Phone number** — after the AI conversation, the patient is always asked for their phone number (if we don't already have it on file). SMS code verification to confirm it's real. Once verified, stored on their patient record — never asked again on future visits. This is a core step, not configurable by the clinic. The patient enters `waiting_doctor_claim` and appears in the staff queue immediately after the AI conversation finishes — phone collection does not block this. The phone step happens on the patient's screen while they're already in the queue.
+6. **Queue** — The patient is in the queue as soon as the AI conversation ends. Before phone verification, they see the phone input screen. After verifying, they see the live queue view: "You're in the queue. [X] people ahead of you. Estimated wait: ~[Y] minutes. This will update live — you'll be called when it's your turn." Phone verification unlocks the queue visibility for the patient, but their position in the queue is already active.
 7. **Doctor Claims** — When a doctor claims the patient, the patient's screen updates to show they've been claimed. The receptionist also sees this status change.
 8. **Doctor Visit** — Doctor reads transcript + AI diagnostic, conducts their visit with full context.
-9. **Completion** — Doctor enters their actual diagnosis and marks the patient as complete. If the clinic has the SMS add-on and the patient has a verified phone number:
+9. **Completion** — Doctor enters their actual diagnosis and marks the patient as complete. The patient has a verified phone number (collected in step 5):
    - **Visit summary SMS** (only if no referral was created for this visit) — patient receives a link to a secure Hilt Health-hosted page showing: clinic name, date, doctor name, their approved summary, doctor's diagnosis, and meds/allergies/chronic conditions on file. Does NOT include doctor notes or the AI diagnostic (doctor-eyes-only). Link is persistent — patient can pull it up anytime. Each visit gets its own link, building a personal health timeline. The patient owns this — they can show it to any doctor, ER, specialist, or family member. If the doctor referred the patient through our system, the information transfer is already handled — no duplicate SMS needed.
-   - **Review funnel SMS** — the review link is triggered after the visit summary.
+   - **Review funnel SMS** (add-on only) — if the clinic has the Review SMS add-on enabled, the review link is triggered after the visit summary.
 
 **Session recovery:** If a patient closes the browser or switches devices, they rescan the QR and re-enter first + last name + birthday to resume where they left off. If their name + birthday is flagged (collision), phone is also required to identify the correct session. Birthday (and phone when applicable) required to prevent someone else from hijacking the session. No receptionist re-approval needed — the active session resumes directly.
 
@@ -65,7 +65,7 @@ This section exists to prevent implementation ambiguity. The check-in identity s
 
 **Key rules:**
 - **Every phone entry in the collision flow is SMS-verified.** No exceptions — this proves ownership and prevents impersonation.
-- Collision phone verification is a **system safety mechanism**, independent of the SMS add-on. It works even if the clinic doesn't pay for SMS features.
+- Collision phone verification is a **system safety mechanism** — since phone is always collected, the collision flow simply uses the same verified phone.
 - Orphaned records are preserved but frozen — they retain visit history, meds, allergies, and notes, but are not matchable during check-in.
 - **No flag on false alarm** — if the patient says "I'm new" but their SMS-verified phone matches the existing record, the receptionist is asked if the phone is shared with someone who has the same name and date of birth. If no (most cases), it's the same person — proceed as returning, no collision flag set. If yes, that combination of first name, last name, birthday, and phone number is blocked from future use — each person must get a separate phone number for next time. This visit is handled manually.
 - Session recovery for flagged name + birthday combos requires phone in addition to name + birthday.
@@ -156,7 +156,7 @@ still_answering_ai -> waiting_doctor_claim -> claimed_by_doctor -> completed
 When a staff member logs in, they see all their assigned roles as options (Doctor, Receptionist, Manager, Reviews). They pick which one to enter.
 
 ### Owner
-- **Signup** — Owner signs up via Supabase Auth (email + password). Also collects full name and organization name. Email is used to contact them 7 days before trial expires.
+- **Signup** — Owner signs up via Supabase Auth (email + password). Also collects full name and organization name. Premium trial requires an approval code during signup. Email is used to contact them 7 days before trial expires.
 - Creates the account. This is the admin.
 - Creates locations (unlimited).
 - Per location: adjust roles, view statistics.
@@ -165,7 +165,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
   1. **Add user** — owner or manager creates a user at a location (username + password + full name). Each user gets a unique user ID on creation. Managers can only add/see users at their location. Owner can add/see users across all locations.
   2. **Assign roles** — assign one or more roles (doctor, receptionist, manager) to that user at that location. A user can have multiple roles at the same location and different roles at different locations.
 - **QR code generation** — when a location is created, the system auto-generates a unique QR code (plain by default). A tiny hint underneath says "Upload a logo for this location" to show it in the center. Logo is per location. Once uploaded, a toggle appears to switch between branded and plain. Owner can download/print as a PDF with configurable patient instructions (defaults to "Scan this to check in"). The instructions text is editable per PDF download, not saved in the system.
-- **Tablet logistics** — trial includes one loaner tablet per location, shipped by Hilt Health. Return shipping prepaid label included. Post-trial: clinics purchase their own tablets (any iPad or Android tablet). Hilt Health provides setup guide. Kiosk mode uses iOS Guided Access or Android kiosk mode (built-in OS features). No MDM required. Setup instructions provided.
+- **Tablet logistics** — Premium trial includes one loaner tablet per location, shipped by Hilt Health. Return shipping prepaid label included. Standard trial does not include a tablet (clinic uses their own device or patients use their phones). Post-trial: clinics purchase their own tablets (any iPad or Android tablet). Hilt Health provides setup guide. Kiosk mode uses iOS Guided Access or Android kiosk mode (built-in OS features). No MDM required. Setup instructions provided.
 
 ### Manager
 - Adds/removes people from roles within their location.
@@ -217,7 +217,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
 
 ### Receptionist
 - **Self-check-in** — patients scan the QR themselves and enter first name, last name, and birthday. The system matches automatically:
-  - **Name + birthday matches an existing record** → returning patient → receptionist asks the patient if they've been here or at any of the organization's other locations before. If yes, receptionist approves. If no (patient claims to be new), verbal confirmation alone isn't enough — the receptionist clicks "Verify Phone" which prompts the patient to enter and SMS-verify their phone number on their device. If the existing record has a phone: match triggers a shared-phone check (receptionist asks if the phone is shared with someone who has the same name and date of birth — if no, same person, proceed as returning; if yes, that name + birthday + phone combination is blocked — each person must get a separate phone number for next time, visit handled manually), no match means confirmed collision — both records stay active (distinguishable by phone), name + birthday flagged permanently. If the existing record has no phone: it's orphaned (frozen, unmatchable) and the new patient's SMS-verified phone is used for a fresh record, name + birthday flagged permanently. Phone required on all future check-ins for flagged combos (system safety mechanism, independent of the SMS add-on).
+  - **Name + birthday matches an existing record** → returning patient → receptionist asks the patient if they've been here or at any of the organization's other locations before. If yes, receptionist approves. If no (patient claims to be new), verbal confirmation alone isn't enough — the receptionist clicks "Verify Phone" which prompts the patient to enter and SMS-verify their phone number on their device. If the existing record has a phone: match triggers a shared-phone check (receptionist asks if the phone is shared with someone who has the same name and date of birth — if no, same person, proceed as returning; if yes, that name + birthday + phone combination is blocked — each person must get a separate phone number for next time, visit handled manually), no match means confirmed collision — both records stay active (distinguishable by phone), name + birthday flagged permanently. If the existing record has no phone: it's orphaned (frozen, unmatchable) and the new patient's SMS-verified phone is used for a fresh record, name + birthday flagged permanently. Phone required on all future check-ins for flagged combos.
   - **Name + birthday flagged (phone required)** → patient is asked to enter and SMS-verify their phone number. Matched by phone to the correct record. If the phone doesn't match any record (e.g., the original patient returning for the first time since the collision), the receptionist sees a note explaining that orphaned records exist for this name + birthday and a new account is expected — patient provides phone, fresh record created.
   - **No match** → new patient registration → receptionist approves the new record
   - When approving a new patient, receptionist sees a "Similar patients" hint (same birthday or similar names). Receptionist is the human filter for typos. All new patient registrations require receptionist approval.
@@ -246,9 +246,20 @@ When a staff member logs in, they see all their assigned roles as options (Docto
 ## Business Model
 
 ### Trial
-- Clinic signs up and receives: **$200 worth of credits** (200 credits) + site access for 30 days
-- No credit card required
-- **7 days before trial ends**, we contact them with their pricing based on the plan they choose
+
+Two trial tiers. No credit card required for either.
+
+**Standard Trial** (self-serve, no approval needed)
+- **$20 worth of credits** (20 credits) + full platform access for 14 days
+- Clinic signs up through the website and starts immediately
+- 7 days before trial ends, we contact them with pricing based on the plan they choose
+
+**Premium Trial** (approval-only, code-gated)
+- **$200 worth of credits** (200 credits) + full platform access for 30 days
+- Includes a loaner tablet per location (shipped by Hilt Health, prepaid return label included)
+- Requires an approval code to activate — clinic enters the code during signup
+- Codes are generated by our team and given to clinics identified through outreach
+- 7 days before trial ends, we contact them with pricing based on the plan they choose
 
 ### Post-Trial Pricing (from existing site)
 
@@ -271,20 +282,20 @@ When a staff member logs in, they see all their assigned roles as options (Docto
 - Helps owners decide when to upgrade their plan before hitting overages
 
 ### Add-On Pricing
-- **SMS add-on is per location** — each location pays $49/mo separately.
-- **Follow-up SMS add-on is also per location** — $49/mo per location.
+- **Review SMS add-on** — $49/mo per location. Enables the review funnel SMS after visit completion. Phone collection and visit summary SMS are core features included in all plans.
+- **Follow-up SMS add-on** — $49/mo per location.
 
 ### Payment & Billing
-- **Payment processor**: Stripe for subscription billing and overage charges.
+- **Payment processor**: PayPal for subscription billing and overage charges.
 - **Payment failure**: 3 retry attempts over 7 days. After 7 days unpaid, service enters read-only mode (staff can view existing data, no new AI conversations). After 30 days, account suspended. Owner notified at each stage via email.
 - **Cancellation**: Owner can cancel anytime. Data retained for 90 days post-cancellation, then permanently deleted. Owner can request immediate deletion.
 - **Annual pricing**: Not offered in V1. Evaluate post-launch based on demand.
 
-### What's Included
-- Trial includes a loaner tablet
+### What's Included (Both Tiers)
 - AI pre-screening (Standard + Advanced models)
 - Doctor summary + full transcript
 - Analytics dashboard
+- Premium trial also includes a loaner tablet per location
 
 ---
 
@@ -294,7 +305,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
 - Organization name
 - Billing / subscription plan management
 - Credit usage dashboard (real-time consumption, remaining, projected run-out)
-- SMS add-on subscription (enable/disable, $49/mo)
+- Review SMS add-on subscription (enable/disable, $49/mo)
 - Follow-up SMS add-on subscription (enable/disable, $49/mo)
 - All locations overview
 
@@ -304,8 +315,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
 - AI model (Standard or Advanced — per location)
 - Display format (summary vs structured card)
 - Staff management (add users, assign roles, set working hours per staff member)
-- Phone number collection (show/hide, optional vs required — only relevant if SMS add-on is enabled)
-- Review funnel config (platform links + URLs, cycle time)
+- Review funnel config (platform links + URLs, cycle time) — only relevant if Review SMS add-on is enabled
 - Embeddable widget (code snippet + preview)
 - Tablet inventory count
 - Referral receiving address (email address where this location receives incoming referrals from other Hilt Health clinics)
@@ -354,9 +364,10 @@ These are confirmed for v1 beyond the core flow:
 27. **Receptionist dashboard header** — at-a-glance status bar: patients per status, tablets out, doctors checked in. One line, full clinic state.
 28. **Self-check-in** — patients scan QR and enter their own info. Returning patients matched automatically, new patients can register themselves. Receptionist just approves/denies. Patient sees "Waiting for approval" until approved.
 29. **AI safety guardrail** — AI never diagnoses or suggests treatment to the patient. Deflects if asked. AI diagnostic is doctor-eyes-only.
-30. **SMS add-on** — $49/mo per clinic. Enables phone number collection (after AI conversation, SMS-verified, only asked once per patient). Clinic configures: show/hide the field, and optional vs required. Three SMS triggers: (1) visit summary link after completion — patient's portable health record they can show anyone, (2) review funnel link after visit summary, (3) follow-up reminders (separate add-on). Phone number stored on patient record for future use. Included free during the 30-day trial to demonstrate value.
+30. **Phone collection & visit summary SMS** — phone number is always collected after AI conversation (SMS-verified, only asked once per patient). Visit summary SMS sent automatically after every completed visit (no referral). Phone number stored on patient record. This is a core feature, not an add-on.
+30a. **Review SMS add-on** — $49/mo per location. Enables the review funnel SMS triggered after the visit summary. Included free during trial (14 days standard, 30 days premium) to demonstrate value.
 31. **Review hub & funnel** — clinics get a review hub in their admin showing all internal patient ratings. After visit, patient receives an SMS with a link to a Hilt Health-hosted rating page. Page shows clinic name, doctor name, and a 1-5 star selector with optional text feedback. If they rate 5 stars → "Would you also leave a review on [Platform]?" with a direct link (current rotation per the cycle time setting). Below 5 → "Thank you for your feedback." (stays internal only — clinic sees the feedback but unhappy patients aren't funneled to public platforms). All ratings stored in review hub tagged by doctor. Each review is tagged with the doctor who handled that visit.
-32. **Follow-up SMS add-on** — $49/mo per clinic (separate from review SMS add-on). Sends automated reminders to patients with overdue follow-ups. Owner pre-configures: reminder text template + how many reminders to send + timing (e.g., 1st reminder 3 days after due, 2nd 7 days after). Included free during trial.
+32. **Follow-up SMS add-on** — $49/mo per location (separate from Review SMS add-on). Sends automated reminders to patients with overdue follow-ups. Owner pre-configures: reminder text template + how many reminders to send + timing (e.g., 1st reminder 3 days after due, 2nd 7 days after). Included free during trial (14 days standard, 30 days premium).
 33. **Follow-up compliance dashboard** — only available if Follow-up SMS add-on is enabled. Tracks: patients tagged for follow-up → returned (receptionist picked the follow-up) → overdue → reminded via SMS → returned after reminder. Per-doctor compliance rates. Follow-ups expire after 90 days overdue.
 34. **Stale session cleanup** — patients left in `waiting_doctor_claim` from the previous day auto-expire. Receptionist notified.
 35. **Check-out guard** — doctors can't check out with claimed patients. Must complete or cancel first.

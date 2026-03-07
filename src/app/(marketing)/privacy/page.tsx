@@ -1,5 +1,3 @@
-import Navbar from "@/components/Navbar";
-
 export const metadata = {
   title: "Privacy Policy — Hilt Health",
   description: "How Hilt Health collects, uses, and protects your personal and health information.",
@@ -8,7 +6,6 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <>
-      <Navbar />
       <main className="mx-auto max-w-[800px] px-6 py-16">
         <h1 className="mb-2 text-4xl font-bold text-ink">Privacy Policy</h1>
         <p className="mb-12 text-sm text-ash">Last updated: February 27, 2026</p>

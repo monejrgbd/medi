@@ -1,6 +1,5 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Navbar from "@/components/Navbar";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
 
 interface Props {
@@ -36,7 +35,6 @@ export default async function BlogPostPage({ params }: Props) {
 
   return (
     <>
-      <Navbar />
       <main className="bg-white">
         <article className="mx-auto max-w-[780px] px-6 pt-16 pb-20">
           <div className="mb-10">
