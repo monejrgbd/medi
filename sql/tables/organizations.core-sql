@@ -1,0 +1,24 @@
+CREATE TABLE public.organizations (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                  text NOT NULL,
+  slug                  text NOT NULL UNIQUE,
+  owner_id              uuid NOT NULL REFERENCES auth.users(id),
+  subscription_plan     text DEFAULT 'standard_trial'
+    CHECK (subscription_plan = ANY (ARRAY[
+      'standard_trial', 'premium_trial', 'starter', 'standard', 'plus',
+      'enterprise', 'pay_as_you_go', 'expired', 'read_only', 'suspended'
+    ])),
+  credits_total         int DEFAULT 20,
+  credits_used          numeric DEFAULT 0,
+  trial_end_date        timestamptz,
+  billing_cycle_start   timestamptz,
+  paypal_subscription_id text,
+  review_sms_addon      boolean DEFAULT false,
+  followup_sms_addon    boolean DEFAULT false,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_member_read" ON public.organizations FOR SELECT
+  USING (id = requesting_org_id());

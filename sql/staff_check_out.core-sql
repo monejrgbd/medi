@@ -1,7 +1,8 @@
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.staff_check_out(
   p_caller_auth_uid uuid,
-  p_staff_user_id uuid DEFAULT NULL
+  p_staff_user_id uuid DEFAULT NULL,
+  p_force boolean DEFAULT false
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -11,6 +12,10 @@ SET search_path TO ''
 AS $$
 DECLARE
   v_target_staff_id uuid;
+  v_is_doctor boolean;
+  v_claimed_count int;
+  v_queue_count int;
+  v_other_doctors int;
 BEGIN
   -- Determine target: self or specified staff user
   IF p_staff_user_id IS NOT NULL THEN
@@ -26,7 +31,65 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
   END IF;
 
-  -- NOTE: claimed-patient guard omitted until Phase 3 (visits table doesn't exist yet)
+  -- Check if target is a doctor
+  SELECT EXISTS(
+    SELECT 1 FROM public.staff_roles sr
+    WHERE sr.staff_user_id = v_target_staff_id
+      AND sr.role = 'doctor'
+  ) INTO v_is_doctor;
+
+  IF v_is_doctor THEN
+    -- Fail if they have claimed patients
+    SELECT count(*) INTO v_claimed_count
+    FROM public.visits v
+    WHERE v.claimed_by = v_target_staff_id
+      AND v.status = 'claimed_by_doctor';
+
+    IF v_claimed_count > 0 THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Cannot check out with claimed patients'
+      );
+    END IF;
+
+    -- Check last-doctor scenario for each checked-in location
+    DECLARE
+      v_checkin record;
+    BEGIN
+      FOR v_checkin IN
+        SELECT sc.location_id
+        FROM public.staff_checkins sc
+        WHERE sc.staff_user_id = v_target_staff_id
+          AND sc.checked_out_at IS NULL
+          AND sc.role = 'doctor'
+      LOOP
+        -- Count other doctors still checked in at this location
+        SELECT count(*) INTO v_other_doctors
+        FROM public.staff_checkins sc
+        WHERE sc.location_id = v_checkin.location_id
+          AND sc.role = 'doctor'
+          AND sc.checked_out_at IS NULL
+          AND sc.staff_user_id <> v_target_staff_id;
+
+        IF v_other_doctors = 0 THEN
+          -- Last doctor: check waiting patients
+          SELECT count(*) INTO v_queue_count
+          FROM public.visits v
+          WHERE v.location_id = v_checkin.location_id
+            AND v.status = 'waiting_doctor_claim';
+
+          IF v_queue_count > 0 AND NOT p_force THEN
+            RETURN jsonb_build_object(
+              'success', false,
+              'needs_confirmation', true,
+              'warning', 'You are the last doctor checked in. ' || v_queue_count || ' patients waiting.',
+              'queue_count', v_queue_count
+            );
+          END IF;
+        END IF;
+      END LOOP;
+    END;
+  END IF;
 
   -- Close open checkins
   UPDATE public.staff_checkins
@@ -40,7 +103,8 @@ $$;
 
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.staff_check_out(
-  p_staff_user_id uuid DEFAULT NULL
+  p_staff_user_id uuid DEFAULT NULL,
+  p_force boolean DEFAULT false
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -51,6 +115,6 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.staff_check_out(v_auth_uid, p_staff_user_id);
+  RETURN private.staff_check_out(v_auth_uid, p_staff_user_id, p_force);
 END;
 $$;

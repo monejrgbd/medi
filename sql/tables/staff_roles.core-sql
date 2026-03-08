@@ -1,0 +1,19 @@
+CREATE TABLE public.staff_roles (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_user_id         uuid NOT NULL REFERENCES public.staff_users(id),
+  location_id           uuid NOT NULL REFERENCES public.locations(id),
+  role                  text NOT NULL
+    CHECK (role = ANY (ARRAY['doctor', 'receptionist', 'manager', 'reviews'])),
+  working_hours         numeric,
+  UNIQUE(staff_user_id, location_id, role)
+);
+
+ALTER TABLE public.staff_roles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_roles" ON public.staff_roles FOR SELECT
+  USING (staff_user_id IN (
+    SELECT su.id FROM staff_users su WHERE su.org_id = requesting_org_id()
+  ));
+
+CREATE INDEX idx_staff_roles_user ON public.staff_roles(staff_user_id);
+CREATE INDEX idx_staff_roles_location ON public.staff_roles(location_id);

@@ -1,0 +1,17 @@
+CREATE TABLE public.visit_messages (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  visit_id              uuid NOT NULL REFERENCES public.visits(id),
+  role                  text NOT NULL CHECK (role IN ('patient', 'ai', 'system')),
+  content               text NOT NULL,
+  content_original      text,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.visit_messages ENABLE ROW LEVEL SECURITY;
+
+-- Default-deny: all access via SECURITY DEFINER functions only
+CREATE POLICY "access_via_functions_only" ON public.visit_messages FOR ALL
+  USING (false);
+
+CREATE INDEX idx_messages_visit
+  ON public.visit_messages (visit_id);

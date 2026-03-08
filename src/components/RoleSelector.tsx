@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useRole } from "@/contexts/RoleContext";
 import FeatureRequestModal from "./FeatureRequestModal";
 
@@ -15,6 +16,7 @@ const ALL_ROLES = ["doctor", "receptionist", "manager", "reviews"];
 
 export default function RoleSelector() {
   const { org, roles, isOwner, currentStaffUser } = useRole();
+  const router = useRouter();
   const [featureModalOpen, setFeatureModalOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>("");
 
@@ -60,6 +62,19 @@ export default function RoleSelector() {
         </div>
       )}
 
+      {isOwner && (
+        <button
+          onClick={() => router.push("/d/owner")}
+          className="w-full rounded-xl border-2 border-indigo-200 bg-indigo-50 p-6 text-left transition-all hover:border-indigo-400 mb-6"
+        >
+          <div className="mb-2 text-2xl">🏥</div>
+          <h3 className="text-lg font-semibold text-ink">Owner Dashboard</h3>
+          <p className="mt-1 text-sm text-slate">
+            Manage locations, staff, and settings
+          </p>
+        </button>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         {displayRoles.map((role) => {
           const config = ROLE_CONFIG[role];
@@ -71,7 +86,9 @@ export default function RoleSelector() {
               key={role}
               className={`rounded-xl border-2 p-6 text-left transition-all ${config.color}`}
               onClick={() => {
-                // Navigation to role dashboard will be added in Phase 2+
+                if (role === "receptionist") {
+                  router.push("/d/receptionist");
+                }
               }}
             >
               <div className="mb-2 text-2xl">{config.icon}</div>

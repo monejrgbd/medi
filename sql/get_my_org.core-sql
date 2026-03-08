@@ -9,6 +9,7 @@ AS $$
 DECLARE
   v_result jsonb;
 BEGIN
+  -- Try owner first
   SELECT jsonb_build_object(
     'id', o.id,
     'name', o.name,
@@ -24,10 +25,31 @@ BEGIN
   )
   INTO v_result
   FROM public.organizations o
-  JOIN public.staff_users su ON su.org_id = o.id
-  WHERE su.auth_uid = p_caller_auth_uid
-    AND su.is_deleted = false
+  WHERE o.owner_id = p_caller_auth_uid
   LIMIT 1;
+
+  -- Fallback to staff_users
+  IF v_result IS NULL THEN
+    SELECT jsonb_build_object(
+      'id', o.id,
+      'name', o.name,
+      'slug', o.slug,
+      'owner_id', o.owner_id,
+      'subscription_plan', o.subscription_plan,
+      'credits_total', o.credits_total,
+      'credits_used', o.credits_used,
+      'trial_end_date', o.trial_end_date,
+      'review_sms_addon', o.review_sms_addon,
+      'followup_sms_addon', o.followup_sms_addon,
+      'created_at', o.created_at
+    )
+    INTO v_result
+    FROM public.organizations o
+    JOIN public.staff_users su ON su.org_id = o.id
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_deleted = false
+    LIMIT 1;
+  END IF;
 
   RETURN COALESCE(v_result, '{}'::jsonb);
 END;

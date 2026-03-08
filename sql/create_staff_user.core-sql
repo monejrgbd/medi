@@ -1,5 +1,5 @@
 -- Private implementation
--- Creates auth user via vault+http, then creates staff_user + roles
+-- Creates auth user + staff_user + roles + preferences in one transaction.
 CREATE OR REPLACE FUNCTION private.create_staff_user(
   p_caller_auth_uid uuid,
   p_org_id uuid,
@@ -17,15 +17,15 @@ SET search_path TO ''
 AS $$
 DECLARE
   v_staff_user_id uuid;
-  v_auth_uid uuid;
   v_owner_id uuid;
   v_is_manager boolean := false;
   v_role text;
   v_slug text;
   v_synthetic_email text;
+  v_auth_uid uuid;
 BEGIN
   -- Check if caller is owner
-  SELECT owner_id, slug INTO v_owner_id, v_slug
+  SELECT owner_id INTO v_owner_id
   FROM public.organizations
   WHERE id = p_org_id;
 
@@ -51,36 +51,43 @@ BEGIN
     END IF;
   END IF;
 
-  -- Build synthetic email
+  -- Get org slug for synthetic email
+  SELECT slug INTO v_slug
+  FROM public.organizations
+  WHERE id = p_org_id;
+
   v_synthetic_email := p_username || '@' || v_slug || '.staff.hilt';
 
-  -- Create auth user via vault+http
-  BEGIN
-    v_auth_uid := private.create_auth_user(v_synthetic_email, p_password, p_full_name);
-  EXCEPTION WHEN OTHERS THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Failed to create auth user: ' || SQLERRM);
-  END;
+  -- Create auth user directly in auth.users
+  INSERT INTO auth.users (
+    instance_id, id, aud, role, email, encrypted_password,
+    email_confirmed_at, raw_app_meta_data, raw_user_meta_data,
+    created_at, updated_at
+  ) VALUES (
+    '00000000-0000-0000-0000-000000000000',
+    gen_random_uuid(), 'authenticated', 'authenticated',
+    v_synthetic_email,
+    crypt(p_password, gen_salt('bf')),
+    now(),
+    jsonb_build_object('provider', 'email', 'providers', ARRAY['email'], 'org_id', p_org_id),
+    jsonb_build_object('full_name', p_full_name),
+    now(), now()
+  ) RETURNING id INTO v_auth_uid;
 
   -- Create staff_user
-  BEGIN
-    INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
-    VALUES (p_org_id, v_auth_uid, p_full_name, p_username)
-    RETURNING id INTO v_staff_user_id;
+  INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
+  VALUES (p_org_id, v_auth_uid, p_full_name, p_username)
+  RETURNING id INTO v_staff_user_id;
 
-    -- Create staff_roles
-    FOREACH v_role IN ARRAY p_roles LOOP
-      INSERT INTO public.staff_roles (staff_user_id, location_id, role)
-      VALUES (v_staff_user_id, p_location_id, v_role);
-    END LOOP;
+  -- Create staff_roles
+  FOREACH v_role IN ARRAY p_roles LOOP
+    INSERT INTO public.staff_roles (staff_user_id, location_id, role)
+    VALUES (v_staff_user_id, p_location_id, v_role);
+  END LOOP;
 
-    -- Create default preferences
-    INSERT INTO public.staff_preferences (staff_user_id)
-    VALUES (v_staff_user_id);
-  EXCEPTION WHEN OTHERS THEN
-    -- Rollback: delete orphaned auth user
-    PERFORM private.delete_auth_user(v_auth_uid);
-    RETURN jsonb_build_object('success', false, 'error', 'Failed to create staff record: ' || SQLERRM);
-  END;
+  -- Create default preferences
+  INSERT INTO public.staff_preferences (staff_user_id)
+  VALUES (v_staff_user_id);
 
   RETURN jsonb_build_object('success', true, 'staff_user_id', v_staff_user_id);
 END;

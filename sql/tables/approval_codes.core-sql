@@ -1,0 +1,11 @@
+CREATE TABLE public.approval_codes (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  code                  text NOT NULL UNIQUE,
+  used_by_org_id        uuid REFERENCES public.organizations(id),
+  created_at            timestamptz DEFAULT now(),
+  used_at               timestamptz
+);
+
+ALTER TABLE public.approval_codes ENABLE ROW LEVEL SECURITY;
+
+-- No SELECT policy: only accessed inside SECURITY DEFINER functions (create_organization)

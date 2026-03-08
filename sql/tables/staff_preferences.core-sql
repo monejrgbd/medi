@@ -1,0 +1,12 @@
+CREATE TABLE public.staff_preferences (
+  staff_user_id         uuid PRIMARY KEY REFERENCES public.staff_users(id),
+  notification_sound    boolean DEFAULT true,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.staff_preferences ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own_prefs_read" ON public.staff_preferences FOR SELECT
+  USING (staff_user_id = (
+    SELECT su.id FROM staff_users su WHERE su.auth_uid = auth.uid() LIMIT 1
+  ));

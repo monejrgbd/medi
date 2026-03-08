@@ -1,0 +1,78 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_locations(p_caller_auth_uid uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_result jsonb;
+BEGIN
+  -- Try owner first
+  SELECT id INTO v_org_id
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  LIMIT 1;
+
+  -- Fallback to staff_users
+  IF v_org_id IS NULL THEN
+    SELECT org_id INTO v_org_id
+    FROM public.staff_users
+    WHERE auth_uid = p_caller_auth_uid
+      AND is_deleted = false
+    LIMIT 1;
+  END IF;
+
+  IF v_org_id IS NULL THEN
+    RETURN '[]'::jsonb;
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(loc_row ORDER BY l.name), '[]'::jsonb)
+  INTO v_result
+  FROM public.locations l
+  CROSS JOIN LATERAL (
+    SELECT
+      count(DISTINCT su.id) FILTER (WHERE su.is_active AND NOT su.is_deleted) AS staff_count,
+      count(DISTINCT su.id) FILTER (WHERE sc.id IS NOT NULL) AS checked_in_count
+    FROM public.staff_roles sr
+    JOIN public.staff_users su ON su.id = sr.staff_user_id
+    LEFT JOIN public.staff_checkins sc
+      ON sc.staff_user_id = su.id
+      AND sc.location_id = l.id
+      AND sc.checked_out_at IS NULL
+    WHERE sr.location_id = l.id
+      AND su.is_deleted = false
+  ) agg
+  CROSS JOIN LATERAL (
+    SELECT jsonb_build_object(
+      'id', l.id,
+      'name', l.name,
+      'address', l.address,
+      'specialty', l.specialty,
+      'logo_url', l.logo_url,
+      'staff_count', agg.staff_count,
+      'checked_in_count', agg.checked_in_count
+    ) AS loc_row
+  ) lr
+  WHERE l.org_id = v_org_id;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_locations()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_locations(v_auth_uid);
+END;
+$$;

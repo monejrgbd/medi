@@ -65,6 +65,11 @@ BEGIN
   INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
   VALUES (v_org_id, p_owner_auth_uid, v_full_name, 'owner');
 
+  -- P1: Store org_id in JWT app_metadata for RLS performance
+  UPDATE auth.users
+  SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('org_id', v_org_id)
+  WHERE id = p_owner_auth_uid;
+
   RETURN jsonb_build_object(
     'success', true,
     'org_id', v_org_id,
@@ -93,6 +98,11 @@ EXCEPTION
     INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
     VALUES (v_org_id, p_owner_auth_uid, v_full_name, 'owner');
 
+    -- P1: Store org_id in JWT app_metadata for RLS performance
+    UPDATE auth.users
+    SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('org_id', v_org_id)
+    WHERE id = p_owner_auth_uid;
+
     RETURN jsonb_build_object(
       'success', true,
       'org_id', v_org_id,
@@ -104,7 +114,7 @@ EXCEPTION
 END;
 $$;
 
--- Public wrapper (takes auth_uid as explicit parameter - called during signup before session exists)
+-- Public wrapper (takes auth_uid as explicit parameter - auth.uid() guard prevents spoofing)
 CREATE OR REPLACE FUNCTION public.create_organization(
   p_owner_auth_uid uuid,
   p_name text,
@@ -117,6 +127,12 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
+  -- Block authenticated users from passing a different auth_uid
+  -- (only service role, which has auth.uid() = NULL, bypasses this)
+  IF auth.uid() IS NOT NULL AND auth.uid() <> p_owner_auth_uid THEN
+    RAISE EXCEPTION 'Cannot create organization for another user';
+  END IF;
+
   RETURN private.create_organization(p_owner_auth_uid, p_name, p_approval_code);
 END;
 $$;

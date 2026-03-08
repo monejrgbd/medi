@@ -37,35 +37,39 @@ BEGIN
     p_location_id := v_caller_location_id;
   END IF;
 
-  SELECT COALESCE(jsonb_agg(staff_row), '[]'::jsonb) INTO v_result
-  FROM (
+  WITH staff_roles_agg AS (
+    SELECT
+      sr.staff_user_id,
+      COALESCE(jsonb_agg(jsonb_build_object(
+        'role', sr.role,
+        'location_id', sr.location_id,
+        'location_name', l.name
+      )), '[]'::jsonb) AS roles
+    FROM public.staff_roles sr
+    JOIN public.locations l ON l.id = sr.location_id
+    JOIN public.staff_users su ON su.id = sr.staff_user_id
+    WHERE su.org_id = p_org_id AND su.is_deleted = false
+    GROUP BY sr.staff_user_id
+  )
+  SELECT COALESCE(jsonb_agg(staff_row ORDER BY su.created_at), '[]'::jsonb) INTO v_result
+  FROM public.staff_users su
+  LEFT JOIN staff_roles_agg sra ON sra.staff_user_id = su.id
+  CROSS JOIN LATERAL (
     SELECT jsonb_build_object(
       'id', su.id,
-      'auth_uid', su.auth_uid,
       'full_name', su.full_name,
       'username', su.username,
       'is_active', su.is_active,
       'is_deleted', su.is_deleted,
       'created_at', su.created_at,
-      'roles', COALESCE((
-        SELECT jsonb_agg(jsonb_build_object(
-          'role', sr.role,
-          'location_id', sr.location_id,
-          'location_name', l.name
-        ))
-        FROM public.staff_roles sr
-        JOIN public.locations l ON l.id = sr.location_id
-        WHERE sr.staff_user_id = su.id
-      ), '[]'::jsonb)
+      'roles', COALESCE(sra.roles, '[]'::jsonb)
     ) AS staff_row
-    FROM public.staff_users su
-    WHERE su.org_id = p_org_id
-      AND su.is_deleted = false
-      AND (p_location_id IS NULL OR su.id IN (
-        SELECT sr2.staff_user_id FROM public.staff_roles sr2 WHERE sr2.location_id = p_location_id
-      ))
-    ORDER BY su.created_at
-  ) sub;
+  ) lr
+  WHERE su.org_id = p_org_id
+    AND su.is_deleted = false
+    AND (p_location_id IS NULL OR su.id IN (
+      SELECT sr2.staff_user_id FROM public.staff_roles sr2 WHERE sr2.location_id = p_location_id
+    ));
 
   RETURN v_result;
 END;

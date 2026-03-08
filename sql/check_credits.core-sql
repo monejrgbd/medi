@@ -1,0 +1,40 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.check_credits(
+  p_org_id uuid
+)
+RETURNS numeric
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_total int;
+  v_used numeric;
+BEGIN
+  SELECT credits_total, credits_used INTO v_total, v_used
+  FROM public.organizations
+  WHERE id = p_org_id;
+
+  IF v_total IS NULL THEN
+    RETURN 0;
+  END IF;
+
+  RETURN GREATEST(v_total - v_used, 0);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.check_credits(
+  p_org_id uuid
+)
+RETURNS numeric
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.check_credits(p_org_id);
+END;
+$$;

@@ -1,0 +1,85 @@
+CREATE TABLE public.visits (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id                uuid NOT NULL REFERENCES public.organizations(id),
+  location_id           uuid NOT NULL REFERENCES public.locations(id),
+  patient_id            uuid NOT NULL REFERENCES public.patients(id),
+  session_token         uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
+  status                text NOT NULL DEFAULT 'pending_approval'
+    CHECK (status IN (
+      'pending_approval', 'still_answering_ai', 'waiting_doctor_claim',
+      'claimed_by_doctor', 'completed', 'left'
+    )),
+  priority              smallint DEFAULT 1 CHECK (priority BETWEEN 1 AND 3),
+  is_sensitive          boolean DEFAULT false,
+  is_follow_up          boolean DEFAULT false,
+  follow_up_of          uuid REFERENCES public.visits(id),
+  has_previous_visits   boolean DEFAULT false,
+  ai_started_at         timestamptz,
+  ai_completed_at       timestamptz,
+  entered_queue_at      timestamptz,
+  claimed_by            uuid REFERENCES public.staff_users(id),
+  claimed_at            timestamptz,
+  completed_at          timestamptz,
+  ai_summary            text,
+  ai_structured_card    jsonb,
+  ai_diagnostic         text,
+  doctor_diagnosis      text,
+  credits_charged       numeric DEFAULT 0,
+  ai_model_used         text,
+  has_referral          boolean DEFAULT false,
+  summary_token         uuid UNIQUE,
+  summary_sms_sent      boolean DEFAULT false,
+  review_sms_sent       boolean DEFAULT false,
+  timeout_flagged       boolean DEFAULT false,
+  is_return_visit       boolean DEFAULT false,
+  patient_approved      boolean DEFAULT false,
+  patient_approved_at   timestamptz,
+  gave_tablet           boolean DEFAULT false,
+  handled               boolean DEFAULT false,
+  updated_at            timestamptz DEFAULT now(),
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.visits ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_visits" ON public.visits FOR SELECT
+  USING (org_id = requesting_org_id());
+
+-- Patient access: unauthenticated patients read visits via SECURITY DEFINER
+-- functions (get_patient_session, give_patient_consent) which bypass RLS.
+-- No direct RLS policy needed — patients never query the table directly.
+
+-- Queue ordering: location + status + priority (desc) + arrival (asc)
+CREATE INDEX idx_visits_queue
+  ON public.visits (location_id, status, priority DESC, created_at ASC);
+
+-- Patient visit history
+CREATE INDEX idx_visits_patient
+  ON public.visits (patient_id, created_at DESC);
+
+-- Doctor claimed visits
+CREATE INDEX idx_visits_claimed
+  ON public.visits (claimed_by, status);
+
+-- Org-wide recent visits
+CREATE INDEX idx_visits_org
+  ON public.visits (org_id, created_at DESC);
+
+-- AI timeout detection
+CREATE INDEX idx_visits_ai_timeout
+  ON public.visits (ai_started_at)
+  WHERE status = 'still_answering_ai';
+
+-- Stale queue detection
+CREATE INDEX idx_visits_stale_queue
+  ON public.visits (entered_queue_at)
+  WHERE status = 'waiting_doctor_claim';
+
+-- Completed visits analytics (Phase 10)
+CREATE INDEX idx_visits_completed
+  ON public.visits (location_id, completed_at)
+  WHERE completed_at IS NOT NULL;
+
+-- Realtime: publish visit changes + full replica identity for old-record diffing
+ALTER PUBLICATION supabase_realtime ADD TABLE visits;
+ALTER TABLE visits REPLICA IDENTITY FULL;

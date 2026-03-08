@@ -22,25 +22,24 @@ export default function OwnerSignUpForm() {
       return;
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters");
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
       return;
     }
 
     setLoading(true);
+
     const supabase = createClient();
 
-    // 1. Sign up with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    // 1. Create auth user via client-side signUp (establishes session directly)
+    const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { full_name: fullName },
-      },
+      options: { data: { full_name: fullName } },
     });
 
-    if (authError) {
-      setError(authError.message);
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
       return;
     }
@@ -51,7 +50,7 @@ export default function OwnerSignUpForm() {
       return;
     }
 
-    // 2. Create organization via RPC
+    // 2. Create organization via RPC (auth.uid() guard ensures user can only create for themselves)
     const { data: orgResult, error: orgError } = await supabase.rpc(
       "create_organization",
       {
@@ -61,14 +60,10 @@ export default function OwnerSignUpForm() {
       }
     );
 
-    if (orgError) {
-      setError(orgError.message);
-      setLoading(false);
-      return;
-    }
-
-    if (orgResult && !orgResult.success) {
-      setError(orgResult.error || "Failed to create organization");
+    if (orgError || (orgResult && !orgResult.success)) {
+      setError(
+        orgError?.message || orgResult?.error || "Failed to create organization"
+      );
       setLoading(false);
       return;
     }
@@ -128,7 +123,7 @@ export default function OwnerSignUpForm() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
-          placeholder="At least 6 characters"
+          placeholder="At least 8 characters"
         />
       </div>
 

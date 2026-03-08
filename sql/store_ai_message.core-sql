@@ -1,0 +1,45 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.store_ai_message(
+  p_caller_role text,
+  p_visit_id uuid,
+  p_content text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- Service-role only check is in the public wrapper
+
+  IF p_content IS NULL OR trim(p_content) = '' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Content cannot be empty');
+  END IF;
+
+  INSERT INTO public.visit_messages (visit_id, role, content)
+  VALUES (p_visit_id, 'ai', p_content);
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.store_ai_message(
+  p_visit_id uuid,
+  p_content text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.store_ai_message(auth.role(), p_visit_id, p_content);
+END;
+$$;

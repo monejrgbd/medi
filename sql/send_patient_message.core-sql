@@ -1,0 +1,72 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.send_patient_message(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_content text,
+  p_content_original text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_clean text;
+BEGIN
+  -- Look up visit
+  SELECT v.id, v.status, v.session_token, v.created_at
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.session_token <> p_session_token THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+  END IF;
+
+  IF v_visit.status <> 'still_answering_ai' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not in AI conversation state');
+  END IF;
+
+  -- 24-hour session expiry
+  IF v_visit.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+  END IF;
+
+  -- Strip HTML and enforce 5000-char limit
+  v_clean := trim(regexp_replace(p_content, '<[^>]*>', '', 'g'));
+  IF length(v_clean) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Message cannot be empty');
+  END IF;
+  v_clean := substring(v_clean, 1, 5000);
+
+  -- Insert patient message
+  INSERT INTO public.visit_messages (visit_id, role, content, content_original)
+  VALUES (p_visit_id, 'patient', v_clean, p_content_original);
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.send_patient_message(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_content text,
+  p_content_original text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.send_patient_message(p_visit_id, p_session_token, p_content, p_content_original);
+END;
+$$;

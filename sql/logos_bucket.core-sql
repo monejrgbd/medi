@@ -1,0 +1,38 @@
+-- logos bucket (public) — location logos
+-- Path pattern: {org_id}/{location_id}/logo
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('logos', 'logos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- SELECT: public access
+DROP POLICY IF EXISTS "logos_public_read" ON storage.objects;
+CREATE POLICY "logos_public_read" ON storage.objects FOR SELECT
+  USING (bucket_id = 'logos');
+
+-- INSERT: authenticated, org match
+DROP POLICY IF EXISTS "logos_org_insert" ON storage.objects;
+CREATE POLICY "logos_org_insert" ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'logos'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );
+
+-- UPDATE: authenticated, org match
+DROP POLICY IF EXISTS "logos_org_update" ON storage.objects;
+CREATE POLICY "logos_org_update" ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'logos'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );
+
+-- DELETE: authenticated, org match
+DROP POLICY IF EXISTS "logos_org_delete" ON storage.objects;
+CREATE POLICY "logos_org_delete" ON storage.objects FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'logos'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );

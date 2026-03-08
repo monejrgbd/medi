@@ -1,0 +1,71 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.give_patient_consent(
+  p_session_token uuid,
+  p_language text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_allowed_languages text[] := ARRAY[
+    'en','es','fr','de','pt','it','ja','ko','zh','nl','ru','ar','hi','tr',
+    'vi','th','id','pl','sv','uk','af','sq','am','hy','az','eu','be','bn',
+    'bs','bg','ca','ceb','ny','co','hr','cs','da','eo','et','tl','fi','fy',
+    'gl','ka','el','gu','ht','ha','haw','he','hmn','hu','is','ig','ga','jw',
+    'kn','kk','km','rw','ku','ky','lo','la','lv','lt','lb','mk','mg','ms',
+    'ml','mt','mi','mr','mn','my','ne','no','or','ps','fa','ro','sm','gd',
+    'sr','st','sn','sd','si','sk','sl','so','su','sw','tg','ta','tt','te',
+    'ur','ug','uz','cy','xh','yi','yo','zu'
+  ];
+BEGIN
+  -- Validate language
+  IF p_language IS NULL OR NOT (p_language = ANY(v_allowed_languages)) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid language');
+  END IF;
+
+  -- Look up visit by session token
+  SELECT v.id, v.patient_id, v.created_at
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.session_token = p_session_token;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session not found');
+  END IF;
+
+  -- Reject expired sessions
+  IF v_visit.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+  END IF;
+
+  -- Update patient consent and language
+  UPDATE public.patients
+  SET consent_given = true,
+      consent_given_at = now(),
+      language = p_language,
+      updated_at = now()
+  WHERE id = v_visit.patient_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable, no auth.uid() capture)
+CREATE OR REPLACE FUNCTION public.give_patient_consent(
+  p_session_token uuid,
+  p_language text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.give_patient_consent(p_session_token, p_language);
+END;
+$$;

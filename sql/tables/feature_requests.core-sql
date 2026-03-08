@@ -1,0 +1,14 @@
+CREATE TABLE public.feature_requests (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_user_id         uuid REFERENCES public.staff_users(id),
+  org_id                uuid REFERENCES public.organizations(id),
+  content               text NOT NULL,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.feature_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "own_requests_read" ON public.feature_requests FOR SELECT
+  USING (staff_user_id = (
+    SELECT su.id FROM staff_users su WHERE su.auth_uid = auth.uid() LIMIT 1
+  ));

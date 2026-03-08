@@ -1,0 +1,48 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.update_chronic_conditions(
+  p_caller_role text,
+  p_patient_id uuid,
+  p_conditions text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- Mark removed items inactive
+  UPDATE public.patient_chronic_conditions
+  SET active = false, updated_at = now()
+  WHERE patient_id = p_patient_id AND active = true
+    AND name NOT IN (SELECT unnest(p_conditions));
+
+  -- Upsert new/existing
+  INSERT INTO public.patient_chronic_conditions (patient_id, name, active, updated_at)
+  SELECT p_patient_id, unnest(p_conditions), true, now()
+  ON CONFLICT (patient_id, name) DO UPDATE
+    SET active = true, updated_at = now();
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.update_chronic_conditions(
+  p_patient_id uuid,
+  p_conditions text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.update_chronic_conditions(auth.role(), p_patient_id, p_conditions);
+END;
+$$;

@@ -1,0 +1,48 @@
+-- Trigger function: sends async HTTP call to broadcast edge function on visit status change
+CREATE OR REPLACE FUNCTION private.notify_visit_status_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_edge_url text;
+  v_secret text;
+BEGIN
+  -- Read from Supabase Vault
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+  SELECT decrypted_secret INTO v_secret
+  FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  -- Only fire if edge function is configured
+  IF v_edge_url IS NOT NULL AND v_edge_url <> '' AND v_secret IS NOT NULL AND v_secret <> '' THEN
+    PERFORM net.http_post(
+      url := v_edge_url || '/broadcast-visit-update',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'x-internal-secret', v_secret
+      ),
+      body := jsonb_build_object(
+        'visit_id', NEW.id,
+        'session_token', NEW.session_token,
+        'old_status', OLD.status,
+        'new_status', NEW.status,
+        'location_id', NEW.location_id,
+        'timeout_flagged', NEW.timeout_flagged
+      )
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger: fires on status column update (after audit trigger)
+DROP TRIGGER IF EXISTS trg_visit_broadcast ON public.visits;
+CREATE TRIGGER trg_visit_broadcast
+  AFTER UPDATE OF status ON public.visits
+  FOR EACH ROW
+  WHEN (OLD.status IS DISTINCT FROM NEW.status)
+  EXECUTE FUNCTION private.notify_visit_status_change();

@@ -1,0 +1,84 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_similar_patients(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_first_name text,
+  p_last_name text,
+  p_birthday date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_full_name text;
+  v_result jsonb;
+BEGIN
+  -- Verify caller is in org
+  SELECT su.id, su.org_id INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_org_id IS NULL OR v_caller_org_id <> p_org_id THEN
+    -- Also check if owner
+    IF NOT EXISTS(SELECT 1 FROM public.organizations WHERE id = p_org_id AND owner_id = p_caller_auth_uid) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  v_full_name := p_first_name || ' ' || p_last_name;
+
+  SELECT jsonb_build_object(
+    'success', true,
+    'patients', COALESCE(jsonb_agg(
+      jsonb_build_object(
+        'patient_id', sub.id,
+        'first_name', sub.first_name,
+        'last_name', sub.last_name,
+        'birthday', sub.birthday,
+        'similarity_score', sub.sim
+      ) ORDER BY sub.sim DESC
+    ), '[]'::jsonb)
+  ) INTO v_result
+  FROM (
+    SELECT p.id, p.first_name, p.last_name, p.birthday,
+           similarity(p.first_name || ' ' || p.last_name, v_full_name) AS sim
+    FROM public.patients p
+    WHERE p.org_id = p_org_id
+      AND (
+        p.birthday = p_birthday
+        OR similarity(p.first_name || ' ' || p.last_name, v_full_name) > 0.3
+      )
+    ORDER BY similarity(p.first_name || ' ' || p.last_name, v_full_name) DESC
+    LIMIT 5
+  ) sub;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_similar_patients(
+  p_org_id uuid,
+  p_first_name text,
+  p_last_name text,
+  p_birthday date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_similar_patients(v_auth_uid, p_org_id, p_first_name, p_last_name, p_birthday);
+END;
+$$;

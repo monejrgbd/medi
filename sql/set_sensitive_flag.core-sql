@@ -1,0 +1,39 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.set_sensitive_flag(
+  p_caller_role text,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  UPDATE public.visits
+  SET is_sensitive = true,
+      updated_at = now()
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.set_sensitive_flag(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.set_sensitive_flag(auth.role(), p_visit_id);
+END;
+$$;

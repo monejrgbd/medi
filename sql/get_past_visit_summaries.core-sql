@@ -1,0 +1,47 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_past_visit_summaries(
+  p_patient_id uuid,
+  p_limit int DEFAULT 10
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_summaries jsonb;
+BEGIN
+  SELECT COALESCE(jsonb_agg(row_to_json(s)), '[]'::jsonb)
+  INTO v_summaries
+  FROM (
+    SELECT v.id AS visit_id, v.ai_summary, v.created_at,
+           l.name AS location_name
+    FROM public.visits v
+    JOIN public.locations l ON l.id = v.location_id
+    WHERE v.patient_id = p_patient_id
+      AND v.status = 'completed'
+      AND v.ai_summary IS NOT NULL
+    ORDER BY v.created_at DESC
+    LIMIT p_limit
+  ) s;
+
+  RETURN v_summaries;
+END;
+$$;
+
+-- Public wrapper (service-role callable)
+CREATE OR REPLACE FUNCTION public.get_past_visit_summaries(
+  p_patient_id uuid,
+  p_limit int DEFAULT 10
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.get_past_visit_summaries(p_patient_id, p_limit);
+END;
+$$;

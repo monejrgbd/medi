@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
@@ -38,6 +40,60 @@ export type Database = {
           {
             foreignKeyName: "approval_codes_used_by_org_id_fkey"
             columns: ["used_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_trail: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_type: string | null
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          location_id: string | null
+          org_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_type?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          location_id?: string | null
+          org_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_type?: string | null
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          location_id?: string | null
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_trail_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_trail_org_id_fkey"
+            columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -307,6 +363,155 @@ export type Database = {
         }
         Relationships: []
       }
+      patient_allergies: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+          patient_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+          patient_id: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_allergies_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_chronic_conditions: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+          patient_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+          patient_id: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_chronic_conditions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_medications: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+          patient_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+          patient_id: string
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_medications_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          birthday: string
+          collision_flag: boolean | null
+          consent_given: boolean | null
+          consent_given_at: string | null
+          created_at: string | null
+          first_name: string
+          id: string
+          language: string | null
+          last_name: string
+          org_id: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          birthday: string
+          collision_flag?: boolean | null
+          consent_given?: boolean | null
+          consent_given_at?: string | null
+          created_at?: string | null
+          first_name: string
+          id?: string
+          language?: string | null
+          last_name: string
+          org_id: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          birthday?: string
+          collision_flag?: boolean | null
+          consent_given?: boolean | null
+          consent_given_at?: string | null
+          created_at?: string | null
+          first_name?: string
+          id?: string
+          language?: string | null
+          last_name?: string
+          org_id?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff_checkins: {
         Row: {
           checked_in_at: string | null
@@ -461,13 +666,180 @@ export type Database = {
           },
         ]
       }
+      visit_addendums: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          visit_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          visit_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_addendums_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visit_messages: {
+        Row: {
+          content: string
+          content_original: string | null
+          created_at: string | null
+          id: string
+          role: string
+          visit_id: string
+        }
+        Insert: {
+          content: string
+          content_original?: string | null
+          created_at?: string | null
+          id?: string
+          role: string
+          visit_id: string
+        }
+        Update: {
+          content?: string
+          content_original?: string | null
+          created_at?: string | null
+          id?: string
+          role?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_messages_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      visits: {
+        Row: {
+          ai_completed_at: string | null
+          ai_diagnostic: Json | null
+          ai_started_at: string | null
+          claimed_at: string | null
+          claimed_by: string | null
+          completed_at: string | null
+          created_at: string | null
+          entered_queue_at: string | null
+          gave_tablet: boolean | null
+          handled: boolean | null
+          has_previous_visits: boolean | null
+          id: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          priority: number | null
+          session_token: string
+          status: string
+        }
+        Insert: {
+          ai_completed_at?: string | null
+          ai_diagnostic?: Json | null
+          ai_started_at?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          entered_queue_at?: string | null
+          gave_tablet?: boolean | null
+          handled?: boolean | null
+          has_previous_visits?: boolean | null
+          id?: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          priority?: number | null
+          session_token?: string
+          status?: string
+        }
+        Update: {
+          ai_completed_at?: string | null
+          ai_diagnostic?: Json | null
+          ai_started_at?: string | null
+          claimed_at?: string | null
+          claimed_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          entered_queue_at?: string | null
+          gave_tablet?: boolean | null
+          handled?: boolean | null
+          has_previous_visits?: boolean | null
+          id?: string
+          location_id?: string
+          org_id?: string
+          patient_id?: string
+          priority?: number | null
+          session_token?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visits_claimed_by_fkey"
+            columns: ["claimed_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      approve_patient: { Args: { p_visit_id: string }; Returns: Json }
       assign_role: {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
+        Returns: Json
+      }
+      check_location_active: { Args: { p_location_id: string }; Returns: Json }
+      checkin_patient: {
+        Args: {
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
+        }
         Returns: Json
       }
       create_location: {
@@ -501,22 +873,49 @@ export type Database = {
       }
       deactivate_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
+      deny_patient: { Args: { p_visit_id: string }; Returns: Json }
+      get_location_detail: { Args: { p_location_id: string }; Returns: Json }
+      get_locations: { Args: never; Returns: Json }
       get_my_org: { Args: never; Returns: Json }
       get_my_roles: { Args: never; Returns: Json }
       get_organization_overview: { Args: never; Returns: Json }
+      get_patient_session: { Args: { p_session_token: string }; Returns: Json }
+      get_pending_approvals: { Args: { p_location_id: string }; Returns: Json }
+      get_receptionist_counts: {
+        Args: { p_location_id: string }
+        Returns: Json
+      }
+      get_similar_patients: {
+        Args: {
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
       get_staff_list: {
         Args: { p_location_id?: string; p_org_id: string }
         Returns: Json
       }
       get_waitlist_count: { Args: never; Returns: number }
+      give_patient_consent: {
+        Args: { p_language: string; p_session_token: string }
+        Returns: Json
+      }
+      handle_patient: { Args: { p_visit_id: string }; Returns: Json }
+      mark_patient_left: { Args: { p_visit_id: string }; Returns: Json }
       remove_role: {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
         Returns: Json
       }
+      requesting_org_id: { Args: never; Returns: string }
       reset_staff_password: {
         Args: { p_new_password: string; p_staff_user_id: string }
         Returns: Json
       }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       staff_check_in: {
         Args: {
           p_location_id: string
@@ -525,7 +924,12 @@ export type Database = {
         }
         Returns: Json
       }
-      staff_check_out: { Args: { p_staff_user_id?: string }; Returns: Json }
+      staff_check_out:
+        | { Args: { p_staff_user_id?: string }; Returns: Json }
+        | {
+            Args: { p_force?: boolean; p_staff_user_id?: string }
+            Returns: Json
+          }
       submit_contact: {
         Args: {
           p_city?: string
@@ -551,21 +955,40 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_location: {
-        Args: {
-          p_address?: string
-          p_ai_model?: string
-          p_display_format?: string
-          p_location_id: string
-          p_name?: string
-          p_operating_hours?: Json
-          p_referral_email?: string
-          p_specialty?: string
-          p_tablet_count?: number
-          p_timezone?: string
-        }
-        Returns: Json
-      }
+      toggle_gave_tablet: { Args: { p_visit_id: string }; Returns: Json }
+      update_location:
+        | {
+            Args: {
+              p_address?: string
+              p_ai_model?: string
+              p_display_format?: string
+              p_location_id: string
+              p_name?: string
+              p_operating_hours?: Json
+              p_referral_email?: string
+              p_specialty?: string
+              p_tablet_count?: number
+              p_timezone?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_ai_model?: string
+              p_display_format?: string
+              p_location_id: string
+              p_logo_url?: string
+              p_name?: string
+              p_operating_hours?: Json
+              p_referral_email?: string
+              p_specialty?: string
+              p_tablet_count?: number
+              p_timezone?: string
+            }
+            Returns: Json
+          }
+      update_organization: { Args: { p_name: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

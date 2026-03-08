@@ -1,0 +1,19 @@
+CREATE TABLE public.patient_medications (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id            uuid NOT NULL REFERENCES public.patients(id),
+  name                  text NOT NULL,
+  active                boolean DEFAULT true,
+  created_at            timestamptz DEFAULT now(),
+  updated_at            timestamptz DEFAULT now(),
+  CONSTRAINT uq_patient_medications UNIQUE (patient_id, name)
+);
+
+ALTER TABLE public.patient_medications ENABLE ROW LEVEL SECURITY;
+
+-- Default-deny: all access via SECURITY DEFINER functions only
+CREATE POLICY "access_via_functions_only" ON public.patient_medications FOR ALL
+  USING (false);
+
+CREATE INDEX idx_patient_meds_active
+  ON public.patient_medications (patient_id)
+  WHERE active = true;

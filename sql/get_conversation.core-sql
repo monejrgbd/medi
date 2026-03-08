@@ -1,0 +1,93 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_conversation(
+  p_caller_role text,
+  p_visit_id uuid,
+  p_session_token uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_messages jsonb;
+  v_is_service_role boolean;
+BEGIN
+  v_is_service_role := (p_caller_role = 'service_role');
+
+  -- Look up visit
+  SELECT v.id, v.session_token, v.created_at
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Authorization: either service_role or valid session_token
+  IF NOT v_is_service_role THEN
+    IF p_session_token IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+
+    IF v_visit.session_token <> p_session_token THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+    END IF;
+
+    -- 24-hour session expiry for patient callers
+    IF v_visit.created_at < now() - interval '24 hours' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+    END IF;
+  END IF;
+
+  -- Get messages: service_role gets all (including cached system prompt);
+  -- patient gets all except the first system-role message (the cached prompt)
+  IF v_is_service_role THEN
+    SELECT COALESCE(jsonb_agg(row_to_json(m) ORDER BY m.created_at ASC), '[]'::jsonb)
+    INTO v_messages
+    FROM (
+      SELECT vm.id, vm.role, vm.content, vm.content_original, vm.created_at
+      FROM public.visit_messages vm
+      WHERE vm.visit_id = p_visit_id
+      ORDER BY vm.created_at ASC
+      LIMIT 500
+    ) m;
+  ELSE
+    -- Exclude the first system message (cached prompt), include greeting + rest
+    SELECT COALESCE(jsonb_agg(row_to_json(m) ORDER BY m.created_at ASC), '[]'::jsonb)
+    INTO v_messages
+    FROM (
+      SELECT vm.id, vm.role, vm.content, vm.created_at
+      FROM public.visit_messages vm
+      WHERE vm.visit_id = p_visit_id
+      ORDER BY vm.created_at ASC
+      LIMIT 500
+      OFFSET 1
+    ) m;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'messages', v_messages
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_conversation(
+  p_visit_id uuid,
+  p_session_token uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.get_conversation(auth.role(), p_visit_id, p_session_token);
+END;
+$$;

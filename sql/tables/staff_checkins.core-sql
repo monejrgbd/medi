@@ -1,0 +1,27 @@
+CREATE TABLE public.staff_checkins (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  staff_user_id         uuid NOT NULL REFERENCES public.staff_users(id),
+  location_id           uuid NOT NULL REFERENCES public.locations(id),
+  role                  text NOT NULL,
+  checked_in_at         timestamptz DEFAULT now(),
+  checked_out_at        timestamptz,
+  shift_duration        interval
+);
+
+ALTER TABLE public.staff_checkins ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_checkins" ON public.staff_checkins FOR SELECT
+  USING (staff_user_id IN (
+    SELECT su.id FROM staff_users su WHERE su.org_id = requesting_org_id()
+  ));
+
+CREATE INDEX idx_staff_checkins_active ON public.staff_checkins(location_id, checked_out_at)
+  WHERE checked_out_at IS NULL;
+
+-- Analytics: location-level shift history
+CREATE INDEX idx_checkins_analytics
+  ON public.staff_checkins (location_id, checked_in_at);
+
+-- Staff shift history
+CREATE INDEX idx_checkins_staff
+  ON public.staff_checkins (staff_user_id, checked_in_at DESC);

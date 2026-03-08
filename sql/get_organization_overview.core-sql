@@ -10,11 +10,20 @@ DECLARE
   v_org_id uuid;
   v_result jsonb;
 BEGIN
+  -- Try staff_users first
   SELECT su.org_id INTO v_org_id
   FROM public.staff_users su
   WHERE su.auth_uid = p_caller_auth_uid
     AND su.is_deleted = false
   LIMIT 1;
+
+  -- Fallback: check if caller is an org owner
+  IF v_org_id IS NULL THEN
+    SELECT id INTO v_org_id
+    FROM public.organizations
+    WHERE owner_id = p_caller_auth_uid
+    LIMIT 1;
+  END IF;
 
   IF v_org_id IS NULL THEN
     RETURN '{}'::jsonb;
@@ -35,11 +44,17 @@ BEGIN
       'created_at', o.created_at
     ),
     'location_count', (SELECT count(*) FROM public.locations WHERE org_id = v_org_id),
-    'staff_count', (SELECT count(*) FROM public.staff_users WHERE org_id = v_org_id AND is_deleted = false),
-    'active_staff_count', (SELECT count(*) FROM public.staff_users WHERE org_id = v_org_id AND is_active = true AND is_deleted = false)
+    'staff_count', sc.staff_count,
+    'active_staff_count', sc.active_staff_count
   )
   INTO v_result
   FROM public.organizations o
+  CROSS JOIN LATERAL (
+    SELECT
+      count(*) FILTER (WHERE NOT is_deleted) AS staff_count,
+      count(*) FILTER (WHERE is_active AND NOT is_deleted) AS active_staff_count
+    FROM public.staff_users WHERE org_id = v_org_id
+  ) sc
   WHERE o.id = v_org_id;
 
   RETURN COALESCE(v_result, '{}'::jsonb);

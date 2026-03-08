@@ -1,0 +1,45 @@
+-- Trigger function: logs visit status changes to audit_trail
+CREATE OR REPLACE FUNCTION private.log_visit_status_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_actor_id text;
+  v_actor_type text;
+  v_action text;
+BEGIN
+  -- Read audit context from session variables (set by calling function)
+  v_actor_id := current_setting('app.audit_actor_id', true);
+  v_actor_type := current_setting('app.audit_actor_type', true);
+  v_action := current_setting('app.audit_action', true);
+
+  INSERT INTO public.audit_trail (
+    org_id, location_id, actor_id, actor_type, action,
+    entity_type, entity_id, details
+  ) VALUES (
+    NEW.org_id,
+    NEW.location_id,
+    CASE WHEN v_actor_id IS NOT NULL AND v_actor_id <> '' THEN v_actor_id::uuid ELSE NULL END,
+    NULLIF(v_actor_type, ''),
+    COALESCE(NULLIF(v_action, ''), 'status_change'),
+    'visit',
+    NEW.id,
+    jsonb_build_object(
+      'old_status', OLD.status,
+      'new_status', NEW.status
+    )
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+-- Trigger: fires on status column update
+DROP TRIGGER IF EXISTS trg_visit_status_audit ON public.visits;
+CREATE TRIGGER trg_visit_status_audit
+  AFTER UPDATE OF status ON public.visits
+  FOR EACH ROW
+  WHEN (OLD.status IS DISTINCT FROM NEW.status)
+  EXECUTE FUNCTION private.log_visit_status_change();

@@ -1,0 +1,59 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.check_location_active(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_location record;
+  v_active boolean;
+BEGIN
+  -- Validate location exists
+  SELECT l.id, l.name, l.specialty, l.operating_hours, l.logo_url,
+         o.name AS org_name
+  INTO v_location
+  FROM public.locations l
+  JOIN public.organizations o ON o.id = l.org_id
+  WHERE l.id = p_location_id;
+
+  IF v_location IS NULL THEN
+    RETURN jsonb_build_object('active', false, 'error', 'Location not found');
+  END IF;
+
+  -- Check if a receptionist is currently checked in at this location
+  SELECT EXISTS(
+    SELECT 1 FROM public.staff_checkins sc
+    WHERE sc.location_id = p_location_id
+      AND sc.role = 'receptionist'
+      AND sc.checked_out_at IS NULL
+  ) INTO v_active;
+
+  RETURN jsonb_build_object(
+    'active', v_active,
+    'location_name', v_location.name,
+    'specialty', v_location.specialty,
+    'operating_hours', v_location.operating_hours,
+    'org_name', v_location.org_name,
+    'logo_url', v_location.logo_url
+  );
+END;
+$$;
+
+-- Public wrapper (anon-callable, no auth.uid() capture)
+CREATE OR REPLACE FUNCTION public.check_location_active(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.check_location_active(p_location_id);
+END;
+$$;

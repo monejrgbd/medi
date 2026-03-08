@@ -1,0 +1,64 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_patient_session(
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+BEGIN
+  -- Look up visit by session token
+  SELECT v.id AS visit_id, v.status, v.has_previous_visits, v.created_at,
+         v.timeout_flagged, v.ai_summary, v.ai_structured_card, v.ai_completed_at,
+         p.first_name AS patient_first_name, p.language, p.consent_given,
+         l.name AS location_name
+  INTO v_visit
+  FROM public.visits v
+  JOIN public.patients p ON p.id = v.patient_id
+  JOIN public.locations l ON l.id = v.location_id
+  WHERE v.session_token = p_session_token;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session not found');
+  END IF;
+
+  -- Reject if visit created more than 24 hours ago
+  IF v_visit.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'visit_id', v_visit.visit_id,
+    'status', v_visit.status,
+    'patient_first_name', v_visit.patient_first_name,
+    'location_name', v_visit.location_name,
+    'has_previous_visits', v_visit.has_previous_visits,
+    'language', v_visit.language,
+    'consent_given', v_visit.consent_given,
+    'timeout_flagged', v_visit.timeout_flagged,
+    'ai_summary', v_visit.ai_summary,
+    'ai_structured_card', v_visit.ai_structured_card,
+    'ai_completed_at', v_visit.ai_completed_at
+  );
+END;
+$$;
+
+-- Public wrapper (anon-callable, no auth.uid() capture)
+CREATE OR REPLACE FUNCTION public.get_patient_session(
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.get_patient_session(p_session_token);
+END;
+$$;

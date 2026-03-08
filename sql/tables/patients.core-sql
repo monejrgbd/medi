@@ -1,0 +1,42 @@
+CREATE TABLE public.patients (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id                uuid NOT NULL REFERENCES public.organizations(id),
+  first_name            text NOT NULL,
+  last_name             text NOT NULL,
+  birthday              date NOT NULL,
+  phone                 text,
+  phone_verified        boolean DEFAULT false,
+  language              text DEFAULT 'en',
+  consent_given         boolean DEFAULT false,
+  consent_given_at      timestamptz,
+  collision_flag         boolean DEFAULT false,
+  is_orphaned           boolean DEFAULT false,
+  created_at            timestamptz DEFAULT now(),
+  updated_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.patients ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_patients" ON public.patients FOR SELECT
+  USING (org_id = requesting_org_id());
+
+-- Uniqueness: prevent duplicate patients (same name+birthday) within org
+CREATE UNIQUE INDEX idx_patients_unique_no_phone
+  ON public.patients (org_id, lower(first_name), lower(last_name), birthday)
+  WHERE phone IS NULL;
+
+CREATE UNIQUE INDEX idx_patients_unique_with_phone
+  ON public.patients (org_id, lower(first_name), lower(last_name), birthday, phone)
+  WHERE phone IS NOT NULL;
+
+-- Lookup indexes
+CREATE INDEX idx_patients_identity
+  ON public.patients (org_id, lower(first_name), lower(last_name), birthday);
+
+CREATE INDEX idx_patients_phone
+  ON public.patients (org_id, phone)
+  WHERE phone IS NOT NULL;
+
+-- Fuzzy name search (pg_trgm)
+CREATE INDEX idx_patients_name_trgm
+  ON public.patients USING gin ((first_name || ' ' || last_name) gin_trgm_ops);

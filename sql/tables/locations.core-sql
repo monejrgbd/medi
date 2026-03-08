@@ -1,0 +1,23 @@
+CREATE TABLE public.locations (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id                uuid NOT NULL REFERENCES public.organizations(id),
+  name                  text NOT NULL,
+  address               text,
+  operating_hours       jsonb,
+  specialty             text,
+  logo_url              text,
+  qr_code_url           text,
+  ai_model              text DEFAULT 'standard'
+    CHECK (ai_model = ANY (ARRAY['standard', 'advanced'])),
+  display_format        text DEFAULT 'summary'
+    CHECK (display_format = ANY (ARRAY['summary', 'structured_card'])),
+  referral_email        text,
+  tablet_count          int DEFAULT 0,
+  timezone              text DEFAULT 'America/Toronto',
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_locations" ON public.locations FOR SELECT
+  USING (org_id = requesting_org_id());

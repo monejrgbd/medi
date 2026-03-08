@@ -1,0 +1,91 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.deduct_credits(
+  p_caller_role text,
+  p_org_id uuid,
+  p_visit_id uuid,
+  p_ai_model text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_amount numeric;
+  v_remaining numeric;
+  v_existing_log uuid;
+BEGIN
+  -- Determine credit amount
+  IF p_ai_model = 'advanced' THEN
+    v_amount := 4;
+  ELSE
+    v_amount := 1.5;
+  END IF;
+
+  -- Prevent double-deduction: check credits_log for existing entry
+  SELECT id INTO v_existing_log
+  FROM public.credits_log
+  WHERE visit_id = p_visit_id;
+
+  IF v_existing_log IS NOT NULL THEN
+    RETURN jsonb_build_object('success', true, 'already_deducted', true);
+  END IF;
+
+  -- Lock org row to prevent race conditions
+  SELECT credits_total, credits_used
+  INTO v_org
+  FROM public.organizations
+  WHERE id = p_org_id
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  v_remaining := v_org.credits_total - v_org.credits_used;
+
+  IF v_remaining < v_amount THEN
+    RETURN jsonb_build_object('success', false, 'error', 'no_credits');
+  END IF;
+
+  -- Deduct credits
+  UPDATE public.organizations
+  SET credits_used = credits_used + v_amount
+  WHERE id = p_org_id;
+
+  -- Log the deduction
+  INSERT INTO public.credits_log (org_id, visit_id, credits_amount, ai_model, description)
+  VALUES (p_org_id, p_visit_id, v_amount, p_ai_model, 'AI conversation credit deduction');
+
+  -- Update visit with credit info
+  UPDATE public.visits
+  SET credits_charged = v_amount,
+      ai_model_used = p_ai_model
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true, 'credits_deducted', v_amount);
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.deduct_credits(
+  p_org_id uuid,
+  p_visit_id uuid,
+  p_ai_model text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.deduct_credits(auth.role(), p_org_id, p_visit_id, p_ai_model);
+END;
+$$;

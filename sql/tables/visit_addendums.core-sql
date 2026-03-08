@@ -1,0 +1,15 @@
+CREATE TABLE public.visit_addendums (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  visit_id              uuid NOT NULL REFERENCES public.visits(id),
+  content               text NOT NULL,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.visit_addendums ENABLE ROW LEVEL SECURITY;
+
+-- Default-deny: all access via SECURITY DEFINER functions only
+CREATE POLICY "access_via_functions_only" ON public.visit_addendums FOR ALL
+  USING (false);
+
+CREATE INDEX idx_visit_addendums_visit
+  ON public.visit_addendums (visit_id);

@@ -1,0 +1,45 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.update_visit_priority(
+  p_caller_role text,
+  p_visit_id uuid,
+  p_priority smallint
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF p_priority < 1 OR p_priority > 3 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Priority must be between 1 and 3');
+  END IF;
+
+  UPDATE public.visits
+  SET priority = p_priority,
+      updated_at = now()
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.update_visit_priority(
+  p_visit_id uuid,
+  p_priority smallint
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.update_visit_priority(auth.role(), p_visit_id, p_priority);
+END;
+$$;
