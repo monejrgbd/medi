@@ -9,7 +9,7 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 DECLARE
-  v_total int;
+  v_total numeric;
   v_used numeric;
 BEGIN
   SELECT credits_total, credits_used INTO v_total, v_used
@@ -24,7 +24,7 @@ BEGIN
 END;
 $$;
 
--- Public wrapper (anon-callable)
+-- Public wrapper (service-role only — prevents leaking credit balance to anon callers)
 CREATE OR REPLACE FUNCTION public.check_credits(
   p_org_id uuid
 )
@@ -35,6 +35,10 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN NULL;
+  END IF;
+
   RETURN private.check_credits(p_org_id);
 END;
 $$;

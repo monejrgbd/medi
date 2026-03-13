@@ -24,10 +24,14 @@ DECLARE
   v_remaining numeric;
   v_returning_section text := '';
   v_past_section text := '';
+  v_follow_up_section text := '';
+  v_prior_visit record;
+  v_follow_up record;
 BEGIN
   -- Look up visit with joins
   SELECT v.id, v.status, v.session_token, v.patient_id, v.location_id,
-         v.org_id, v.has_previous_visits, v.created_at
+         v.org_id, v.has_previous_visits, v.created_at,
+         v.is_follow_up, v.follow_up_of
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -49,17 +53,15 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Session expired');
   END IF;
 
-  -- Check credits
-  v_remaining := private.check_credits(v_visit.org_id);
-  IF v_remaining <= 0 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'no_credits');
-  END IF;
-
   -- Load patient info
-  SELECT p.first_name, p.language, p.id
+  SELECT p.first_name, p.language, p.id, p.consent_given
   INTO v_patient
   FROM public.patients p
   WHERE p.id = v_visit.patient_id;
+
+  IF NOT COALESCE(v_patient.consent_given, false) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'consent_required');
+  END IF;
 
   -- Load location info
   SELECT l.name, l.specialty, l.ai_model, l.display_format
@@ -68,7 +70,7 @@ BEGIN
   WHERE l.id = v_visit.location_id;
 
   -- Load org info
-  SELECT o.name
+  SELECT o.name, o.subscription_plan
   INTO v_org
   FROM public.organizations o
   WHERE o.id = v_visit.org_id;
@@ -78,7 +80,25 @@ BEGIN
   FROM public.visit_messages vm
   WHERE vm.visit_id = p_visit_id;
 
+  -- For NEW conversations only: check subscription status
+  IF v_existing_messages = 0 THEN
+    IF v_org.subscription_plan IN ('expired', 'read_only', 'suspended') THEN
+      RETURN jsonb_build_object('success', false, 'error', 'subscription_inactive');
+    END IF;
+  END IF;
+
+  -- Check credits
+  v_remaining := private.check_credits(v_visit.org_id);
+  IF v_remaining <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'no_credits');
+  END IF;
+
   IF v_existing_messages > 0 THEN
+    -- Load follow-up fields for early return (page refresh of follow-up visit)
+    IF v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL THEN
+      SELECT ai_summary, completed_at INTO v_prior_visit
+      FROM public.visits WHERE id = v_visit.follow_up_of AND status = 'completed';
+    END IF;
     -- Already initialized, return context without re-inserting
     RETURN jsonb_build_object(
       'success', true,
@@ -89,7 +109,10 @@ BEGIN
       'org_name', v_org.name,
       'ai_model', v_location.ai_model,
       'display_format', v_location.display_format,
-      'already_initialized', true
+      'already_initialized', true,
+      'is_follow_up', COALESCE(v_visit.is_follow_up, false),
+      'follow_up_prior_summary', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN left(v_prior_visit.ai_summary, 200) ELSE NULL END,
+      'follow_up_prior_date', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN v_prior_visit.completed_at ELSE NULL END
     );
   END IF;
 
@@ -115,11 +138,11 @@ BEGIN
     -- Build returning patient section
     IF jsonb_array_length(v_meds) > 0 OR jsonb_array_length(v_allergies) > 0 OR jsonb_array_length(v_chronic) > 0 THEN
       v_returning_section := E'\n\nCONFIRM STORED RECORDS:\n"Last time you mentioned you take '
-        || COALESCE(array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_meds->'name')), ', '), 'no medications listed')
+        || COALESCE(array_to_string(ARRAY(SELECT e->>'name' FROM jsonb_array_elements(v_meds) e), ', '), 'no medications listed')
         || ', are allergic to '
-        || COALESCE(array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_allergies->'name')), ', '), 'nothing listed')
+        || COALESCE(array_to_string(ARRAY(SELECT e->>'name' FROM jsonb_array_elements(v_allergies) e), ', '), 'nothing listed')
         || ', and have '
-        || COALESCE(array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_chronic->'name')), ', '), 'no conditions listed')
+        || COALESCE(array_to_string(ARRAY(SELECT e->>'name' FROM jsonb_array_elements(v_chronic) e), ', '), 'no conditions listed')
         || '. Is this still accurate?"'
         || E'\nUpdate any changes.';
     END IF;
@@ -140,6 +163,30 @@ BEGIN
     v_past_summaries := '[]'::jsonb;
   END IF;
 
+  -- Load follow-up context if this is a follow-up visit
+  IF v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL THEN
+    SELECT ai_summary, doctor_diagnosis, completed_at INTO v_prior_visit
+    FROM public.visits WHERE id = v_visit.follow_up_of AND status = 'completed';
+
+    IF v_prior_visit IS NOT NULL THEN
+      SELECT ai_instructions INTO v_follow_up
+      FROM public.follow_ups
+      WHERE visit_id = v_visit.follow_up_of AND patient_id = v_visit.patient_id AND status = 'completed'
+      ORDER BY created_at DESC LIMIT 1;
+
+      v_follow_up_section := E'\n\nFOLLOW-UP VISIT CONTEXT:\n'
+        || 'Prior visit (' || to_char(v_prior_visit.completed_at, 'YYYY-MM-DD') || '):\n'
+        || '- Summary: ' || COALESCE(left(v_prior_visit.ai_summary, 500), 'None') || E'\n'
+        || '- Diagnosis: ' || COALESCE(left(v_prior_visit.doctor_diagnosis, 500), 'None');
+      IF v_follow_up.ai_instructions IS NOT NULL THEN
+        v_follow_up_section := v_follow_up_section || E'\n'
+          || '- Doctor''s instructions: ' || v_follow_up.ai_instructions;
+      END IF;
+      v_follow_up_section := v_follow_up_section || E'\n\n'
+        || 'START by asking how they''ve been since their last visit. Reference the prior visit naturally.';
+    END IF;
+  END IF;
+
   -- Construct system prompt
   v_system_prompt := 'You are a medical intake assistant at ' || v_org.name || ' (' || COALESCE(v_location.specialty, 'General Practice') || ').'
     || E'\nThink like a triage nurse. Your job: gather everything the doctor needs to know.'
@@ -158,6 +205,7 @@ BEGIN
     || E'\n12. Chronic conditions — diabetes, hypertension, asthma, etc. EVERY visit.'
     || v_returning_section
     || v_past_section
+    || v_follow_up_section
     || E'\n\nURGENCY DETECTION — set priority during conversation:'
     || E'\n- HIGH (red-flag): chest pain, difficulty breathing, severe bleeding, stroke symptoms, loss of consciousness, suicidal ideation'
     || E'\n- MEDIUM (concerning): high fever (>103F/39.4C), significant pain (7+/10), possible infection, persistent vomiting, head injury'
@@ -181,8 +229,12 @@ BEGIN
   VALUES (p_visit_id, 'system', v_system_prompt);
 
   -- Insert system greeting as second message
-  v_greeting := 'Hello ' || v_patient.first_name || ', welcome to ' || v_org.name
-    || '! Could you describe what you''re feeling today?';
+  IF v_visit.is_follow_up THEN
+    v_greeting := 'Welcome back, ' || v_patient.first_name || '! Your doctor asked us to follow up on your last visit. How have you been?';
+  ELSE
+    v_greeting := 'Hello ' || v_patient.first_name || ', welcome to ' || v_org.name
+      || '! Could you describe what you''re feeling today?';
+  END IF;
 
   INSERT INTO public.visit_messages (visit_id, role, content)
   VALUES (p_visit_id, 'system', v_greeting);
@@ -196,7 +248,10 @@ BEGIN
     'org_name', v_org.name,
     'ai_model', v_location.ai_model,
     'display_format', v_location.display_format,
-    'already_initialized', false
+    'already_initialized', false,
+    'is_follow_up', COALESCE(v_visit.is_follow_up, false),
+    'follow_up_prior_summary', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN left(v_prior_visit.ai_summary, 200) ELSE NULL END,
+    'follow_up_prior_date', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN v_prior_visit.completed_at ELSE NULL END
   );
 END;
 $$;

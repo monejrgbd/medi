@@ -1,0 +1,21 @@
+-- Cron job: daily midnight — reset monthly credits for orgs past billing cycle
+SELECT cron.schedule(
+  'credit_reset',
+  '0 0 * * *',
+  $cron$
+  DO $body$
+  DECLARE
+    v_org_id uuid;
+  BEGIN
+    FOR v_org_id IN
+      SELECT id FROM public.organizations
+      WHERE subscription_plan IN ('starter', 'standard', 'plus', 'enterprise')
+        AND billing_cycle_start IS NOT NULL
+        AND billing_cycle_start + interval '30 days' <= now()
+    LOOP
+      PERFORM private.reset_monthly_credits(v_org_id);
+    END LOOP;
+  END;
+  $body$
+  $cron$
+);

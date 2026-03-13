@@ -1,0 +1,3 @@
+-- Register daily cleanup cron job at 6 AM UTC
+SELECT cron.unschedule('cron_cleanup');
+SELECT cron.schedule('cron_cleanup', '0 6 * * *', $$SELECT private.expire_stale_sessions()$$);

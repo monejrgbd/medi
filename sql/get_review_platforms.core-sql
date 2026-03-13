@@ -1,0 +1,73 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_review_platforms(
+  p_caller_org_id uuid,
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_location_org_id uuid;
+  v_platforms jsonb;
+  v_rotation jsonb;
+BEGIN
+  -- Verify location belongs to caller's org
+  SELECT org_id INTO v_location_org_id
+  FROM public.locations WHERE id = p_location_id;
+
+  IF v_location_org_id IS NULL OR v_location_org_id <> p_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Get active platforms
+  SELECT COALESCE(jsonb_agg(row_to_json(sub) ORDER BY sub.created_at ASC), '[]'::jsonb)
+  INTO v_platforms
+  FROM (
+    SELECT rp.id, rp.platform_name, rp.platform_url, rp.is_active, rp.created_at
+    FROM public.review_platforms rp
+    WHERE rp.location_id = p_location_id AND rp.is_active = true
+  ) sub;
+
+  -- Get rotation info
+  SELECT jsonb_build_object(
+    'cycle_days', rr.cycle_days,
+    'current_platform_id', rr.current_platform_id,
+    'last_rotated_at', rr.last_rotated_at
+  )
+  INTO v_rotation
+  FROM public.review_rotation rr
+  WHERE rr.location_id = p_location_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'platforms', v_platforms,
+    'rotation', COALESCE(v_rotation, '{}'::jsonb)
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_review_platforms(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid := requesting_org_id();
+BEGIN
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_review_platforms(v_org_id, p_location_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_review_platforms(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_review_platforms(uuid) TO authenticated;

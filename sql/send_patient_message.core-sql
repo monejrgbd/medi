@@ -45,9 +45,9 @@ BEGIN
   END IF;
   v_clean := substring(v_clean, 1, 5000);
 
-  -- Insert patient message
+  -- Insert patient message (cap original at 5000 chars too)
   INSERT INTO public.visit_messages (visit_id, role, content, content_original)
-  VALUES (p_visit_id, 'patient', v_clean, p_content_original);
+  VALUES (p_visit_id, 'patient', v_clean, substring(trim(regexp_replace(COALESCE(p_content_original, ''), '<[^>]*>', '', 'g')), 1, 5000));
 
   RETURN jsonb_build_object('success', true);
 END;

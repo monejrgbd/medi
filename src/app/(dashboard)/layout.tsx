@@ -1,5 +1,7 @@
 import { requireAuth, getMyRoles, getMyOrg, getStaffUser } from "@/lib/auth";
 import { RoleProvider } from "@/contexts/RoleContext";
+import { Toaster } from "sonner";
+import SubscriptionWarningBanner from "@/components/dashboard/SubscriptionWarningBanner";
 
 export default async function DashboardLayout({
   children,
@@ -24,7 +26,9 @@ export default async function DashboardLayout({
         currentStaffUser: staffUser,
       }}
     >
+      <SubscriptionWarningBanner />
       {children}
+      <Toaster position="top-right" richColors />
     </RoleProvider>
   );
 }

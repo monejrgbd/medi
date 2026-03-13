@@ -1,0 +1,123 @@
+-- get_patient_medical_records: retrieves patient medications, allergies, chronic conditions with PHI access logging
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_patient_medical_records(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_patient record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_meds jsonb;
+  v_allergies jsonb;
+  v_chronic jsonb;
+BEGIN
+  -- Get patient
+  SELECT id, org_id
+  INTO v_patient
+  FROM public.patients
+  WHERE id = p_patient_id;
+
+  IF v_patient.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+  FROM public.staff_users
+  WHERE auth_uid = p_caller_auth_uid
+    AND org_id = v_patient.org_id
+    AND is_active = true
+    AND is_deleted = false;
+
+  -- Get owner id
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_patient.org_id;
+
+  -- Auth: owner or any staff at org
+  IF p_caller_auth_uid != v_owner_id AND v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized to view patient medical records');
+  END IF;
+
+  -- Log PHI access
+  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_patient.org_id,
+    'patient',
+    p_patient_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'staff' END,
+    'medical_records_viewed',
+    jsonb_build_object('patient_id', p_patient_id)
+  );
+
+  -- Get medications
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'name', pm.name,
+    'dosage', pm.dosage,
+    'frequency', pm.frequency
+  )), '[]'::jsonb)
+  INTO v_meds
+  FROM public.patient_medications pm
+  WHERE pm.patient_id = p_patient_id
+    AND pm.active = true;
+
+  -- Get allergies
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'name', pa.name
+  )), '[]'::jsonb)
+  INTO v_allergies
+  FROM public.patient_allergies pa
+  WHERE pa.patient_id = p_patient_id
+    AND pa.active = true;
+
+  -- Get chronic conditions
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'name', pc.name
+  )), '[]'::jsonb)
+  INTO v_chronic
+  FROM public.patient_chronic_conditions pc
+  WHERE pc.patient_id = p_patient_id
+    AND pc.active = true;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'medications', v_meds,
+    'allergies', v_allergies,
+    'chronic_conditions', v_chronic
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_patient_medical_records(
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_patient_medical_records(v_auth_uid, p_patient_id);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.get_patient_medical_records(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_patient_medical_records(uuid) TO authenticated;

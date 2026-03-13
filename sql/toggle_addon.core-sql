@@ -1,0 +1,88 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.toggle_addon(
+  p_caller_auth_uid uuid,
+  p_addon_type text,
+  p_enabled boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+BEGIN
+  -- Validate addon type
+  IF p_addon_type NOT IN ('review_sms', 'followup_sms') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid addon type');
+  END IF;
+
+  -- Lock org and verify ownership
+  SELECT id, subscription_plan, followup_sms_addon
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Guard: blocked plans
+  IF v_org.subscription_plan IN ('expired', 'suspended') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Cannot modify addons while account is ' || v_org.subscription_plan);
+  END IF;
+
+  -- Trial orgs get addons free — skip any charge logic
+  -- (non-trial orgs may be billed via subscription webhook)
+
+  -- Toggle the addon
+  IF p_addon_type = 'review_sms' THEN
+    UPDATE public.organizations SET review_sms_addon = p_enabled WHERE id = v_org.id;
+  ELSIF p_addon_type = 'followup_sms' THEN
+    UPDATE public.organizations SET followup_sms_addon = p_enabled WHERE id = v_org.id;
+
+    -- If enabling followup_sms and no config exists, insert default
+    IF p_enabled AND NOT EXISTS (
+      SELECT 1 FROM public.followup_sms_config WHERE org_id = v_org.id
+    ) THEN
+      INSERT INTO public.followup_sms_config (org_id, max_reminders, first_reminder_days, second_reminder_days)
+      VALUES (v_org.id, 2, 3, 7)
+      ON CONFLICT (org_id) DO NOTHING;
+    END IF;
+  END IF;
+
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'toggle_addon', 'organization', v_org.id,
+    jsonb_build_object('addon', p_addon_type, 'enabled', p_enabled));
+
+  RETURN jsonb_build_object('success', true, 'addon', p_addon_type, 'enabled', p_enabled);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.toggle_addon(
+  p_addon_type text,
+  p_enabled boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.toggle_addon(v_uid, p_addon_type, p_enabled);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.toggle_addon(text, boolean) FROM anon;
+GRANT EXECUTE ON FUNCTION public.toggle_addon(text, boolean) TO authenticated;

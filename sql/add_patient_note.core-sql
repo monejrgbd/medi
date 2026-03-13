@@ -1,0 +1,128 @@
+-- private.add_patient_note
+CREATE OR REPLACE FUNCTION private.add_patient_note(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid,
+  p_content text,
+  p_is_private boolean DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_clean text;
+  v_patient record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_is_doctor boolean;
+  v_used_private boolean;
+  v_note_id uuid;
+BEGIN
+  -- Sanitize
+  v_clean := regexp_replace(trim(COALESCE(p_content, '')), '<[^>]*>', '', 'g');
+
+  -- Validate length
+  IF length(v_clean) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Note content cannot be empty');
+  END IF;
+
+  IF length(v_clean) > 10000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Note content exceeds maximum length of 10000 characters');
+  END IF;
+
+  -- Get patient
+  SELECT id, org_id
+    INTO v_patient
+    FROM public.patients
+   WHERE id = p_patient_id;
+
+  IF v_patient.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+    FROM public.staff_users
+   WHERE auth_uid = p_caller_auth_uid
+     AND org_id = v_patient.org_id
+     AND is_active = true
+     AND is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+  END IF;
+
+  -- Get owner id
+  SELECT owner_id INTO v_owner_id
+    FROM public.organizations
+   WHERE id = v_patient.org_id;
+
+  -- Auth: owner OR doctor at any location in org
+  IF p_caller_auth_uid = v_owner_id THEN
+    -- Owner is authorized
+    NULL;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1
+        FROM public.staff_roles sr
+       WHERE sr.staff_user_id = v_caller_staff_id
+         AND sr.role = 'doctor'
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized: must be owner or doctor');
+    END IF;
+  END IF;
+
+  -- Determine is_private
+  IF p_is_private IS NULL THEN
+    SELECT default_private INTO v_used_private
+      FROM public.doctor_note_preferences
+     WHERE doctor_id = v_caller_staff_id
+       AND patient_id = p_patient_id;
+
+    IF v_used_private IS NULL THEN
+      v_used_private := false;
+    END IF;
+  ELSE
+    v_used_private := p_is_private;
+  END IF;
+
+  -- Insert note
+  INSERT INTO public.patient_notes (patient_id, doctor_id, org_id, content, is_private)
+  VALUES (p_patient_id, v_caller_staff_id, v_patient.org_id, v_clean, v_used_private)
+  RETURNING id INTO v_note_id;
+
+  RETURN jsonb_build_object('success', true, 'note_id', v_note_id, 'is_private', v_used_private);
+END;
+$$;
+
+-- public.add_patient_note (wrapper)
+CREATE OR REPLACE FUNCTION public.add_patient_note(
+  p_patient_id uuid,
+  p_content text,
+  p_is_private boolean DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.add_patient_note(v_auth_uid, p_patient_id, p_content, p_is_private);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.add_patient_note(uuid, text, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.add_patient_note(uuid, text, boolean) TO authenticated;

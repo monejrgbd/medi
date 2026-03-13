@@ -1,0 +1,147 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_collision_state(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_receptionist boolean := false;
+  v_patient record;
+  v_verified_phone text;
+  v_candidate record;
+  v_match_state text;
+  v_existing_phone_masked text;
+BEGIN
+  -- Get visit details
+  SELECT v.id, v.status, v.location_id, v.org_id, v.patient_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or receptionist at visit location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'receptionist'
+        AND sr.location_id = v_visit.location_id
+    ) INTO v_is_receptionist;
+
+    IF NOT v_is_receptionist THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Get the visit's patient
+  SELECT p.id, p.first_name, p.last_name, p.birthday, p.org_id
+  INTO v_patient
+  FROM public.patients p
+  WHERE p.id = v_visit.patient_id;
+
+  -- Read verified phone from phone_verifications (NOT on the patient for collision cases)
+  SELECT pv.phone INTO v_verified_phone
+  FROM public.phone_verifications pv
+  WHERE pv.visit_id = p_visit_id
+    AND pv.verified_at IS NOT NULL
+  ORDER BY pv.verified_at DESC
+  LIMIT 1;
+
+  IF v_verified_phone IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'No verified phone found');
+  END IF;
+
+  -- Find OTHER patients in same org with same name + birthday (collision candidates)
+  -- Exclude orphaned patients
+  -- First: try to find a candidate whose phone matches the verified phone
+  SELECT p.id, p.phone
+  INTO v_candidate
+  FROM public.patients p
+  WHERE p.org_id = v_patient.org_id
+    AND lower(p.first_name) = lower(v_patient.first_name)
+    AND lower(p.last_name) = lower(v_patient.last_name)
+    AND p.birthday = v_patient.birthday
+    AND p.id <> v_patient.id
+    AND NOT p.is_orphaned
+    AND p.phone = v_verified_phone
+  LIMIT 1;
+
+  -- Fallback: if no phone match, pick the best candidate (prefer those with phones)
+  IF v_candidate IS NULL THEN
+    SELECT p.id, p.phone
+    INTO v_candidate
+    FROM public.patients p
+    WHERE p.org_id = v_patient.org_id
+      AND lower(p.first_name) = lower(v_patient.first_name)
+      AND lower(p.last_name) = lower(v_patient.last_name)
+      AND p.birthday = v_patient.birthday
+      AND p.id <> v_patient.id
+      AND NOT p.is_orphaned
+    ORDER BY (p.phone IS NOT NULL) DESC, p.created_at DESC
+    LIMIT 1;
+  END IF;
+
+  IF v_candidate IS NULL THEN
+    -- No other patient found — treat as no existing phone
+    v_match_state := 'no_existing_phone';
+    v_existing_phone_masked := NULL;
+  ELSIF v_candidate.phone IS NOT NULL THEN
+    IF v_candidate.phone = v_verified_phone THEN
+      v_match_state := 'phone_matches';
+    ELSE
+      v_match_state := 'phone_no_match';
+    END IF;
+    v_existing_phone_masked := '***-***-' || right(v_candidate.phone, 4);
+  ELSE
+    v_match_state := 'no_existing_phone';
+    v_existing_phone_masked := NULL;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'match_state', v_match_state,
+    'existing_phone_masked', v_existing_phone_masked,
+    'new_phone_masked', '***-***-' || right(v_verified_phone, 4),
+    'existing_patient_id', v_candidate.id
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_collision_state(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_collision_state(v_auth_uid, p_visit_id);
+END;
+$$;

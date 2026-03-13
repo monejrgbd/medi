@@ -29,8 +29,10 @@ CREATE TABLE public.visits (
   has_referral          boolean DEFAULT false,
   summary_token         uuid UNIQUE,
   summary_sms_sent      boolean DEFAULT false,
+  review_token          uuid UNIQUE,
   review_sms_sent       boolean DEFAULT false,
   timeout_flagged       boolean DEFAULT false,
+  phone_verification_pending boolean DEFAULT false,
   is_return_visit       boolean DEFAULT false,
   patient_approved      boolean DEFAULT false,
   patient_approved_at   timestamptz,
@@ -51,7 +53,7 @@ CREATE POLICY "org_staff_read_visits" ON public.visits FOR SELECT
 
 -- Queue ordering: location + status + priority (desc) + arrival (asc)
 CREATE INDEX idx_visits_queue
-  ON public.visits (location_id, status, priority DESC, created_at ASC);
+  ON public.visits (location_id, status, priority DESC, entered_queue_at ASC);
 
 -- Patient visit history
 CREATE INDEX idx_visits_patient

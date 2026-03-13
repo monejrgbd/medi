@@ -1,0 +1,31 @@
+CREATE TABLE public.sms_log (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id                uuid NOT NULL REFERENCES public.organizations(id),
+  location_id           uuid REFERENCES public.locations(id),
+  visit_id              uuid REFERENCES public.visits(id),
+  patient_id            uuid REFERENCES public.patients(id),
+  phone                 text NOT NULL,
+  sms_type              text NOT NULL CHECK (sms_type IN ('verification', 'summary', 'review', 'follow_up')),
+  twilio_sid            text,
+  status                text DEFAULT 'sent' CHECK (status IN ('pending', 'sent', 'delivered', 'failed', 'undelivered')),
+  error_message         text,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.sms_log ENABLE ROW LEVEL SECURITY;
+
+-- Owner/manager can read their org's SMS logs
+CREATE POLICY "org_owner_manager_read" ON public.sms_log FOR SELECT USING (
+  org_id IN (
+    SELECT o.id FROM public.organizations o WHERE o.owner_id = auth.uid()
+    UNION
+    SELECT su.org_id FROM public.staff_users su
+    JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+    WHERE su.auth_uid = auth.uid() AND su.is_active AND NOT su.is_deleted
+      AND sr.role = 'manager'
+  )
+);
+
+-- No direct INSERT/UPDATE/DELETE — all via SECURITY DEFINER functions or service role
+
+CREATE INDEX idx_sms_log_org ON public.sms_log (org_id, created_at DESC);

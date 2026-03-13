@@ -1,0 +1,51 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.update_visit_status_system(
+  p_visit_id uuid,
+  p_new_status text,
+  p_timeout_flagged boolean DEFAULT false,
+  p_action text DEFAULT 'system_update'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- Set audit context for the trigger
+  PERFORM set_config('app.audit_actor_type', 'system', true);
+  PERFORM set_config('app.audit_action', p_action, true);
+  PERFORM set_config('app.audit_actor_id', '00000000-0000-0000-0000-000000000000', true);
+
+  UPDATE public.visits
+  SET status = p_new_status,
+      timeout_flagged = p_timeout_flagged,
+      entered_queue_at = CASE WHEN p_new_status = 'waiting_doctor_claim' THEN now() ELSE entered_queue_at END,
+      updated_at = now()
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.update_visit_status_system(
+  p_visit_id uuid,
+  p_new_status text,
+  p_timeout_flagged boolean DEFAULT false,
+  p_action text DEFAULT 'system_update'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.update_visit_status_system(p_visit_id, p_new_status, p_timeout_flagged, p_action);
+END;
+$$;

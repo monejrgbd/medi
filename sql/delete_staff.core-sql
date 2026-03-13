@@ -103,3 +103,6 @@ BEGIN
   RETURN private.delete_staff(v_auth_uid, p_staff_user_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.delete_staff(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.delete_staff(uuid) TO authenticated;

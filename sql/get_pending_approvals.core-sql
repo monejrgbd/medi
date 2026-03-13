@@ -50,7 +50,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- Get pending visits with patient info and match type
+  -- Get pending visits with patient info, match type, and collision fields
   SELECT jsonb_build_object(
     'success', true,
     'pending', COALESCE(jsonb_agg(
@@ -65,7 +65,43 @@ BEGIN
         'match_type', CASE
           WHEN v.has_previous_visits THEN 'returning'
           ELSE 'new'
-        END
+        END,
+        'collision_flag', p.collision_flag,
+        'phone_verified', p.phone_verified,
+        'phone_masked', CASE WHEN p.phone IS NOT NULL THEN '***-***-' || right(p.phone, 4) ELSE NULL END,
+        'phone_verification_pending', v.phone_verification_pending,
+        'active_follow_ups', (
+          SELECT COALESCE(jsonb_agg(jsonb_build_object(
+            'id', fu.id,
+            'doctor_name', su.full_name,
+            'due_date', fu.due_date,
+            'ai_instructions_preview', left(fu.ai_instructions, 100),
+            'visit_id', fu.visit_id,
+            'visit_date', fv.completed_at,
+            'visit_summary_preview', left(fv.ai_summary, 100)
+          ) ORDER BY fu.due_date ASC), '[]'::jsonb)
+          FROM public.follow_ups fu
+          JOIN public.staff_users su ON su.id = fu.doctor_id
+          JOIN public.visits fv ON fv.id = fu.visit_id
+          WHERE fu.patient_id = p.id AND fu.status = 'active'
+        ),
+        'referral_match', (
+          SELECT jsonb_build_object(
+            'referral_id', r.id,
+            'specialty', r.specialty,
+            'from_org_name', rorg.name,
+            'from_doctor_name', rsu.full_name
+          )
+          FROM public.referrals r
+          JOIN public.organizations rorg ON rorg.id = r.from_org_id
+          JOIN public.staff_users rsu ON rsu.id = r.from_doctor_id
+          WHERE r.to_location_id = p_location_id
+            AND r.status IN ('sent', 'viewed')
+            AND r.patient_birthday = p.birthday
+            AND r.patient_name ILIKE replace(replace(p.first_name, '%', '\%'), '_', '\_') || '%' || replace(replace(p.last_name, '%', '\%'), '_', '\_')
+          ORDER BY r.created_at DESC
+          LIMIT 1
+        )
       ) ORDER BY v.created_at ASC
     ), '[]'::jsonb)
   ) INTO v_result
@@ -91,6 +127,12 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
   RETURN private.get_pending_approvals(v_auth_uid, p_location_id);
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.get_pending_approvals(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_pending_approvals(uuid) TO authenticated;

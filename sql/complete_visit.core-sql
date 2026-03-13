@@ -1,0 +1,178 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.complete_visit(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid,
+  p_diagnosis text,
+  p_follow_up jsonb DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_clean_diagnosis text;
+  v_avg_wait numeric;
+  v_sample_count int;
+BEGIN
+  -- Sanitize input
+  v_clean_diagnosis := regexp_replace(trim(COALESCE(p_diagnosis, '')), '<[^>]*>', '', 'g');
+
+  IF length(v_clean_diagnosis) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Diagnosis is required');
+  END IF;
+
+  IF length(v_clean_diagnosis) > 10000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Diagnosis exceeds maximum length');
+  END IF;
+
+  -- Get visit details
+  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.patient_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.status <> 'claimed_by_doctor' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not claimed');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: claiming doctor or owner only
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSIF v_caller_staff_id IS NOT NULL AND v_visit.claimed_by = v_caller_staff_id THEN
+    NULL;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Set audit context
+  PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
+  PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END, true);
+  PERFORM set_config('app.audit_action', 'completed', true);
+
+  -- Complete the visit
+  UPDATE public.visits
+  SET status = 'completed',
+      doctor_diagnosis = v_clean_diagnosis,
+      completed_at = now(),
+      is_return_visit = EXISTS(
+        SELECT 1 FROM public.visits
+        WHERE patient_id = v_visit.patient_id
+          AND org_id = v_visit.org_id
+          AND status = 'completed'
+          AND completed_at > now() - interval '90 days'
+          AND id <> p_visit_id
+      )
+  WHERE id = p_visit_id;
+
+  -- Create follow-up if requested
+  IF p_follow_up IS NOT NULL THEN
+    DECLARE
+      v_follow_up_result jsonb;
+    BEGIN
+      v_follow_up_result := private.create_follow_up(
+        p_caller_auth_uid,
+        p_visit_id,
+        (p_follow_up->>'timeframe_days')::int,
+        p_follow_up->>'ai_instructions'
+      );
+      IF NOT (v_follow_up_result->>'success')::boolean THEN
+        RAISE WARNING 'Follow-up creation failed: %', v_follow_up_result->>'error';
+      END IF;
+    END;
+  END IF;
+
+  -- Recompute estimated_wait cache
+  SELECT extract(epoch FROM avg(claimed_at - entered_queue_at)) / 60, count(*)
+  INTO v_avg_wait, v_sample_count
+  FROM (
+    SELECT claimed_at, entered_queue_at
+    FROM public.visits
+    WHERE location_id = v_visit.location_id
+      AND status = 'completed'
+      AND entered_queue_at IS NOT NULL
+      AND claimed_at IS NOT NULL
+    ORDER BY completed_at DESC
+    LIMIT 10
+  ) recent;
+
+  IF v_sample_count >= 3 THEN
+    UPDATE public.locations
+    SET estimated_wait_minutes = round(v_avg_wait::numeric, 1)
+    WHERE id = v_visit.location_id;
+  ELSE
+    UPDATE public.locations
+    SET estimated_wait_minutes = NULL
+    WHERE id = v_visit.location_id;
+  END IF;
+
+  -- Generate summary token + trigger SMS (fire-and-forget, non-blocking)
+  PERFORM private.generate_summary_token(p_caller_auth_uid, p_visit_id);
+  PERFORM private.trigger_visit_summary_sms(p_caller_auth_uid, p_visit_id);
+
+  -- Review token generation + SMS (fire-and-forget, non-blocking)
+  -- trigger_review_sms internally gates on addon/trial status
+  PERFORM private.trigger_review_sms(p_caller_auth_uid, p_visit_id);
+
+  -- Check if this visit is a linked referral target
+  DECLARE
+    v_linked_referral_id uuid;
+  BEGIN
+    SELECT id INTO v_linked_referral_id
+    FROM public.referrals
+    WHERE linked_visit_id = p_visit_id AND status = 'patient_arrived';
+
+    IF v_linked_referral_id IS NOT NULL THEN
+      PERFORM private.complete_referral(p_caller_auth_uid, v_linked_referral_id);
+    END IF;
+  EXCEPTION WHEN undefined_table THEN
+    -- referrals table may not exist yet during incremental deployment
+    NULL;
+  END;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.complete_visit(
+  p_visit_id uuid,
+  p_diagnosis text,
+  p_follow_up jsonb DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.complete_visit(v_auth_uid, p_visit_id, p_diagnosis, p_follow_up);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.complete_visit(uuid, text, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.complete_visit(uuid, text, jsonb) TO authenticated;

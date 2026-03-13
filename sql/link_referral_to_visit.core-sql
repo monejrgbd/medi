@@ -1,0 +1,112 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.link_referral_to_visit(
+  p_caller_auth_uid uuid,
+  p_referral_id uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_referral record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_authorized boolean := false;
+BEGIN
+  -- Get referral details
+  SELECT r.id, r.status, r.to_org_id, r.to_location_id
+  INTO v_referral
+  FROM public.referrals r
+  WHERE r.id = p_referral_id;
+
+  IF v_referral IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Referral not found');
+  END IF;
+
+  -- Guard: referral status must be sent or viewed
+  IF v_referral.status NOT IN ('sent', 'viewed') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Referral is not in a linkable state');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_referral.to_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or receptionist/manager at receiving location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_referral.to_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    v_is_authorized := true;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role IN ('receptionist', 'manager')
+        AND sr.location_id = v_referral.to_location_id
+    ) INTO v_is_authorized;
+  END IF;
+
+  IF NOT v_is_authorized THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Verify visit belongs to the receiving org
+  IF NOT EXISTS (
+    SELECT 1 FROM public.visits
+    WHERE id = p_visit_id AND org_id = v_referral.to_org_id
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found at receiving location');
+  END IF;
+
+  -- Update referral
+  UPDATE public.referrals
+  SET status = 'patient_arrived',
+      linked_visit_id = p_visit_id
+  WHERE id = p_referral_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_referral.to_org_id,
+    'referral',
+    p_referral_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'staff' END,
+    'referral_linked',
+    jsonb_build_object('visit_id', p_visit_id)
+  );
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.link_referral_to_visit(
+  p_referral_id uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.link_referral_to_visit(v_auth_uid, p_referral_id, p_visit_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.link_referral_to_visit(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.link_referral_to_visit(uuid, uuid) TO authenticated;

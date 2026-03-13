@@ -76,3 +76,6 @@ BEGIN
   RETURN private.toggle_gave_tablet(v_auth_uid, p_visit_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.toggle_gave_tablet(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.toggle_gave_tablet(uuid) TO authenticated;

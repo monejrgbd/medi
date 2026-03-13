@@ -1,0 +1,108 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.verify_phone_and_link(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_phone text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_patient record;
+  v_clean_phone text;
+BEGIN
+  -- Phone sanitization: strip non-digit except leading +
+  v_clean_phone := regexp_replace(p_phone, '[^0-9+]', '', 'g');
+  -- Keep only leading +
+  IF left(v_clean_phone, 1) = '+' THEN
+    v_clean_phone := '+' || regexp_replace(substring(v_clean_phone, 2), '[^0-9]', '', 'g');
+  END IF;
+
+  -- Validate E.164
+  IF v_clean_phone !~ '^\+[1-9][0-9]{1,14}$' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid phone number format');
+  END IF;
+
+  -- Look up visit by id
+  SELECT v.id, v.session_token, v.patient_id, v.phone_verification_pending, v.org_id, v.location_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Validate session token matches visit
+  IF v_visit.session_token <> p_session_token THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+  END IF;
+
+  -- Look up patient collision_flag
+  SELECT p.id, p.collision_flag
+  INTO v_patient
+  FROM public.patients p
+  WHERE p.id = v_visit.patient_id;
+
+  IF v_patient IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  -- Collision-aware phone handling
+  IF v_patient.collision_flag THEN
+    -- Path C: do NOT write phone to patient record
+    -- Phone stays in phone_verifications until collision resolution
+    NULL;
+  ELSE
+    -- Path B or post-AI: write phone directly to patient
+    UPDATE public.patients
+    SET phone = v_clean_phone,
+        phone_verified = true,
+        updated_at = now()
+    WHERE id = v_patient.id;
+  END IF;
+
+  -- Clear pending flag
+  UPDATE public.visits
+  SET phone_verification_pending = false
+  WHERE id = p_visit_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, location_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (
+    v_visit.org_id,
+    v_visit.location_id,
+    'patient',
+    'phone_verified',
+    'visit',
+    p_visit_id,
+    jsonb_build_object(
+      'phone_masked', '***-***-' || right(v_clean_phone, 4),
+      'collision_flag', v_patient.collision_flag
+    )
+  );
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable, no auth.uid() capture — called by edge function via service role)
+CREATE OR REPLACE FUNCTION public.verify_phone_and_link(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_phone text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.verify_phone_and_link(p_visit_id, p_session_token, p_phone);
+END;
+$$;

@@ -75,3 +75,6 @@ BEGIN
   RETURN private.get_organization_overview(v_auth_uid);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.get_organization_overview() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_organization_overview() TO authenticated;

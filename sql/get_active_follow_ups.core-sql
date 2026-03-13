@@ -1,0 +1,106 @@
+-- private.get_active_follow_ups
+-- Returns active follow-ups for a given patient
+-- Called by: public.get_active_follow_ups (wrapper)
+
+CREATE OR REPLACE FUNCTION private.get_active_follow_ups(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_result jsonb;
+BEGIN
+  -- Try to get caller as staff
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NOT NULL THEN
+    -- Staff is authorized, v_org_id already set
+    NULL;
+  ELSE
+    -- Check if caller is an owner (may not be in staff_users)
+    SELECT o.id, o.owner_id
+    INTO v_org_id, v_owner_id
+    FROM public.organizations o
+    WHERE o.owner_id = p_caller_auth_uid;
+
+    IF v_owner_id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'not authorized');
+    END IF;
+  END IF;
+
+  -- Verify patient belongs to this org
+  IF NOT EXISTS (
+    SELECT 1 FROM public.patients
+    WHERE id = p_patient_id AND org_id = v_org_id
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'patient not found');
+  END IF;
+
+  -- Get active follow-ups
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'id', sub.id,
+    'doctor_name', sub.full_name,
+    'due_date', sub.due_date,
+    'ai_instructions_preview', left(sub.ai_instructions, 100),
+    'visit_id', sub.visit_id,
+    'visit_date', sub.completed_at,
+    'visit_summary_preview', left(sub.ai_summary, 100)
+  ) ORDER BY sub.due_date ASC), '[]'::jsonb)
+  INTO v_result
+  FROM (
+    SELECT fu.id, su.full_name, fu.due_date, fu.ai_instructions,
+           fu.visit_id, fv.completed_at, fv.ai_summary
+    FROM public.follow_ups fu
+    JOIN public.staff_users su ON su.id = fu.doctor_id
+    JOIN public.visits fv ON fv.id = fu.visit_id
+    WHERE fu.patient_id = p_patient_id
+      AND fu.org_id = v_org_id
+      AND fu.status = 'active'
+    ORDER BY fu.due_date ASC
+    LIMIT 100
+  ) sub;
+
+  RETURN jsonb_build_object('success', true, 'follow_ups', v_result);
+END;
+$$;
+
+-- public.get_active_follow_ups (wrapper)
+-- Thin public wrapper that captures auth context
+
+CREATE OR REPLACE FUNCTION public.get_active_follow_ups(
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not authenticated');
+  END IF;
+
+  RETURN private.get_active_follow_ups(v_auth_uid, p_patient_id);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.get_active_follow_ups(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_active_follow_ups(uuid) TO authenticated;

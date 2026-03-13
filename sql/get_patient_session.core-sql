@@ -10,12 +10,19 @@ SET search_path TO ''
 AS $$
 DECLARE
   v_visit record;
+  v_queue_position int;
+  v_estimated_wait numeric;
 BEGIN
   -- Look up visit by session token
   SELECT v.id AS visit_id, v.status, v.has_previous_visits, v.created_at,
          v.timeout_flagged, v.ai_summary, v.ai_structured_card, v.ai_completed_at,
+         v.priority, v.location_id, v.phone_verification_pending,
+         v.entered_queue_at, v.patient_denied,
          p.first_name AS patient_first_name, p.language, p.consent_given,
-         l.name AS location_name
+         p.birthday AS patient_birthday,
+         p.phone_verified AS patient_phone_verified,
+         (p.phone IS NOT NULL) AS patient_has_phone,
+         l.name AS location_name, l.estimated_wait_minutes
   INTO v_visit
   FROM public.visits v
   JOIN public.patients p ON p.id = v.patient_id
@@ -31,6 +38,22 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Session expired');
   END IF;
 
+  -- Compute queue position when in queue
+  IF v_visit.status = 'waiting_doctor_claim' THEN
+    SELECT count(*) + 1 INTO v_queue_position
+    FROM public.visits
+    WHERE location_id = v_visit.location_id
+      AND status = 'waiting_doctor_claim'
+      AND (priority > v_visit.priority
+        OR (priority = v_visit.priority AND entered_queue_at < v_visit.entered_queue_at));
+
+    IF v_visit.estimated_wait_minutes IS NOT NULL THEN
+      v_estimated_wait := v_visit.estimated_wait_minutes * v_queue_position;
+    END IF;
+  ELSIF v_visit.status = 'claimed_by_doctor' THEN
+    v_queue_position := 0;
+  END IF;
+
   RETURN jsonb_build_object(
     'success', true,
     'visit_id', v_visit.visit_id,
@@ -43,7 +66,14 @@ BEGIN
     'timeout_flagged', v_visit.timeout_flagged,
     'ai_summary', v_visit.ai_summary,
     'ai_structured_card', v_visit.ai_structured_card,
-    'ai_completed_at', v_visit.ai_completed_at
+    'ai_completed_at', v_visit.ai_completed_at,
+    'queue_position', v_queue_position,
+    'estimated_wait_minutes', v_estimated_wait,
+    'phone_verification_pending', v_visit.phone_verification_pending,
+    'patient_phone_verified', v_visit.patient_phone_verified,
+    'patient_has_phone', v_visit.patient_has_phone,
+    'patient_birthday', v_visit.patient_birthday,
+    'patient_denied', v_visit.patient_denied
   );
 END;
 $$;

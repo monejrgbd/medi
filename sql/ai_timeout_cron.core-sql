@@ -1,8 +1,17 @@
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
 SELECT cron.schedule('ai_timeout_check', '* * * * *', $$
-  UPDATE public.visits
-  SET status = 'waiting_doctor_claim', timeout_flagged = true,
-      entered_queue_at = now(), updated_at = now()
-  WHERE status = 'still_answering_ai' AND ai_started_at < now() - interval '30 minutes';
+  DO $do$
+  BEGIN
+    PERFORM set_config('app.audit_actor_type', 'system', true);
+    PERFORM set_config('app.audit_action', 'ai_timeout', true);
+    PERFORM set_config('app.audit_actor_id', '00000000-0000-0000-0000-000000000000', true);
+
+    UPDATE public.visits
+    SET status = 'waiting_doctor_claim', timeout_flagged = true,
+        entered_queue_at = now(), updated_at = now()
+    WHERE status = 'still_answering_ai'
+      AND ai_started_at IS NOT NULL
+      AND ai_started_at < now() - interval '30 minutes';
+  END $do$;
 $$);

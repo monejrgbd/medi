@@ -1,0 +1,195 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.edit_patient_record(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid,
+  p_first_name text DEFAULT NULL,
+  p_last_name text DEFAULT NULL,
+  p_birthday date DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_patient record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_authorized boolean := false;
+  v_clean_first text;
+  v_clean_last text;
+  v_old_first text;
+  v_old_last text;
+  v_old_birthday date;
+  v_changed_fields text[] := '{}';
+  v_duplicate_check uuid;
+BEGIN
+  -- Get patient
+  SELECT p.id, p.org_id, p.first_name, p.last_name, p.birthday
+  INTO v_patient
+  FROM public.patients p
+  WHERE p.id = p_patient_id;
+
+  IF v_patient IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  v_old_first := v_patient.first_name;
+  v_old_last := v_patient.last_name;
+  v_old_birthday := v_patient.birthday;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner, receptionist, or manager — NOT doctor
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_patient.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    v_is_authorized := true;
+  ELSIF v_caller_staff_id IS NOT NULL THEN
+    -- Check for receptionist or manager role at any location the patient has visited
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role IN ('receptionist', 'manager')
+        AND sr.location_id IN (
+          SELECT DISTINCT v.location_id FROM public.visits v WHERE v.patient_id = p_patient_id
+        )
+    ) INTO v_is_authorized;
+  END IF;
+
+  IF NOT v_is_authorized THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized. Only receptionists, managers, and owners can edit patient records.');
+  END IF;
+
+  -- Input validation for provided fields
+  IF p_first_name IS NOT NULL THEN
+    v_clean_first := substring(trim(regexp_replace(p_first_name, '<[^>]*>', '', 'g')), 1, 100);
+    IF v_clean_first = '' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'First name cannot be empty');
+    END IF;
+  END IF;
+
+  IF p_last_name IS NOT NULL THEN
+    v_clean_last := substring(trim(regexp_replace(p_last_name, '<[^>]*>', '', 'g')), 1, 100);
+    IF v_clean_last = '' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Last name cannot be empty');
+    END IF;
+  END IF;
+
+  IF p_birthday IS NOT NULL THEN
+    IF p_birthday >= CURRENT_DATE THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Birthday must be in the past');
+    END IF;
+    IF p_birthday < '1900-01-01'::date THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid birthday');
+    END IF;
+  END IF;
+
+  -- Uniqueness check before update
+  SELECT p.id INTO v_duplicate_check
+  FROM public.patients p
+  WHERE p.org_id = v_patient.org_id
+    AND lower(p.first_name) = lower(COALESCE(v_clean_first, v_patient.first_name))
+    AND lower(p.last_name) = lower(COALESCE(v_clean_last, v_patient.last_name))
+    AND p.birthday = COALESCE(p_birthday, v_patient.birthday)
+    AND p.id <> p_patient_id
+    AND NOT p.is_orphaned
+  LIMIT 1;
+
+  IF v_duplicate_check IS NOT NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'A patient with this name and birthday already exists.');
+  END IF;
+
+  -- Track changed fields
+  IF p_first_name IS NOT NULL AND lower(v_clean_first) <> lower(v_patient.first_name) THEN
+    v_changed_fields := v_changed_fields || 'first_name';
+  END IF;
+  IF p_last_name IS NOT NULL AND lower(v_clean_last) <> lower(v_patient.last_name) THEN
+    v_changed_fields := v_changed_fields || 'last_name';
+  END IF;
+  IF p_birthday IS NOT NULL AND p_birthday <> v_patient.birthday THEN
+    v_changed_fields := v_changed_fields || 'birthday';
+  END IF;
+
+  IF array_length(v_changed_fields, 1) IS NULL THEN
+    RETURN jsonb_build_object('success', true, 'message', 'No changes detected');
+  END IF;
+
+  -- Update patient
+  UPDATE public.patients
+  SET first_name = COALESCE(v_clean_first, first_name),
+      last_name = COALESCE(v_clean_last, last_name),
+      birthday = COALESCE(p_birthday, birthday),
+      updated_at = now()
+  WHERE id = p_patient_id;
+
+  -- Audit trail (use most recent visit for context)
+  INSERT INTO public.audit_trail (
+    org_id, location_id, actor_id, actor_type, action, entity_type, entity_id, details
+  )
+  SELECT
+    v.org_id,
+    v.location_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE
+      WHEN v_owner_id = p_caller_auth_uid THEN 'owner'
+      ELSE COALESCE(
+        (SELECT sr.role FROM public.staff_roles sr
+         WHERE sr.staff_user_id = v_caller_staff_id
+           AND sr.role IN ('receptionist', 'manager')
+           AND sr.location_id IN (SELECT DISTINCT vi.location_id FROM public.visits vi WHERE vi.patient_id = p_patient_id)
+         ORDER BY CASE sr.role WHEN 'manager' THEN 1 ELSE 2 END
+         LIMIT 1),
+        'staff'
+      )
+    END,
+    'patient_record_edited',
+    'visit',
+    v.id,
+    jsonb_build_object(
+      'patient_id', p_patient_id,
+      'old', jsonb_build_object('first_name', v_old_first, 'last_name', v_old_last, 'birthday', v_old_birthday),
+      'new', jsonb_build_object(
+        'first_name', COALESCE(v_clean_first, v_old_first),
+        'last_name', COALESCE(v_clean_last, v_old_last),
+        'birthday', COALESCE(p_birthday, v_old_birthday)
+      ),
+      'changed_fields', to_jsonb(v_changed_fields)
+    )
+  FROM public.visits v
+  WHERE v.patient_id = p_patient_id
+  ORDER BY v.created_at DESC
+  LIMIT 1;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.edit_patient_record(
+  p_patient_id uuid,
+  p_first_name text DEFAULT NULL,
+  p_last_name text DEFAULT NULL,
+  p_birthday date DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.edit_patient_record(v_auth_uid, p_patient_id, p_first_name, p_last_name, p_birthday);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date) FROM anon;
+GRANT EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date) TO authenticated;

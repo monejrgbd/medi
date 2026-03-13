@@ -14,6 +14,7 @@ CREATE TABLE public.locations (
   referral_email        text,
   tablet_count          int DEFAULT 0,
   timezone              text DEFAULT 'America/Toronto',
+  estimated_wait_minutes numeric DEFAULT NULL,
   created_at            timestamptz DEFAULT now()
 );
 

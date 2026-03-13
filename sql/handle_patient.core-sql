@@ -74,3 +74,6 @@ BEGIN
   RETURN private.handle_patient(v_auth_uid, p_visit_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.handle_patient(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.handle_patient(uuid) TO authenticated;

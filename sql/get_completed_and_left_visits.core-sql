@@ -1,0 +1,141 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_completed_and_left_visits(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_date date DEFAULT CURRENT_DATE,
+  p_cursor timestamptz DEFAULT NULL,
+  p_page_size int DEFAULT 50
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_doctor boolean := false;
+  v_completed jsonb;
+  v_left jsonb;
+  v_completed_rows jsonb;
+  v_left_rows jsonb;
+  v_has_more_completed boolean := false;
+  v_has_more_left boolean := false;
+BEGIN
+  -- Get location org
+  SELECT l.org_id INTO v_org_id
+  FROM public.locations l
+  WHERE l.id = p_location_id;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or doctor at location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'doctor'
+        AND sr.location_id = p_location_id
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Get completed visits (own completions only)
+  SELECT COALESCE(jsonb_agg(row_to_json(q)), '[]'::jsonb)
+  INTO v_completed_rows
+  FROM (
+    SELECT
+      v.id AS visit_id,
+      p.first_name,
+      p.last_name,
+      v.completed_at,
+      left(v.doctor_diagnosis, 200) AS diagnosis_preview
+    FROM public.visits v
+    JOIN public.patients p ON p.id = v.patient_id
+    WHERE v.location_id = p_location_id
+      AND v.status = 'completed'
+      AND v.completed_at >= p_date AND v.completed_at < p_date + interval '1 day'
+      AND (v_owner_id = p_caller_auth_uid OR v.claimed_by = v_caller_staff_id)
+      AND (p_cursor IS NULL OR v.completed_at < p_cursor)
+    ORDER BY v.completed_at DESC
+    LIMIT p_page_size + 1
+  ) q;
+
+  IF jsonb_array_length(v_completed_rows) > p_page_size THEN
+    v_has_more_completed := true;
+    v_completed := (SELECT jsonb_agg(e) FROM (SELECT e FROM jsonb_array_elements(v_completed_rows) e LIMIT p_page_size) sub);
+  ELSE
+    v_completed := v_completed_rows;
+  END IF;
+
+  -- Get left visits (all at location)
+  SELECT COALESCE(jsonb_agg(row_to_json(q)), '[]'::jsonb)
+  INTO v_left_rows
+  FROM (
+    SELECT
+      v.id AS visit_id,
+      p.first_name,
+      p.last_name,
+      v.updated_at AS created_at
+    FROM public.visits v
+    JOIN public.patients p ON p.id = v.patient_id
+    WHERE v.location_id = p_location_id
+      AND v.status = 'left'
+      AND v.updated_at >= p_date AND v.updated_at < p_date + interval '1 day'
+      AND (p_cursor IS NULL OR v.updated_at < p_cursor)
+    ORDER BY v.updated_at DESC
+    LIMIT p_page_size + 1
+  ) q;
+
+  IF jsonb_array_length(v_left_rows) > p_page_size THEN
+    v_has_more_left := true;
+    v_left := (SELECT jsonb_agg(e) FROM (SELECT e FROM jsonb_array_elements(v_left_rows) e LIMIT p_page_size) sub);
+  ELSE
+    v_left := v_left_rows;
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'completed', v_completed, 'left', v_left, 'has_more_completed', v_has_more_completed, 'has_more_left', v_has_more_left);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_completed_and_left_visits(
+  p_location_id uuid,
+  p_date date DEFAULT CURRENT_DATE,
+  p_cursor timestamptz DEFAULT NULL,
+  p_page_size int DEFAULT 50
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_completed_and_left_visits(v_auth_uid, p_location_id, p_date, p_cursor, p_page_size);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_completed_and_left_visits(uuid, date, timestamptz, int) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_completed_and_left_visits(uuid, date, timestamptz, int) TO authenticated;

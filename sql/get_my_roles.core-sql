@@ -40,3 +40,6 @@ BEGIN
   RETURN private.get_my_roles(v_auth_uid);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.get_my_roles() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_my_roles() TO authenticated;

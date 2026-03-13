@@ -25,7 +25,7 @@ BEGIN
   END IF;
 
   -- Only allow from pre-claim statuses
-  IF v_visit.status NOT IN ('pending_approval', 'still_answering_ai', 'waiting_doctor_claim') THEN
+  IF v_visit.status NOT IN ('pending_approval', 'still_answering_ai', 'waiting_doctor_claim', 'claimed_by_doctor') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Cannot mark as left from current status');
   END IF;
 
@@ -61,7 +61,10 @@ BEGIN
 
   -- Update status
   UPDATE public.visits
-  SET status = 'left'
+  SET status = 'left',
+      claimed_by = NULL,
+      claimed_at = NULL,
+      updated_at = now()
   WHERE id = p_visit_id;
 
   RETURN jsonb_build_object('success', true);
@@ -84,3 +87,6 @@ BEGIN
   RETURN private.mark_patient_left(v_auth_uid, p_visit_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.mark_patient_left(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.mark_patient_left(uuid) TO authenticated;

@@ -1,0 +1,246 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_referral_detail(
+  p_caller_auth_uid uuid,
+  p_referral_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_referral record;
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_is_from_org boolean := false;
+  v_is_to_org boolean := false;
+  v_owner_id_from uuid;
+  v_owner_id_to uuid;
+  v_result jsonb;
+BEGIN
+  -- Get referral
+  SELECT r.id, r.from_doctor_id, r.from_location_id, r.from_org_id,
+         r.to_org_id, r.to_location_id, r.to_email,
+         r.specialty, r.referral_note,
+         r.included_visit_ids, r.included_attachment_ids,
+         r.patient_id, r.patient_name, r.patient_birthday,
+         r.linked_visit_id, r.status, r.pdf_url,
+         r.created_at
+  INTO v_referral
+  FROM public.referrals r
+  WHERE r.id = p_referral_id;
+
+  IF v_referral IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Referral not found');
+  END IF;
+
+  -- Service-role bypass: NULL auth_uid means called from edge function with service key
+  IF p_caller_auth_uid IS NOT NULL THEN
+    -- Get caller staff info (check both orgs)
+    SELECT su.id, su.org_id
+    INTO v_caller_staff_id, v_caller_org_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_active = true
+      AND su.is_deleted = false
+    LIMIT 1;
+
+    -- Check org ownership for both sides
+    SELECT owner_id INTO v_owner_id_from FROM public.organizations WHERE id = v_referral.from_org_id;
+    IF v_referral.to_org_id IS NOT NULL THEN
+      SELECT owner_id INTO v_owner_id_to FROM public.organizations WHERE id = v_referral.to_org_id;
+    END IF;
+
+    -- Determine which org the caller belongs to
+    IF v_owner_id_from = p_caller_auth_uid OR v_caller_org_id = v_referral.from_org_id THEN
+      v_is_from_org := true;
+    END IF;
+    IF (v_owner_id_to IS NOT NULL AND v_owner_id_to = p_caller_auth_uid)
+       OR (v_referral.to_org_id IS NOT NULL AND v_caller_org_id = v_referral.to_org_id) THEN
+      v_is_to_org := true;
+    END IF;
+
+    IF NOT v_is_from_org AND NOT v_is_to_org THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  ELSE
+    -- Service role: skip auth, mark as from_org for audit purposes
+    v_is_from_org := true;
+  END IF;
+
+  -- On first access by receiving org: mark as viewed
+  IF v_is_to_org AND v_referral.status = 'sent' THEN
+    UPDATE public.referrals
+    SET status = 'viewed'
+    WHERE id = p_referral_id AND status = 'sent';
+  END IF;
+
+  -- Audit: referral_viewed (deduplicate within 5 minutes per actor)
+  IF NOT EXISTS (
+    SELECT 1 FROM public.audit_trail
+    WHERE entity_type = 'referral'
+      AND entity_id = p_referral_id
+      AND actor_id IS NOT DISTINCT FROM COALESCE(v_caller_staff_id, p_caller_auth_uid)
+      AND action = 'referral_viewed'
+      AND created_at > now() - interval '5 minutes'
+  ) THEN
+    INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+    VALUES (
+      COALESCE(v_caller_org_id, v_referral.from_org_id),
+      'referral',
+      p_referral_id,
+      COALESCE(v_caller_staff_id, p_caller_auth_uid),
+      CASE
+        WHEN p_caller_auth_uid IS NULL THEN 'system'
+        WHEN v_owner_id_from = p_caller_auth_uid OR v_owner_id_to = p_caller_auth_uid THEN 'owner'
+        ELSE 'staff'
+      END,
+      'referral_viewed',
+      jsonb_build_object('from_org', v_is_from_org, 'to_org', v_is_to_org)
+    );
+  END IF;
+
+  -- Build result with CTE batch fetch of visit data
+  WITH target_visits AS (
+    SELECT unnest(v_referral.included_visit_ids) AS visit_id
+  ),
+  visit_data AS (
+    SELECT v.id, v.ai_summary, v.doctor_diagnosis, v.ai_diagnostic, v.completed_at
+    FROM public.visits v
+    JOIN target_visits tv ON v.id = tv.visit_id
+  ),
+  visit_transcripts AS (
+    SELECT vm.visit_id,
+      jsonb_agg(jsonb_build_object(
+        'role', vm.role,
+        'content', vm.content,
+        'created_at', vm.created_at
+      ) ORDER BY vm.created_at ASC) AS messages
+    FROM (
+      SELECT vm2.visit_id, vm2.role, vm2.content, vm2.created_at,
+             row_number() OVER (PARTITION BY vm2.visit_id ORDER BY vm2.created_at DESC) AS rn
+      FROM public.visit_messages vm2
+      JOIN target_visits tv ON vm2.visit_id = tv.visit_id
+      WHERE vm2.role <> 'system'
+    ) vm
+    WHERE vm.rn <= 100
+    GROUP BY vm.visit_id
+  ),
+  visit_public_notes AS (
+    SELECT vn.visit_id,
+      jsonb_agg(jsonb_build_object(
+        'content', vn.content,
+        'author_name', su.full_name,
+        'created_at', vn.created_at
+      ) ORDER BY vn.created_at ASC) AS notes
+    FROM public.visit_notes vn
+    JOIN target_visits tv ON vn.visit_id = tv.visit_id
+    JOIN public.staff_users su ON su.id = vn.doctor_id
+    WHERE vn.is_private = false
+    GROUP BY vn.visit_id
+  ),
+  patient_public_notes AS (
+    SELECT jsonb_agg(jsonb_build_object(
+      'content', pn.content,
+      'author_name', su.full_name,
+      'created_at', pn.created_at
+    ) ORDER BY pn.created_at ASC) AS notes
+    FROM public.patient_notes pn
+    JOIN public.staff_users su ON su.id = pn.author_id
+    WHERE pn.patient_id = v_referral.patient_id
+      AND pn.is_private = false
+  ),
+  visits_combined AS (
+    SELECT jsonb_agg(jsonb_build_object(
+      'id', vd.id,
+      'ai_summary', vd.ai_summary,
+      'doctor_diagnosis', vd.doctor_diagnosis,
+      'ai_diagnostic', vd.ai_diagnostic,
+      'completed_at', vd.completed_at,
+      'transcript', COALESCE(vt.messages, '[]'::jsonb),
+      'notes', COALESCE(vpn.notes, '[]'::jsonb)
+    ) ORDER BY vd.completed_at DESC) AS visits
+    FROM visit_data vd
+    LEFT JOIN visit_transcripts vt ON vt.visit_id = vd.id
+    LEFT JOIN visit_public_notes vpn ON vpn.visit_id = vd.id
+  )
+  SELECT jsonb_build_object(
+    'referral', jsonb_build_object(
+      'id', v_referral.id,
+      'from_org_id', v_referral.from_org_id,
+      'from_doctor_name', ds.full_name,
+      'from_org_name', fo.name,
+      'from_location_name', fl.name,
+      'to_org_name', too.name,
+      'to_location_name', tl.name,
+      'to_email', v_referral.to_email,
+      'specialty', v_referral.specialty,
+      'referral_note', v_referral.referral_note,
+      'patient_name', v_referral.patient_name,
+      'patient_birthday', v_referral.patient_birthday,
+      'included_attachment_ids', v_referral.included_attachment_ids,
+      'linked_visit_id', v_referral.linked_visit_id,
+      'status', CASE WHEN v_is_to_org AND v_referral.status = 'sent' THEN 'viewed' ELSE v_referral.status END,
+      'pdf_url', v_referral.pdf_url,
+      'created_at', v_referral.created_at,
+      'medications', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('name', pm.name))
+        FROM public.patient_medications pm
+        WHERE pm.patient_id = v_referral.patient_id
+      ), '[]'::jsonb),
+      'allergies', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('name', pa.name))
+        FROM public.patient_allergies pa
+        WHERE pa.patient_id = v_referral.patient_id
+      ), '[]'::jsonb),
+      'chronic_conditions', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('name', pc.name))
+        FROM public.patient_chronic_conditions pc
+        WHERE pc.patient_id = v_referral.patient_id
+      ), '[]'::jsonb)
+    ),
+    'visits', COALESCE(vc.visits, '[]'::jsonb),
+    'patient_notes', COALESCE(ppn.notes, '[]'::jsonb)
+  ) INTO v_result
+  FROM visits_combined vc
+  CROSS JOIN patient_public_notes ppn
+  CROSS JOIN public.staff_users ds
+  CROSS JOIN public.organizations fo
+  CROSS JOIN public.locations fl
+  LEFT JOIN public.organizations too ON too.id = v_referral.to_org_id
+  LEFT JOIN public.locations tl ON tl.id = v_referral.to_location_id
+  WHERE ds.id = v_referral.from_doctor_id
+    AND fo.id = v_referral.from_org_id
+    AND fl.id = v_referral.from_location_id;
+
+  RETURN jsonb_build_object('success', true, 'data', v_result);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_referral_detail(
+  p_referral_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  -- Service-role bypass (for edge functions calling with service key)
+  IF auth.role() = 'service_role' THEN
+    RETURN private.get_referral_detail(NULL, p_referral_id);
+  END IF;
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_referral_detail(v_auth_uid, p_referral_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_referral_detail(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_referral_detail(uuid) TO authenticated;

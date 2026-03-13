@@ -104,3 +104,6 @@ BEGIN
   RETURN private.deactivate_staff(v_auth_uid, p_staff_user_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.deactivate_staff(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.deactivate_staff(uuid) TO authenticated;

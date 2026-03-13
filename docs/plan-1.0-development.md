@@ -68,7 +68,7 @@ Two strategies based on auth context:
 | Job | Schedule | Action |
 |-----|----------|--------|
 | Stale session cleanup | Daily 6 AM | Expire `waiting_doctor_claim` visits from previous day, notify receptionist |
-| 30-minute AI timeout | Every minute | Move `still_answering_ai` visits older than 30 min to queue with `timeout_flagged = true`. Uses `idx_visits_ai_timeout` partial index (tiny — only active AI sessions). |
+| 30-minute AI timeout | Every minute | Move `still_answering_ai` visits older than 30 min to queue with `timeout_flagged = true`. Sets audit context (`actor_type=system`, `action=ai_timeout`) before UPDATE. Guards against NULL `ai_started_at`. Uses `idx_visits_ai_timeout` partial index (tiny — only active AI sessions). |
 | Follow-up expiry | Daily midnight | Expire follow-ups 90+ days overdue |
 | Follow-up SMS reminders | Daily 10 AM | Send reminders for overdue follow-ups (if add-on enabled). Process in batches of 20 with small delays between batches to respect Twilio rate limits. `LIMIT` batch size and track cursor for next run. |
 | Review platform rotation | Daily midnight | Rotate review platforms per location's cycle_days |
@@ -1129,8 +1129,8 @@ CREATE INDEX idx_phone_verifications_lookup ON phone_verifications(phone, expire
 **SQL Functions:**
 - `check_location_active(location_id)` — returns true if at least one receptionist is currently checked in. Also returns operating_hours for display if inactive.
 - `checkin_patient(location_id, first_name, last_name, birthday)` — Phase 3 implements Path A only:
-  - No match → creates patient + visit (`pending_approval`) → returns session_token + `match_type: 'new'`
-  - Match found (no flag) → creates visit for existing patient → returns `match_type: 'returning'`
+  - No match → creates patient + visit (`pending_approval`) → returns session_token, visit_id + `match_type: 'new'`
+  - Match found (no flag) → creates visit for existing patient → returns `match_type: 'returning'` with visit_id
   - Match found (flag) → returns `match_type: 'phone_required'` (handled in Phase 6)
   - Also returns `has_previous_visits` boolean for first-timer detection
   - Checks concurrent session guard: if patient has active visit → returns `match_type: 'active_session'` with session info
@@ -1224,7 +1224,7 @@ CREATE INDEX idx_phone_verifications_lookup ON phone_verifications(phone, expire
 
 ---
 
-### Phase 4: AI Conversation Engine
+### Phase 4: AI Conversation Engine (completed) (audited)
 
 **Goal:** Patients have a full AI conversation. AI generates summary + diagnostic. Patient approves. Credits deducted. Queue entry created.
 
@@ -1252,7 +1252,11 @@ CREATE INDEX idx_phone_verifications_lookup ON phone_verifications(phone, expire
   - Detects urgency → updates `visits.priority`
   - Detects sensitive topics → sets `visits.is_sensitive = true`
   - Detects conversation completion → triggers summary generation
-  - On first AI message: deducts credits (1.5 standard, 4 advanced) via atomic transaction (`SELECT FOR UPDATE` on org row)
+  - Deducts credits **before** storing the first patient message (1.5 standard, 4 advanced) — avoids dangling messages if credits exhausted. Uses `SELECT FOR UPDATE` on org row + `UNIQUE(visit_id)` on `credits_log` + `INSERT ... ON CONFLICT DO NOTHING` as triple-guard against double-deduction.
+  - On Claude API persistent failure: calls `update_visit_status_system` RPC to set audit context (`actor_type=system`, `action=ai_failure_fallback`) atomically with status update
+  - Priority only escalates via `GREATEST(priority, p_priority)` — a HIGH priority from an early message cannot be downgraded by a later MEDIUM match
+  - Transcript injection defense: escapes `</transcript>` in patient messages before summary prompt injection
+  - `Authorization: Bearer <anon_key>` header included in client-side fetch to edge function
 
 - `generate-summary`:
   - Input: visit_id
@@ -1263,17 +1267,19 @@ CREATE INDEX idx_phone_verifications_lookup ON phone_verifications(phone, expire
   - **Parallelize with `Promise.all()`**: summary, structured_card, and diagnostic are independent Claude API calls — run them concurrently to cut wait from ~15s to ~5s
   - Extracts medications, allergies, chronic conditions → updates patient records (can be part of summary prompt or parallel)
   - Stores all on visit row
+  - Broadcasts `summary_ready` to patient channel (subscribes to channel before sending)
 
 **SQL Functions:**
 - `start_ai_conversation(visit_id, session_token)` — validates session, checks credits (fails if 0), returns conversation context (past summaries, meds). Note: follow-up context added in Phase 7.
-- `send_patient_message(visit_id, session_token, content, content_original?)` — stores patient message. **Must verify `visits.status = 'still_answering_ai'` before processing.** Reject if visit is completed/claimed/other status to prevent stale session tokens from sending messages to closed visits (wasted Claude API calls + corrupted records).
+- `send_patient_message(visit_id, session_token, content, content_original?)` — stores patient message. `content_original` capped at 5000 chars. **Must verify `visits.status = 'still_answering_ai'` before processing.** Reject if visit is completed/claimed/other status to prevent stale session tokens from sending messages to closed visits (wasted Claude API calls + corrupted records).
 - `store_ai_message(visit_id, content)` — stores AI response
-- `get_conversation(visit_id)` — returns all messages ordered by created_at
+- `get_conversation(visit_id)` — returns all messages ordered by `created_at ASC, id ASC` (deterministic tiebreaker prevents system prompt leak to patient via `OFFSET 1`)
 - `update_visit_priority(visit_id, priority smallint)` — sets urgency (1=low, 2=medium, 3=high)
 - `set_sensitive_flag(visit_id)` — marks transcript as sensitive
 - `save_summary(visit_id, summary, structured_card?, diagnostic?)` — stores AI outputs
 - `approve_summary(visit_id, session_token)` — patient confirms → status → `waiting_doctor_claim`, entered_queue_at = now(). patient_approved = true, patient_approved_at = now()
-- `deduct_credits(org_id, visit_id, ai_model)` — atomic: check remaining > 0, deduct (1.5 or 4), log to credits_log. Uses `SELECT FOR UPDATE` to prevent race condition. **Must be its own transaction** (separate RPC call) — never nested inside a larger transaction. The lock is held only for microseconds; nesting would hold it for the entire AI processing duration, blocking all other patients at the same org.
+- `deduct_credits(org_id, visit_id, ai_model)` — atomic: `SELECT FOR UPDATE` on org row first, then check `credits_log` for existing entry, then `INSERT ... ON CONFLICT DO NOTHING` with `ROW_COUNT` check as final guard. `credits_log` has `UNIQUE(visit_id)` constraint. **Must be its own transaction** (separate RPC call) — never nested inside a larger transaction.
+- `update_visit_status_system(visit_id, new_status, timeout_flagged?, action?)` — sets `app.audit_*` GUC params atomically with visit status update. Used by edge functions and cron for system-initiated transitions.
 - `check_credits(org_id)` — returns credits_total - credits_used
 - `update_medications(patient_id, medications[])` — bulk upsert from AI extraction (mark removed ones as inactive). Moved here from Phase 7 because `generate-summary` needs it.
 - `update_allergies(patient_id, allergies[])` — bulk upsert. Same reason.
@@ -1398,7 +1404,7 @@ After approval, the patient flow continues:
 
 ---
 
-### Phase 5: Doctor Dashboard + Real-Time Queue
+### Phase 5: Doctor Dashboard + Real-Time Queue (completed) (audited)
 
 **Goal:** Doctors see the queue, claim patients, read transcripts, enter diagnosis, complete visits.
 
@@ -1484,7 +1490,7 @@ After approval, the patient flow continues:
 
 ---
 
-### Phase 6: Full Identity System + Phone Verification
+### Phase 6: Full Identity System + Phone Verification (completed) (audited)
 
 **Goal:** Complete collision handling (Path B + C), SMS phone verification, phone collection after AI, session recovery, concurrent session guard.
 
@@ -1568,10 +1574,36 @@ After approval, the patient flow continues:
 - [ ] Session recovery with flag: phone also required
 - [ ] Concurrent session guard: scan at Location B while active at A → resume A session, receptionist A notified
 - [ ] Patient record edit → audit logged, uniqueness validated
+- [ ] Returning flagged patient with verified phone: receptionist sees "VERIFIED RETURNING" badge with Approve button (no re-verification)
+- [ ] "No phone" decline → receptionist buttons re-enabled (Confirm Returning / Verify Phone / Mark as Left)
+- [ ] Phone collection mode calls collect_phone_post_ai before starting SMS verification
+- [ ] Path B "Verify Phone" sets collisionContext so PhoneInput renders in verification mode
+
+**Implementation Deviations (from spec above):**
+1. **`checkin_patient` modified in-place** instead of creating `checkin_patient_full`. Optional `p_phone` param is backward-compatible. Creating a new function would require client-side changes and leave a dead function.
+2. **`verify_phone_and_link` signature changed** to `(visit_id, session_token, phone)` — bcrypt code comparison moved to `verify-phone` edge function (Deno has native bcrypt). SQL function receives already-verified phone. Patient_id derived from visit internally.
+3. **Cross-location "receptionist A notified"** implemented as audit trail entry only, no real-time notification. The critical behavior (resume at original location, prevent duplicate visit) works without real-time push. Adding cross-location notifications would require new infrastructure with low ROI.
+
+**Implementation Additions (not in spec, necessary for implementation):**
+1. `phone_verification_pending` boolean column on visits — async state tracking between patient phone screen and receptionist card. Avoids adding a 7th status to the enum that drives triggers, audit, broadcast, counts, and session recovery.
+2. `broadcast-visit-update` extended with `event_type` field — reuses existing edge function for `phone_required` and `phone_verified` events via same `net.http_post()` infrastructure.
+3. `get_collision_state(visit_id)` SQL function — after phone verification, determines match state (phone_matches / phone_no_match / no_existing_phone) for CollisionResolutionDialog. Reads verified phone from `phone_verifications` table.
+4. `decline_phone_verification(visit_id, session_token)` SQL function — when patient clicks "I don't have a phone", clears `phone_verification_pending` so receptionist buttons re-enable. Without this, receptionist sees permanent "Waiting..." spinner with no escape.
+5. `get_patient_session` modified — adds `phone_verification_pending`, `patient_phone_verified`, `patient_has_phone` fields for session recovery and phone state tracking.
+6. `get_pending_approvals` modified — adds `collision_flag`, `phone_verified`, `phone_masked`, `phone_verification_pending` for receptionist ApprovalCard rendering.
+
+**Collision-aware phone storage:** `verify_phone_and_link` only writes phone to the patient record when `collision_flag=false` (Path B verify or post-AI collection). When `collision_flag=true`, phone stays in `phone_verifications` table until collision resolution functions determine the correct patient — prevents corrupting the wrong patient's phone when the visit is temporarily linked to an arbitrary first-matched patient.
+
+**Phase 6 Audit Fixes:**
+7. `resume_session` SQL function was built but never called from the frontend. Session recovery is handled entirely by `checkin_patient`'s `active_session` match_type + localStorage-based `get_patient_session` on mount. Function dropped as dead code.
+8. `phone_no_match` path in `checkin_patient` now creates a new patient + visit and returns `session_token`/`visit_id`, matching the plan's stated behavior ("Phone doesn't match any → receptionist notified, new record created"). Previously returned `phone_no_match` without creating any records, causing null session_token errors in CheckinFlow.
+9. **TOCTOU race in OTP attempt limiting** (`verify-phone/index.ts`): JS-side attempt increment allowed unlimited parallel OTP guesses (all requests read same `attempts` value, set same increment, all succeed). Fixed with new `increment_verification_attempt` SQL RPC that does atomic server-side `SET attempts = attempts + 1 WHERE attempts < 3 RETURNING attempts`.
+10. **Collision candidate selection** (`get_collision_state`): With 3+ patients sharing name+birthday, `LIMIT 1` could pick wrong candidate, causing incorrect `phone_no_match` state and duplicate records. Fixed with match-first approach: try `p.phone = v_verified_phone` first, fall back to best candidate.
+11. **Name regex too restrictive** (`edit_patient_record`): Regex `'^[a-zA-ZÀ-ÿ\s\-'']+$'` rejected CJK, Arabic, Cyrillic, etc. Removed regex; existing sanitization (HTML strip + trim + 100-char limit + empty check) is sufficient.
 
 ---
 
-### Phase 7: Medical Records + Notes + Attachments + Follow-ups
+### Phase 7: Medical Records + Notes + Attachments + Follow-ups (completed) (audited)
 
 **Goal:** Full patient data layer — persistent medical records, doctor notes, attachments, follow-up system, addendums, audit trail viewer.
 
@@ -1659,7 +1691,7 @@ After approval, the patient flow continues:
 
 ---
 
-### Phase 8: SMS + Notifications + Referrals
+### Phase 8: SMS + Notifications + Referrals (completed) (audited)
 
 **Goal:** Visit summary SMS, browser/email notifications, stale session cleanup, and full referral system.
 
@@ -1778,7 +1810,7 @@ After approval, the patient flow continues:
 
 ---
 
-### Phase 9: Reviews + Translation + Voice
+### Phase 9: Reviews + Translation + Voice (completed) (audited)
 
 **Goal:** Review system with external platform funneling, multi-language support, and voice input.
 
@@ -1879,7 +1911,7 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 
 ---
 
-### Phase 10: Analytics + Manager Dashboard
+### Phase 10: Analytics + Manager Dashboard (completed) (audited)
 
 **Goal:** Manager/owner analytics — employee stats, patient stats, wait times, return rates, follow-up compliance.
 
@@ -1943,7 +1975,7 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 
 ---
 
-### Phase 11: Billing + Credits + Polish
+### Phase 11: Billing + Credits + Polish (completed) (audited)
 
 **Goal:** PayPal billing integration, credit management, and final feature polish.
 
@@ -1963,10 +1995,10 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 
 **SQL Functions:**
 - `get_credit_dashboard(org_id)` — credits used/remaining, daily usage trend (aggregated by day in SQL, bounded by billing cycle or last 30 days — never raw `credits_log` rows), projected run-out date (usage rate × remaining / rate)
-- `purchase_overage_credits(org_id, amount)` — immediately available, $1/credit, logged
+- `purchase_overage_credits(org_id, amount)` — immediately available, $1/credit, logged. **v2: add server-side PayPal order verification (p_order_id param) before crediting — current design relies on client-side checkout completing first, but the RPC is callable directly.**
 - `reset_monthly_credits(org_id)` — on billing cycle: set credits_used = 0, credits_total = plan allocation. No rollover.
 - `handle_payment_failure(org_id, attempt_number)` — tracks retries. After 3 over 7 days → `read_only`. After 30 days → `suspended`. Owner notified at each stage.
-- `change_subscription_plan(org_id, new_plan)` — updates credits_total + plan
+- `change_subscription_plan(org_id, new_plan)` — updates credits_total + plan. **v2: make service_role only (called via webhook after PayPal subscription update) — current design allows owner to call directly without payment proof.**
 - `toggle_addon(org_id, addon_type, enabled)` — review_sms_addon or followup_sms_addon
 - `cancel_subscription(org_id)` — data retained 90 days, then deleted. Owner can request immediate deletion.
 - `search_patients(org_id, query, birthday?, p_limit int DEFAULT 25)` — search by name and/or birthday across entire org, `LIMIT 25`. **Requires `pg_trgm` GIN index** (`idx_patients_name_trgm`) for acceptable performance — without it, `ILIKE '%query%'` does a seq scan on all patients. Returns: name, birthday, last visit date, visit count.

@@ -1,0 +1,98 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.complete_referral(
+  p_caller_auth_uid uuid,
+  p_referral_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_referral record;
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_owner_id uuid;
+BEGIN
+  -- Get referral details
+  SELECT r.id, r.status, r.from_org_id, r.to_org_id
+  INTO v_referral
+  FROM public.referrals r
+  WHERE r.id = p_referral_id;
+
+  IF v_referral IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Referral not found');
+  END IF;
+
+  -- Guard: status must be patient_arrived
+  IF v_referral.status <> 'patient_arrived' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Referral must be in patient_arrived status to complete');
+  END IF;
+
+  -- Auth: staff at from_org_id OR to_org_id
+  SELECT su.id, su.org_id INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false
+    AND su.org_id IN (v_referral.from_org_id, v_referral.to_org_id);
+
+  IF v_caller_staff_id IS NULL THEN
+    -- Check if caller is owner of either org
+    SELECT o.id INTO v_caller_org_id
+    FROM public.organizations o
+    WHERE o.owner_id = p_caller_auth_uid
+      AND o.id IN (v_referral.from_org_id, v_referral.to_org_id)
+    LIMIT 1;
+
+    IF v_caller_org_id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+
+    v_owner_id := p_caller_auth_uid;
+  END IF;
+
+  -- Update referral
+  UPDATE public.referrals
+  SET status = 'completed'
+  WHERE id = p_referral_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    COALESCE(v_caller_org_id, v_referral.from_org_id),
+    'referral',
+    p_referral_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE WHEN v_owner_id IS NOT NULL THEN 'owner' ELSE 'staff' END,
+    'referral_completed',
+    jsonb_build_object('from_org_id', v_referral.from_org_id, 'to_org_id', v_referral.to_org_id)
+  );
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.complete_referral(
+  p_referral_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.complete_referral(v_auth_uid, p_referral_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.complete_referral(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.complete_referral(uuid) TO authenticated;

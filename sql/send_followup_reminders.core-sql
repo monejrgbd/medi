@@ -1,0 +1,79 @@
+-- Private only (cron target, no public wrapper)
+CREATE OR REPLACE FUNCTION private.send_followup_reminders()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_rec record;
+  v_edge_url text;
+  v_edge_secret text;
+  v_org_phone text;
+  v_config record;
+BEGIN
+  SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+  SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  IF v_edge_url IS NULL OR v_edge_secret IS NULL THEN
+    RETURN;
+  END IF;
+
+  FOR v_rec IN
+    SELECT f.id, f.patient_id, f.visit_id, f.due_date, f.reminders_sent,
+           p.first_name, p.phone, p.org_id,
+           o.name AS org_name,
+           l.id AS location_id,
+           fsc.max_reminders, fsc.first_reminder_days, fsc.second_reminder_days,
+           fsc.reminder_template
+    FROM public.follow_ups f
+    JOIN public.patients p ON p.id = f.patient_id
+    JOIN public.organizations o ON o.id = p.org_id
+    JOIN public.visits v ON v.id = f.visit_id
+    JOIN public.locations l ON l.id = v.location_id
+    LEFT JOIN public.followup_sms_config fsc ON fsc.org_id = o.id
+    WHERE f.status = 'active'
+      AND o.followup_sms_addon = true
+      AND o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
+      AND p.phone IS NOT NULL
+      AND f.reminders_sent < COALESCE(fsc.max_reminders, 2)
+      AND (
+        (f.reminders_sent = 0 AND f.due_date + (COALESCE(fsc.first_reminder_days, 3) || ' days')::interval <= now())
+        OR (f.reminders_sent = 1 AND f.due_date + (COALESCE(fsc.second_reminder_days, 7) || ' days')::interval <= now())
+        OR (f.reminders_sent >= 2 AND f.due_date + ((COALESCE(fsc.second_reminder_days, 7) + (f.reminders_sent - 1) * 7) || ' days')::interval <= now())
+      )
+    ORDER BY f.due_date ASC
+    LIMIT 20
+  LOOP
+    PERFORM net.http_post(
+      url := v_edge_url || '/send-sms',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'x-internal-secret', v_edge_secret
+      ),
+      body := jsonb_build_object(
+        'to', v_rec.phone,
+        'org_id', v_rec.org_id,
+        'location_id', v_rec.location_id,
+        'visit_id', v_rec.visit_id,
+        'patient_id', v_rec.patient_id,
+        'sms_type', 'follow_up_reminder',
+        'template', 'follow_up',
+        'custom_body', v_rec.reminder_template,
+        'template_params', jsonb_build_object(
+          'first_name', v_rec.first_name,
+          'org_name', v_rec.org_name,
+          'name', v_rec.first_name,
+          'clinic', v_rec.org_name,
+          'phone', ''
+        )
+      )
+    );
+
+    UPDATE public.follow_ups
+    SET reminders_sent = reminders_sent + 1
+    WHERE id = v_rec.id;
+  END LOOP;
+END;
+$$;

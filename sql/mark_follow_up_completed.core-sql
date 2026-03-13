@@ -1,0 +1,116 @@
+-- private.mark_follow_up_completed
+-- Marks an active follow-up as completed
+-- Called by: public.mark_follow_up_completed (wrapper)
+
+CREATE OR REPLACE FUNCTION private.mark_follow_up_completed(
+  p_caller_auth_uid uuid,
+  p_follow_up_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_follow_up record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_is_receptionist boolean;
+BEGIN
+  -- Get the follow-up
+  SELECT id, status, org_id, location_id
+  INTO v_follow_up
+  FROM public.follow_ups
+  WHERE id = p_follow_up_id;
+
+  IF v_follow_up.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'follow-up not found');
+  END IF;
+
+  IF v_follow_up.status <> 'active' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'follow-up is not active');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+  FROM public.staff_users
+  WHERE auth_uid = p_caller_auth_uid
+    AND org_id = v_follow_up.org_id
+    AND is_active = true
+    AND is_deleted = false;
+
+  -- Get org owner
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_follow_up.org_id;
+
+  -- Auth: owner OR receptionist at the follow-up's location
+  IF v_owner_id = p_caller_auth_uid THEN
+    -- owner is authorized
+    NULL;
+  ELSIF v_caller_staff_id IS NOT NULL THEN
+    -- Check if caller has receptionist role at this location
+    SELECT EXISTS (
+      SELECT 1 FROM public.staff_roles
+      WHERE staff_user_id = v_caller_staff_id
+        AND role = 'receptionist'
+        AND location_id = v_follow_up.location_id
+    ) INTO v_is_receptionist;
+
+    IF NOT v_is_receptionist THEN
+      RETURN jsonb_build_object('success', false, 'error', 'not authorized');
+    END IF;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'not authorized');
+  END IF;
+
+  -- Update follow-up status
+  UPDATE public.follow_ups
+  SET status = 'completed'
+  WHERE id = p_follow_up_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (
+    org_id, entity_type, entity_id, actor_id, actor_type, action, details
+  ) VALUES (
+    v_follow_up.org_id,
+    'follow_up',
+    p_follow_up_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END,
+    'completed',
+    jsonb_build_object('follow_up_id', p_follow_up_id)
+  );
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- public.mark_follow_up_completed (wrapper)
+-- Thin public wrapper that captures auth context
+
+CREATE OR REPLACE FUNCTION public.mark_follow_up_completed(
+  p_follow_up_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not authenticated');
+  END IF;
+
+  RETURN private.mark_follow_up_completed(v_auth_uid, p_follow_up_id);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.mark_follow_up_completed(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.mark_follow_up_completed(uuid) TO authenticated;

@@ -1,16 +1,35 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { stripHtml } from "@/lib/utils";
 
-export async function approvePatient(visitId: string) {
-  if (!visitId) return { success: false, error: "Visit ID required" };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function validUUID(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
+export async function approvePatient(
+  visitId: string,
+  followUpInfo?: { followUpOfVisitId: string; followUpId: string }
+) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId))
+    return { success: false, error: "Invalid visit ID" };
+  if (followUpInfo) {
+    if (!validUUID(followUpInfo.followUpOfVisitId) || !validUUID(followUpInfo.followUpId))
+      return { success: false, error: "Invalid follow-up IDs" };
+  }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("approve_patient", {
-    p_visit_id: visitId,
-  });
+  const rpcParams: Record<string, unknown> = { p_visit_id: visitId };
+  if (followUpInfo) {
+    rpcParams.p_is_follow_up = true;
+    rpcParams.p_follow_up_of_visit_id = followUpInfo.followUpOfVisitId;
+    rpcParams.p_follow_up_id = followUpInfo.followUpId;
+  }
+  const { data, error } = await supabase.rpc("approve_patient", rpcParams);
 
   if (error) return { success: false, error: "Failed to approve patient" };
   if (data && !data.success) return { success: false, error: data.error };
@@ -20,7 +39,8 @@ export async function approvePatient(visitId: string) {
 }
 
 export async function denyPatient(visitId: string) {
-  if (!visitId) return { success: false, error: "Visit ID required" };
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("deny_patient", {
@@ -35,7 +55,8 @@ export async function denyPatient(visitId: string) {
 }
 
 export async function markPatientLeft(visitId: string) {
-  if (!visitId) return { success: false, error: "Visit ID required" };
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("mark_patient_left", {
@@ -50,7 +71,8 @@ export async function markPatientLeft(visitId: string) {
 }
 
 export async function toggleGaveTablet(visitId: string) {
-  if (!visitId) return { success: false, error: "Visit ID required" };
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("toggle_gave_tablet", {
@@ -64,7 +86,8 @@ export async function toggleGaveTablet(visitId: string) {
 }
 
 export async function handlePatient(visitId: string) {
-  if (!visitId) return { success: false, error: "Visit ID required" };
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("handle_patient", {
@@ -84,6 +107,7 @@ export async function fetchSimilarPatients(
   lastName: string,
   birthday: string
 ) {
+  await requireAuth();
   const cleanFirst = stripHtml(firstName).slice(0, 100);
   const cleanLast = stripHtml(lastName).slice(0, 100);
 
@@ -103,4 +127,196 @@ export async function fetchSimilarPatients(
   if (data && !data.success) return { success: false, error: data.error };
 
   return { success: true, patients: data?.patients ?? [] };
+}
+
+// --- Phase 6: Phone verification & collision handling ---
+
+export async function verifyPhonePrompt(visitId: string) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("handle_collision_verify", {
+    p_visit_id: visitId,
+  });
+
+  if (error) return { success: false, error: "Failed to trigger phone verification" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
+export async function confirmReturning(visitId: string) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("handle_collision_returning", {
+    p_visit_id: visitId,
+  });
+
+  if (error) return { success: false, error: "Failed to confirm returning patient" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
+export async function resolveCollision(
+  visitId: string,
+  phoneMatchesExisting: boolean,
+  sharedPhone: boolean = false
+) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("handle_collision_result", {
+    p_visit_id: visitId,
+    p_phone_matches_existing: phoneMatchesExisting,
+    p_shared_phone: sharedPhone,
+  });
+
+  if (error) return { success: false, error: "Failed to resolve collision" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
+export async function handleNoPhoneExisting(visitId: string) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("handle_no_phone_existing", {
+    p_visit_id: visitId,
+  });
+
+  if (error) return { success: false, error: "Failed to handle no-phone case" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
+export async function editPatientRecord(
+  patientId: string,
+  firstName?: string,
+  lastName?: string,
+  birthday?: string
+) {
+  await requireAuth();
+  if (!patientId || !validUUID(patientId)) return { success: false, error: "Invalid patient ID" };
+
+  const supabase = await createClient();
+  const params: Record<string, unknown> = { p_patient_id: patientId };
+  if (firstName !== undefined) params.p_first_name = stripHtml(firstName).slice(0, 100);
+  if (lastName !== undefined) params.p_last_name = stripHtml(lastName).slice(0, 100);
+  if (birthday !== undefined) params.p_birthday = birthday;
+
+  const { data, error } = await supabase.rpc("edit_patient_record", params);
+
+  if (error) return { success: false, error: "Failed to edit patient record" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
+export async function fetchCollisionState(visitId: string) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_collision_state", {
+    p_visit_id: visitId,
+  });
+
+  if (error) return { success: false, error: "Failed to fetch collision state" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  return {
+    success: true,
+    match_state: data.match_state,
+    existing_phone_masked: data.existing_phone_masked,
+    new_phone_masked: data.new_phone_masked,
+    existing_patient_id: data.existing_patient_id,
+  };
+}
+
+// --- Phase 7: Follow-ups & audit trail ---
+
+export async function fetchActiveFollowUps(patientId: string) {
+  await requireAuth();
+  if (!patientId || !validUUID(patientId))
+    return { success: false, error: "Invalid patient ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_active_follow_ups", {
+    p_patient_id: patientId,
+  });
+
+  if (error) return { success: false, error: "Failed to fetch follow-ups" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  return { success: true, follow_ups: data.follow_ups };
+}
+
+export async function markFollowUpCompleted(followUpId: string) {
+  await requireAuth();
+  if (!followUpId || !validUUID(followUpId))
+    return { success: false, error: "Invalid follow-up ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("mark_follow_up_completed", {
+    p_follow_up_id: followUpId,
+  });
+
+  if (error) return { success: false, error: "Failed to mark follow-up completed" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
+export async function fetchAuditTrail(
+  orgId: string,
+  filters?: {
+    entityType?: string;
+    entityId?: string;
+    actorId?: string;
+    startDate?: string;
+    endDate?: string;
+    cursorCreatedAt?: string;
+    cursorId?: string;
+  }
+) {
+  await requireAuth();
+  if (!orgId || !validUUID(orgId))
+    return { success: false, error: "Invalid organization ID" };
+
+  const supabase = await createClient();
+  const rpcParams: Record<string, unknown> = { p_org_id: orgId };
+  if (filters?.entityType) rpcParams.p_entity_type = filters.entityType;
+  if (filters?.entityId) rpcParams.p_entity_id = filters.entityId;
+  if (filters?.actorId) rpcParams.p_actor_id = filters.actorId;
+  if (filters?.startDate) rpcParams.p_start_date = filters.startDate;
+  if (filters?.endDate) rpcParams.p_end_date = filters.endDate;
+  if (filters?.cursorCreatedAt) rpcParams.p_cursor_created_at = filters.cursorCreatedAt;
+  if (filters?.cursorId) rpcParams.p_cursor_id = filters.cursorId;
+
+  const { data, error } = await supabase.rpc("get_audit_trail", rpcParams);
+
+  if (error) return { success: false, error: "Failed to fetch audit trail" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  return {
+    success: true,
+    entries: data.entries,
+    has_more: data.has_more,
+    next_cursor_created_at: data.next_cursor_created_at,
+    next_cursor_id: data.next_cursor_id,
+  };
 }

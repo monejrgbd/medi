@@ -1,0 +1,57 @@
+-- Private only — called by daily cron, no public wrapper needed
+CREATE OR REPLACE FUNCTION private.send_trial_expiry_alert()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_owner_email text;
+  v_edge_url text;
+  v_edge_secret text;
+BEGIN
+  -- Read vault secrets once
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+  SELECT decrypted_secret INTO v_edge_secret
+  FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  IF v_edge_url IS NULL OR v_edge_secret IS NULL THEN
+    RETURN;
+  END IF;
+
+  FOR v_org IN
+    SELECT o.id, o.name, o.owner_id, o.trial_end_date
+    FROM public.organizations o
+    WHERE o.trial_end_date BETWEEN now() AND now() + interval '7 days'
+      AND o.subscription_plan ILIKE '%trial%'
+      AND o.trial_alert_sent = false
+  LOOP
+    SELECT email INTO v_owner_email
+    FROM auth.users WHERE id = v_org.owner_id;
+
+    IF v_owner_email IS NOT NULL THEN
+      PERFORM net.http_post(
+        url := v_edge_url || '/send-email',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'x-internal-secret', v_edge_secret
+        ),
+        body := jsonb_build_object(
+          'to', v_owner_email,
+          'subject', 'Trial Expiring Soon — ' || v_org.name,
+          'html_body', '<h2>Trial Expiry Notice</h2><p>Your trial for <strong>' || v_org.name ||
+            '</strong> expires on ' || to_char(v_org.trial_end_date, 'Month DD, YYYY') ||
+            '.</p><p>Upgrade to keep your AI pre-screening running.</p>'
+        )
+      );
+    END IF;
+
+    UPDATE public.organizations
+    SET trial_alert_sent = true
+    WHERE id = v_org.id;
+  END LOOP;
+END;
+$$;

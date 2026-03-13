@@ -45,3 +45,6 @@ BEGIN
   RETURN private.submit_feature_request(v_auth_uid, p_content);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.submit_feature_request(text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.submit_feature_request(text) TO authenticated;

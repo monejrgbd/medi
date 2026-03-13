@@ -1,0 +1,83 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_stale_session_count(
+  p_caller_auth_uid uuid,
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_has_role boolean := false;
+  v_count int;
+BEGIN
+  -- Get location org
+  SELECT l.org_id INTO v_org_id
+  FROM public.locations l
+  WHERE l.id = p_location_id;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Auth: owner or staff at location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.location_id = p_location_id
+    ) INTO v_has_role;
+
+    IF NOT v_has_role THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  SELECT count(*)::int INTO v_count
+  FROM public.visits
+  WHERE location_id = p_location_id
+    AND status = 'waiting_doctor_claim'
+    AND entered_queue_at < CURRENT_DATE;
+
+  RETURN jsonb_build_object('success', true, 'count', v_count);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_stale_session_count(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_stale_session_count(v_auth_uid, p_location_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_stale_session_count(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_stale_session_count(uuid) TO authenticated;

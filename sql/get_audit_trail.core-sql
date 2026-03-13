@@ -1,0 +1,188 @@
+-- get_audit_trail: paginated audit trail query with filters, owner/manager only
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_audit_trail(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_entity_type text DEFAULT NULL,
+  p_entity_id text DEFAULT NULL,
+  p_actor_id text DEFAULT NULL,
+  p_start_date timestamptz DEFAULT NULL,
+  p_end_date timestamptz DEFAULT NULL,
+  p_limit int DEFAULT 50,
+  p_cursor_created_at timestamptz DEFAULT NULL,
+  p_cursor_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_limit int;
+  v_rows jsonb;
+  v_has_more boolean := false;
+  v_trimmed_rows jsonb;
+  v_next_cursor_created_at timestamptz;
+  v_next_cursor_id uuid;
+  v_row_count int;
+BEGIN
+  -- Get owner id
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = p_org_id;
+
+  IF v_owner_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  -- Auth: owner or manager at any location in org
+  IF p_caller_auth_uid = v_owner_id THEN
+    -- Owner is authorized
+    NULL;
+  ELSE
+    -- Check if caller is a manager
+    SELECT id INTO v_caller_staff_id
+    FROM public.staff_users
+    WHERE auth_uid = p_caller_auth_uid
+      AND org_id = p_org_id
+      AND is_active = true
+      AND is_deleted = false;
+
+    IF v_caller_staff_id IS NULL OR NOT EXISTS (
+      SELECT 1 FROM public.staff_roles
+      WHERE staff_user_id = v_caller_staff_id
+        AND role = 'manager'
+        AND location_id IN (SELECT id FROM public.locations WHERE org_id = p_org_id)
+    ) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized to view audit trail');
+    END IF;
+  END IF;
+
+  -- UUID format validation for text params
+  IF p_entity_id IS NOT NULL AND p_entity_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    RETURN jsonb_build_object('success', true, 'entries', '[]'::jsonb, 'has_more', false);
+  END IF;
+  IF p_actor_id IS NOT NULL AND p_actor_id !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+    RETURN jsonb_build_object('success', true, 'entries', '[]'::jsonb, 'has_more', false);
+  END IF;
+
+  -- Date range validation
+  IF p_start_date IS NOT NULL AND p_end_date IS NOT NULL THEN
+    IF p_end_date < p_start_date THEN
+      RETURN jsonb_build_object('success', false, 'error', 'End date must be after start date');
+    END IF;
+    IF (p_end_date - p_start_date) > interval '365 days' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 365 days');
+    END IF;
+  END IF;
+
+  -- Clamp limit
+  v_limit := LEAST(COALESCE(p_limit, 50), 200);
+
+  -- Query audit trail with cursor pagination
+  SELECT jsonb_agg(row_data)
+  INTO v_rows
+  FROM (
+    SELECT jsonb_build_object(
+      'id', at.id,
+      'actor_name', CASE
+        WHEN at.actor_id IS NULL THEN 'System'
+        WHEN su.full_name IS NOT NULL THEN su.full_name
+        ELSE 'Deleted staff member'
+      END,
+      'actor_type', at.actor_type,
+      'action', at.action,
+      'entity_type', at.entity_type,
+      'entity_id', at.entity_id,
+      'details', at.details,
+      'created_at', at.created_at
+    ) AS row_data
+    FROM public.audit_trail at
+    LEFT JOIN public.staff_users su ON su.id = at.actor_id
+    WHERE at.org_id = p_org_id
+      AND (p_entity_type IS NULL OR at.entity_type = p_entity_type)
+      AND (p_entity_id IS NULL OR at.entity_id = p_entity_id)
+      AND (p_actor_id IS NULL OR at.actor_id = p_actor_id)
+      AND (p_start_date IS NULL OR at.created_at >= p_start_date)
+      AND (p_end_date IS NULL OR at.created_at <= p_end_date)
+      AND (p_cursor_created_at IS NULL OR (at.created_at, at.id) < (p_cursor_created_at, p_cursor_id))
+    ORDER BY at.created_at DESC, at.id DESC
+    LIMIT v_limit + 1
+  ) sub;
+
+  -- Default to empty array
+  IF v_rows IS NULL THEN
+    v_rows := '[]'::jsonb;
+  END IF;
+
+  -- has_more detection
+  v_row_count := jsonb_array_length(v_rows);
+
+  IF v_row_count > v_limit THEN
+    v_has_more := true;
+    -- Remove the extra element (last one)
+    v_trimmed_rows := v_rows - v_limit;
+    -- Extract cursor from last remaining element
+    v_next_cursor_created_at := (v_trimmed_rows -> (v_limit - 1) ->> 'created_at')::timestamptz;
+    v_next_cursor_id := (v_trimmed_rows -> (v_limit - 1) ->> 'id')::uuid;
+  ELSE
+    v_trimmed_rows := v_rows;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'entries', v_trimmed_rows,
+    'has_more', v_has_more,
+    'next_cursor_created_at', v_next_cursor_created_at,
+    'next_cursor_id', v_next_cursor_id
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_audit_trail(
+  p_org_id uuid,
+  p_entity_type text DEFAULT NULL,
+  p_entity_id text DEFAULT NULL,
+  p_actor_id text DEFAULT NULL,
+  p_start_date timestamptz DEFAULT NULL,
+  p_end_date timestamptz DEFAULT NULL,
+  p_limit int DEFAULT 50,
+  p_cursor_created_at timestamptz DEFAULT NULL,
+  p_cursor_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_audit_trail(
+    v_auth_uid,
+    p_org_id,
+    p_entity_type,
+    p_entity_id,
+    p_actor_id,
+    p_start_date,
+    p_end_date,
+    p_limit,
+    p_cursor_created_at,
+    p_cursor_id
+  );
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.get_audit_trail(uuid, text, text, text, timestamptz, timestamptz, int, timestamptz, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_audit_trail(uuid, text, text, text, timestamptz, timestamptz, int, timestamptz, uuid) TO authenticated;

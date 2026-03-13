@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { stripHtml } from "@/lib/utils";
+import { requireAuth } from "@/lib/auth";
 
 export async function createStaffUser(formData: {
   orgId: string;
@@ -12,6 +13,7 @@ export async function createStaffUser(formData: {
   locationId: string;
   roles: string[];
 }) {
+  await requireAuth();
   const fullName = stripHtml(formData.fullName).slice(0, 100);
   const username = formData.username.toLowerCase().trim().slice(0, 50);
   const password = formData.password;
@@ -51,6 +53,7 @@ export async function createStaffUser(formData: {
 }
 
 export async function deactivateStaff(staffUserId: string) {
+  await requireAuth();
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("deactivate_staff", {
@@ -65,6 +68,7 @@ export async function deactivateStaff(staffUserId: string) {
 }
 
 export async function deleteStaff(staffUserId: string) {
+  await requireAuth();
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("delete_staff", {
@@ -90,6 +94,7 @@ export async function resetStaffPassword(
     return { success: false, error: "Password must be at most 72 characters" };
   }
 
+  await requireAuth();
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("reset_staff_password", {
@@ -108,6 +113,7 @@ export async function assignRole(
   locationId: string,
   role: string
 ) {
+  await requireAuth();
   if (!["doctor", "receptionist", "manager", "reviews"].includes(role)) {
     return { success: false, error: "Invalid role" };
   }
@@ -132,6 +138,7 @@ export async function removeRole(
   locationId: string,
   role: string
 ) {
+  await requireAuth();
   if (!["doctor", "receptionist", "manager", "reviews"].includes(role)) {
     return { success: false, error: "Invalid role" };
   }

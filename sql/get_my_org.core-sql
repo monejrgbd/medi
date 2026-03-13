@@ -69,3 +69,6 @@ BEGIN
   RETURN private.get_my_org(v_auth_uid);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.get_my_org() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_my_org() TO authenticated;

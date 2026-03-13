@@ -82,3 +82,6 @@ BEGIN
   RETURN private.get_similar_patients(v_auth_uid, p_org_id, p_first_name, p_last_name, p_birthday);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.get_similar_patients(uuid, text, text, date) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_similar_patients(uuid, text, text, date) TO authenticated;

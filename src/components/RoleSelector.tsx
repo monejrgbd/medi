@@ -75,6 +75,14 @@ export default function RoleSelector() {
         </button>
       )}
 
+      {displayRoles.length === 0 && !isOwner && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 mb-6 text-center">
+          <p className="text-sm text-amber-800">
+            No roles assigned. Contact your administrator.
+          </p>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         {displayRoles.map((role) => {
           const config = ROLE_CONFIG[role];
@@ -88,6 +96,15 @@ export default function RoleSelector() {
               onClick={() => {
                 if (role === "receptionist") {
                   router.push("/d/receptionist");
+                }
+                if (role === "doctor") {
+                  router.push("/d/doctor");
+                }
+                if (role === "manager") {
+                  router.push("/d/manager");
+                }
+                if (role === "reviews") {
+                  router.push("/d/reviews");
                 }
               }}
             >

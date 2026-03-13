@@ -1,0 +1,70 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.activate_subscription(
+  p_org_id uuid,
+  p_paypal_subscription_id text,
+  p_plan text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_allocation int;
+BEGIN
+  -- Validate plan
+  IF p_plan NOT IN ('starter', 'standard', 'plus', 'enterprise', 'pay_as_you_go') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid plan');
+  END IF;
+
+  -- Map plan to credit allocation
+  CASE p_plan
+    WHEN 'starter' THEN v_allocation := 125;
+    WHEN 'standard' THEN v_allocation := 500;
+    WHEN 'plus' THEN v_allocation := 1500;
+    WHEN 'enterprise' THEN v_allocation := 5000;
+    WHEN 'pay_as_you_go' THEN v_allocation := 0;
+  END CASE;
+
+  UPDATE public.organizations
+  SET paypal_subscription_id = p_paypal_subscription_id,
+      subscription_plan = p_plan,
+      billing_cycle_start = now(),
+      credits_used = 0,
+      credits_total = v_allocation,
+      trial_end_date = NULL,
+      cancelled_at = NULL,
+      data_retention_until = NULL,
+      payment_failure_count = 0,
+      payment_first_failed_at = NULL
+  WHERE id = p_org_id;
+
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (p_org_id, NULL, 'system', 'subscription_activated', 'organization', p_org_id,
+    jsonb_build_object('plan', p_plan, 'paypal_subscription_id', p_paypal_subscription_id, 'credits', v_allocation));
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service_role only)
+CREATE OR REPLACE FUNCTION public.activate_subscription(
+  p_org_id uuid,
+  p_paypal_subscription_id text,
+  p_plan text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.activate_subscription(p_org_id, p_paypal_subscription_id, p_plan);
+END;
+$$;

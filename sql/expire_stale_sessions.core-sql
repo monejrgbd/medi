@@ -1,0 +1,40 @@
+-- Private implementation — called by daily cron
+CREATE OR REPLACE FUNCTION private.expire_stale_sessions()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- Set audit context
+  PERFORM set_config('app.audit_actor_type', 'system', true);
+  PERFORM set_config('app.audit_action', 'daily_cleanup', true);
+
+  -- 1. Expire stale waiting_doctor_claim from previous day
+  UPDATE public.visits
+  SET status = 'left', updated_at = now()
+  WHERE status = 'waiting_doctor_claim'
+    AND entered_queue_at < CURRENT_DATE;
+
+  -- 2. Expire 90-day overdue follow-ups
+  UPDATE public.follow_ups
+  SET status = 'expired'
+  WHERE status = 'active'
+    AND due_date < CURRENT_DATE - interval '90 days';
+
+  -- 3. Expire 30-day unfollowed referrals
+  UPDATE public.referrals
+  SET status = 'expired', expired_at = now()
+  WHERE status IN ('sent', 'viewed')
+    AND created_at < now() - interval '30 days';
+
+  -- 4. Delete expired phone verifications
+  DELETE FROM public.phone_verifications
+  WHERE expires_at < now() - interval '24 hours';
+
+  -- 5. Owner alerts (trial expiry + daily digest)
+  PERFORM private.send_trial_expiry_alert();
+  PERFORM private.send_daily_digest();
+END;
+$$;

@@ -1,0 +1,81 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.purchase_overage_credits(
+  p_caller_auth_uid uuid,
+  p_amount int
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+BEGIN
+  -- Validate amount
+  IF p_amount < 1 OR p_amount > 1000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Amount must be between 1 and 1000');
+  END IF;
+
+  -- Lock org row and verify ownership
+  SELECT id, subscription_plan, credits_total, credits_used, owner_id
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Guard: blocked plans cannot purchase
+  IF v_org.subscription_plan IN ('expired', 'suspended') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Cannot purchase credits while account is ' || v_org.subscription_plan);
+  END IF;
+
+  -- Increment credits
+  UPDATE public.organizations
+  SET credits_total = credits_total + p_amount
+  WHERE id = v_org.id;
+
+  -- Log the purchase
+  INSERT INTO public.credits_log (org_id, visit_id, credits_amount, description)
+  VALUES (v_org.id, NULL, p_amount, 'Overage purchase');
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'purchase_credits', 'organization', v_org.id,
+    jsonb_build_object('amount', p_amount));
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'new_credits_total', v_org.credits_total + p_amount,
+    'credits_purchased', p_amount
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.purchase_overage_credits(
+  p_amount int
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.purchase_overage_credits(v_uid, p_amount);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.purchase_overage_credits(int) FROM anon;
+GRANT EXECUTE ON FUNCTION public.purchase_overage_credits(int) TO authenticated;

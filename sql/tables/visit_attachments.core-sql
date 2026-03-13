@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS public.visit_attachments (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  visit_id    uuid NOT NULL REFERENCES public.visits(id),
+  doctor_id   uuid NOT NULL REFERENCES public.staff_users(id),
+  org_id      uuid NOT NULL REFERENCES public.organizations(id),
+  file_url    text NOT NULL,
+  file_name   text NOT NULL CHECK (length(file_name) <= 255),
+  file_size   int NOT NULL CHECK (file_size > 0 AND file_size <= 10485760),
+  mime_type   text NOT NULL CHECK (mime_type IN (
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf', 'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  )),
+  created_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.visit_attachments ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_visit_attachments" ON public.visit_attachments FOR SELECT
+  USING (org_id = requesting_org_id());
+
+CREATE INDEX idx_visit_attachments_visit ON public.visit_attachments (visit_id);

@@ -1,0 +1,103 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_credit_dashboard(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_daily_usage jsonb;
+  v_projected_runout date;
+  v_avg_daily numeric;
+  v_remaining numeric;
+  v_usage_days int;
+BEGIN
+  -- Verify caller is org owner
+  SELECT id, name, credits_total, credits_used, subscription_plan,
+         billing_cycle_start, trial_end_date, payment_failure_count,
+         review_sms_addon, followup_sms_addon, paypal_subscription_id,
+         cancelled_at, data_retention_until
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Daily usage for last 30 days (or since billing cycle start)
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object('date', d.day, 'credits', d.total)
+    ORDER BY d.day
+  ), '[]'::jsonb)
+  INTO v_daily_usage
+  FROM (
+    SELECT date_trunc('day', cl.created_at)::date AS day,
+           SUM(cl.credits_amount) AS total
+    FROM public.credits_log cl
+    WHERE cl.org_id = v_org.id
+      AND cl.created_at >= GREATEST(
+        COALESCE(v_org.billing_cycle_start, now() - interval '30 days'),
+        now() - interval '30 days'
+      )
+    GROUP BY 1
+    ORDER BY 1
+  ) d;
+
+  -- Projected runout date
+  v_remaining := v_org.credits_total - v_org.credits_used;
+  v_usage_days := GREATEST(1, EXTRACT(EPOCH FROM now() - COALESCE(v_org.billing_cycle_start, now() - interval '30 days')) / 86400);
+  v_avg_daily := CASE WHEN v_usage_days > 0 THEN v_org.credits_used / v_usage_days ELSE 0 END;
+
+  IF v_avg_daily > 0 AND v_remaining > 0 THEN
+    v_projected_runout := (current_date + (v_remaining / v_avg_daily)::int);
+  ELSE
+    v_projected_runout := NULL;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'credits_total', v_org.credits_total,
+    'credits_used', v_org.credits_used,
+    'credits_remaining', v_remaining,
+    'subscription_plan', v_org.subscription_plan,
+    'billing_cycle_start', v_org.billing_cycle_start,
+    'trial_end_date', v_org.trial_end_date,
+    'payment_failure_count', v_org.payment_failure_count,
+    'daily_usage', v_daily_usage,
+    'projected_runout_date', v_projected_runout,
+    'review_sms_addon', v_org.review_sms_addon,
+    'followup_sms_addon', v_org.followup_sms_addon,
+    'paypal_subscription_id', v_org.paypal_subscription_id,
+    'cancelled_at', v_org.cancelled_at,
+    'data_retention_until', v_org.data_retention_until
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_credit_dashboard()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_credit_dashboard(v_uid);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_credit_dashboard() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_credit_dashboard() TO authenticated;

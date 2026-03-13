@@ -1,0 +1,84 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.cancel_claim(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+BEGIN
+  -- Get visit details
+  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.status <> 'claimed_by_doctor' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not claimed');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: only claiming doctor or owner
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can cancel any claim
+  ELSIF v_caller_staff_id IS NOT NULL AND v_visit.claimed_by = v_caller_staff_id THEN
+    NULL; -- Claiming doctor can cancel own claim
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Set audit context
+  PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
+  PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END, true);
+  PERFORM set_config('app.audit_action', 'unclaimed', true);
+
+  -- Release the claim — keep original entered_queue_at for fair re-entry
+  UPDATE public.visits
+  SET status = 'waiting_doctor_claim',
+      claimed_by = NULL,
+      claimed_at = NULL
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.cancel_claim(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.cancel_claim(v_auth_uid, p_visit_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_claim(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.cancel_claim(uuid) TO authenticated;

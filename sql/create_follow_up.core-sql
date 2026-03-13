@@ -1,0 +1,147 @@
+-- private.create_follow_up
+-- Creates a follow-up record for a completed visit
+-- Called by: public.create_follow_up (wrapper)
+
+CREATE OR REPLACE FUNCTION private.create_follow_up(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid,
+  p_timeframe_days int,
+  p_ai_instructions text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_due_date date;
+  v_clean_instructions text;
+  v_follow_up_id uuid;
+BEGIN
+  -- Validate timeframe_days
+  IF p_timeframe_days IS NULL OR p_timeframe_days NOT BETWEEN 1 AND 365 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'timeframe_days must be between 1 and 365');
+  END IF;
+
+  -- Clean and validate ai_instructions if provided
+  IF p_ai_instructions IS NOT NULL THEN
+    v_clean_instructions := regexp_replace(trim(p_ai_instructions), '<[^>]*>', '', 'g');
+    v_clean_instructions := trim(v_clean_instructions);
+    IF v_clean_instructions = '' THEN
+      v_clean_instructions := NULL;
+    ELSIF length(v_clean_instructions) > 2000 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'ai_instructions must be 2000 characters or less');
+    END IF;
+  END IF;
+
+  -- Get the visit
+  SELECT id, status, claimed_by, org_id, location_id, patient_id, completed_at
+  INTO v_visit
+  FROM public.visits
+  WHERE id = p_visit_id;
+
+  IF v_visit.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'visit not found');
+  END IF;
+
+  IF v_visit.status <> 'completed' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'visit must be completed');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+  FROM public.staff_users
+  WHERE auth_uid = p_caller_auth_uid
+    AND org_id = v_visit.org_id
+    AND is_active = true
+    AND is_deleted = false;
+
+  -- Get org owner
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_visit.org_id;
+
+  -- Auth: must be owner or the claiming doctor
+  IF v_owner_id = p_caller_auth_uid THEN
+    -- owner is authorized
+    NULL;
+  ELSIF v_caller_staff_id IS NOT NULL AND v_caller_staff_id = v_visit.claimed_by THEN
+    -- claiming doctor is authorized
+    NULL;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'not authorized');
+  END IF;
+
+  -- Compute due date
+  v_due_date := v_visit.completed_at::date + p_timeframe_days;
+
+  -- Insert follow-up
+  INSERT INTO public.follow_ups (
+    visit_id, patient_id, doctor_id, org_id, location_id,
+    timeframe_days, due_date, ai_instructions
+  ) VALUES (
+    p_visit_id,
+    v_visit.patient_id,
+    COALESCE(v_caller_staff_id, v_visit.claimed_by),
+    v_visit.org_id,
+    v_visit.location_id,
+    p_timeframe_days,
+    v_due_date,
+    v_clean_instructions
+  )
+  RETURNING id INTO v_follow_up_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (
+    org_id, entity_type, entity_id, actor_id, actor_type, action, details
+  ) VALUES (
+    v_visit.org_id,
+    'follow_up',
+    v_follow_up_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END,
+    'created',
+    jsonb_build_object(
+      'visit_id', p_visit_id,
+      'timeframe_days', p_timeframe_days,
+      'due_date', v_due_date
+    )
+  );
+
+  RETURN jsonb_build_object('success', true, 'follow_up_id', v_follow_up_id);
+END;
+$$;
+
+-- public.create_follow_up (wrapper)
+-- Thin public wrapper that captures auth context
+
+CREATE OR REPLACE FUNCTION public.create_follow_up(
+  p_visit_id uuid,
+  p_timeframe_days int,
+  p_ai_instructions text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not authenticated');
+  END IF;
+
+  RETURN private.create_follow_up(v_auth_uid, p_visit_id, p_timeframe_days, p_ai_instructions);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.create_follow_up(uuid, int, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_follow_up(uuid, int, text) TO authenticated;

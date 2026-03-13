@@ -1,7 +1,10 @@
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.approve_patient(
   p_caller_auth_uid uuid,
-  p_visit_id uuid
+  p_visit_id uuid,
+  p_is_follow_up boolean DEFAULT false,
+  p_follow_up_of_visit_id uuid DEFAULT NULL,
+  p_follow_up_id uuid DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -56,7 +59,7 @@ BEGIN
 
   -- Set audit context for trigger
   PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
-  PERFORM set_config('app.audit_actor_type', 'receptionist', true);
+  PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
   PERFORM set_config('app.audit_action', 'approved', true);
 
   -- Update visit status
@@ -65,13 +68,40 @@ BEGIN
       ai_started_at = now()
   WHERE id = p_visit_id;
 
+  -- Handle follow-up linkage
+  IF p_is_follow_up AND p_follow_up_of_visit_id IS NOT NULL THEN
+    -- Validate prior visit exists, is completed, same patient
+    IF EXISTS (SELECT 1 FROM public.visits WHERE id = p_follow_up_of_visit_id
+               AND status = 'completed' AND patient_id = v_visit.patient_id) THEN
+      UPDATE public.visits
+      SET is_follow_up = true, follow_up_of = p_follow_up_of_visit_id
+      WHERE id = p_visit_id;
+    END IF;
+    -- Mark the follow-up record as completed (with org_id guard)
+    IF p_follow_up_id IS NOT NULL THEN
+      UPDATE public.follow_ups SET status = 'completed'
+      WHERE id = p_follow_up_id AND status = 'active' AND org_id = v_visit.org_id;
+
+      IF FOUND THEN
+        INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+        VALUES (v_visit.org_id, 'follow_up', p_follow_up_id,
+                COALESCE(v_caller_staff_id, p_caller_auth_uid),
+                CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, 'completed',
+                jsonb_build_object('completed_via', 'approve_patient', 'visit_id', p_visit_id));
+      END IF;
+    END IF;
+  END IF;
+
   RETURN jsonb_build_object('success', true);
 END;
 $$;
 
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.approve_patient(
-  p_visit_id uuid
+  p_visit_id uuid,
+  p_is_follow_up boolean DEFAULT false,
+  p_follow_up_of_visit_id uuid DEFAULT NULL,
+  p_follow_up_id uuid DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -82,6 +112,12 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.approve_patient(v_auth_uid, p_visit_id);
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.approve_patient(v_auth_uid, p_visit_id, p_is_follow_up, p_follow_up_of_visit_id, p_follow_up_id);
 END;
 $$;
+
+REVOKE ALL ON FUNCTION public.approve_patient(uuid, boolean, uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.approve_patient(uuid, boolean, uuid, uuid) TO authenticated;

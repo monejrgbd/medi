@@ -3,7 +3,8 @@ CREATE OR REPLACE FUNCTION private.checkin_patient(
   p_location_id uuid,
   p_first_name text,
   p_last_name text,
-  p_birthday date
+  p_birthday date,
+  p_phone text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -15,12 +16,17 @@ DECLARE
   v_org_id uuid;
   v_clean_first text;
   v_clean_last text;
+  v_clean_phone text;
   v_patient record;
+  v_collision_patient record;
   v_active_visit record;
   v_has_previous boolean;
   v_new_patient_id uuid;
   v_new_visit record;
   v_match_type text;
+  v_location_name text;
+  v_other_location_name text;
+  v_pending_visit record;
 BEGIN
   -- Input validation: strip HTML, trim, enforce length
   v_clean_first := substring(trim(regexp_replace(p_first_name, '<[^>]*>', '', 'g')), 1, 100);
@@ -30,12 +36,12 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'First and last name are required');
   END IF;
 
-  -- Validate characters: letters, spaces, hyphens, apostrophes only
-  IF v_clean_first !~ '^[a-zA-ZÀ-ÿ\s\-'']+$' THEN
+  -- Validate characters: reject control chars, digits, and obvious injection chars only
+  IF v_clean_first ~ '[<>&;\\0-9]' OR v_clean_first ~ '[\x00-\x1F]' THEN
     RETURN jsonb_build_object('success', false, 'error', 'First name contains invalid characters');
   END IF;
 
-  IF v_clean_last !~ '^[a-zA-ZÀ-ÿ\s\-'']+$' THEN
+  IF v_clean_last ~ '[<>&;\\0-9]' OR v_clean_last ~ '[\x00-\x1F]' THEN
     RETURN jsonb_build_object('success', false, 'error', 'Last name contains invalid characters');
   END IF;
 
@@ -52,8 +58,21 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid birthday');
   END IF;
 
+  -- Phone validation if provided
+  IF p_phone IS NOT NULL AND p_phone <> '' THEN
+    v_clean_phone := regexp_replace(p_phone, '[^0-9+]', '', 'g');
+    IF left(v_clean_phone, 1) = '+' THEN
+      v_clean_phone := '+' || regexp_replace(substring(v_clean_phone, 2), '[^0-9]', '', 'g');
+    END IF;
+    IF v_clean_phone !~ '^\+[1-9][0-9]{1,14}$' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid phone number format');
+    END IF;
+  ELSE
+    v_clean_phone := NULL;
+  END IF;
+
   -- Validate location exists and get org_id
-  SELECT l.org_id INTO v_org_id
+  SELECT l.org_id, l.name INTO v_org_id, v_location_name
   FROM public.locations l
   WHERE l.id = p_location_id;
 
@@ -61,27 +80,161 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Location not found');
   END IF;
 
-  -- Look up existing patient (exact match on name + birthday within org)
+  -- Look up existing patient (exact match on name + birthday within org, exclude orphaned)
   SELECT p.* INTO v_patient
   FROM public.patients p
   WHERE p.org_id = v_org_id
     AND lower(p.first_name) = lower(v_clean_first)
     AND lower(p.last_name) = lower(v_clean_last)
     AND p.birthday = p_birthday
+    AND NOT p.is_orphaned
+  ORDER BY p.created_at ASC
   LIMIT 1;
 
   IF v_patient IS NOT NULL THEN
     -- Existing patient found
-    -- Check collision flag
+
+    -- Check collision flag BEFORE active session for flagged patients
     IF v_patient.collision_flag THEN
-      RETURN jsonb_build_object(
-        'success', true,
-        'match_type', 'phone_required',
-        'has_previous_visits', false
-      );
+      IF v_clean_phone IS NULL THEN
+        -- No phone provided: check for existing pending visit across ALL matching patients
+        -- (prevents duplicate visits on page refresh)
+        SELECT v.* INTO v_pending_visit
+        FROM public.visits v
+        JOIN public.patients p ON p.id = v.patient_id
+        WHERE p.org_id = v_org_id
+          AND lower(p.first_name) = lower(v_clean_first)
+          AND lower(p.last_name) = lower(v_clean_last)
+          AND p.birthday = p_birthday
+          AND NOT p.is_orphaned
+          AND v.status NOT IN ('completed', 'left')
+        ORDER BY v.created_at DESC
+        LIMIT 1;
+
+        IF v_pending_visit IS NOT NULL THEN
+          -- Existing pending visit found — return it
+          RETURN jsonb_build_object(
+            'success', true,
+            'match_type', 'phone_required',
+            'visit_id', v_pending_visit.id,
+            'session_token', v_pending_visit.session_token,
+            'patient_id', v_pending_visit.patient_id,
+            'has_previous_visits', v_pending_visit.has_previous_visits
+          );
+        END IF;
+
+        -- No pending visit — create one linked to first-matched patient with pending flag
+        INSERT INTO public.visits (org_id, location_id, patient_id, has_previous_visits, phone_verification_pending)
+        VALUES (v_org_id, p_location_id, v_patient.id, true, true)
+        RETURNING * INTO v_new_visit;
+
+        RETURN jsonb_build_object(
+          'success', true,
+          'match_type', 'phone_required',
+          'visit_id', v_new_visit.id,
+          'session_token', v_new_visit.session_token,
+          'patient_id', v_new_visit.patient_id,
+          'has_previous_visits', true
+        );
+      ELSE
+        -- Phone provided: find specific patient by phone match
+        SELECT p.* INTO v_collision_patient
+        FROM public.patients p
+        WHERE p.org_id = v_org_id
+          AND lower(p.first_name) = lower(v_clean_first)
+          AND lower(p.last_name) = lower(v_clean_last)
+          AND p.birthday = p_birthday
+          AND p.phone = v_clean_phone
+          AND NOT p.is_orphaned
+        LIMIT 1;
+
+        IF v_collision_patient IS NULL THEN
+          -- Phone doesn't match any collision patient — create new patient + visit
+          INSERT INTO public.patients (org_id, first_name, last_name, birthday, phone, phone_verified)
+          VALUES (v_org_id, v_clean_first, v_clean_last, p_birthday, v_clean_phone, false)
+          RETURNING id INTO v_new_patient_id;
+
+          INSERT INTO public.visits (org_id, location_id, patient_id, has_previous_visits)
+          VALUES (v_org_id, p_location_id, v_new_patient_id, false)
+          RETURNING * INTO v_new_visit;
+
+          RETURN jsonb_build_object(
+            'success', true,
+            'match_type', 'phone_no_match',
+            'session_token', v_new_visit.session_token,
+            'visit_id', v_new_visit.id,
+            'has_previous_visits', false
+          );
+        END IF;
+
+        -- Found by phone: check active session for that patient
+        SELECT v.* INTO v_active_visit
+        FROM public.visits v
+        WHERE v.patient_id = v_collision_patient.id
+          AND v.status NOT IN ('completed', 'left')
+        ORDER BY v.created_at DESC
+        LIMIT 1;
+
+        IF v_active_visit IS NOT NULL THEN
+          -- Check cross-location
+          IF v_active_visit.location_id <> p_location_id THEN
+            SELECT l.name INTO v_other_location_name
+            FROM public.locations l WHERE l.id = v_active_visit.location_id;
+
+            -- Audit cross-location attempt
+            INSERT INTO public.audit_trail (org_id, location_id, actor_type, action, entity_type, entity_id, details)
+            VALUES (
+              v_org_id,
+              v_active_visit.location_id,
+              'patient',
+              'cross_location_checkin_attempt',
+              'visit',
+              v_active_visit.id,
+              jsonb_build_object(
+                'attempted_location', p_location_id,
+                'active_location', v_active_visit.location_id
+              )
+            );
+
+            RETURN jsonb_build_object(
+              'success', true,
+              'match_type', 'active_session',
+              'session_token', v_active_visit.session_token,
+              'has_previous_visits', true,
+              'active_at_other_location', true,
+              'other_location_name', v_other_location_name
+            );
+          END IF;
+
+          RETURN jsonb_build_object(
+            'success', true,
+            'match_type', 'active_session',
+            'session_token', v_active_visit.session_token,
+            'has_previous_visits', true
+          );
+        END IF;
+
+        -- Create visit as returning_verified
+        SELECT EXISTS(
+          SELECT 1 FROM public.visits v
+          WHERE v.patient_id = v_collision_patient.id AND v.status = 'completed'
+        ) INTO v_has_previous;
+
+        INSERT INTO public.visits (org_id, location_id, patient_id, has_previous_visits)
+        VALUES (v_org_id, p_location_id, v_collision_patient.id, v_has_previous)
+        RETURNING * INTO v_new_visit;
+
+        RETURN jsonb_build_object(
+          'success', true,
+          'match_type', 'returning',
+          'session_token', v_new_visit.session_token,
+          'visit_id', v_new_visit.id,
+          'has_previous_visits', v_has_previous
+        );
+      END IF;
     END IF;
 
-    -- Check for concurrent active session
+    -- Non-flagged patient: check for concurrent active session FIRST
     SELECT v.* INTO v_active_visit
     FROM public.visits v
     WHERE v.patient_id = v_patient.id
@@ -90,6 +243,36 @@ BEGIN
     LIMIT 1;
 
     IF v_active_visit IS NOT NULL THEN
+      -- Check cross-location
+      IF v_active_visit.location_id <> p_location_id THEN
+        SELECT l.name INTO v_other_location_name
+        FROM public.locations l WHERE l.id = v_active_visit.location_id;
+
+        -- Audit cross-location attempt
+        INSERT INTO public.audit_trail (org_id, location_id, actor_type, action, entity_type, entity_id, details)
+        VALUES (
+          v_org_id,
+          v_active_visit.location_id,
+          'patient',
+          'cross_location_checkin_attempt',
+          'visit',
+          v_active_visit.id,
+          jsonb_build_object(
+            'attempted_location', p_location_id,
+            'active_location', v_active_visit.location_id
+          )
+        );
+
+        RETURN jsonb_build_object(
+          'success', true,
+          'match_type', 'active_session',
+          'session_token', v_active_visit.session_token,
+          'has_previous_visits', true,
+          'active_at_other_location', true,
+          'other_location_name', v_other_location_name
+        );
+      END IF;
+
       RETURN jsonb_build_object(
         'success', true,
         'match_type', 'active_session',
@@ -114,6 +297,7 @@ BEGIN
       'success', true,
       'match_type', 'returning',
       'session_token', v_new_visit.session_token,
+      'visit_id', v_new_visit.id,
       'has_previous_visits', v_has_previous
     );
   END IF;
@@ -125,13 +309,13 @@ BEGIN
     RETURNING id INTO v_new_patient_id;
   EXCEPTION WHEN unique_violation THEN
     -- Race condition: concurrent insert with same name+birthday
-    -- Re-query the existing patient and proceed as returning
     SELECT p.id INTO v_new_patient_id
     FROM public.patients p
     WHERE p.org_id = v_org_id
       AND lower(p.first_name) = lower(v_clean_first)
       AND lower(p.last_name) = lower(v_clean_last)
       AND p.birthday = p_birthday
+      AND NOT p.is_orphaned
     LIMIT 1;
 
     IF v_new_patient_id IS NULL THEN
@@ -164,6 +348,7 @@ BEGIN
       'success', true,
       'match_type', 'returning',
       'session_token', v_new_visit.session_token,
+      'visit_id', v_new_visit.id,
       'has_previous_visits', false
     );
   END;
@@ -177,6 +362,7 @@ BEGIN
     'success', true,
     'match_type', 'new',
     'session_token', v_new_visit.session_token,
+    'visit_id', v_new_visit.id,
     'has_previous_visits', false
   );
 END;
@@ -187,7 +373,8 @@ CREATE OR REPLACE FUNCTION public.checkin_patient(
   p_location_id uuid,
   p_first_name text,
   p_last_name text,
-  p_birthday date
+  p_birthday date,
+  p_phone text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -196,6 +383,6 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
-  RETURN private.checkin_patient(p_location_id, p_first_name, p_last_name, p_birthday);
+  RETURN private.checkin_patient(p_location_id, p_first_name, p_last_name, p_birthday, p_phone);
 END;
 $$;

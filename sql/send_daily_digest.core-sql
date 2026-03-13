@@ -1,0 +1,63 @@
+-- Private only — called by daily cron, no public wrapper needed
+CREATE OR REPLACE FUNCTION private.send_daily_digest()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_owner_email text;
+  v_unseen_count int;
+  v_edge_url text;
+  v_edge_secret text;
+BEGIN
+  -- Read vault secrets once
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+  SELECT decrypted_secret INTO v_edge_secret
+  FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  IF v_edge_url IS NULL OR v_edge_secret IS NULL THEN
+    RETURN;
+  END IF;
+
+  FOR v_org IN
+    SELECT o.id, o.name, o.owner_id
+    FROM public.organizations o
+    WHERE o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
+  LOOP
+    -- Count visits from yesterday that ended in 'left' status or still waiting
+    SELECT count(*)::int INTO v_unseen_count
+    FROM public.visits v
+    WHERE v.org_id = v_org.id
+      AND v.created_at >= CURRENT_DATE - interval '1 day'
+      AND v.created_at < CURRENT_DATE
+      AND v.status IN ('left', 'waiting_doctor_claim');
+
+    IF v_unseen_count > 0 THEN
+      SELECT email INTO v_owner_email
+      FROM auth.users WHERE id = v_org.owner_id;
+
+      IF v_owner_email IS NOT NULL THEN
+        PERFORM net.http_post(
+          url := v_edge_url || '/send-email',
+          headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'x-internal-secret', v_edge_secret
+          ),
+          body := jsonb_build_object(
+            'to', v_owner_email,
+            'subject', 'Daily Summary — ' || v_org.name,
+            'html_body', '<h2>Daily Summary</h2><p>Yesterday at <strong>' || v_org.name ||
+              '</strong>: ' || v_unseen_count || ' patient' ||
+              CASE WHEN v_unseen_count > 1 THEN 's were' ELSE ' was' END ||
+              ' not seen by a doctor.</p>'
+          )
+        );
+      END IF;
+    END IF;
+  END LOOP;
+END;
+$$;

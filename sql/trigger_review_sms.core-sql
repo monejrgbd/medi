@@ -1,0 +1,166 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.trigger_review_sms(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_patient record;
+  v_org record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_edge_url text;
+  v_edge_secret text;
+  v_sms_log_id uuid;
+  v_review_token uuid;
+BEGIN
+  -- Get visit details
+  SELECT v.id, v.review_sms_sent, v.review_token,
+         v.patient_id, v.org_id, v.location_id, v.claimed_by
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Idempotent: already sent
+  IF v_visit.review_sms_sent THEN
+    RETURN jsonb_build_object('success', true, 'already_sent', true);
+  END IF;
+
+  -- Check org: must have review_sms_addon OR be on trial
+  SELECT o.id, o.name, o.owner_id, o.review_sms_addon, o.subscription_plan
+  INTO v_org
+  FROM public.organizations o
+  WHERE o.id = v_visit.org_id;
+
+  IF NOT (v_org.review_sms_addon OR v_org.subscription_plan IN ('standard_trial', 'premium_trial')) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Review SMS not enabled');
+  END IF;
+
+  -- Check patient has phone
+  SELECT p.id, p.phone, p.first_name
+  INTO v_patient
+  FROM public.patients p
+  WHERE p.id = v_visit.patient_id;
+
+  IF v_patient.phone IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient has no phone');
+  END IF;
+
+  -- Auth: claiming doctor or owner
+  v_owner_id := v_org.owner_id;
+
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can trigger
+  ELSIF v_caller_staff_id IS NOT NULL AND v_visit.claimed_by = v_caller_staff_id THEN
+    NULL; -- Claiming doctor can trigger
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Generate review token (reuse existing if present)
+  IF v_visit.review_token IS NOT NULL THEN
+    v_review_token := v_visit.review_token;
+  ELSE
+    v_review_token := gen_random_uuid();
+
+    -- Update visit with review token
+    UPDATE public.visits
+    SET review_token = v_review_token
+    WHERE id = p_visit_id;
+  END IF;
+
+  -- Create review record (upsert to handle retry after partial failure)
+  INSERT INTO public.reviews (org_id, location_id, visit_id, patient_id, doctor_id, review_token)
+  VALUES (v_visit.org_id, v_visit.location_id, p_visit_id, v_visit.patient_id, v_visit.claimed_by, v_review_token)
+  ON CONFLICT (review_token) DO NOTHING;
+
+  -- Read vault secrets
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets
+  WHERE name = 'edge_function_url';
+
+  SELECT decrypted_secret INTO v_edge_secret
+  FROM vault.decrypted_secrets
+  WHERE name = 'internal_edge_secret';
+
+  IF v_edge_url IS NULL OR v_edge_secret IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Configuration missing');
+  END IF;
+
+  -- Pre-insert sms_log with status 'pending'
+  INSERT INTO public.sms_log (org_id, location_id, visit_id, patient_id, phone, sms_type, status)
+  VALUES (v_visit.org_id, v_visit.location_id, p_visit_id, v_visit.patient_id, v_patient.phone, 'review', 'pending')
+  RETURNING id INTO v_sms_log_id;
+
+  -- Fire-and-forget SMS via edge function
+  PERFORM net.http_post(
+    url := v_edge_url || '/send-sms',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-internal-secret', v_edge_secret
+    ),
+    body := jsonb_build_object(
+      'to', v_patient.phone,
+      'template', 'review',
+      'template_params', jsonb_build_object(
+        'first_name', v_patient.first_name,
+        'org_name', v_org.name,
+        'token', v_review_token
+      ),
+      'org_id', v_visit.org_id,
+      'location_id', v_visit.location_id,
+      'visit_id', p_visit_id,
+      'patient_id', v_visit.patient_id,
+      'sms_type', 'review',
+      'sms_log_id', v_sms_log_id
+    )
+  );
+
+  -- Mark review SMS sent
+  UPDATE public.visits
+  SET review_sms_sent = true
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true, 'sms_log_id', v_sms_log_id);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.trigger_review_sms(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.trigger_review_sms(v_auth_uid, p_visit_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.trigger_review_sms(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.trigger_review_sms(uuid) TO authenticated;

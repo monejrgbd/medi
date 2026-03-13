@@ -1,0 +1,64 @@
+-- Cron target — no auth required (called by pg_cron)
+CREATE OR REPLACE FUNCTION public.rotate_review_platforms()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_rotation record;
+  v_next_platform_id uuid;
+  v_active_count int;
+BEGIN
+  FOR v_rotation IN
+    SELECT rr.id, rr.location_id, rr.current_platform_id, rr.cycle_days, rr.last_rotated_at
+    FROM public.review_rotation rr
+    WHERE now() - rr.last_rotated_at >= (rr.cycle_days || ' days')::interval
+  LOOP
+    -- Count active platforms for this location
+    SELECT count(*) INTO v_active_count
+    FROM public.review_platforms rp
+    WHERE rp.location_id = v_rotation.location_id AND rp.is_active = true;
+
+    -- Skip if only one or zero active platforms (no rotation needed)
+    IF v_active_count <= 1 THEN
+      -- Still update last_rotated_at to prevent repeated checks
+      UPDATE public.review_rotation
+      SET last_rotated_at = now()
+      WHERE id = v_rotation.id;
+      CONTINUE;
+    END IF;
+
+    -- Get next platform in round-robin order (by created_at)
+    SELECT rp.id INTO v_next_platform_id
+    FROM public.review_platforms rp
+    WHERE rp.location_id = v_rotation.location_id
+      AND rp.is_active = true
+      AND rp.created_at > (
+        SELECT rp2.created_at FROM public.review_platforms rp2
+        WHERE rp2.id = v_rotation.current_platform_id
+      )
+    ORDER BY rp.created_at ASC
+    LIMIT 1;
+
+    -- If no next found (we were at the last), wrap around to first
+    IF v_next_platform_id IS NULL THEN
+      SELECT rp.id INTO v_next_platform_id
+      FROM public.review_platforms rp
+      WHERE rp.location_id = v_rotation.location_id
+        AND rp.is_active = true
+      ORDER BY rp.created_at ASC
+      LIMIT 1;
+    END IF;
+
+    -- Update rotation
+    UPDATE public.review_rotation
+    SET current_platform_id = v_next_platform_id,
+        last_rotated_at = now()
+    WHERE id = v_rotation.id;
+  END LOOP;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.rotate_review_platforms() FROM PUBLIC;

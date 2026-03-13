@@ -1,0 +1,94 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.cancel_subscription(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_owner_email text;
+  v_edge_url text;
+  v_edge_secret text;
+BEGIN
+  -- Lock org and verify ownership
+  SELECT id, subscription_plan, name, owner_id
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Guard: already cancelled/suspended
+  IF v_org.subscription_plan IN ('expired', 'suspended') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Subscription is already ' || v_org.subscription_plan);
+  END IF;
+
+  -- Cancel
+  UPDATE public.organizations
+  SET subscription_plan = 'expired',
+      cancelled_at = now(),
+      data_retention_until = now() + interval '90 days'
+  WHERE id = v_org.id;
+
+  -- Send confirmation email
+  SELECT email INTO v_owner_email FROM auth.users WHERE id = v_org.owner_id;
+
+  IF v_owner_email IS NOT NULL THEN
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL THEN
+      PERFORM net.http_post(
+        url := v_edge_url || '/send-email',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'x-internal-secret', v_edge_secret
+        ),
+        body := jsonb_build_object(
+          'to', v_owner_email,
+          'subject', 'Subscription Cancelled — ' || v_org.name,
+          'html_body', '<h2>Subscription Cancelled</h2>' ||
+            '<p>Your subscription for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') || '</strong> has been cancelled.</p>' ||
+            '<p>Your data will be retained for 90 days. You can reactivate anytime during this period.</p>'
+        )
+      );
+    END IF;
+  END IF;
+
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'subscription_cancelled', 'organization', v_org.id,
+    jsonb_build_object('old_plan', v_org.subscription_plan));
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.cancel_subscription()
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.cancel_subscription(v_uid);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.cancel_subscription() FROM anon;
+GRANT EXECUTE ON FUNCTION public.cancel_subscription() TO authenticated;

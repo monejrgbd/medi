@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS public.visit_notes (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  visit_id    uuid NOT NULL REFERENCES public.visits(id),
+  doctor_id   uuid NOT NULL REFERENCES public.staff_users(id),
+  org_id      uuid NOT NULL REFERENCES public.organizations(id),
+  content     text NOT NULL CHECK (length(content) <= 10000),
+  is_private  boolean DEFAULT false,
+  created_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.visit_notes ENABLE ROW LEVEL SECURITY;
+
+-- Default-deny: all reads go through SECURITY DEFINER functions
+CREATE POLICY "default_deny_visit_notes" ON public.visit_notes FOR SELECT
+  USING (false);
+
+CREATE INDEX idx_visit_notes_visit ON public.visit_notes (visit_id, created_at ASC);

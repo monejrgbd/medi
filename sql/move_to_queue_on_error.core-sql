@@ -1,0 +1,86 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.move_to_queue_on_error(
+  p_visit_id uuid,
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_edge_url text;
+  v_edge_secret text;
+BEGIN
+  -- Verify session token
+  SELECT id, status, session_token, org_id
+  INTO v_visit
+  FROM public.visits
+  WHERE id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.session_token <> p_session_token THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+  END IF;
+
+  IF v_visit.status <> 'still_answering_ai' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not in AI conversation state');
+  END IF;
+
+  -- Move to queue
+  UPDATE public.visits
+  SET status = 'waiting_doctor_claim',
+      timeout_flagged = true,
+      entered_queue_at = now()
+  WHERE id = p_visit_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, details)
+  VALUES (v_visit.org_id, NULL, 'system', 'ai_error',
+    jsonb_build_object('visit_id', p_visit_id));
+
+  -- Broadcast status change
+  SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+  SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL THEN
+    PERFORM net.http_post(
+      url := v_edge_url || '/broadcast-visit-update',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'x-internal-secret', v_edge_secret
+      ),
+      body := jsonb_build_object(
+        'visit_id', p_visit_id,
+        'session_token', p_session_token,
+        'type', 'status_change',
+        'status', 'waiting_doctor_claim',
+        'timeout_flagged', true
+      )
+    );
+  END IF;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable, session token auth)
+CREATE OR REPLACE FUNCTION public.move_to_queue_on_error(
+  p_visit_id uuid,
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.move_to_queue_on_error(p_visit_id, p_session_token);
+END;
+$$;

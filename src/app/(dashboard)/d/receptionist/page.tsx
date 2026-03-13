@@ -94,7 +94,7 @@ export default async function ReceptionistPage() {
     supabase
       .from("visits")
       .select(
-        "id, status, priority, gave_tablet, handled, has_previous_visits, created_at, claimed_by, claimed_at, patient_id, patients(first_name, last_name, birthday), claimed_doctor:staff_users!visits_claimed_by_fkey(full_name)"
+        "id, status, priority, gave_tablet, handled, has_previous_visits, created_at, claimed_by, claimed_at, patient_id, patients(id, first_name, last_name, birthday), claimed_doctor:staff_users!visits_claimed_by_fkey(full_name)"
       )
       .eq("location_id", checkedInLocationId)
       .not("status", "in", '("completed","left")')
@@ -103,7 +103,7 @@ export default async function ReceptionistPage() {
     supabase
       .from("visits")
       .select(
-        "id, status, gave_tablet, has_previous_visits, created_at, completed_at, patient_id, patients(first_name, last_name, birthday)"
+        "id, status, gave_tablet, has_previous_visits, created_at, completed_at, patient_id, patients(id, first_name, last_name, birthday)"
       )
       .eq("location_id", checkedInLocationId)
       .eq("status", "completed")

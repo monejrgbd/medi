@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS public.reviews (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id            uuid NOT NULL REFERENCES public.organizations(id),
+  location_id       uuid NOT NULL REFERENCES public.locations(id),
+  visit_id          uuid NOT NULL REFERENCES public.visits(id),
+  patient_id        uuid NOT NULL REFERENCES public.patients(id),
+  doctor_id         uuid REFERENCES public.staff_users(id),
+  review_token      uuid NOT NULL UNIQUE,
+  rating            smallint CHECK (rating BETWEEN 1 AND 5),
+  feedback_text     text,
+  sent_to_external  boolean DEFAULT false,
+  external_platform text,
+  submitted_at      timestamptz,
+  created_at        timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_reviews" ON public.reviews FOR SELECT
+  USING (org_id = requesting_org_id());
+
+CREATE INDEX IF NOT EXISTS idx_reviews_token ON public.reviews (review_token);
+CREATE INDEX IF NOT EXISTS idx_reviews_location_submitted ON public.reviews (location_id, submitted_at DESC) WHERE submitted_at IS NOT NULL;

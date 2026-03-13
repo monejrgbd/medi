@@ -1,0 +1,39 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.increment_verification_attempt(
+  p_verification_id uuid
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_attempts integer;
+BEGIN
+  UPDATE public.phone_verifications
+  SET attempts = attempts + 1
+  WHERE id = p_verification_id
+    AND attempts < 3
+    AND verified_at IS NULL
+    AND expires_at > now()
+  RETURNING attempts INTO v_attempts;
+
+  RETURN v_attempts; -- NULL if no row matched (limit reached, already verified, or expired)
+END;
+$$;
+
+-- Public wrapper (anon-callable — called by verify-phone edge function via service role)
+CREATE OR REPLACE FUNCTION public.increment_verification_attempt(
+  p_verification_id uuid
+)
+RETURNS integer
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.increment_verification_attempt(p_verification_id);
+END;
+$$;

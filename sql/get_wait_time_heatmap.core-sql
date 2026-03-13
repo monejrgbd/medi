@@ -1,0 +1,120 @@
+-- get_wait_time_heatmap: wait time by day-of-week and hour for heatmap visualization
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_wait_time_heatmap(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_start_date date,
+  p_end_date date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_timezone text;
+  v_heatmap jsonb;
+BEGIN
+  -- Get org info and timezone for location
+  SELECT l.org_id, o.owner_id, COALESCE(l.timezone, 'America/New_York')
+  INTO v_org_id, v_owner_id, v_timezone
+  FROM public.locations l
+  JOIN public.organizations o ON o.id = l.org_id
+  WHERE l.id = p_location_id;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Auth: owner or manager at location
+  IF p_caller_auth_uid = v_owner_id THEN
+    NULL;
+  ELSE
+    SELECT id INTO v_caller_staff_id
+    FROM public.staff_users
+    WHERE auth_uid = p_caller_auth_uid
+      AND org_id = v_org_id
+      AND is_active = true
+      AND is_deleted = false;
+
+    IF v_caller_staff_id IS NULL OR NOT EXISTS (
+      SELECT 1 FROM public.staff_roles
+      WHERE staff_user_id = v_caller_staff_id
+        AND role = 'manager'
+        AND location_id = p_location_id
+    ) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Date range guard
+  IF p_end_date < p_start_date THEN
+    RETURN jsonb_build_object('success', false, 'error', 'End date must be after start date');
+  END IF;
+
+  IF (p_end_date - p_start_date) > 90 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 90 days');
+  END IF;
+
+  -- Build heatmap data
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'day_of_week', dow,
+    'hour', hr,
+    'avg_wait_minutes', avg_mins,
+    'sample_count', cnt
+  ) ORDER BY dow, hr), '[]'::jsonb)
+  INTO v_heatmap
+  FROM (
+    SELECT
+      EXTRACT(DOW FROM v.entered_queue_at AT TIME ZONE v_timezone)::int AS dow,
+      EXTRACT(HOUR FROM v.entered_queue_at AT TIME ZONE v_timezone)::int AS hr,
+      round(avg(EXTRACT(EPOCH FROM (v.claimed_at - v.entered_queue_at)) / 60.0), 1) AS avg_mins,
+      count(*) AS cnt
+    FROM public.visits v
+    WHERE v.location_id = p_location_id
+      AND v.entered_queue_at IS NOT NULL
+      AND v.claimed_at IS NOT NULL
+      AND v.entered_queue_at >= p_start_date::timestamptz
+      AND v.entered_queue_at < (p_end_date + 1)::timestamptz
+      AND EXTRACT(HOUR FROM v.entered_queue_at AT TIME ZONE v_timezone) BETWEEN 8 AND 20
+    GROUP BY
+      EXTRACT(DOW FROM v.entered_queue_at AT TIME ZONE v_timezone),
+      EXTRACT(HOUR FROM v.entered_queue_at AT TIME ZONE v_timezone)
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'heatmap', v_heatmap,
+    'timezone', v_timezone
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_wait_time_heatmap(
+  p_location_id uuid,
+  p_start_date date,
+  p_end_date date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_wait_time_heatmap(v_auth_uid, p_location_id, p_start_date, p_end_date);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_wait_time_heatmap(uuid, date, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_wait_time_heatmap(uuid, date, date) TO authenticated;

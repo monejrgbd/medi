@@ -1,0 +1,28 @@
+-- Internal helper — called by submit_review
+-- No private wrapper needed (internal use only, called within SECURITY DEFINER context)
+CREATE OR REPLACE FUNCTION public.get_current_review_platform(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'name', rp.platform_name,
+    'url', rp.platform_url
+  )
+  INTO v_result
+  FROM public.review_rotation rr
+  JOIN public.review_platforms rp ON rp.id = rr.current_platform_id AND rp.is_active = true
+  WHERE rr.location_id = p_location_id;
+
+  RETURN v_result; -- NULL if no rotation configured
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_current_review_platform(uuid) FROM PUBLIC;

@@ -92,3 +92,6 @@ BEGIN
   RETURN private.get_staff_list(v_auth_uid, p_org_id, p_location_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.get_staff_list(uuid, uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_staff_list(uuid, uuid) TO authenticated;

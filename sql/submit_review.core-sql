@@ -1,0 +1,84 @@
+-- NO private/public wrapper — anon-callable (token is the capability)
+CREATE OR REPLACE FUNCTION public.submit_review(
+  p_token uuid,
+  p_rating smallint,
+  p_feedback_text text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_review record;
+  v_clean_feedback text;
+  v_platform jsonb;
+BEGIN
+  -- Validate rating
+  IF p_rating IS NULL OR p_rating < 1 OR p_rating > 5 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Rating must be between 1 and 5');
+  END IF;
+
+  -- Clean feedback text
+  IF p_feedback_text IS NOT NULL THEN
+    v_clean_feedback := trim(regexp_replace(p_feedback_text, '<[^>]*>', '', 'g'));
+    IF length(v_clean_feedback) = 0 THEN
+      v_clean_feedback := NULL;
+    ELSE
+      v_clean_feedback := substring(v_clean_feedback, 1, 2000);
+    END IF;
+  END IF;
+
+  -- Get review record (tokens expire after 90 days)
+  SELECT r.id, r.submitted_at, r.location_id
+  INTO v_review
+  FROM public.reviews r
+  WHERE r.review_token = p_token
+    AND r.created_at > now() - interval '90 days';
+
+  IF v_review IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid or expired review link');
+  END IF;
+
+  -- Guard: already submitted
+  IF v_review.submitted_at IS NOT NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Already submitted');
+  END IF;
+
+  -- If 5-star: check for external platform redirect
+  IF p_rating = 5 THEN
+    v_platform := public.get_current_review_platform(v_review.location_id);
+
+    IF v_platform IS NOT NULL THEN
+      UPDATE public.reviews
+      SET rating = p_rating,
+          feedback_text = v_clean_feedback,
+          submitted_at = now(),
+          sent_to_external = true,
+          external_platform = v_platform->>'name'
+      WHERE id = v_review.id;
+
+      RETURN jsonb_build_object(
+        'success', true,
+        'platform_name', v_platform->>'name',
+        'platform_url', v_platform->>'url'
+      );
+    END IF;
+  END IF;
+
+  -- Store review (no external redirect for < 5 stars or no platform configured)
+  UPDATE public.reviews
+  SET rating = p_rating,
+      feedback_text = v_clean_feedback,
+      submitted_at = now()
+  WHERE id = v_review.id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Anon-callable
+REVOKE ALL ON FUNCTION public.submit_review(uuid, smallint, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.submit_review(uuid, smallint, text) TO anon;
+GRANT EXECUTE ON FUNCTION public.submit_review(uuid, smallint, text) TO authenticated;

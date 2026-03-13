@@ -102,3 +102,6 @@ BEGIN
   RETURN private.get_receptionist_counts(v_auth_uid, p_location_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.get_receptionist_counts(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_receptionist_counts(uuid) TO authenticated;

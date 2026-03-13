@@ -79,3 +79,6 @@ BEGIN
   RETURN private.staff_check_in(v_auth_uid, p_location_id, p_role, p_shift_duration);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.staff_check_in(uuid, text, interval) FROM anon;
+GRANT EXECUTE ON FUNCTION public.staff_check_in(uuid, text, interval) TO authenticated;

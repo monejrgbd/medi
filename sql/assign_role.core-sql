@@ -69,3 +69,6 @@ BEGIN
   RETURN private.assign_role(v_auth_uid, p_staff_user_id, p_location_id, p_role);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.assign_role(uuid, uuid, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.assign_role(uuid, uuid, text) TO authenticated;

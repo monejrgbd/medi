@@ -57,13 +57,14 @@ BEGIN
     ) m;
   ELSE
     -- Exclude the first system message (cached prompt), include greeting + rest
-    SELECT COALESCE(jsonb_agg(row_to_json(m) ORDER BY m.created_at ASC), '[]'::jsonb)
+    -- Patient sees content_original when available (their language), falls back to content (English)
+    SELECT COALESCE(jsonb_agg(row_to_json(m) ORDER BY m.created_at ASC, m.id ASC), '[]'::jsonb)
     INTO v_messages
     FROM (
-      SELECT vm.id, vm.role, vm.content, vm.created_at
+      SELECT vm.id, vm.role, COALESCE(vm.content_original, vm.content) AS content, vm.created_at
       FROM public.visit_messages vm
       WHERE vm.visit_id = p_visit_id
-      ORDER BY vm.created_at ASC
+      ORDER BY vm.created_at ASC, vm.id ASC
       LIMIT 500
       OFFSET 1
     ) m;

@@ -1,0 +1,96 @@
+-- get_visit_attachments: retrieves all attachments for a visit
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_visit_attachments(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_result jsonb;
+BEGIN
+  -- Get visit
+  SELECT id, org_id
+  INTO v_visit
+  FROM public.visits
+  WHERE id = p_visit_id;
+
+  IF v_visit.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+  FROM public.staff_users
+  WHERE auth_uid = p_caller_auth_uid
+    AND org_id = v_visit.org_id
+    AND is_active = true
+    AND is_deleted = false;
+
+  -- Get owner id
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_visit.org_id;
+
+  -- Auth: owner or any staff at org
+  IF p_caller_auth_uid != v_owner_id AND v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized to view attachments for this visit');
+  END IF;
+
+  -- Query attachments
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'id', sub.id,
+    'file_url', sub.file_url,
+    'file_name', sub.file_name,
+    'file_size', sub.file_size,
+    'mime_type', sub.mime_type,
+    'uploader_name', sub.full_name,
+    'created_at', sub.created_at
+  ) ORDER BY sub.created_at ASC), '[]'::jsonb)
+  INTO v_result
+  FROM (
+    SELECT va.id, va.file_url, va.file_name, va.file_size, va.mime_type,
+           su.full_name, va.created_at
+    FROM public.visit_attachments va
+    JOIN public.staff_users su ON su.id = va.doctor_id
+    WHERE va.visit_id = p_visit_id
+    ORDER BY va.created_at ASC
+    LIMIT 50
+  ) sub;
+
+  RETURN jsonb_build_object('success', true, 'attachments', v_result);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_visit_attachments(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_visit_attachments(v_auth_uid, p_visit_id);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.get_visit_attachments(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_visit_attachments(uuid) TO authenticated;

@@ -1,0 +1,129 @@
+-- get_patient_stats: patient flow metrics and daily trends for a location
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_patient_stats(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_start_date date,
+  p_end_date date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_stats jsonb;
+  v_daily jsonb;
+BEGIN
+  -- Get org info for location
+  SELECT l.org_id, o.owner_id INTO v_org_id, v_owner_id
+  FROM public.locations l
+  JOIN public.organizations o ON o.id = l.org_id
+  WHERE l.id = p_location_id;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Auth: owner or manager at location
+  IF p_caller_auth_uid = v_owner_id THEN
+    NULL;
+  ELSE
+    SELECT id INTO v_caller_staff_id
+    FROM public.staff_users
+    WHERE auth_uid = p_caller_auth_uid
+      AND org_id = v_org_id
+      AND is_active = true
+      AND is_deleted = false;
+
+    IF v_caller_staff_id IS NULL OR NOT EXISTS (
+      SELECT 1 FROM public.staff_roles
+      WHERE staff_user_id = v_caller_staff_id
+        AND role = 'manager'
+        AND location_id = p_location_id
+    ) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Date range guard
+  IF p_end_date < p_start_date THEN
+    RETURN jsonb_build_object('success', false, 'error', 'End date must be after start date');
+  END IF;
+
+  IF (p_end_date - p_start_date) > 90 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 90 days');
+  END IF;
+
+  -- Aggregate stats
+  SELECT jsonb_build_object(
+    'avg_ai_minutes', round(avg(EXTRACT(EPOCH FROM (v.entered_queue_at - v.ai_started_at)) / 60.0) FILTER (WHERE v.entered_queue_at IS NOT NULL AND v.ai_started_at IS NOT NULL), 1),
+    'avg_wait_minutes', round(avg(EXTRACT(EPOCH FROM (v.claimed_at - v.entered_queue_at)) / 60.0) FILTER (WHERE v.claimed_at IS NOT NULL AND v.entered_queue_at IS NOT NULL), 1),
+    'avg_handling_minutes', round(avg(EXTRACT(EPOCH FROM (v.completed_at - v.claimed_at)) / 60.0) FILTER (WHERE v.completed_at IS NOT NULL AND v.claimed_at IS NOT NULL), 1),
+    'total', count(*),
+    'completed', count(*) FILTER (WHERE v.status = 'completed'),
+    'left_count', count(*) FILTER (WHERE v.status = 'left' AND v.patient_approved = true),
+    'denied_count', count(*) FILTER (WHERE v.status = 'left' AND v.patient_approved = false)
+  ) INTO v_stats
+  FROM public.visits v
+  WHERE v.location_id = p_location_id
+    AND v.created_at >= p_start_date::timestamptz
+    AND v.created_at < (p_end_date + 1)::timestamptz;
+
+  -- Daily breakdown
+  SELECT COALESCE(jsonb_agg(row_data ORDER BY row_data->>'date'), '[]'::jsonb)
+  INTO v_daily
+  FROM (
+    SELECT jsonb_build_object(
+      'date', v.created_at::date,
+      'avg_ai_minutes', round(avg(EXTRACT(EPOCH FROM (v.entered_queue_at - v.ai_started_at)) / 60.0) FILTER (WHERE v.entered_queue_at IS NOT NULL AND v.ai_started_at IS NOT NULL), 1),
+      'avg_wait_minutes', round(avg(EXTRACT(EPOCH FROM (v.claimed_at - v.entered_queue_at)) / 60.0) FILTER (WHERE v.claimed_at IS NOT NULL AND v.entered_queue_at IS NOT NULL), 1),
+      'avg_handling_minutes', round(avg(EXTRACT(EPOCH FROM (v.completed_at - v.claimed_at)) / 60.0) FILTER (WHERE v.completed_at IS NOT NULL AND v.claimed_at IS NOT NULL), 1),
+      'total', count(*),
+      'completed', count(*) FILTER (WHERE v.status = 'completed'),
+      'left_count', count(*) FILTER (WHERE v.status = 'left' AND v.patient_approved = true),
+      'denied_count', count(*) FILTER (WHERE v.status = 'left' AND v.patient_approved = false)
+    ) AS row_data
+    FROM public.visits v
+    WHERE v.location_id = p_location_id
+      AND v.created_at >= p_start_date::timestamptz
+      AND v.created_at < (p_end_date + 1)::timestamptz
+    GROUP BY v.created_at::date
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'stats', v_stats,
+    'daily', v_daily
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_patient_stats(
+  p_location_id uuid,
+  p_start_date date DEFAULT CURRENT_DATE,
+  p_end_date date DEFAULT CURRENT_DATE
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_patient_stats(v_auth_uid, p_location_id, p_start_date, p_end_date);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_patient_stats(uuid, date, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_patient_stats(uuid, date, date) TO authenticated;

@@ -1,0 +1,77 @@
+-- private.update_note_preference
+CREATE OR REPLACE FUNCTION private.update_note_preference(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid,
+  p_default_private boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_has_doctor_role boolean;
+BEGIN
+  -- Get caller staff id (from any org, since patient_id is the anchor)
+  SELECT su.id INTO v_caller_staff_id
+    FROM public.staff_users su
+    JOIN public.patients p ON p.org_id = su.org_id
+   WHERE su.auth_uid = p_caller_auth_uid
+     AND p.id = p_patient_id
+     AND su.is_active = true
+     AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+  END IF;
+
+  -- Check has doctor role
+  SELECT EXISTS(
+    SELECT 1
+      FROM public.staff_roles
+     WHERE staff_user_id = v_caller_staff_id
+       AND role = 'doctor'
+  ) INTO v_has_doctor_role;
+
+  IF NOT v_has_doctor_role THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized: doctor role required');
+  END IF;
+
+  -- Upsert preference
+  INSERT INTO public.doctor_note_preferences (doctor_id, patient_id, default_private)
+  VALUES (v_caller_staff_id, p_patient_id, p_default_private)
+  ON CONFLICT (doctor_id, patient_id)
+  DO UPDATE SET default_private = EXCLUDED.default_private;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- public.update_note_preference (wrapper)
+CREATE OR REPLACE FUNCTION public.update_note_preference(
+  p_patient_id uuid,
+  p_default_private boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.update_note_preference(v_auth_uid, p_patient_id, p_default_private);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.update_note_preference(uuid, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.update_note_preference(uuid, boolean) TO authenticated;

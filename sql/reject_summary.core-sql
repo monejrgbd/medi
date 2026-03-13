@@ -44,6 +44,10 @@ BEGIN
       updated_at = now()
   WHERE id = p_visit_id;
 
+  -- Insert a system message so the AI knows to continue asking
+  INSERT INTO public.visit_messages (visit_id, role, content)
+  VALUES (p_visit_id, 'system', 'The patient indicated the summary was inaccurate. Please ask what was missing or incorrect, then continue gathering information.');
+
   RETURN jsonb_build_object('success', true);
 END;
 $$;

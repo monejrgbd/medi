@@ -49,3 +49,6 @@ BEGIN
   RETURN private.update_organization(v_auth_uid, p_name);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.update_organization(text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_organization(text) TO authenticated;

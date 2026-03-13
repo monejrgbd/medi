@@ -1,0 +1,15 @@
+CREATE TABLE IF NOT EXISTS public.review_platforms (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id          uuid NOT NULL REFERENCES public.organizations(id),
+  location_id     uuid NOT NULL REFERENCES public.locations(id),
+  platform_name   text NOT NULL CHECK (platform_name IN ('google','yelp','healthgrades','zocdoc','vitals','ratemds','facebook')),
+  platform_url    text NOT NULL,
+  is_active       boolean DEFAULT true,
+  created_at      timestamptz DEFAULT now(),
+  UNIQUE(location_id, platform_name)
+);
+
+ALTER TABLE public.review_platforms ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_review_platforms" ON public.review_platforms FOR SELECT
+  USING (org_id = requesting_org_id());

@@ -1,0 +1,38 @@
+-- NO private/public wrapper — anon-callable (token is the capability)
+CREATE OR REPLACE FUNCTION public.get_review_page(
+  p_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'success', true,
+    'clinic_name', o.name,
+    'doctor_name', doc.full_name,
+    'already_submitted', (r.submitted_at IS NOT NULL)
+  )
+  INTO v_result
+  FROM public.reviews r
+  JOIN public.organizations o ON o.id = r.org_id
+  LEFT JOIN public.staff_users doc ON doc.id = r.doctor_id
+  WHERE r.review_token = p_token
+    AND r.created_at > now() - interval '90 days';
+
+  IF v_result IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Review not found or link has expired');
+  END IF;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Anon-callable
+REVOKE ALL ON FUNCTION public.get_review_page(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_review_page(uuid) TO anon;
+GRANT EXECUTE ON FUNCTION public.get_review_page(uuid) TO authenticated;

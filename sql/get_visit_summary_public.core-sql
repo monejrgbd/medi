@@ -1,0 +1,58 @@
+-- NO private/public wrapper — anon-callable (token is the capability)
+CREATE OR REPLACE FUNCTION public.get_visit_summary_public(
+  p_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'success', true,
+    'clinic_name', o.name,
+    'clinic_address', l.address,
+    'clinic_logo_url', l.logo_url,
+    'visit_date', v.completed_at,
+    'doctor_name', doc.full_name,
+    'summary', v.ai_summary,
+    'diagnosis', v.doctor_diagnosis,
+    'medications', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object('name', pm.name))
+      FROM public.patient_medications pm
+      WHERE pm.patient_id = v.patient_id
+    ), '[]'::jsonb),
+    'allergies', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object('name', pa.name))
+      FROM public.patient_allergies pa
+      WHERE pa.patient_id = v.patient_id
+    ), '[]'::jsonb),
+    'chronic_conditions', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object('name', pc.name))
+      FROM public.patient_chronic_conditions pc
+      WHERE pc.patient_id = v.patient_id
+    ), '[]'::jsonb)
+  )
+  INTO v_result
+  FROM public.visits v
+  JOIN public.organizations o ON o.id = v.org_id
+  JOIN public.locations l ON l.id = v.location_id
+  LEFT JOIN public.staff_users doc ON doc.id = v.claimed_by
+  WHERE v.summary_token = p_token
+    AND v.status = 'completed';
+
+  IF v_result IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Summary not found');
+  END IF;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Anon-callable: grant to both anon and authenticated
+REVOKE ALL ON FUNCTION public.get_visit_summary_public(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_visit_summary_public(uuid) TO anon;
+GRANT EXECUTE ON FUNCTION public.get_visit_summary_public(uuid) TO authenticated;

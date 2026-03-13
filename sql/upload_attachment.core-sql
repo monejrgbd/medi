@@ -1,0 +1,130 @@
+-- upload_attachment: allows doctors/owners to attach files to a visit
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.upload_attachment(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid,
+  p_file_url text,
+  p_file_name text,
+  p_mime_type text,
+  p_file_size int
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_attachment_id uuid;
+BEGIN
+  -- Validate mime type
+  IF p_mime_type NOT IN (
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'File type not allowed');
+  END IF;
+
+  -- Validate file size
+  IF p_file_size <= 0 OR p_file_size > 10485760 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'File size must be between 1 byte and 10MB');
+  END IF;
+
+  -- Validate file name length
+  IF length(p_file_name) > 255 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'File name too long');
+  END IF;
+
+  -- Get visit
+  SELECT id, org_id, location_id
+  INTO v_visit
+  FROM public.visits
+  WHERE id = p_visit_id;
+
+  IF v_visit.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+  FROM public.staff_users
+  WHERE auth_uid = p_caller_auth_uid
+    AND org_id = v_visit.org_id
+    AND is_active = true
+    AND is_deleted = false;
+
+  -- Get owner id
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_visit.org_id;
+
+  -- Auth: must be owner or doctor at visit location
+  IF p_caller_auth_uid = v_owner_id THEN
+    -- Owner is authorized
+    NULL;
+  ELSIF v_caller_staff_id IS NOT NULL AND EXISTS (
+    SELECT 1 FROM public.staff_roles
+    WHERE staff_user_id = v_caller_staff_id
+      AND role = 'doctor'
+      AND location_id = v_visit.location_id
+  ) THEN
+    -- Doctor at visit location is authorized
+    NULL;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized to upload attachments for this visit');
+  END IF;
+
+  -- Staff account required (owner without staff row cannot upload)
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account required to upload');
+  END IF;
+
+  -- Insert attachment
+  INSERT INTO public.visit_attachments (visit_id, doctor_id, org_id, file_url, file_name, file_size, mime_type)
+  VALUES (p_visit_id, v_caller_staff_id, v_visit.org_id, p_file_url, p_file_name, p_file_size, p_mime_type)
+  RETURNING id INTO v_attachment_id;
+
+  -- Touch visit updated_at
+  UPDATE public.visits SET updated_at = now() WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true, 'attachment_id', v_attachment_id);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.upload_attachment(
+  p_visit_id uuid,
+  p_file_url text,
+  p_file_name text,
+  p_mime_type text,
+  p_file_size int
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.upload_attachment(v_auth_uid, p_visit_id, p_file_url, p_file_name, p_mime_type, p_file_size);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.upload_attachment(uuid, text, text, text, int) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.upload_attachment(uuid, text, text, text, int) TO authenticated;

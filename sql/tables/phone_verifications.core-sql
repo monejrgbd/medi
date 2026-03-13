@@ -1,0 +1,38 @@
+CREATE TABLE public.phone_verifications (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone                 text NOT NULL,
+  code_hash             text NOT NULL,
+  location_id           uuid REFERENCES public.locations(id),
+  visit_id              uuid REFERENCES public.visits(id),
+  patient_id            uuid REFERENCES public.patients(id),
+  ip_address            text,
+  attempts              int DEFAULT 0,
+  expires_at            timestamptz NOT NULL,
+  verified_at           timestamptz,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.phone_verifications ENABLE ROW LEVEL SECURITY;
+
+-- Default-deny: no SELECT/INSERT/UPDATE/DELETE policies
+-- All access via service role in edge functions
+
+-- Rate-limit by phone
+CREATE INDEX idx_phone_verif_phone_active
+  ON public.phone_verifications (phone, created_at DESC)
+  WHERE verified_at IS NULL;
+
+-- Rate-limit by IP
+CREATE INDEX idx_phone_verif_ip_active
+  ON public.phone_verifications (ip_address, created_at DESC)
+  WHERE verified_at IS NULL;
+
+-- Rate-limit by location
+CREATE INDEX idx_phone_verif_location_active
+  ON public.phone_verifications (location_id, created_at DESC)
+  WHERE verified_at IS NULL;
+
+-- Verification lookup
+CREATE INDEX idx_phone_verif_lookup
+  ON public.phone_verifications (phone, expires_at DESC)
+  WHERE verified_at IS NULL;

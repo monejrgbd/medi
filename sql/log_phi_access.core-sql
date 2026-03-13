@@ -1,0 +1,49 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.log_phi_access(
+  p_caller_auth_uid uuid,
+  p_entity_type text,
+  p_entity_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_staff record;
+BEGIN
+  SELECT su.id, su.org_id
+  INTO v_staff
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_staff IS NULL THEN
+    RETURN; -- silent no-op if caller not found
+  END IF;
+
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id)
+  VALUES (v_staff.org_id, v_staff.id, 'staff', 'viewed', p_entity_type, p_entity_id);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.log_phi_access(
+  p_entity_type text,
+  p_entity_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  PERFORM private.log_phi_access(auth.uid(), p_entity_type, p_entity_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.log_phi_access(text, uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.log_phi_access(text, uuid) TO authenticated;

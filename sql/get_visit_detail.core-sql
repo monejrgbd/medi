@@ -1,0 +1,249 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_visit_detail(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_doctor boolean := false;
+  v_result jsonb;
+BEGIN
+  -- Get visit basic info for auth check
+  SELECT v.id, v.org_id, v.location_id, v.patient_id, v.status, v.claimed_by
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or doctor at org
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'doctor'
+        AND sr.location_id = v_visit.location_id
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+
+    -- Only the claiming doctor can view during active claim
+    IF v_visit.status = 'claimed_by_doctor' AND v_visit.claimed_by IS NOT NULL
+       AND v_visit.claimed_by <> v_caller_staff_id THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Log PHI access (deduplicate: skip if same actor viewed this visit in last 5 minutes)
+  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  SELECT v_visit.org_id, 'visit', p_visit_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END,
+    'viewed', jsonb_build_object('patient_id', v_visit.patient_id)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM public.audit_trail
+    WHERE entity_type = 'visit' AND entity_id = p_visit_id
+      AND actor_id = COALESCE(v_caller_staff_id, p_caller_auth_uid)
+      AND action = 'viewed'
+      AND created_at > now() - interval '5 minutes'
+  );
+
+  -- Single CTE-based query per perf audit
+  WITH transcript AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', sub.id,
+      'role', sub.role,
+      'content', sub.content,
+      'created_at', sub.created_at
+    ) ORDER BY sub.created_at ASC), '[]'::jsonb) AS messages
+    FROM (
+      SELECT vm.id, vm.role, vm.content, vm.created_at
+      FROM public.visit_messages vm
+      WHERE vm.visit_id = p_visit_id
+        AND vm.role <> 'system'
+      ORDER BY vm.created_at ASC
+      LIMIT 500
+    ) sub
+  ),
+  addendums AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', va.id,
+      'content', va.content,
+      'created_at', va.created_at
+    ) ORDER BY va.created_at ASC), '[]'::jsonb) AS items
+    FROM public.visit_addendums va
+    WHERE va.visit_id = p_visit_id
+  ),
+  patient_meds AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'name', pm.name
+    )), '[]'::jsonb) AS meds
+    FROM public.patient_medications pm
+    WHERE pm.patient_id = v_visit.patient_id
+      AND pm.active = true
+  ),
+  patient_allergies AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'name', pa.name
+    )), '[]'::jsonb) AS allergies
+    FROM public.patient_allergies pa
+    WHERE pa.patient_id = v_visit.patient_id
+      AND pa.active = true
+  ),
+  patient_chronic AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'name', pc.name
+    )), '[]'::jsonb) AS conditions
+    FROM public.patient_chronic_conditions pc
+    WHERE pc.patient_id = v_visit.patient_id
+      AND pc.active = true
+  ),
+  past_visits AS (
+    SELECT
+      count(*) AS visit_count,
+      max(pv.completed_at) AS last_visit_date,
+      (SELECT left(pv2.ai_summary, 200)
+       FROM public.visits pv2
+       WHERE pv2.patient_id = v_visit.patient_id
+         AND pv2.status = 'completed'
+         AND pv2.id <> p_visit_id
+       ORDER BY pv2.completed_at DESC
+       LIMIT 1) AS last_visit_summary
+    FROM public.visits pv
+    WHERE pv.patient_id = v_visit.patient_id
+      AND pv.status = 'completed'
+      AND pv.id <> p_visit_id
+  ),
+  visit_notes_cte AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', sub.id, 'content', sub.content, 'is_private', sub.is_private,
+      'author_name', sub.full_name,
+      'is_own', (sub.doctor_id = v_caller_staff_id),
+      'created_at', sub.created_at
+    ) ORDER BY sub.created_at ASC), '[]'::jsonb) AS notes
+    FROM (
+      SELECT vn.id, vn.content, vn.is_private, vn.doctor_id, su.full_name, vn.created_at
+      FROM public.visit_notes vn
+      JOIN public.staff_users su ON su.id = vn.doctor_id
+      WHERE vn.visit_id = p_visit_id
+        AND (vn.doctor_id = v_caller_staff_id OR vn.is_private = false OR v_owner_id = p_caller_auth_uid)
+      ORDER BY vn.created_at ASC
+      LIMIT 200
+    ) sub
+  ),
+  visit_attachments_cte AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', sub.id, 'file_url', sub.file_url, 'file_name', sub.file_name,
+      'file_size', sub.file_size, 'mime_type', sub.mime_type,
+      'uploader_name', sub.full_name, 'created_at', sub.created_at
+    ) ORDER BY sub.created_at ASC), '[]'::jsonb) AS files
+    FROM (
+      SELECT va.id, va.file_url, va.file_name, va.file_size, va.mime_type, su.full_name, va.created_at
+      FROM public.visit_attachments va
+      JOIN public.staff_users su ON su.id = va.doctor_id
+      WHERE va.visit_id = p_visit_id
+      ORDER BY va.created_at ASC
+      LIMIT 50
+    ) sub
+  )
+  SELECT jsonb_build_object(
+    'visit', jsonb_build_object(
+      'id', v.id,
+      'status', v.status,
+      'ai_summary', v.ai_summary,
+      'ai_structured_card', v.ai_structured_card,
+      'ai_diagnostic', CASE WHEN v_is_doctor OR v_owner_id = p_caller_auth_uid THEN v.ai_diagnostic ELSE NULL END,
+      'ai_model_used', v.ai_model_used,
+      'doctor_diagnosis', v.doctor_diagnosis,
+      'priority', v.priority,
+      'is_sensitive', v.is_sensitive,
+      'timeout_flagged', v.timeout_flagged,
+      'created_at', v.created_at,
+      'completed_at', v.completed_at,
+      'claimed_at', v.claimed_at,
+      'claimed_by', v.claimed_by,
+      'entered_queue_at', v.entered_queue_at,
+      'updated_at', v.updated_at,
+      'is_follow_up', v.is_follow_up,
+      'follow_up_of', v.follow_up_of
+    ),
+    'patient', jsonb_build_object(
+      'id', p.id,
+      'first_name', p.first_name,
+      'last_name', p.last_name,
+      'birthday', p.birthday,
+      'phone_masked', CASE WHEN p.phone IS NOT NULL THEN '***-***-' || right(p.phone, 4) ELSE NULL END,
+      'medications', pm.meds,
+      'allergies', pa.allergies,
+      'chronic_conditions', pc.conditions,
+      'visit_count', pv.visit_count,
+      'last_visit_date', pv.last_visit_date,
+      'last_visit_summary', pv.last_visit_summary
+    ),
+    'transcript', t.messages,
+    'addendums', a.items,
+    'notes', vnc.notes,
+    'attachments', vac.files
+  ) INTO v_result
+  FROM public.visits v
+  JOIN public.patients p ON p.id = v.patient_id
+  CROSS JOIN transcript t
+  CROSS JOIN addendums a
+  CROSS JOIN patient_meds pm
+  CROSS JOIN patient_allergies pa
+  CROSS JOIN patient_chronic pc
+  CROSS JOIN past_visits pv
+  CROSS JOIN visit_notes_cte vnc
+  CROSS JOIN visit_attachments_cte vac
+  WHERE v.id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true, 'data', v_result);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_visit_detail(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_visit_detail(v_auth_uid, p_visit_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_visit_detail(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_visit_detail(uuid) TO authenticated;

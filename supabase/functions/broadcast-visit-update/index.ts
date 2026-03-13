@@ -13,11 +13,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { visit_id, session_token, old_status, new_status, location_id, timeout_flagged } =
-      await req.json();
+    const body = await req.json();
+    const { session_token, visit_id, event_type } = body;
 
-    if (!session_token || !new_status) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    if (!session_token) {
+      return new Response(JSON.stringify({ error: "Missing session_token" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
       });
@@ -28,13 +28,41 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Broadcast to patient channel
     const channel = supabase.channel(`patient:${session_token}`);
-    await channel.send({
-      type: "broadcast",
-      event: "status_change",
-      payload: { visit_id, status: new_status, old_status, timeout_flagged },
-    });
+
+    if (event_type === "phone_required") {
+      // Broadcast phone_required event
+      await channel.send({
+        type: "broadcast",
+        event: "phone_required",
+        payload: { visit_id },
+      });
+    } else if (event_type === "phone_verified") {
+      // Broadcast phone_verified event
+      await channel.send({
+        type: "broadcast",
+        event: "phone_verified",
+        payload: { visit_id },
+      });
+    } else {
+      // Default: status_change (existing behavior)
+      const { old_status, new_status, timeout_flagged, denied } = body;
+
+      if (!new_status) {
+        supabase.removeChannel(channel);
+        return new Response(JSON.stringify({ error: "Missing new_status" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
+      await channel.send({
+        type: "broadcast",
+        event: "status_change",
+        payload: { visit_id, status: new_status, old_status, timeout_flagged, denied },
+      });
+    }
+
     supabase.removeChannel(channel);
 
     return new Response(JSON.stringify({ success: true }), {

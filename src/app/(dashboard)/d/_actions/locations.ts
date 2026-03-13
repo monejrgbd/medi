@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { stripHtml } from "@/lib/utils";
-import { getMyOrg } from "@/lib/auth";
+import { getMyOrg, requireAuth } from "@/lib/auth";
 
 export async function createLocation(formData: {
   orgId: string;
@@ -12,6 +12,7 @@ export async function createLocation(formData: {
   specialty?: string;
   operatingHours?: Record<string, unknown>;
 }) {
+  await requireAuth();
   const name = stripHtml(formData.name).slice(0, 100);
   if (!name) {
     return { success: false, error: "Location name is required" };
@@ -47,6 +48,7 @@ export async function updateLocation(formData: {
   timezone?: string;
   logoUrl?: string;
 }) {
+  await requireAuth();
   const supabase = await createClient();
 
   const params: Record<string, unknown> = {
@@ -78,6 +80,7 @@ export async function updateLocation(formData: {
 }
 
 export async function updateOrganization(formData: { name: string }) {
+  await requireAuth();
   const name = stripHtml(formData.name).slice(0, 100);
   if (!name) {
     return { success: false, error: "Organization name is required" };
@@ -97,6 +100,7 @@ export async function updateOrganization(formData: { name: string }) {
 }
 
 export async function uploadLocationLogo(locationId: string, formData: FormData) {
+  await requireAuth();
   const file = formData.get("file") as File | null;
   if (!file) return { success: false, error: "No file provided" };
 

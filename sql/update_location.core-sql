@@ -101,3 +101,6 @@ BEGIN
   RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text) TO authenticated;

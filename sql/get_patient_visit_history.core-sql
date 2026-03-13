@@ -1,0 +1,126 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_patient_visit_history(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid,
+  p_limit int DEFAULT 20,
+  p_cursor timestamptz DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_patient_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_doctor boolean := false;
+  v_visits jsonb;
+  v_count int;
+  v_has_more boolean;
+  v_next_cursor timestamptz;
+  v_safe_limit int;
+BEGIN
+  -- Cap limit
+  v_safe_limit := LEAST(GREATEST(p_limit, 1), 50);
+
+  -- Get patient org
+  SELECT p.org_id INTO v_patient_org_id
+  FROM public.patients p
+  WHERE p.id = p_patient_id;
+
+  IF v_patient_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_patient_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or doctor at org
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_patient_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'doctor'
+        AND sr.location_id IN (
+          SELECT v.location_id FROM public.visits v
+          WHERE v.patient_id = p_patient_id
+        )
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Fetch limit + 1 for has_more detection
+  SELECT jsonb_agg(row_to_json(q)), count(*)
+  INTO v_visits, v_count
+  FROM (
+    SELECT
+      v.id AS visit_id,
+      v.created_at AS date,
+      l.name AS location_name,
+      left(v.ai_summary, 200) AS summary,
+      left(v.doctor_diagnosis, 200) AS diagnosis,
+      su.full_name AS doctor_name,
+      v.status
+    FROM public.visits v
+    JOIN public.locations l ON l.id = v.location_id
+    LEFT JOIN public.staff_users su ON su.id = v.claimed_by
+    WHERE v.patient_id = p_patient_id
+      AND (p_cursor IS NULL OR v.created_at < p_cursor)
+    ORDER BY v.created_at DESC
+    LIMIT v_safe_limit + 1
+  ) q;
+
+  v_has_more := COALESCE(v_count > v_safe_limit, false);
+
+  -- Trim extra row and get cursor
+  IF v_has_more AND v_visits IS NOT NULL THEN
+    v_visits := v_visits - (jsonb_array_length(v_visits) - 1);
+    v_next_cursor := (v_visits -> (jsonb_array_length(v_visits) - 1) ->> 'date')::timestamptz;
+  ELSIF v_visits IS NOT NULL AND jsonb_array_length(v_visits) > 0 THEN
+    v_next_cursor := NULL;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'visits', COALESCE(v_visits, '[]'::jsonb),
+    'has_more', v_has_more,
+    'next_cursor', v_next_cursor
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_patient_visit_history(
+  p_patient_id uuid,
+  p_limit int DEFAULT 20,
+  p_cursor timestamptz DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_patient_visit_history(v_auth_uid, p_patient_id, p_limit, p_cursor);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_patient_visit_history(uuid, int, timestamptz) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_patient_visit_history(uuid, int, timestamptz) TO authenticated;

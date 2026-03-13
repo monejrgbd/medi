@@ -14,6 +14,8 @@ DECLARE
   v_owner_id uuid;
   v_caller_staff_id uuid;
   v_is_receptionist boolean := false;
+  v_edge_url text;
+  v_secret text;
 BEGIN
   -- Get visit details
   SELECT v.* INTO v_visit
@@ -58,10 +60,34 @@ BEGIN
   PERFORM set_config('app.audit_actor_type', 'receptionist', true);
   PERFORM set_config('app.audit_action', 'denied', true);
 
-  -- Update visit status
+  -- Update visit status and mark as denied
   UPDATE public.visits
-  SET status = 'left'
+  SET status = 'left',
+      patient_denied = true
   WHERE id = p_visit_id;
+
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+  SELECT decrypted_secret INTO v_secret
+  FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  IF v_edge_url IS NOT NULL AND v_edge_url <> '' AND v_secret IS NOT NULL AND v_secret <> '' THEN
+    PERFORM net.http_post(
+      url := v_edge_url || '/broadcast-visit-update',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'x-internal-secret', v_secret
+      ),
+      body := jsonb_build_object(
+        'visit_id', p_visit_id,
+        'session_token', v_visit.session_token,
+        'old_status', 'pending_approval',
+        'new_status', 'denied',
+        'denied', true
+      )
+    );
+  END IF;
 
   RETURN jsonb_build_object('success', true);
 END;
@@ -83,3 +109,6 @@ BEGIN
   RETURN private.deny_patient(v_auth_uid, p_visit_id);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.deny_patient(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.deny_patient(uuid) TO authenticated;

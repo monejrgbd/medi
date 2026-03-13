@@ -16,7 +16,7 @@ BEGIN
   END IF;
 
   UPDATE public.visits
-  SET priority = p_priority,
+  SET priority = GREATEST(priority, p_priority),
       updated_at = now()
   WHERE id = p_visit_id;
 

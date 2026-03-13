@@ -1,0 +1,137 @@
+-- private.get_notes_for_patient
+CREATE OR REPLACE FUNCTION private.get_notes_for_patient(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid,
+  p_limit int DEFAULT 30,
+  p_cursor timestamptz DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_patient_org_id uuid;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_is_owner boolean;
+  v_is_doctor boolean;
+  v_rows jsonb;
+  v_has_more boolean;
+  v_next_cursor timestamptz;
+  v_trimmed jsonb;
+BEGIN
+  -- Get patient org_id
+  SELECT org_id INTO v_patient_org_id
+    FROM public.patients
+   WHERE id = p_patient_id;
+
+  IF v_patient_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+    FROM public.staff_users
+   WHERE auth_uid = p_caller_auth_uid
+     AND org_id = v_patient_org_id
+     AND is_active = true
+     AND is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+  END IF;
+
+  -- Get owner id
+  SELECT owner_id INTO v_owner_id
+    FROM public.organizations
+   WHERE id = v_patient_org_id;
+
+  v_is_owner := (v_owner_id = p_caller_auth_uid);
+
+  -- Auth: owner OR doctor at any location in org
+  IF NOT v_is_owner THEN
+    SELECT EXISTS(
+      SELECT 1
+        FROM public.staff_roles sr
+       WHERE sr.staff_user_id = v_caller_staff_id
+         AND sr.role = 'doctor'
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized: must be owner or doctor');
+    END IF;
+  END IF;
+
+  -- Clamp limit
+  p_limit := LEAST(COALESCE(p_limit, 30), 200);
+
+  -- Fetch p_limit + 1 rows for has_more detection
+  SELECT jsonb_agg(row_data) INTO v_rows FROM (
+    SELECT jsonb_build_object(
+      'id', pn.id,
+      'content', pn.content,
+      'is_private', pn.is_private,
+      'author_name', su.full_name,
+      'is_own', (pn.doctor_id = v_caller_staff_id),
+      'created_at', pn.created_at
+    ) AS row_data
+    FROM public.patient_notes pn
+    JOIN public.staff_users su ON su.id = pn.doctor_id
+    WHERE pn.patient_id = p_patient_id
+      AND (pn.doctor_id = v_caller_staff_id OR pn.is_private = false OR v_is_owner)
+      AND (p_cursor IS NULL OR pn.created_at < p_cursor)
+    ORDER BY pn.created_at DESC
+    LIMIT p_limit + 1
+  ) sub;
+
+  v_rows := COALESCE(v_rows, '[]'::jsonb);
+  v_has_more := jsonb_array_length(v_rows) > p_limit;
+
+  IF v_has_more THEN
+    -- Trim last element (the extra row)
+    v_trimmed := v_rows - (jsonb_array_length(v_rows) - 1);
+    -- Get next_cursor from last remaining element
+    v_next_cursor := (v_trimmed -> (jsonb_array_length(v_trimmed) - 1) ->> 'created_at')::timestamptz;
+  ELSE
+    v_trimmed := v_rows;
+    v_next_cursor := NULL;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'notes', v_trimmed,
+    'has_more', v_has_more,
+    'next_cursor', v_next_cursor
+  );
+END;
+$$;
+
+-- public.get_notes_for_patient (wrapper)
+CREATE OR REPLACE FUNCTION public.get_notes_for_patient(
+  p_patient_id uuid,
+  p_limit int DEFAULT 30,
+  p_cursor timestamptz DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_notes_for_patient(v_auth_uid, p_patient_id, p_limit, p_cursor);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.get_notes_for_patient(uuid, int, timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_notes_for_patient(uuid, int, timestamptz) TO authenticated;

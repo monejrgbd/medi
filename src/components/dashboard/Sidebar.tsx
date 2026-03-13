@@ -9,6 +9,10 @@ const NAV_ITEMS = [
   { href: "/d/owner", label: "Overview", icon: "📊" },
   { href: "/d/owner/locations", label: "Locations", icon: "📍" },
   { href: "/d/owner/staff", label: "Staff", icon: "👥" },
+  { href: "/d/owner/audit", label: "Audit Trail", icon: "📋" },
+  { href: "/d/reviews", label: "Reviews", icon: "⭐" },
+  { href: "/d/manager", label: "Analytics", icon: "📈" },
+  { href: "/d/owner/billing", label: "Billing", icon: "💳" },
   { href: "/d/owner/settings", label: "Settings", icon: "⚙️" },
 ];
 
@@ -48,6 +52,14 @@ export default function Sidebar() {
       </nav>
 
       <div className="p-4 border-t border-gray-100 space-y-1">
+        <a
+          href="mailto:support@hilthealth.com?subject=Custom%20Build%20Request"
+          onClick={() => setMobileOpen(false)}
+          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 hover:text-ink transition-colors"
+        >
+          <span>🛠️</span>
+          Request Custom Build
+        </a>
         <Link
           href="/d/select-role"
           onClick={() => setMobileOpen(false)}

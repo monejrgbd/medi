@@ -114,3 +114,6 @@ BEGIN
   RETURN private.create_staff_user(v_auth_uid, p_org_id, p_full_name, p_username, p_password, p_location_id, p_roles);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.create_staff_user(uuid, text, text, text, uuid, text[]) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_staff_user(uuid, text, text, text, uuid, text[]) TO authenticated;

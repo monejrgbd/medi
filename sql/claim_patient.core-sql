@@ -1,0 +1,124 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.claim_patient(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_doctor boolean := false;
+  v_locked record;
+  -- v_claimer_name removed (m10: don't leak doctor names)
+BEGIN
+  -- Get visit details
+  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or doctor at visit location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can claim
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'doctor'
+        AND sr.location_id = v_visit.location_id
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Staff record required to claim (prevents NULL claimed_by)
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account required to claim patients');
+  END IF;
+
+  -- Try to lock the visit row (SKIP LOCKED = non-blocking)
+  SELECT id, status, claimed_by
+  INTO v_locked
+  FROM public.visits
+  WHERE id = p_visit_id
+  FOR UPDATE SKIP LOCKED;
+
+  -- If lock not acquired, someone else has it
+  IF v_locked IS NULL THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'already_claimed', true,
+      'claimed_by_name', 'Another doctor'
+    );
+  END IF;
+
+  -- Validate status
+  IF v_locked.status <> 'waiting_doctor_claim' THEN
+    IF v_locked.claimed_by IS NOT NULL THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'already_claimed', true,
+        'claimed_by_name', 'Another doctor'
+      );
+    END IF;
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not in queue');
+  END IF;
+
+  -- Set audit context
+  PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
+  PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END, true);
+  PERFORM set_config('app.audit_action', 'claimed', true);
+
+  -- Claim the visit
+  UPDATE public.visits
+  SET status = 'claimed_by_doctor',
+      claimed_by = v_caller_staff_id,
+      claimed_at = now()
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.claim_patient(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.claim_patient(v_auth_uid, p_visit_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.claim_patient(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.claim_patient(uuid) TO authenticated;

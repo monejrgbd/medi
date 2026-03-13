@@ -1,0 +1,77 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.collect_phone_post_ai(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_phone text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_patient record;
+  v_clean_phone text;
+BEGIN
+  -- Look up visit
+  SELECT v.id, v.session_token, v.status, v.patient_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Validate session token
+  IF v_visit.session_token <> p_session_token THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+  END IF;
+
+  -- Must be in queue
+  IF v_visit.status <> 'waiting_doctor_claim' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not in queue');
+  END IF;
+
+  -- Check if patient already has verified phone
+  SELECT p.phone_verified INTO v_patient
+  FROM public.patients p
+  WHERE p.id = v_visit.patient_id;
+
+  IF v_patient.phone_verified THEN
+    RETURN jsonb_build_object('success', true, 'already_verified', true);
+  END IF;
+
+  -- Phone sanitization
+  v_clean_phone := regexp_replace(p_phone, '[^0-9+]', '', 'g');
+  IF left(v_clean_phone, 1) = '+' THEN
+    v_clean_phone := '+' || regexp_replace(substring(v_clean_phone, 2), '[^0-9]', '', 'g');
+  END IF;
+
+  IF v_clean_phone !~ '^\+[1-9][0-9]{1,14}$' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid phone number format');
+  END IF;
+
+  -- Don't write phone directly — phone set only after verification via verify_phone_and_link
+  RETURN jsonb_build_object('success', true, 'needs_verification', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.collect_phone_post_ai(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_phone text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.collect_phone_post_ai(p_visit_id, p_session_token, p_phone);
+END;
+$$;

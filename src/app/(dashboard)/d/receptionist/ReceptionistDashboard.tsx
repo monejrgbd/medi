@@ -1,12 +1,26 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { useReceptionistRealtime } from "@/hooks/useReceptionistRealtime";
+import {
+  useReceptionistRealtime,
+  type ReceptionistNotification,
+} from "@/hooks/useReceptionistRealtime";
+import { unlockAudio } from "@/lib/notificationSound";
+import {
+  fetchNotificationPreference,
+  toggleNotificationSound,
+} from "@/app/(dashboard)/d/_actions/preferences";
 import ReceptionistHeader from "@/components/receptionist/ReceptionistHeader";
 import ApprovalQueue from "@/components/receptionist/ApprovalQueue";
 import ActivePatientsList from "@/components/receptionist/ActivePatientsList";
+import ReferralInbox from "@/components/receptionist/ReferralInbox";
+import NotificationPermission from "@/components/dashboard/NotificationPermission";
+import NotificationBanner from "@/components/dashboard/NotificationBanner";
+import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
+import NoDoctorsWarning from "@/components/dashboard/NoDoctorsWarning";
+import PatientSearch from "@/components/dashboard/PatientSearch";
 
 interface PendingVisit {
   visit_id: string;
@@ -17,6 +31,25 @@ interface PendingVisit {
   created_at: string;
   has_previous_visits: boolean;
   match_type: string;
+  collision_flag?: boolean;
+  phone_verified?: boolean;
+  phone_masked?: string | null;
+  phone_verification_pending?: boolean;
+  active_follow_ups: {
+    id: string;
+    doctor_name: string;
+    due_date: string;
+    ai_instructions_preview: string | null;
+    visit_id: string;
+    visit_date: string;
+    visit_summary_preview: string | null;
+  }[];
+  referral_match?: {
+    referral_id: string;
+    specialty: string;
+    from_org_name: string;
+    from_doctor_name: string;
+  } | null;
 }
 
 interface ActiveVisit {
@@ -101,13 +134,38 @@ export default function ReceptionistDashboard({
   initialCounts,
 }: ReceptionistDashboardProps) {
   const router = useRouter();
-  const [tab, setTab] = useState<"pending" | "active">("pending");
+  const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
   const [pending, setPending] = useState<PendingVisit[]>(initialPending);
   const [active, setActive] = useState<ActiveVisit[]>(initialActive);
   const [completed, setCompleted] = useState<CompletedVisit[]>(initialCompleted);
   const [counts, setCounts] = useState<Counts>(initialCounts ?? DEFAULT_COUNTS);
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [urgentPatient, setUrgentPatient] = useState<string | null>(null);
+
+  // Load notification preference + unlock audio
+  useEffect(() => {
+    unlockAudio();
+    fetchNotificationPreference().then((res) => {
+      if (res.success) setSoundEnabled(res.notification_sound);
+    });
+  }, []);
+
+  async function handleToggleSound() {
+    const newVal = !soundEnabled;
+    setSoundEnabled(newVal);
+    await toggleNotificationSound(newVal);
+  }
+
+  const handleNotification = useCallback(
+    (notification: ReceptionistNotification) => {
+      if (notification.type === "urgent" && notification.patientName) {
+        setUrgentPatient(notification.patientName);
+      }
+    },
+    []
+  );
 
   // Realtime: update lists + counts on visit changes
   const handleVisitChange = useCallback(
@@ -194,7 +252,10 @@ export default function ReceptionistDashboard({
     [router]
   );
 
-  useReceptionistRealtime(locationId, handleVisitChange);
+  useReceptionistRealtime(locationId, handleVisitChange, {
+    soundEnabled,
+    onNotification: handleNotification,
+  });
 
   // Handle check-in to location
   async function handleCheckIn(locId: string) {
@@ -304,6 +365,7 @@ export default function ReceptionistDashboard({
   const tabs = [
     { key: "pending" as const, label: `Pending (${counts.awaiting})` },
     { key: "active" as const, label: "Active" },
+    { key: "referrals" as const, label: "Referrals" },
   ];
 
   return (
@@ -312,9 +374,34 @@ export default function ReceptionistDashboard({
         counts={counts}
         locationName={locationName}
         onCheckOut={handleCheckOut}
+        soundEnabled={soundEnabled}
+        onToggleSound={handleToggleSound}
       />
 
       <div className="px-4 py-4 lg:px-6">
+        <NotificationPermission />
+
+        {locationId && <StaleSessionAlert locationId={locationId} />}
+
+        {locationId && (
+          <NoDoctorsWarning
+            locationId={locationId}
+            patientsWaiting={counts.in_queue}
+          />
+        )}
+
+        {urgentPatient && (
+          <NotificationBanner
+            patientName={urgentPatient}
+            onDismiss={() => setUrgentPatient(null)}
+          />
+        )}
+
+        {/* Patient search */}
+        <div className="mb-4">
+          <PatientSearch />
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-1 mb-4 border-b border-gray-200">
           {tabs.map((t) => (
@@ -348,6 +435,10 @@ export default function ReceptionistDashboard({
             onVisitUpdate={handleVisitUpdate}
             onVisitRemove={handleVisitRemove}
           />
+        )}
+
+        {tab === "referrals" && locationId && (
+          <ReferralInbox locationId={locationId} />
         )}
       </div>
     </div>

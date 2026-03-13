@@ -1,0 +1,108 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.handle_payment_failure(
+  p_org_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_new_count int;
+  v_owner_email text;
+  v_org_name text;
+  v_edge_url text;
+  v_edge_secret text;
+  v_new_plan text := NULL;
+BEGIN
+  -- Lock and fetch org
+  SELECT payment_failure_count, payment_first_failed_at, subscription_plan, name, owner_id
+  INTO v_org
+  FROM public.organizations
+  WHERE id = p_org_id
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  -- Increment failure count
+  v_new_count := v_org.payment_failure_count + 1;
+
+  -- Escalation logic
+  IF COALESCE(v_org.payment_first_failed_at, now()) + interval '30 days' <= now()
+    AND v_org.subscription_plan NOT IN ('suspended', 'expired')
+  THEN
+    v_new_plan := 'suspended';
+  ELSIF v_new_count >= 3
+    AND COALESCE(v_org.payment_first_failed_at, now()) + interval '7 days' <= now()
+    AND v_org.subscription_plan NOT IN ('read_only', 'suspended', 'expired')
+  THEN
+    v_new_plan := 'read_only';
+  END IF;
+
+  -- Single UPDATE for all fields
+  UPDATE public.organizations
+  SET payment_failure_count = v_new_count,
+      payment_first_failed_at = COALESCE(payment_first_failed_at, now()),
+      subscription_plan = COALESCE(v_new_plan, subscription_plan)
+  WHERE id = p_org_id;
+
+  -- Send email notification to owner
+  SELECT email INTO v_owner_email
+  FROM auth.users
+  WHERE id = v_org.owner_id;
+
+  IF v_owner_email IS NOT NULL THEN
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL THEN
+      PERFORM net.http_post(
+        url := v_edge_url || '/send-email',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'x-internal-secret', v_edge_secret
+        ),
+        body := jsonb_build_object(
+          'to', v_owner_email,
+          'subject', 'Payment Failed — ' || v_org.name,
+          'html_body', '<h2>Payment Failed</h2><p>We were unable to process your payment for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') ||
+            '</strong>. This is attempt #' || v_new_count || '.</p>' ||
+            CASE WHEN v_new_plan = 'read_only' THEN '<p><strong>Your account has been set to read-only mode.</strong> Please update your payment method to restore full access.</p>'
+                 WHEN v_new_plan = 'suspended' THEN '<p><strong>Your account has been suspended.</strong> Please contact support to restore access.</p>'
+                 ELSE '<p>Please update your payment method to avoid service interruption.</p>'
+            END
+        )
+      );
+    END IF;
+  END IF;
+
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (p_org_id, NULL, 'system', 'payment_failure', 'organization', p_org_id,
+    jsonb_build_object('failure_count', v_new_count, 'new_plan', v_new_plan));
+
+  RETURN jsonb_build_object('success', true, 'failure_count', v_new_count, 'new_plan', v_new_plan);
+END;
+$$;
+
+-- Public wrapper (service_role only)
+CREATE OR REPLACE FUNCTION public.handle_payment_failure(
+  p_org_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.handle_payment_failure(p_org_id);
+END;
+$$;

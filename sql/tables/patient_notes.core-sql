@@ -1,0 +1,17 @@
+CREATE TABLE IF NOT EXISTS public.patient_notes (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id  uuid NOT NULL REFERENCES public.patients(id),
+  doctor_id   uuid NOT NULL REFERENCES public.staff_users(id),
+  org_id      uuid NOT NULL REFERENCES public.organizations(id),
+  content     text NOT NULL CHECK (length(content) <= 10000),
+  is_private  boolean DEFAULT false,
+  created_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.patient_notes ENABLE ROW LEVEL SECURITY;
+
+-- Default-deny: all reads go through SECURITY DEFINER functions
+CREATE POLICY "default_deny_patient_notes" ON public.patient_notes FOR SELECT
+  USING (false);
+
+CREATE INDEX idx_patient_notes_patient ON public.patient_notes (patient_id, created_at DESC);

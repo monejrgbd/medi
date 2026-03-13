@@ -1,0 +1,85 @@
+-- Private implementation (anon-callable, session_token auth)
+CREATE OR REPLACE FUNCTION private.add_addendum(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_content text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_clean_content text;
+BEGIN
+  -- Sanitize input
+  v_clean_content := regexp_replace(trim(COALESCE(p_content, '')), '<[^>]*>', '', 'g');
+
+  IF length(v_clean_content) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Content is required');
+  END IF;
+
+  IF length(v_clean_content) > 2000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Content exceeds maximum length');
+  END IF;
+
+  -- Get visit and validate session
+  SELECT v.id, v.status, v.session_token, v.created_at
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.session_token <> p_session_token THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+  END IF;
+
+  -- Must be in queue (can't add after claimed/completed)
+  IF v_visit.status <> 'waiting_doctor_claim' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Cannot add details at this stage');
+  END IF;
+
+  -- 24-hour session expiry
+  IF v_visit.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+  END IF;
+
+  -- Rate limit: max 10 addendums per visit
+  IF (SELECT count(*) FROM public.visit_addendums WHERE visit_id = p_visit_id) >= 10 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Maximum number of updates reached');
+  END IF;
+
+  -- Insert addendum
+  INSERT INTO public.visit_addendums (visit_id, content)
+  VALUES (p_visit_id, v_clean_content);
+
+  -- Touch parent visit to fire Postgres Changes for doctor realtime
+  UPDATE public.visits
+  SET updated_at = now()
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable, no auth.uid() capture)
+CREATE OR REPLACE FUNCTION public.add_addendum(
+  p_visit_id uuid,
+  p_session_token uuid,
+  p_content text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.add_addendum(p_visit_id, p_session_token, p_content);
+END;
+$$;

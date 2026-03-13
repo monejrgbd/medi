@@ -1,0 +1,102 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.search_patients(
+  p_caller_auth_uid uuid,
+  p_query text,
+  p_birthday date DEFAULT NULL,
+  p_limit int DEFAULT 25
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_org_id uuid;
+  v_escaped_query text;
+  v_results jsonb;
+BEGIN
+  -- Validate query length
+  IF length(p_query) < 1 OR length(p_query) > 100 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Query must be between 1 and 100 characters');
+  END IF;
+
+  -- Cap limit
+  p_limit := GREATEST(1, LEAST(p_limit, 25));
+
+  -- Verify caller is active staff or org owner
+  SELECT o.id INTO v_caller_org_id
+  FROM public.organizations o
+  WHERE o.owner_id = p_caller_auth_uid;
+
+  IF v_caller_org_id IS NULL THEN
+    SELECT su.org_id INTO v_caller_org_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_active = true
+      AND su.is_deleted = false;
+  END IF;
+
+  IF v_caller_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Escape ILIKE wildcards (backslash first, then % and _)
+  v_escaped_query := replace(replace(replace(p_query, '\', '\\'), '%', '\%'), '_', '\_');
+
+  -- Trigram similarity search
+  SELECT COALESCE(jsonb_agg(row_to_json(r.*)), '[]'::jsonb)
+  INTO v_results
+  FROM (
+    SELECT
+      p.id AS patient_id,
+      p.first_name,
+      p.last_name,
+      p.birthday,
+      CASE WHEN p.phone IS NOT NULL
+        THEN '***' || right(p.phone, 4)
+        ELSE NULL
+      END AS phone,
+      (SELECT MAX(v.created_at) FROM public.visits v WHERE v.patient_id = p.id) AS last_visit_date,
+      (SELECT COUNT(*) FROM public.visits v WHERE v.patient_id = p.id)::int AS visit_count
+    FROM public.patients p
+    WHERE p.org_id = v_caller_org_id
+      AND (
+        (p.first_name || ' ' || p.last_name) % v_escaped_query
+        OR (p.first_name || ' ' || p.last_name) ILIKE '%' || v_escaped_query || '%'
+      )
+      AND (p_birthday IS NULL OR p.birthday = p_birthday)
+    ORDER BY similarity(p.first_name || ' ' || p.last_name, v_escaped_query) DESC
+    LIMIT p_limit
+  ) r;
+
+  RETURN jsonb_build_object('success', true, 'patients', v_results);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.search_patients(
+  p_query text,
+  p_birthday date DEFAULT NULL,
+  p_limit int DEFAULT 25
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.search_patients(v_uid, p_query, p_birthday, p_limit);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.search_patients(text, date, int) FROM anon;
+GRANT EXECUTE ON FUNCTION public.search_patients(text, date, int) TO authenticated;

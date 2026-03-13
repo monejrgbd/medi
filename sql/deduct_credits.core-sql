@@ -15,7 +15,7 @@ DECLARE
   v_org record;
   v_amount numeric;
   v_remaining numeric;
-  v_existing_log uuid;
+  v_rows_inserted int;
 BEGIN
   -- Determine credit amount
   IF p_ai_model = 'advanced' THEN
@@ -24,16 +24,7 @@ BEGIN
     v_amount := 1.5;
   END IF;
 
-  -- Prevent double-deduction: check credits_log for existing entry
-  SELECT id INTO v_existing_log
-  FROM public.credits_log
-  WHERE visit_id = p_visit_id;
-
-  IF v_existing_log IS NOT NULL THEN
-    RETURN jsonb_build_object('success', true, 'already_deducted', true);
-  END IF;
-
-  -- Lock org row to prevent race conditions
+  -- Lock org row FIRST to prevent race conditions
   SELECT credits_total, credits_used
   INTO v_org
   FROM public.organizations
@@ -44,10 +35,25 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
   END IF;
 
+  -- After lock: check credits_log for existing entry (prevents double-deduction)
+  IF EXISTS (SELECT 1 FROM public.credits_log WHERE visit_id = p_visit_id) THEN
+    RETURN jsonb_build_object('success', true, 'already_deducted', true);
+  END IF;
+
   v_remaining := v_org.credits_total - v_org.credits_used;
 
   IF v_remaining < v_amount THEN
     RETURN jsonb_build_object('success', false, 'error', 'no_credits');
+  END IF;
+
+  -- Log the deduction with UNIQUE constraint as final guard
+  INSERT INTO public.credits_log (org_id, visit_id, credits_amount, ai_model, description)
+  VALUES (p_org_id, p_visit_id, -v_amount, p_ai_model, 'AI conversation credit deduction')
+  ON CONFLICT (visit_id) DO NOTHING;
+
+  GET DIAGNOSTICS v_rows_inserted = ROW_COUNT;
+  IF v_rows_inserted = 0 THEN
+    RETURN jsonb_build_object('success', true, 'already_deducted', true);
   END IF;
 
   -- Deduct credits
@@ -55,15 +61,71 @@ BEGIN
   SET credits_used = credits_used + v_amount
   WHERE id = p_org_id;
 
-  -- Log the deduction
-  INSERT INTO public.credits_log (org_id, visit_id, credits_amount, ai_model, description)
-  VALUES (p_org_id, p_visit_id, v_amount, p_ai_model, 'AI conversation credit deduction');
-
   -- Update visit with credit info
   UPDATE public.visits
   SET credits_charged = v_amount,
       ai_model_used = p_ai_model
   WHERE id = p_visit_id;
+
+  -- Check if credits are running low (>= 80% used) and alert owner
+  DECLARE
+    v_updated_used numeric;
+    v_credits_total numeric;
+    v_usage_pct numeric;
+    v_owner_email text;
+    v_org_name text;
+    v_edge_url text;
+    v_edge_secret text;
+    v_last_alert timestamptz;
+    v_billing_start timestamptz;
+  BEGIN
+    SELECT credits_used, credits_total, name, last_credit_alert_at, billing_cycle_start
+    INTO v_updated_used, v_credits_total, v_org_name, v_last_alert, v_billing_start
+    FROM public.organizations WHERE id = p_org_id;
+
+    v_usage_pct := v_updated_used / NULLIF(v_credits_total, 0);
+
+    IF v_usage_pct >= 0.80 THEN
+      -- Only alert once per billing cycle
+      IF v_last_alert IS NULL OR v_last_alert < COALESCE(v_billing_start, now() - interval '30 days') THEN
+        -- Get owner email
+        SELECT email INTO v_owner_email
+        FROM auth.users
+        WHERE id = (SELECT owner_id FROM public.organizations WHERE id = p_org_id);
+
+        IF v_owner_email IS NOT NULL THEN
+          SELECT decrypted_secret INTO v_edge_url
+          FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+          SELECT decrypted_secret INTO v_edge_secret
+          FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+          IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL THEN
+            PERFORM net.http_post(
+              url := v_edge_url || '/send-email',
+              headers := jsonb_build_object(
+                'Content-Type', 'application/json',
+                'x-internal-secret', v_edge_secret
+              ),
+              body := jsonb_build_object(
+                'to', v_owner_email,
+                'subject', 'Credits Running Low — ' || v_org_name,
+                'html_body', '<h2>Credits Alert</h2><p>Your organization <strong>' || v_org_name ||
+                  '</strong> has used ' || round(v_usage_pct * 100) || '% of its credits this billing cycle.</p>' ||
+                  '<p>Please top up to ensure uninterrupted AI pre-screening.</p>'
+              )
+            );
+          END IF;
+        END IF;
+
+        UPDATE public.organizations
+        SET last_credit_alert_at = now()
+        WHERE id = p_org_id;
+      END IF;
+    END IF;
+  EXCEPTION WHEN undefined_column THEN
+    -- last_credit_alert_at may not exist yet during incremental deployment
+    NULL;
+  END;
 
   RETURN jsonb_build_object('success', true, 'credits_deducted', v_amount);
 END;

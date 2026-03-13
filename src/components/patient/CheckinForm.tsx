@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { stripHtml } from "@/lib/utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CheckinFormProps {
   locationName: string;
@@ -24,6 +25,7 @@ export default function CheckinForm({
   const [lastName, setLastName] = useState("");
   const [birthday, setBirthday] = useState("");
   const [validationError, setValidationError] = useState("");
+  const { t } = useLanguage();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,7 +74,7 @@ export default function CheckinForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
-            First Name
+            {t("checkin.firstName")}
           </label>
           <input
             type="text"
@@ -81,13 +83,12 @@ export default function CheckinForm({
             maxLength={100}
             required
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-            placeholder="Enter your first name"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
-            Last Name
+            {t("checkin.lastName")}
           </label>
           <input
             type="text"
@@ -96,13 +97,12 @@ export default function CheckinForm({
             maxLength={100}
             required
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-            placeholder="Enter your last name"
           />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
-            Date of Birth
+            {t("checkin.birthday")}
           </label>
           <input
             type="date"
@@ -123,7 +123,7 @@ export default function CheckinForm({
           disabled={loading}
           className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
         >
-          {loading ? "Checking in..." : "Check In"}
+          {loading ? t("checkin.submit") + "..." : t("checkin.submit")}
         </button>
       </form>
     </div>

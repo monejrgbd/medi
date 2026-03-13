@@ -1,0 +1,145 @@
+-- get_patient_return_rate: return visit analytics (owner only, org-wide)
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_patient_return_rate(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_start_date date,
+  p_end_date date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_owner_id uuid;
+  v_overall jsonb;
+  v_per_doctor jsonb;
+  v_trend jsonb;
+  v_granularity text;
+BEGIN
+  -- Auth: owner only
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = p_org_id;
+
+  IF v_owner_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  IF v_owner_id <> p_caller_auth_uid THEN
+    IF NOT EXISTS (
+      SELECT 1 FROM public.staff_roles sr
+      JOIN public.staff_users su ON su.id = sr.staff_user_id
+      WHERE su.auth_uid = p_caller_auth_uid
+        AND su.is_active = true
+        AND su.is_deleted = false
+        AND sr.role = 'manager'
+        AND sr.location_id IN (SELECT l.id FROM public.locations l WHERE l.org_id = p_org_id)
+    ) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Date range guard
+  IF p_end_date < p_start_date THEN
+    RETURN jsonb_build_object('success', false, 'error', 'End date must be after start date');
+  END IF;
+
+  IF (p_end_date - p_start_date) > 90 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 90 days');
+  END IF;
+
+  -- Overall stats
+  SELECT jsonb_build_object(
+    'total', count(*),
+    'returns', count(*) FILTER (WHERE v.is_return_visit = true),
+    'rate', CASE
+      WHEN count(*) > 0 THEN round(count(*) FILTER (WHERE v.is_return_visit = true)::numeric / count(*)::numeric * 100, 1)
+      ELSE 0
+    END
+  ) INTO v_overall
+  FROM public.visits v
+  WHERE v.org_id = p_org_id
+    AND v.status = 'completed'
+    AND v.completed_at >= p_start_date::timestamptz
+    AND v.completed_at < (p_end_date + 1)::timestamptz;
+
+  -- Per-doctor breakdown
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'staff_user_id', v.claimed_by,
+    'full_name', su.full_name,
+    'total', count(*),
+    'returns', count(*) FILTER (WHERE v.is_return_visit = true),
+    'rate', CASE
+      WHEN count(*) > 0 THEN round(count(*) FILTER (WHERE v.is_return_visit = true)::numeric / count(*)::numeric * 100, 1)
+      ELSE 0
+    END
+  ) ORDER BY count(*) DESC), '[]'::jsonb)
+  INTO v_per_doctor
+  FROM public.visits v
+  JOIN public.staff_users su ON su.id = v.claimed_by
+  WHERE v.org_id = p_org_id
+    AND v.status = 'completed'
+    AND v.claimed_by IS NOT NULL
+    AND v.completed_at >= p_start_date::timestamptz
+    AND v.completed_at < (p_end_date + 1)::timestamptz
+  GROUP BY v.claimed_by, su.full_name;
+
+  -- Trend: week if ≤30 days, else month
+  v_granularity := CASE WHEN (p_end_date - p_start_date) <= 30 THEN 'week' ELSE 'month' END;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'period', period,
+    'total', total,
+    'returns', returns,
+    'rate', CASE WHEN total > 0 THEN round(returns::numeric / total::numeric * 100, 1) ELSE 0 END
+  ) ORDER BY period), '[]'::jsonb)
+  INTO v_trend
+  FROM (
+    SELECT
+      date_trunc(v_granularity, v.completed_at)::date AS period,
+      count(*) AS total,
+      count(*) FILTER (WHERE v.is_return_visit = true) AS returns
+    FROM public.visits v
+    WHERE v.org_id = p_org_id
+      AND v.status = 'completed'
+      AND v.completed_at >= p_start_date::timestamptz
+      AND v.completed_at < (p_end_date + 1)::timestamptz
+    GROUP BY date_trunc(v_granularity, v.completed_at)::date
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'overall', v_overall,
+    'per_doctor', v_per_doctor,
+    'trend', v_trend
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_patient_return_rate(
+  p_org_id uuid,
+  p_start_date date,
+  p_end_date date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_patient_return_rate(v_auth_uid, p_org_id, p_start_date, p_end_date);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_patient_return_rate(uuid, date, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_patient_return_rate(uuid, date, date) TO authenticated;

@@ -1,0 +1,112 @@
+-- private.get_notes_for_visit
+CREATE OR REPLACE FUNCTION private.get_notes_for_visit(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_is_owner boolean;
+  v_is_doctor boolean;
+  v_result jsonb;
+BEGIN
+  -- Get visit
+  SELECT id, org_id, location_id, patient_id
+    INTO v_visit
+    FROM public.visits
+   WHERE id = p_visit_id;
+
+  IF v_visit.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT id INTO v_caller_staff_id
+    FROM public.staff_users
+   WHERE auth_uid = p_caller_auth_uid
+     AND org_id = v_visit.org_id
+     AND is_active = true
+     AND is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+  END IF;
+
+  -- Get owner id
+  SELECT owner_id INTO v_owner_id
+    FROM public.organizations
+   WHERE id = v_visit.org_id;
+
+  v_is_owner := (v_owner_id = p_caller_auth_uid);
+
+  -- Auth: owner OR doctor at visit's location
+  IF NOT v_is_owner THEN
+    SELECT EXISTS(
+      SELECT 1
+        FROM public.staff_roles sr
+       WHERE sr.staff_user_id = v_caller_staff_id
+         AND sr.role = 'doctor'
+         AND sr.location_id = v_visit.location_id
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized: must be owner or doctor at this location');
+    END IF;
+  END IF;
+
+  -- Fetch notes with visibility filtering
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'id', sub.id,
+    'content', sub.content,
+    'is_private', sub.is_private,
+    'author_name', sub.full_name,
+    'is_own', (sub.doctor_id = v_caller_staff_id),
+    'created_at', sub.created_at
+  ) ORDER BY sub.created_at ASC), '[]'::jsonb)
+  INTO v_result
+  FROM (
+    SELECT vn.id, vn.content, vn.is_private, vn.doctor_id, su.full_name, vn.created_at
+    FROM public.visit_notes vn
+    JOIN public.staff_users su ON su.id = vn.doctor_id
+    WHERE vn.visit_id = p_visit_id
+      AND (vn.doctor_id = v_caller_staff_id OR vn.is_private = false OR v_is_owner)
+    ORDER BY vn.created_at ASC
+    LIMIT 200
+  ) sub;
+
+  RETURN jsonb_build_object('success', true, 'notes', v_result);
+END;
+$$;
+
+-- public.get_notes_for_visit (wrapper)
+CREATE OR REPLACE FUNCTION public.get_notes_for_visit(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_notes_for_visit(v_auth_uid, p_visit_id);
+END;
+$$;
+
+-- Permissions
+REVOKE ALL ON FUNCTION public.get_notes_for_visit(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_notes_for_visit(uuid) TO authenticated;

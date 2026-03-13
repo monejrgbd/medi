@@ -15,6 +15,12 @@ CREATE TABLE public.organizations (
   paypal_subscription_id text,
   review_sms_addon      boolean DEFAULT false,
   followup_sms_addon    boolean DEFAULT false,
+  last_credit_alert_at  timestamptz,
+  trial_alert_sent      boolean DEFAULT false,
+  payment_failure_count int DEFAULT 0,
+  payment_first_failed_at timestamptz,
+  cancelled_at          timestamptz,
+  data_retention_until  timestamptz,
   created_at            timestamptz DEFAULT now()
 );
 

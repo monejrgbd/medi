@@ -1,0 +1,141 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_review_hub(
+  p_caller_org_id uuid,
+  p_location_id uuid,
+  p_date_start timestamptz DEFAULT NULL,
+  p_date_end timestamptz DEFAULT NULL,
+  p_doctor_id uuid DEFAULT NULL,
+  p_rating smallint DEFAULT NULL,
+  p_limit int DEFAULT 50,
+  p_cursor_ts timestamptz DEFAULT NULL,
+  p_cursor_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_location_org_id uuid;
+  v_reviews jsonb;
+  v_stats jsonb;
+  v_per_doctor jsonb;
+  v_effective_limit int;
+BEGIN
+  -- Verify location belongs to caller's org
+  SELECT org_id INTO v_location_org_id
+  FROM public.locations WHERE id = p_location_id;
+
+  IF v_location_org_id IS NULL OR v_location_org_id <> p_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Date range validation
+  IF p_date_start IS NOT NULL AND p_date_end IS NOT NULL THEN
+    IF p_date_end < p_date_start THEN
+      RETURN jsonb_build_object('success', false, 'error', 'End date must be after start date');
+    END IF;
+    IF extract(epoch FROM (p_date_end - p_date_start)) > 365 * 86400 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 365 days');
+    END IF;
+  END IF;
+
+  v_effective_limit := LEAST(GREATEST(p_limit, 1), 100);
+
+  -- Get paginated reviews
+  SELECT COALESCE(jsonb_agg(row_to_json(sub) ORDER BY sub.submitted_at DESC), '[]'::jsonb)
+  INTO v_reviews
+  FROM (
+    SELECT
+      r.id,
+      r.submitted_at,
+      p.first_name || ' ' || left(p.last_name, 1) || '.' AS patient_name,
+      doc.full_name AS doctor_name,
+      r.rating,
+      r.feedback_text,
+      r.sent_to_external,
+      r.external_platform
+    FROM public.reviews r
+    JOIN public.patients p ON p.id = r.patient_id
+    LEFT JOIN public.staff_users doc ON doc.id = r.doctor_id
+    WHERE r.location_id = p_location_id
+      AND r.submitted_at IS NOT NULL
+      AND (p_date_start IS NULL OR r.submitted_at >= p_date_start)
+      AND (p_date_end IS NULL OR r.submitted_at <= p_date_end)
+      AND (p_doctor_id IS NULL OR r.doctor_id = p_doctor_id)
+      AND (p_rating IS NULL OR r.rating = p_rating)
+      AND (p_cursor_ts IS NULL OR (r.submitted_at, r.id) < (p_cursor_ts, p_cursor_id))
+    ORDER BY r.submitted_at DESC, r.id DESC
+    LIMIT v_effective_limit
+  ) sub;
+
+  -- Compute stats (over the full filtered set, not just the current page)
+  SELECT jsonb_build_object(
+    'avg_rating', COALESCE(round(avg(r.rating)::numeric, 2), 0),
+    'total_count', count(*)
+  )
+  INTO v_stats
+  FROM public.reviews r
+  WHERE r.location_id = p_location_id
+    AND r.submitted_at IS NOT NULL
+    AND (p_date_start IS NULL OR r.submitted_at >= p_date_start)
+    AND (p_date_end IS NULL OR r.submitted_at <= p_date_end)
+    AND (p_doctor_id IS NULL OR r.doctor_id = p_doctor_id)
+    AND (p_rating IS NULL OR r.rating = p_rating);
+
+  -- Per-doctor breakdown
+  SELECT COALESCE(jsonb_agg(row_to_json(sub)), '[]'::jsonb)
+  INTO v_per_doctor
+  FROM (
+    SELECT
+      doc.full_name AS doctor_name,
+      round(avg(r.rating)::numeric, 2) AS avg_rating,
+      count(*) AS count
+    FROM public.reviews r
+    JOIN public.staff_users doc ON doc.id = r.doctor_id
+    WHERE r.location_id = p_location_id
+      AND r.submitted_at IS NOT NULL
+      AND (p_date_start IS NULL OR r.submitted_at >= p_date_start)
+      AND (p_date_end IS NULL OR r.submitted_at <= p_date_end)
+    GROUP BY doc.id, doc.full_name
+    ORDER BY avg(r.rating) DESC
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'reviews', v_reviews,
+    'stats', v_stats || jsonb_build_object('per_doctor', v_per_doctor)
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_review_hub(
+  p_location_id uuid,
+  p_date_start timestamptz DEFAULT NULL,
+  p_date_end timestamptz DEFAULT NULL,
+  p_doctor_id uuid DEFAULT NULL,
+  p_rating smallint DEFAULT NULL,
+  p_limit int DEFAULT 50,
+  p_cursor_ts timestamptz DEFAULT NULL,
+  p_cursor_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid := requesting_org_id();
+BEGIN
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_review_hub(v_org_id, p_location_id, p_date_start, p_date_end, p_doctor_id, p_rating, p_limit, p_cursor_ts, p_cursor_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_review_hub(uuid, timestamptz, timestamptz, uuid, smallint, int, timestamptz, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_review_hub(uuid, timestamptz, timestamptz, uuid, smallint, int, timestamptz, uuid) TO authenticated;

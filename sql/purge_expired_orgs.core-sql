@@ -1,0 +1,116 @@
+-- Migration: add purged column to organizations
+ALTER TABLE public.organizations
+  ADD COLUMN IF NOT EXISTS purged boolean DEFAULT false;
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.purge_expired_orgs()
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_purged_count int := 0;
+  v_location_ids uuid[];
+  v_patient_ids uuid[];
+  v_visit_ids uuid[];
+  v_staff_ids uuid[];
+BEGIN
+  FOR v_org IN
+    SELECT id, name, owner_id
+    FROM public.organizations
+    WHERE data_retention_until IS NOT NULL
+      AND data_retention_until < now()
+      AND purged IS NOT TRUE
+  LOOP
+    -- Collect IDs for cascading deletes
+    SELECT array_agg(id) INTO v_location_ids FROM public.locations WHERE org_id = v_org.id;
+    SELECT array_agg(id) INTO v_patient_ids FROM public.patients WHERE org_id = v_org.id;
+    SELECT array_agg(id) INTO v_visit_ids FROM public.visits WHERE org_id = v_org.id;
+    SELECT array_agg(id) INTO v_staff_ids FROM public.staff_users WHERE org_id = v_org.id;
+
+    -- Delete child tables that reference visits
+    DELETE FROM public.visit_messages WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.visit_notes WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.visit_addendums WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.visit_attachments WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.follow_ups WHERE visit_id = ANY(v_visit_ids);
+
+    -- Delete child tables that reference patients
+    DELETE FROM public.patient_notes WHERE patient_id = ANY(v_patient_ids);
+    DELETE FROM public.patient_allergies WHERE patient_id = ANY(v_patient_ids);
+    DELETE FROM public.patient_medications WHERE patient_id = ANY(v_patient_ids);
+    DELETE FROM public.patient_chronic_conditions WHERE patient_id = ANY(v_patient_ids);
+    DELETE FROM public.doctor_note_preferences WHERE patient_id = ANY(v_patient_ids);
+    DELETE FROM public.phone_verifications WHERE patient_id = ANY(v_patient_ids);
+
+    -- Delete child tables that reference locations
+    DELETE FROM public.review_platforms WHERE location_id = ANY(v_location_ids);
+    DELETE FROM public.review_rotation WHERE location_id = ANY(v_location_ids);
+
+    -- Delete child tables that reference staff_users
+    DELETE FROM public.staff_roles WHERE staff_user_id = ANY(v_staff_ids);
+    DELETE FROM public.staff_checkins WHERE staff_user_id = ANY(v_staff_ids);
+    DELETE FROM public.staff_preferences WHERE staff_user_id = ANY(v_staff_ids);
+
+    -- Delete tables that reference org_id directly
+    DELETE FROM public.reviews WHERE org_id = v_org.id;
+    DELETE FROM public.referrals WHERE from_org_id = v_org.id;
+    DELETE FROM public.credits_log WHERE org_id = v_org.id;
+    DELETE FROM public.sms_log WHERE org_id = v_org.id;
+    DELETE FROM public.audit_trail WHERE org_id = v_org.id;
+    DELETE FROM public.followup_sms_config WHERE org_id = v_org.id;
+    DELETE FROM public.processed_webhook_events WHERE org_id = v_org.id;
+    DELETE FROM public.feature_requests WHERE org_id = v_org.id;
+
+    -- Delete main entity tables (order matters for FK constraints)
+    DELETE FROM public.visits WHERE org_id = v_org.id;
+    DELETE FROM public.patients WHERE org_id = v_org.id;
+    DELETE FROM public.staff_users WHERE org_id = v_org.id;
+    DELETE FROM public.locations WHERE org_id = v_org.id;
+
+    -- Mark org as purged (keep the org row for records)
+    UPDATE public.organizations
+    SET purged = true,
+        name = 'PURGED-' || v_org.id::text
+    WHERE id = v_org.id;
+
+    -- Log the purge (insert after clearing audit_trail, this is the only record)
+    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+    VALUES (v_org.id, '00000000-0000-0000-0000-000000000000'::uuid, 'system', 'org_purged',
+            'organization', v_org.id,
+            jsonb_build_object('original_name', v_org.name, 'purged_at', now()::text));
+
+    -- Ban the owner auth user
+    UPDATE auth.users SET banned_until = '2999-01-01'::timestamptz WHERE id = v_org.owner_id;
+
+    v_purged_count := v_purged_count + 1;
+  END LOOP;
+
+  RETURN jsonb_build_object('success', true, 'purged_count', v_purged_count);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.purge_expired_orgs()
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- This function is only callable by pg_cron (system context)
+  -- No auth check needed — runs as superuser via cron
+  RETURN private.purge_expired_orgs();
+END;
+$$;
+
+-- pg_cron job: daily at 3 AM — purge orgs past their 90-day data retention period
+SELECT cron.schedule(
+  'purge_expired_orgs',
+  '0 3 * * *',
+  $$SELECT public.purge_expired_orgs();$$
+);

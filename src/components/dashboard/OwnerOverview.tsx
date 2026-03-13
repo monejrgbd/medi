@@ -4,6 +4,7 @@ import { useState } from "react";
 import StatCard from "./StatCard";
 import LocationCard from "./LocationCard";
 import LocationFormModal from "./LocationFormModal";
+import PatientSearch from "./PatientSearch";
 import { getPlanLabel, getTrialDaysLeft } from "@/lib/utils";
 
 interface OrgOverview {
@@ -51,6 +52,10 @@ export default function OwnerOverview({
     <div>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-ink">Overview</h1>
+      </div>
+
+      <div className="mb-6">
+        <PatientSearch />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">

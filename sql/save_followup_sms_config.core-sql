@@ -1,0 +1,86 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.save_followup_sms_config(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_max_reminders int,
+  p_first_reminder_days int,
+  p_second_reminder_days int,
+  p_template text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+BEGIN
+  -- Verify caller is org owner
+  SELECT id INTO v_org_id
+  FROM public.organizations
+  WHERE id = p_org_id AND owner_id = p_caller_auth_uid;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Validate inputs
+  IF p_max_reminders < 1 OR p_max_reminders > 5 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Max reminders must be between 1 and 5');
+  END IF;
+
+  IF p_first_reminder_days < 1 OR p_first_reminder_days > 30 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'First reminder days must be between 1 and 30');
+  END IF;
+
+  IF p_second_reminder_days <= p_first_reminder_days OR p_second_reminder_days > 60 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Second reminder days must be greater than first and at most 60');
+  END IF;
+
+  IF p_template IS NOT NULL AND length(p_template) > 500 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Template must be at most 500 characters');
+  END IF;
+
+  -- Upsert config (one config per org)
+  INSERT INTO public.followup_sms_config (org_id, max_reminders, first_reminder_days, second_reminder_days, reminder_template)
+  VALUES (v_org_id, p_max_reminders, p_first_reminder_days, p_second_reminder_days, p_template)
+  ON CONFLICT (org_id)
+  DO UPDATE SET
+    max_reminders = EXCLUDED.max_reminders,
+    first_reminder_days = EXCLUDED.first_reminder_days,
+    second_reminder_days = EXCLUDED.second_reminder_days,
+    reminder_template = EXCLUDED.reminder_template;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.save_followup_sms_config(
+  p_org_id uuid,
+  p_max_reminders int,
+  p_first_reminder_days int,
+  p_second_reminder_days int,
+  p_template text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.save_followup_sms_config(v_uid, p_org_id, p_max_reminders, p_first_reminder_days, p_second_reminder_days, p_template);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.save_followup_sms_config(uuid, int, int, int, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.save_followup_sms_config(uuid, int, int, int, text) TO authenticated;

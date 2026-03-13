@@ -1,13 +1,25 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { usePatientRealtime } from "@/hooks/usePatientRealtime";
+import { usePatientRealtime, RealtimePayload } from "@/hooks/usePatientRealtime";
 import CheckinForm from "@/components/patient/CheckinForm";
 import WaitingApproval from "@/components/patient/WaitingApproval";
 import DenialScreen from "@/components/patient/DenialScreen";
 import FirstTimerExplainer from "@/components/patient/FirstTimerExplainer";
 import LanguagePicker from "@/components/patient/LanguagePicker";
+import ChatInterface from "@/components/patient/ChatInterface";
+import SummaryReview from "@/components/patient/SummaryReview";
+import CreditWarning from "@/components/patient/CreditWarning";
+import PatientQueueView from "@/components/patient/PatientQueueView";
+import DoctorClaimedNotice from "@/components/patient/DoctorClaimedNotice";
+import PhoneInput from "@/components/patient/PhoneInput";
+import PhoneVerification from "@/components/patient/PhoneVerification";
+import PatientLeftScreen from "@/components/patient/PatientLeftScreen";
+import VisitCompletedScreen from "@/components/patient/VisitCompletedScreen";
+import SubscriptionExpiredScreen from "@/components/patient/SubscriptionExpiredScreen";
+import { LanguageProvider } from "@/contexts/LanguageContext";
+import { t } from "@/lib/i18n";
 
 type FlowState =
   | "inactive"
@@ -17,7 +29,21 @@ type FlowState =
   | "denied"
   | "first_timer"
   | "language"
-  | "approved";
+  | "chatting"
+  | "generating_summary"
+  | "summary_review"
+  | "queued"
+  | "claimed"
+  | "timeout"
+  | "no_credits"
+  | "phone_input"
+  | "phone_verification"
+  | "phone_collection"
+  | "no_phone_notice"
+  | "patient_left"
+  | "visit_completed"
+  | "subscription_inactive"
+  | "verify_birthday";
 
 interface LocationData {
   active: boolean;
@@ -31,26 +57,86 @@ interface LocationData {
 interface CheckinFlowProps {
   locationId: string;
   locationData: LocationData;
+  embed?: boolean;
+}
+
+interface SummaryData {
+  summary: string;
+  structured_card?: Record<string, unknown> | null;
 }
 
 const STORAGE_KEY = "hilt_session_token";
+const PHONE_STORAGE_KEY = "hilt_session_phone";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export default function CheckinFlow({
   locationId,
   locationData,
+  embed = false,
 }: CheckinFlowProps) {
   const [state, setState] = useState<FlowState>(
     locationData.active ? "form" : "inactive"
   );
   const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [visitId, setVisitId] = useState<string | null>(null);
   const [patientFirstName, setPatientFirstName] = useState("");
   const [hasPreviousVisits, setHasPreviousVisits] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [languageLoading, setLanguageLoading] = useState(false);
+  const [patientLanguage, setPatientLanguage] = useState("en");
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [queuePosition, setQueuePosition] = useState<number | null>(null);
+  const [estimatedWait, setEstimatedWait] = useState<number | null>(null);
 
-  // Session recovery on mount
+  // Phone verification state
+  const [patientPhone, setPatientPhone] = useState<string | null>(null);
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState("");
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [collisionContext, setCollisionContext] = useState<{ patientId: string; visitId: string } | null>(null);
+
+  // Birthday verification for session recovery on shared kiosks
+  const [pendingSession, setPendingSession] = useState<{
+    token: string;
+    birthday: string;
+    sessionData: Record<string, unknown>;
+  } | null>(null);
+  const [birthdayInput, setBirthdayInput] = useState("");
+
+  // Refs for current state to avoid stale closures in callbacks
+  const summaryDataRef = useRef<SummaryData | null>(null);
+  summaryDataRef.current = summaryData;
+  const stateRef = useRef<FlowState>(state);
+  stateRef.current = state;
+
+  // 60s timeout safety net for summary generation
+  useEffect(() => {
+    if (state !== "generating_summary") return;
+    if (!visitId || !sessionToken) return;
+
+    const timer = setTimeout(async () => {
+      // Double-check we're still in generating_summary (avoid stale closure)
+      if (stateRef.current !== "generating_summary") return;
+
+      // Move visit to queue server-side
+      const supabase = createClient();
+      await supabase.rpc("move_to_queue_on_error", {
+        p_visit_id: visitId,
+        p_session_token: sessionToken,
+      });
+
+      // Transition to timeout view — summary was not generated in time
+      setState("timeout");
+    }, 60_000);
+
+    return () => clearTimeout(timer);
+  }, [state, visitId, sessionToken]);
+
+  // Session recovery on mount — requires birthday verification on shared kiosks
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved || !locationData.active) return;
@@ -63,34 +149,75 @@ export default function CheckinFlow({
 
       if (!data?.success) {
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(PHONE_STORAGE_KEY);
         return;
       }
 
+      // If we have a birthday on file, require verification before restoring
+      if (data.patient_birthday) {
+        setPendingSession({
+          token: saved,
+          birthday: data.patient_birthday,
+          sessionData: data,
+        });
+        setState("verify_birthday");
+        return;
+      }
+
+      // No birthday on file — restore directly (legacy patients)
       setSessionToken(saved);
       setPatientFirstName(data.patient_first_name);
       setHasPreviousVisits(data.has_previous_visits);
       setConsentGiven(data.consent_given);
+      setVisitId(data.visit_id);
+      if (data.language) setPatientLanguage(data.language);
+
+      // Recover stored phone
+      const savedPhone = localStorage.getItem(PHONE_STORAGE_KEY);
+      if (savedPhone) setPatientPhone(savedPhone);
 
       // Resume at correct state based on visit status
       switch (data.status) {
         case "pending_approval":
-          setState("waiting");
-          break;
-        case "still_answering_ai":
-        case "waiting_doctor_claim":
-        case "claimed_by_doctor":
-          if (!data.has_previous_visits && !data.consent_given) {
-            setState("first_timer");
+          if (data.phone_verification_pending) {
+            setState("phone_input");
           } else {
-            setState("approved");
+            setState("waiting");
           }
           break;
+        case "still_answering_ai":
+          if (data.ai_summary) {
+            setSummaryData({
+              summary: data.ai_summary,
+              structured_card: data.ai_structured_card,
+            });
+            setState("summary_review");
+          } else if (data.ai_completed_at) {
+            setState("generating_summary");
+          } else if (!data.has_previous_visits && !data.consent_given) {
+            setState("first_timer");
+          } else {
+            setState("chatting");
+          }
+          break;
+        case "waiting_doctor_claim":
+          if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
+          if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
+          // Check if phone collection needed
+          if (!data.patient_phone_verified && !data.patient_has_phone) {
+            setState("phone_collection");
+          } else {
+            setState(data.timeout_flagged ? "timeout" : "queued");
+          }
+          break;
+        case "claimed_by_doctor":
+          setState("claimed");
+          break;
         case "left":
-          setState("denied");
+          setState(data.patient_denied ? "denied" : "patient_left");
           break;
         case "completed":
-          localStorage.removeItem(STORAGE_KEY);
-          setState("form");
+          setState("visit_completed");
           break;
         default:
           setState("form");
@@ -98,40 +225,109 @@ export default function CheckinFlow({
     })();
   }, [locationData.active]);
 
-  // Handle realtime status changes
-  const handleStatusChange = useCallback(
-    (payload: { status: string }) => {
-      const { status } = payload;
-
-      if (status === "left") {
-        setState("denied");
+  // Handle realtime events
+  const handleRealtimeEvent = useCallback(
+    (event: RealtimePayload) => {
+      if (event.type === "queue_update") {
+        setQueuePosition(event.payload.position);
+        setEstimatedWait(event.payload.estimated_wait_minutes);
         return;
       }
 
-      if (status === "still_answering_ai") {
-        if (!hasPreviousVisits && !consentGiven) {
-          setState("first_timer");
-        } else {
-          setState("approved");
+      if (event.type === "summary_ready") {
+        const payload = event.payload;
+        setSummaryData({
+          summary: payload.summary,
+          structured_card: payload.structured_card,
+        });
+        setState("summary_review");
+        return;
+      }
+
+      if (event.type === "phone_required") {
+        const current = stateRef.current;
+        // Only transition if not already in a phone state
+        if (current !== "phone_input" && current !== "phone_verification") {
+          if (visitId) {
+            setCollisionContext({ patientId: "", visitId });
+          }
+          setState("phone_input");
         }
         return;
       }
 
-      // For any other forward status, go to approved
-      if (
-        status === "waiting_doctor_claim" ||
-        status === "claimed_by_doctor" ||
-        status === "completed"
-      ) {
-        setState("approved");
+      if (event.type === "phone_verified") {
+        const current = stateRef.current;
+        if (current === "phone_input" || current === "phone_verification") {
+          setState("waiting");
+        }
+        return;
+      }
+
+      // status_change
+      const { status, visit_id, timeout_flagged } = event.payload;
+
+      if (visit_id) setVisitId(visit_id);
+
+      if (status === "denied" || event.payload.denied) {
+        setState("denied");
+        return;
+      }
+
+      if (status === "left") {
+        setState("patient_left");
+        return;
+      }
+
+      if (status === "still_answering_ai") {
+        const current = stateRef.current;
+        if (current === "chatting" || current === "generating_summary" || current === "summary_review") {
+          return;
+        }
+        if (!hasPreviousVisits && !consentGiven) {
+          setState("first_timer");
+        } else {
+          setState("chatting");
+        }
+        return;
+      }
+
+      if (status === "waiting_doctor_claim") {
+        setState(timeout_flagged ? "timeout" : "queued");
+        return;
+      }
+
+      if (status === "claimed_by_doctor") {
+        setState("claimed");
+        return;
+      }
+
+      if (status === "completed") {
+        setState("visit_completed");
       }
     },
-    [hasPreviousVisits, consentGiven]
+    [hasPreviousVisits, consentGiven, visitId]
   );
 
+  // Activate realtime during waiting, chatting, generating_summary, summary_review, queued, timeout, phone states
+  const realtimeActive =
+    state === "waiting" ||
+    state === "chatting" ||
+    state === "generating_summary" ||
+    state === "summary_review" ||
+    state === "queued" ||
+    state === "claimed" ||
+    state === "timeout" ||
+    state === "phone_input" ||
+    state === "phone_verification" ||
+    state === "phone_collection" ||
+    state === "no_phone_notice" ||
+    state === "patient_left" ||
+    state === "visit_completed";
+
   usePatientRealtime(
-    state === "waiting" ? sessionToken : null,
-    handleStatusChange
+    realtimeActive ? sessionToken : null,
+    handleRealtimeEvent
   );
 
   async function handleCheckin(
@@ -166,10 +362,11 @@ export default function CheckinFlow({
       case "new":
       case "returning":
         setSessionToken(data.session_token);
+        setVisitId(data.visit_id);
         localStorage.setItem(STORAGE_KEY, data.session_token);
         setState("waiting");
         break;
-      case "active_session":
+      case "active_session": {
         setSessionToken(data.session_token);
         localStorage.setItem(STORAGE_KEY, data.session_token);
         // Recover session state
@@ -178,28 +375,70 @@ export default function CheckinFlow({
         });
         if (session?.success) {
           setConsentGiven(session.consent_given);
+          setVisitId(session.visit_id);
+
+          // Show cross-location notice
+          if (data.active_at_other_location) {
+            setError(`You have an active session at ${data.other_location_name || "another location"}. Resuming that session.`);
+          }
+
           if (session.status === "pending_approval") {
-            setState("waiting");
-          } else if (
-            session.status === "still_answering_ai" &&
-            !session.has_previous_visits &&
-            !session.consent_given
-          ) {
-            setState("first_timer");
+            if (session.phone_verification_pending) {
+              setState("phone_input");
+            } else {
+              setState("waiting");
+            }
+          } else if (session.status === "still_answering_ai") {
+            if (session.ai_summary) {
+              setSummaryData({
+                summary: session.ai_summary,
+                structured_card: session.ai_structured_card,
+              });
+              setState("summary_review");
+            } else if (session.ai_completed_at) {
+              setState("generating_summary");
+            } else if (!session.has_previous_visits && !session.consent_given) {
+              setState("first_timer");
+            } else {
+              setState("chatting");
+            }
+          } else if (session.status === "waiting_doctor_claim") {
+            if (session.queue_position !== undefined) setQueuePosition(session.queue_position);
+            if (session.estimated_wait_minutes !== undefined) setEstimatedWait(session.estimated_wait_minutes);
+            // Check if phone collection needed
+            if (!session.patient_phone_verified && !session.patient_has_phone) {
+              setState("phone_collection");
+            } else {
+              setState(session.timeout_flagged ? "timeout" : "queued");
+            }
+          } else if (session.status === "claimed_by_doctor") {
+            setState("claimed");
           } else if (session.status === "left") {
-            setState("denied");
+            setState("patient_left");
           } else {
-            setState("approved");
+            setState("chatting");
           }
         } else {
           setState("waiting");
         }
         break;
+      }
       case "phone_required":
-        setError(
-          "Phone verification is required. This feature is coming soon."
-        );
-        setState("form");
+        // Path C: collision flagged — patient sees phone input immediately
+        setSessionToken(data.session_token);
+        setVisitId(data.visit_id);
+        localStorage.setItem(STORAGE_KEY, data.session_token);
+        setCollisionContext({ patientId: data.patient_id, visitId: data.visit_id });
+        setState("phone_input");
+        break;
+      case "phone_no_match":
+        // Phone didn't match any collision patient — new record created, go to waiting
+        localStorage.removeItem(PHONE_STORAGE_KEY);
+        setPatientPhone(null);
+        setSessionToken(data.session_token);
+        setVisitId(data.visit_id);
+        localStorage.setItem(STORAGE_KEY, data.session_token);
+        setState("waiting");
         break;
       default:
         setState("waiting");
@@ -208,8 +447,13 @@ export default function CheckinFlow({
 
   function handleRetry() {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PHONE_STORAGE_KEY);
     setSessionToken(null);
+    setVisitId(null);
     setError("");
+    setPatientPhone(null);
+    setVerificationId(null);
+    setCollisionContext(null);
     setState("form");
   }
 
@@ -237,10 +481,154 @@ export default function CheckinFlow({
     }
 
     setConsentGiven(true);
-    setState("approved");
+    setPatientLanguage(language);
+    setState("chatting");
+  }
+
+  function handleConversationComplete() {
+    if (summaryDataRef.current) {
+      setState("summary_review");
+    } else {
+      setState("generating_summary");
+    }
+  }
+
+  function handleChatError(errType: string) {
+    if (errType === "no_credits") {
+      setState("no_credits");
+    } else if (errType === "subscription_inactive") {
+      setState("subscription_inactive");
+    } else if (errType === "ai_error") {
+      // moveToQueueOnError already called — visit is now in queue
+      // The realtime listener will pick up the status change to waiting_doctor_claim
+      // with timeout_flagged=true and transition to the timeout/queued state
+      setState("timeout");
+    }
+  }
+
+  async function handleSummaryApprove() {
+    // Check if phone collection needed
+    const supabase = createClient();
+    if (sessionToken) {
+      const { data } = await supabase.rpc("get_patient_session", {
+        p_session_token: sessionToken,
+      });
+      if (data?.success && !data.patient_phone_verified && !data.patient_has_phone) {
+        setState("phone_collection");
+        return;
+      }
+    }
+    setState("queued");
+  }
+
+  function handleSummaryReject() {
+    setSummaryData(null);
+    setState("chatting");
+  }
+
+  // Phone handlers
+  async function handlePhoneSubmit(phone: string) {
+    setPhoneLoading(true);
+    setPhoneError("");
+    setPatientPhone(phone);
+    localStorage.setItem(PHONE_STORAGE_KEY, phone);
+
+    // If post-AI collection mode, call collect_phone_post_ai first
+    if (state === "phone_collection" && visitId && sessionToken) {
+      const supabase = createClient();
+      const { data } = await supabase.rpc("collect_phone_post_ai", {
+        p_visit_id: visitId,
+        p_session_token: sessionToken,
+        p_phone: phone,
+      });
+
+      if (data?.already_verified) {
+        setPhoneLoading(false);
+        setState("queued");
+        return;
+      }
+
+      if (!data?.success && !data?.needs_verification) {
+        setPhoneLoading(false);
+        setPhoneError(data?.error || "Failed to submit phone number");
+        return;
+      }
+    }
+
+    // Send verification code
+    try {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-phone`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+        },
+        body: JSON.stringify({
+          action: "send_code",
+          phone,
+          session_token: sessionToken,
+          visit_id: visitId,
+          location_id: locationId,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        setPhoneError(data.error || "Failed to send verification code");
+        setPhoneLoading(false);
+        return;
+      }
+
+      setVerificationId(data.verification_id);
+      setPhoneLoading(false);
+      setState("phone_verification");
+    } catch {
+      setPhoneError("Failed to send verification code. Please try again.");
+      setPhoneLoading(false);
+    }
+  }
+
+  function handlePhoneVerified() {
+    if (collisionContext) {
+      // Pre-approval collision flow: go back to waiting (receptionist still processes)
+      setState("waiting");
+    } else {
+      // Post-AI collection: go to queue
+      setState("queued");
+    }
+  }
+
+  async function handlePhoneResend() {
+    if (!patientPhone) return;
+    await handlePhoneSubmit(patientPhone);
+  }
+
+  function handlePhoneSkip() {
+    setState("queued");
+  }
+
+  async function handleNoPhone() {
+    if (!visitId || !sessionToken) return;
+
+    setPhoneLoading(true);
+    const supabase = createClient();
+    const { data } = await supabase.rpc("decline_phone_verification", {
+      p_visit_id: visitId,
+      p_session_token: sessionToken,
+    });
+    setPhoneLoading(false);
+
+    if (!data?.success) {
+      setPhoneError(data?.error || "Failed to decline verification");
+      return;
+    }
+
+    setState("no_phone_notice");
   }
 
   // Render based on state
+  const content = (() => {
   switch (state) {
     case "inactive":
       return (
@@ -292,6 +680,97 @@ export default function CheckinFlow({
         />
       );
 
+    case "verify_birthday":
+      return (
+        <div className="w-full max-w-md text-center">
+          <h2 className="text-xl font-bold text-ink mb-2">
+            {t("checkin.verifyBirthday", patientLanguage)}
+          </h2>
+          <p className="text-sm text-slate mb-4">
+            {t("checkin.verifyBirthdayDesc", patientLanguage)}
+          </p>
+          <input
+            type="date"
+            value={birthdayInput}
+            onChange={(e) => { setBirthdayInput(e.target.value); setError(""); }}
+            className="w-full rounded-lg border border-gray-200 px-4 py-3 text-ink mb-3"
+          />
+          {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                // Clear session and start fresh
+                localStorage.removeItem(STORAGE_KEY);
+                localStorage.removeItem(PHONE_STORAGE_KEY);
+                setPendingSession(null);
+                setBirthdayInput("");
+                setState("form");
+              }}
+              className="flex-1 rounded-lg border border-gray-200 px-4 py-3 text-sm font-medium text-slate"
+            >
+              {t("checkin.startOver", patientLanguage)}
+            </button>
+            <button
+              onClick={() => {
+                if (!pendingSession) return;
+                if (birthdayInput === pendingSession.birthday) {
+                  // Birthday matches — restore session
+                  const data = pendingSession.sessionData;
+                  setSessionToken(pendingSession.token);
+                  setPatientFirstName(data.patient_first_name as string);
+                  setHasPreviousVisits(data.has_previous_visits as boolean);
+                  setConsentGiven(data.consent_given as boolean);
+                  setVisitId(data.visit_id as string);
+                  if (data.language) setPatientLanguage(data.language as string);
+                  const savedPhone = localStorage.getItem(PHONE_STORAGE_KEY);
+                  if (savedPhone) setPatientPhone(savedPhone);
+                  // Resume at correct state
+                  const status = data.status as string;
+                  if (status === "pending_approval") {
+                    setState(data.phone_verification_pending ? "phone_input" : "waiting");
+                  } else if (status === "still_answering_ai") {
+                    if (data.ai_summary) {
+                      setSummaryData({ summary: data.ai_summary as string, structured_card: data.ai_structured_card as Record<string, unknown> | null });
+                      setState("summary_review");
+                    } else if (data.ai_completed_at) {
+                      setState("generating_summary");
+                    } else if (!(data.has_previous_visits as boolean) && !(data.consent_given as boolean)) {
+                      setState("first_timer");
+                    } else {
+                      setState("chatting");
+                    }
+                  } else if (status === "waiting_doctor_claim") {
+                    if (data.queue_position !== undefined) setQueuePosition(data.queue_position as number);
+                    if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes as number | null);
+                    if (!(data.patient_phone_verified as boolean) && !(data.patient_has_phone as boolean)) {
+                      setState("phone_collection");
+                    } else {
+                      setState((data.timeout_flagged as boolean) ? "timeout" : "queued");
+                    }
+                  } else if (status === "claimed_by_doctor") {
+                    setState("claimed");
+                  } else if (status === "left") {
+                    setState((data.patient_denied as boolean) ? "denied" : "patient_left");
+                  } else if (status === "completed") {
+                    setState("visit_completed");
+                  } else {
+                    localStorage.removeItem(STORAGE_KEY);
+                    setState("form");
+                  }
+                  setPendingSession(null);
+                  setBirthdayInput("");
+                } else {
+                  setError(t("checkin.birthdayMismatch", patientLanguage));
+                }
+              }}
+              className="flex-1 rounded-lg bg-hilt-blue px-4 py-3 text-sm font-medium text-white"
+            >
+              {t("checkin.confirm", patientLanguage)}
+            </button>
+          </div>
+        </div>
+      );
+
     case "waiting":
       return (
         <WaitingApproval
@@ -314,20 +793,168 @@ export default function CheckinFlow({
         />
       );
 
-    case "approved":
+    case "chatting":
+      return visitId && sessionToken ? (
+        <ChatInterface
+          visitId={visitId}
+          sessionToken={sessionToken}
+          patientName={patientFirstName}
+          locationName={locationData.location_name || "Clinic"}
+          onConversationComplete={handleConversationComplete}
+          onError={handleChatError}
+        />
+      ) : null;
+
+    case "generating_summary":
       return (
         <div className="w-full max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-            <span className="text-3xl text-green-600">&#10003;</span>
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-hilt-blue" />
           </div>
-          <h2 className="text-xl font-bold text-ink mb-2">You're All Set</h2>
+          <h2 className="text-xl font-bold text-ink mb-2">
+            {t("generating.title", patientLanguage)}
+          </h2>
           <p className="text-sm text-slate">
-            Your conversation will begin shortly — coming in Phase 4.
+            {t("generating.subtitle", patientLanguage)}
           </p>
         </div>
       );
 
+    case "summary_review":
+      return visitId && sessionToken && summaryData ? (
+        <SummaryReview
+          visitId={visitId}
+          sessionToken={sessionToken}
+          summary={summaryData.summary}
+          structuredCard={summaryData.structured_card}
+          onApprove={handleSummaryApprove}
+          onReject={handleSummaryReject}
+        />
+      ) : null;
+
+    case "queued":
+      return visitId && sessionToken ? (
+        <PatientQueueView
+          queuePosition={queuePosition}
+          estimatedWait={estimatedWait}
+          visitId={visitId}
+          sessionToken={sessionToken}
+        />
+      ) : null;
+
+    case "claimed":
+      return <DoctorClaimedNotice />;
+
+    case "timeout":
+      return (
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
+            <span className="text-3xl">&#9201;</span>
+          </div>
+          <h2 className="text-xl font-bold text-ink mb-2">
+            {t("timeout.title", patientLanguage)}
+          </h2>
+          <p className="text-sm text-slate">
+            {t("timeout.subtitle", patientLanguage)}
+          </p>
+        </div>
+      );
+
+    case "no_credits":
+      return <CreditWarning />;
+
+    case "phone_input":
+      return (
+        <PhoneInput
+          mode="verification"
+          onSubmit={handlePhoneSubmit}
+          loading={phoneLoading}
+          error={phoneError}
+          onNoPhone={handleNoPhone}
+        />
+      );
+
+    case "phone_verification":
+      return patientPhone && visitId && sessionToken && verificationId ? (
+        <PhoneVerification
+          phone={patientPhone}
+          visitId={visitId}
+          sessionToken={sessionToken}
+          locationId={locationId}
+          verificationId={verificationId}
+          onVerified={handlePhoneVerified}
+          onResend={handlePhoneResend}
+          onError={(msg) => setPhoneError(msg)}
+        />
+      ) : null;
+
+    case "phone_collection":
+      return (
+        <PhoneInput
+          mode="collection"
+          onSubmit={handlePhoneSubmit}
+          loading={phoneLoading}
+          error={phoneError}
+          onSkip={handlePhoneSkip}
+        />
+      );
+
+    case "no_phone_notice":
+      return (
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
+            <svg className="h-7 w-7 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-ink mb-2">
+            {t("noPhone.title", patientLanguage)}
+          </h2>
+          <p className="text-sm text-slate">
+            {t("noPhone.subtitle", patientLanguage)}
+          </p>
+        </div>
+      );
+
+    case "patient_left":
+      return <PatientLeftScreen onRetry={handleRetry} />;
+
+    case "visit_completed":
+      return (
+        <VisitCompletedScreen
+          onAutoReset={() => {
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(PHONE_STORAGE_KEY);
+            handleRetry();
+          }}
+        />
+      );
+
+    case "subscription_inactive":
+      return <SubscriptionExpiredScreen />;
+
     default:
       return null;
   }
+  })();
+
+  return (
+    <LanguageProvider language={patientLanguage}>
+      <div dir={patientLanguage === "ar" ? "rtl" : "ltr"}>
+        {content}
+        {embed && (
+          <div className="fixed bottom-2 right-2 z-50">
+            <a
+              href="https://hilthealth.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-ash hover:text-slate transition-colors"
+            >
+              Powered by HiltHealth.com
+            </a>
+          </div>
+        )}
+      </div>
+    </LanguageProvider>
+  );
 }

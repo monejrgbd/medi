@@ -1,0 +1,81 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.search_locations_public(
+  p_caller_auth_uid uuid,
+  p_query text,
+  p_exclude_org_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_clean_query text;
+  v_result jsonb;
+BEGIN
+  -- Input validation
+  v_clean_query := trim(COALESCE(p_query, ''));
+
+  IF length(v_clean_query) < 2 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Query must be at least 2 characters');
+  END IF;
+
+  IF length(v_clean_query) > 200 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Query must not exceed 200 characters');
+  END IF;
+
+  -- Search locations using pg_trgm similarity
+  SELECT jsonb_build_object(
+    'success', true,
+    'locations', COALESCE(jsonb_agg(
+      jsonb_build_object(
+        'location_id', sub.location_id,
+        'location_name', sub.location_name,
+        'org_name', sub.org_name,
+        'address', sub.address
+      )
+    ), '[]'::jsonb)
+  ) INTO v_result
+  FROM (
+    SELECT
+      l.id AS location_id,
+      l.name AS location_name,
+      o.name AS org_name,
+      l.address
+    FROM public.locations l
+    JOIN public.organizations o ON o.id = l.org_id
+    WHERE l.org_id <> p_exclude_org_id
+      AND o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
+      AND similarity(l.name || ' ' || o.name, v_clean_query) > 0.1
+    ORDER BY similarity(l.name || ' ' || o.name, v_clean_query) DESC
+    LIMIT 10
+  ) sub;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.search_locations_public(
+  p_query text,
+  p_exclude_org_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.search_locations_public(v_auth_uid, p_query, p_exclude_org_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.search_locations_public(text, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.search_locations_public(text, uuid) TO authenticated;

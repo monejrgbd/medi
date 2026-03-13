@@ -1,0 +1,84 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.generate_summary_token(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_token uuid;
+BEGIN
+  -- Get visit details
+  SELECT v.id, v.summary_token, v.claimed_by, v.org_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Idempotent: return existing token
+  IF v_visit.summary_token IS NOT NULL THEN
+    RETURN jsonb_build_object('success', true, 'token', v_visit.summary_token);
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Auth: claiming doctor or owner
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSIF v_caller_staff_id IS NOT NULL AND v_visit.claimed_by = v_caller_staff_id THEN
+    NULL;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Generate token
+  v_token := gen_random_uuid();
+
+  UPDATE public.visits
+  SET summary_token = v_token
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true, 'token', v_token);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.generate_summary_token(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.generate_summary_token(v_auth_uid, p_visit_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.generate_summary_token(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.generate_summary_token(uuid) TO authenticated;

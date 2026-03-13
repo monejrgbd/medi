@@ -1,0 +1,40 @@
+CREATE TABLE public.referrals (
+  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_doctor_id          uuid NOT NULL REFERENCES public.staff_users(id),
+  from_location_id        uuid NOT NULL REFERENCES public.locations(id),
+  from_org_id             uuid NOT NULL REFERENCES public.organizations(id),
+  to_org_id               uuid REFERENCES public.organizations(id),
+  to_location_id          uuid REFERENCES public.locations(id),
+  to_email                text CHECK (to_email IS NULL OR (length(to_email) <= 254)),
+  specialty               text NOT NULL CHECK (length(specialty) <= 50),
+  referral_note           text NOT NULL CHECK (length(referral_note) <= 5000),
+  included_visit_ids      uuid[] NOT NULL,
+  included_attachment_ids uuid[],
+  patient_id              uuid NOT NULL REFERENCES public.patients(id),
+  patient_name            text NOT NULL,
+  patient_birthday        date NOT NULL,
+  linked_visit_id         uuid REFERENCES public.visits(id),
+  status                  text NOT NULL DEFAULT 'sent'
+    CHECK (status IN ('sent', 'viewed', 'patient_arrived', 'completed', 'expired')),
+  pdf_url                 text,
+  expired_at              timestamptz,
+  created_at              timestamptz DEFAULT now(),
+  -- Must have either to_location_id OR to_email (not both null)
+  CHECK (to_location_id IS NOT NULL OR to_email IS NOT NULL)
+);
+
+ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;
+
+-- Cross-org SELECT (the ONLY table with cross-org visibility)
+CREATE POLICY "cross_org_read" ON public.referrals FOR SELECT
+  USING (from_org_id = requesting_org_id() OR to_org_id = requesting_org_id());
+
+-- No INSERT/UPDATE/DELETE policies — all mutations via SECURITY DEFINER
+
+-- Indexes
+CREATE INDEX idx_referrals_to ON public.referrals (to_location_id, status);
+CREATE INDEX idx_referrals_match ON public.referrals (to_location_id, patient_birthday, status)
+  WHERE status IN ('sent', 'viewed');
+CREATE INDEX idx_referrals_patient ON public.referrals (patient_id);
+CREATE INDEX idx_referrals_from_org ON public.referrals (from_org_id, created_at DESC);
+CREATE INDEX idx_referrals_from_doctor ON public.referrals (from_doctor_id, created_at DESC);

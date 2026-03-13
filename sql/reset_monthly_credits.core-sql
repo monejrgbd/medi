@@ -1,0 +1,68 @@
+-- Private implementation (used by cron + public wrapper)
+CREATE OR REPLACE FUNCTION private.reset_monthly_credits(
+  p_org_id uuid
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_plan text;
+  v_allocation int;
+BEGIN
+  SELECT subscription_plan INTO v_plan
+  FROM public.organizations
+  WHERE id = p_org_id
+  FOR UPDATE;
+
+  IF v_plan IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Map plan to credit allocation
+  CASE v_plan
+    WHEN 'starter' THEN v_allocation := 125;
+    WHEN 'standard' THEN v_allocation := 500;
+    WHEN 'plus' THEN v_allocation := 1500;
+    WHEN 'enterprise' THEN v_allocation := 5000;
+    ELSE
+      -- Non-resettable plans (pay_as_you_go, trial, etc.) — log and skip
+      INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+      VALUES (p_org_id, NULL, 'system', 'credit_reset_skipped', 'organization', p_org_id,
+        jsonb_build_object('plan', v_plan, 'reason', 'Plan does not have monthly credit allocation'));
+      RETURN;
+  END CASE;
+
+  UPDATE public.organizations
+  SET credits_used = 0,
+      credits_total = v_allocation,
+      billing_cycle_start = now(),
+      payment_failure_count = 0,
+      payment_first_failed_at = NULL
+  WHERE id = p_org_id;
+
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (p_org_id, NULL, 'system', 'monthly_credit_reset', 'organization', p_org_id,
+    jsonb_build_object('plan', v_plan, 'allocation', v_allocation));
+END;
+$$;
+
+-- Public wrapper (service_role only — called by billing-webhook)
+CREATE OR REPLACE FUNCTION public.reset_monthly_credits(p_org_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Forbidden');
+  END IF;
+
+  PERFORM private.reset_monthly_credits(p_org_id);
+  RETURN jsonb_build_object('success', true);
+END;
+$$;

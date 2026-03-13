@@ -1,0 +1,129 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_referral_analytics(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_start_date date,
+  p_end_date date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_owner_id uuid;
+  v_total_sent int;
+  v_total_received int;
+  v_by_status jsonb;
+  v_by_specialty jsonb;
+  v_top_sending_clinics jsonb;
+BEGIN
+  -- Auth: owner only
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = p_org_id;
+
+  IF v_owner_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  IF v_owner_id <> p_caller_auth_uid THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Guard: date range <= 90 days
+  IF (p_end_date - p_start_date) > 90 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 90 days');
+  END IF;
+
+  -- Total sent (from this org)
+  SELECT count(*) INTO v_total_sent
+  FROM public.referrals
+  WHERE from_org_id = p_org_id
+    AND created_at >= p_start_date
+    AND created_at < (p_end_date + 1);
+
+  -- Total received (to this org)
+  SELECT count(*) INTO v_total_received
+  FROM public.referrals
+  WHERE to_org_id = p_org_id
+    AND created_at >= p_start_date
+    AND created_at < (p_end_date + 1);
+
+  -- By status counts
+  SELECT COALESCE(jsonb_object_agg(status, cnt), '{}'::jsonb) INTO v_by_status
+  FROM (
+    SELECT r.status, count(*) AS cnt
+    FROM public.referrals r
+    WHERE (r.from_org_id = p_org_id OR r.to_org_id = p_org_id)
+      AND r.created_at >= p_start_date
+      AND r.created_at < (p_end_date + 1)
+    GROUP BY r.status
+  ) sub;
+
+  -- By specialty breakdown
+  SELECT COALESCE(jsonb_object_agg(specialty, cnt), '{}'::jsonb) INTO v_by_specialty
+  FROM (
+    SELECT COALESCE(r.specialty, 'unspecified') AS specialty, count(*) AS cnt
+    FROM public.referrals r
+    WHERE (r.from_org_id = p_org_id OR r.to_org_id = p_org_id)
+      AND r.created_at >= p_start_date
+      AND r.created_at < (p_end_date + 1)
+    GROUP BY COALESCE(r.specialty, 'unspecified')
+  ) sub;
+
+  -- Top sending clinics (for referrals received by this org)
+  SELECT COALESCE(jsonb_agg(row_data), '[]'::jsonb) INTO v_top_sending_clinics
+  FROM (
+    SELECT jsonb_build_object(
+      'org_name', o.name,
+      'count', count(*)
+    ) AS row_data
+    FROM public.referrals r
+    JOIN public.organizations o ON o.id = r.from_org_id
+    WHERE r.to_org_id = p_org_id
+      AND r.created_at >= p_start_date
+      AND r.created_at < (p_end_date + 1)
+    GROUP BY o.name
+    ORDER BY count(*) DESC
+    LIMIT 10
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'analytics', jsonb_build_object(
+      'total_sent', v_total_sent,
+      'total_received', v_total_received,
+      'by_status', v_by_status,
+      'by_specialty', v_by_specialty,
+      'top_sending_clinics', v_top_sending_clinics
+    )
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_referral_analytics(
+  p_org_id uuid,
+  p_start_date date,
+  p_end_date date
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_referral_analytics(v_auth_uid, p_org_id, p_start_date, p_end_date);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_referral_analytics(uuid, date, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_referral_analytics(uuid, date, date) TO authenticated;

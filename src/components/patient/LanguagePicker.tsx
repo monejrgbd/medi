@@ -124,6 +124,7 @@ const ALL_LANGUAGES = [...TOP_LANGUAGES, ...OTHER_LANGUAGES];
 export default function LanguagePicker({ onSelect, loading }: LanguagePickerProps) {
   const [selected, setSelected] = useState("en");
   const [search, setSearch] = useState("");
+  // LanguagePicker is shown before language is set, so we keep English labels here (language names are universal)
 
   const filtered = search
     ? ALL_LANGUAGES.filter((l) =>
@@ -193,15 +194,6 @@ export default function LanguagePicker({ onSelect, loading }: LanguagePickerProp
           </p>
         )}
       </div>
-
-      {selected !== "en" && (
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 mb-4">
-          <p className="text-xs text-yellow-800">
-            Conversations are currently in English only. Multi-language support
-            coming soon.
-          </p>
-        </div>
-      )}
 
       <button
         onClick={() => onSelect(selected)}

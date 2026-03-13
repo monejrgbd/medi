@@ -118,3 +118,6 @@ BEGIN
   RETURN private.staff_check_out(v_auth_uid, p_staff_user_id, p_force);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.staff_check_out(uuid, boolean) FROM anon;
+GRANT EXECUTE ON FUNCTION public.staff_check_out(uuid, boolean) TO authenticated;

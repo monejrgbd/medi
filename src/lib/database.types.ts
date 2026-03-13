@@ -217,6 +217,84 @@ export type Database = {
         }
         Relationships: []
       }
+      credits_log: {
+        Row: {
+          ai_model: string | null
+          created_at: string | null
+          credits_amount: number
+          description: string | null
+          id: string
+          org_id: string
+          visit_id: string | null
+        }
+        Insert: {
+          ai_model?: string | null
+          created_at?: string | null
+          credits_amount: number
+          description?: string | null
+          id?: string
+          org_id: string
+          visit_id?: string | null
+        }
+        Update: {
+          ai_model?: string | null
+          created_at?: string | null
+          credits_amount?: number
+          description?: string | null
+          id?: string
+          org_id?: string
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credits_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credits_log_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: true
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doctor_note_preferences: {
+        Row: {
+          default_private: boolean | null
+          doctor_id: string
+          patient_id: string
+        }
+        Insert: {
+          default_private?: boolean | null
+          doctor_id: string
+          patient_id: string
+        }
+        Update: {
+          default_private?: boolean | null
+          doctor_id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_note_preferences_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_note_preferences_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_requests: {
         Row: {
           content: string
@@ -256,12 +334,129 @@ export type Database = {
           },
         ]
       }
+      follow_ups: {
+        Row: {
+          ai_instructions: string | null
+          created_at: string | null
+          doctor_id: string
+          due_date: string
+          id: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          reminders_sent: number | null
+          status: string
+          timeframe_days: number
+          visit_id: string
+        }
+        Insert: {
+          ai_instructions?: string | null
+          created_at?: string | null
+          doctor_id: string
+          due_date: string
+          id?: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          reminders_sent?: number | null
+          status?: string
+          timeframe_days: number
+          visit_id: string
+        }
+        Update: {
+          ai_instructions?: string | null
+          created_at?: string | null
+          doctor_id?: string
+          due_date?: string
+          id?: string
+          location_id?: string
+          org_id?: string
+          patient_id?: string
+          reminders_sent?: number | null
+          status?: string
+          timeframe_days?: number
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_ups_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_ups_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      followup_sms_config: {
+        Row: {
+          created_at: string | null
+          first_reminder_days: number | null
+          max_reminders: number | null
+          org_id: string
+          reminder_template: string | null
+          second_reminder_days: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          first_reminder_days?: number | null
+          max_reminders?: number | null
+          org_id: string
+          reminder_template?: string | null
+          second_reminder_days?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          first_reminder_days?: number | null
+          max_reminders?: number | null
+          org_id?: string
+          reminder_template?: string | null
+          second_reminder_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "followup_sms_config_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
           ai_model: string | null
           created_at: string | null
           display_format: string | null
+          estimated_wait_minutes: number | null
           id: string
           logo_url: string | null
           name: string
@@ -278,6 +473,7 @@ export type Database = {
           ai_model?: string | null
           created_at?: string | null
           display_format?: string | null
+          estimated_wait_minutes?: number | null
           id?: string
           logo_url?: string | null
           name: string
@@ -294,6 +490,7 @@ export type Database = {
           ai_model?: string | null
           created_at?: string | null
           display_format?: string | null
+          estimated_wait_minutes?: number | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -318,47 +515,65 @@ export type Database = {
       organizations: {
         Row: {
           billing_cycle_start: string | null
+          cancelled_at: string | null
           created_at: string | null
           credits_total: number | null
           credits_used: number | null
+          data_retention_until: string | null
           followup_sms_addon: boolean | null
           id: string
+          last_credit_alert_at: string | null
           name: string
           owner_id: string
+          payment_failure_count: number | null
+          payment_first_failed_at: string | null
           paypal_subscription_id: string | null
           review_sms_addon: boolean | null
           slug: string
           subscription_plan: string | null
+          trial_alert_sent: boolean | null
           trial_end_date: string | null
         }
         Insert: {
           billing_cycle_start?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
+          data_retention_until?: string | null
           followup_sms_addon?: boolean | null
           id?: string
+          last_credit_alert_at?: string | null
           name: string
           owner_id: string
+          payment_failure_count?: number | null
+          payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
           review_sms_addon?: boolean | null
           slug: string
           subscription_plan?: string | null
+          trial_alert_sent?: boolean | null
           trial_end_date?: string | null
         }
         Update: {
           billing_cycle_start?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
+          data_retention_until?: string | null
           followup_sms_addon?: boolean | null
           id?: string
+          last_credit_alert_at?: string | null
           name?: string
           owner_id?: string
+          payment_failure_count?: number | null
+          payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
           review_sms_addon?: boolean | null
           slug?: string
           subscription_plan?: string | null
+          trial_alert_sent?: boolean | null
           trial_end_date?: string | null
         }
         Relationships: []
@@ -370,6 +585,7 @@ export type Database = {
           id: string
           name: string
           patient_id: string
+          updated_at: string | null
         }
         Insert: {
           active?: boolean | null
@@ -377,6 +593,7 @@ export type Database = {
           id?: string
           name: string
           patient_id: string
+          updated_at?: string | null
         }
         Update: {
           active?: boolean | null
@@ -384,6 +601,7 @@ export type Database = {
           id?: string
           name?: string
           patient_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -402,6 +620,7 @@ export type Database = {
           id: string
           name: string
           patient_id: string
+          updated_at: string | null
         }
         Insert: {
           active?: boolean | null
@@ -409,6 +628,7 @@ export type Database = {
           id?: string
           name: string
           patient_id: string
+          updated_at?: string | null
         }
         Update: {
           active?: boolean | null
@@ -416,6 +636,7 @@ export type Database = {
           id?: string
           name?: string
           patient_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -434,6 +655,7 @@ export type Database = {
           id: string
           name: string
           patient_id: string
+          updated_at: string | null
         }
         Insert: {
           active?: boolean | null
@@ -441,6 +663,7 @@ export type Database = {
           id?: string
           name: string
           patient_id: string
+          updated_at?: string | null
         }
         Update: {
           active?: boolean | null
@@ -448,10 +671,63 @@ export type Database = {
           id?: string
           name?: string
           patient_id?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "patient_medications_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_notes: {
+        Row: {
+          content: string
+          created_at: string | null
+          doctor_id: string
+          id: string
+          is_private: boolean | null
+          org_id: string
+          patient_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          doctor_id: string
+          id?: string
+          is_private?: boolean | null
+          org_id: string
+          patient_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          doctor_id?: string
+          id?: string
+          is_private?: boolean | null
+          org_id?: string
+          patient_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_notes_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_notes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_notes_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -468,10 +744,12 @@ export type Database = {
           created_at: string | null
           first_name: string
           id: string
+          is_orphaned: boolean | null
           language: string | null
           last_name: string
           org_id: string
           phone: string | null
+          phone_verified: boolean | null
           updated_at: string | null
         }
         Insert: {
@@ -482,10 +760,12 @@ export type Database = {
           created_at?: string | null
           first_name: string
           id?: string
+          is_orphaned?: boolean | null
           language?: string | null
           last_name: string
           org_id: string
           phone?: string | null
+          phone_verified?: boolean | null
           updated_at?: string | null
         }
         Update: {
@@ -496,10 +776,12 @@ export type Database = {
           created_at?: string | null
           first_name?: string
           id?: string
+          is_orphaned?: boolean | null
           language?: string | null
           last_name?: string
           org_id?: string
           phone?: string | null
+          phone_verified?: boolean | null
           updated_at?: string | null
         }
         Relationships: [
@@ -508,6 +790,473 @@ export type Database = {
             columns: ["org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_verifications: {
+        Row: {
+          attempts: number | null
+          code_hash: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          ip_address: string | null
+          location_id: string | null
+          patient_id: string | null
+          phone: string
+          verified_at: string | null
+          visit_id: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          code_hash: string
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          ip_address?: string | null
+          location_id?: string | null
+          patient_id?: string | null
+          phone: string
+          verified_at?: string | null
+          visit_id?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          code_hash?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: string | null
+          location_id?: string | null
+          patient_id?: string | null
+          phone?: string
+          verified_at?: string | null
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_verifications_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_verifications_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_verifications_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      processed_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          id: string
+          org_id: string | null
+          payload: Json | null
+          processed_at: string | null
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          id?: string
+          org_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          id?: string
+          org_id?: string | null
+          payload?: Json | null
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processed_webhook_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      referrals: {
+        Row: {
+          created_at: string | null
+          expired_at: string | null
+          from_doctor_id: string
+          from_location_id: string
+          from_org_id: string
+          id: string
+          included_attachment_ids: string[] | null
+          included_visit_ids: string[]
+          linked_visit_id: string | null
+          patient_birthday: string
+          patient_id: string
+          patient_name: string
+          pdf_url: string | null
+          referral_note: string
+          specialty: string
+          status: string
+          to_email: string | null
+          to_location_id: string | null
+          to_org_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expired_at?: string | null
+          from_doctor_id: string
+          from_location_id: string
+          from_org_id: string
+          id?: string
+          included_attachment_ids?: string[] | null
+          included_visit_ids: string[]
+          linked_visit_id?: string | null
+          patient_birthday: string
+          patient_id: string
+          patient_name: string
+          pdf_url?: string | null
+          referral_note: string
+          specialty: string
+          status?: string
+          to_email?: string | null
+          to_location_id?: string | null
+          to_org_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expired_at?: string | null
+          from_doctor_id?: string
+          from_location_id?: string
+          from_org_id?: string
+          id?: string
+          included_attachment_ids?: string[] | null
+          included_visit_ids?: string[]
+          linked_visit_id?: string | null
+          patient_birthday?: string
+          patient_id?: string
+          patient_name?: string
+          pdf_url?: string | null
+          referral_note?: string
+          specialty?: string
+          status?: string
+          to_email?: string | null
+          to_location_id?: string | null
+          to_org_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_from_doctor_id_fkey"
+            columns: ["from_doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_from_location_id_fkey"
+            columns: ["from_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_linked_visit_id_fkey"
+            columns: ["linked_visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_to_location_id_fkey"
+            columns: ["to_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_platforms: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          location_id: string
+          org_id: string
+          platform_name: string
+          platform_url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_id: string
+          org_id: string
+          platform_name: string
+          platform_url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          location_id?: string
+          org_id?: string
+          platform_name?: string
+          platform_url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_platforms_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_platforms_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      review_rotation: {
+        Row: {
+          created_at: string | null
+          current_platform_id: string | null
+          cycle_days: number | null
+          id: string
+          last_rotated_at: string | null
+          location_id: string
+          org_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          current_platform_id?: string | null
+          cycle_days?: number | null
+          id?: string
+          last_rotated_at?: string | null
+          location_id: string
+          org_id: string
+        }
+        Update: {
+          created_at?: string | null
+          current_platform_id?: string | null
+          cycle_days?: number | null
+          id?: string
+          last_rotated_at?: string | null
+          location_id?: string
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_rotation_current_platform_id_fkey"
+            columns: ["current_platform_id"]
+            isOneToOne: false
+            referencedRelation: "review_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_rotation_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: true
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "review_rotation_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reviews: {
+        Row: {
+          created_at: string | null
+          doctor_id: string | null
+          external_platform: string | null
+          feedback_text: string | null
+          id: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          rating: number | null
+          review_token: string
+          sent_to_external: boolean | null
+          submitted_at: string | null
+          visit_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          doctor_id?: string | null
+          external_platform?: string | null
+          feedback_text?: string | null
+          id?: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          rating?: number | null
+          review_token: string
+          sent_to_external?: boolean | null
+          submitted_at?: string | null
+          visit_id: string
+        }
+        Update: {
+          created_at?: string | null
+          doctor_id?: string | null
+          external_platform?: string | null
+          feedback_text?: string | null
+          id?: string
+          location_id?: string
+          org_id?: string
+          patient_id?: string
+          rating?: number | null
+          review_token?: string
+          sent_to_external?: boolean | null
+          submitted_at?: string | null
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviews_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviews_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_log: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          location_id: string | null
+          org_id: string
+          patient_id: string | null
+          phone: string
+          sms_type: string
+          status: string | null
+          twilio_sid: string | null
+          visit_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          location_id?: string | null
+          org_id: string
+          patient_id?: string | null
+          phone: string
+          sms_type: string
+          status?: string | null
+          twilio_sid?: string | null
+          visit_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          location_id?: string | null
+          org_id?: string
+          patient_id?: string | null
+          phone?: string
+          sms_type?: string
+          status?: string | null
+          twilio_sid?: string | null
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_log_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_log_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
         ]
@@ -695,6 +1444,64 @@ export type Database = {
           },
         ]
       }
+      visit_attachments: {
+        Row: {
+          created_at: string | null
+          doctor_id: string
+          file_name: string
+          file_size: number
+          file_url: string
+          id: string
+          mime_type: string
+          org_id: string
+          visit_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          doctor_id: string
+          file_name: string
+          file_size: number
+          file_url: string
+          id?: string
+          mime_type: string
+          org_id: string
+          visit_id: string
+        }
+        Update: {
+          created_at?: string | null
+          doctor_id?: string
+          file_name?: string
+          file_size?: number
+          file_url?: string
+          id?: string
+          mime_type?: string
+          org_id?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_attachments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_attachments_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_attachments_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visit_messages: {
         Row: {
           content: string
@@ -730,66 +1537,175 @@ export type Database = {
           },
         ]
       }
+      visit_notes: {
+        Row: {
+          content: string
+          created_at: string | null
+          doctor_id: string
+          id: string
+          is_private: boolean | null
+          org_id: string
+          visit_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          doctor_id: string
+          id?: string
+          is_private?: boolean | null
+          org_id: string
+          visit_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          doctor_id?: string
+          id?: string
+          is_private?: boolean | null
+          org_id?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "visit_notes_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_notes_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visit_notes_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visits: {
         Row: {
           ai_completed_at: string | null
-          ai_diagnostic: Json | null
+          ai_diagnostic: string | null
+          ai_model_used: string | null
           ai_started_at: string | null
+          ai_structured_card: Json | null
+          ai_summary: string | null
           claimed_at: string | null
           claimed_by: string | null
           completed_at: string | null
           created_at: string | null
+          credits_charged: number | null
+          doctor_diagnosis: string | null
           entered_queue_at: string | null
+          follow_up_of: string | null
           gave_tablet: boolean | null
           handled: boolean | null
           has_previous_visits: boolean | null
+          has_referral: boolean | null
           id: string
+          is_follow_up: boolean | null
+          is_return_visit: boolean | null
+          is_sensitive: boolean | null
           location_id: string
           org_id: string
+          patient_approved: boolean | null
+          patient_approved_at: string | null
           patient_id: string
+          phone_verification_pending: boolean | null
           priority: number | null
+          review_sms_sent: boolean | null
+          review_token: string | null
           session_token: string
           status: string
+          summary_sms_sent: boolean | null
+          summary_token: string | null
+          timeout_flagged: boolean | null
+          updated_at: string | null
         }
         Insert: {
           ai_completed_at?: string | null
-          ai_diagnostic?: Json | null
+          ai_diagnostic?: string | null
+          ai_model_used?: string | null
           ai_started_at?: string | null
+          ai_structured_card?: Json | null
+          ai_summary?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
           created_at?: string | null
+          credits_charged?: number | null
+          doctor_diagnosis?: string | null
           entered_queue_at?: string | null
+          follow_up_of?: string | null
           gave_tablet?: boolean | null
           handled?: boolean | null
           has_previous_visits?: boolean | null
+          has_referral?: boolean | null
           id?: string
+          is_follow_up?: boolean | null
+          is_return_visit?: boolean | null
+          is_sensitive?: boolean | null
           location_id: string
           org_id: string
+          patient_approved?: boolean | null
+          patient_approved_at?: string | null
           patient_id: string
+          phone_verification_pending?: boolean | null
           priority?: number | null
+          review_sms_sent?: boolean | null
+          review_token?: string | null
           session_token?: string
           status?: string
+          summary_sms_sent?: boolean | null
+          summary_token?: string | null
+          timeout_flagged?: boolean | null
+          updated_at?: string | null
         }
         Update: {
           ai_completed_at?: string | null
-          ai_diagnostic?: Json | null
+          ai_diagnostic?: string | null
+          ai_model_used?: string | null
           ai_started_at?: string | null
+          ai_structured_card?: Json | null
+          ai_summary?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
           created_at?: string | null
+          credits_charged?: number | null
+          doctor_diagnosis?: string | null
           entered_queue_at?: string | null
+          follow_up_of?: string | null
           gave_tablet?: boolean | null
           handled?: boolean | null
           has_previous_visits?: boolean | null
+          has_referral?: boolean | null
           id?: string
+          is_follow_up?: boolean | null
+          is_return_visit?: boolean | null
+          is_sensitive?: boolean | null
           location_id?: string
           org_id?: string
+          patient_approved?: boolean | null
+          patient_approved_at?: string | null
           patient_id?: string
+          phone_verification_pending?: boolean | null
           priority?: number | null
+          review_sms_sent?: boolean | null
+          review_token?: string | null
           session_token?: string
           status?: string
+          summary_sms_sent?: boolean | null
+          summary_token?: string | null
+          timeout_flagged?: boolean | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -797,6 +1713,13 @@ export type Database = {
             columns: ["claimed_by"]
             isOneToOne: false
             referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "visits_follow_up_of_fkey"
+            columns: ["follow_up_of"]
+            isOneToOne: false
+            referencedRelation: "visits"
             referencedColumns: ["id"]
           },
           {
@@ -827,18 +1750,108 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_patient: { Args: { p_visit_id: string }; Returns: Json }
+      activate_subscription: {
+        Args: {
+          p_org_id: string
+          p_paypal_subscription_id: string
+          p_plan: string
+        }
+        Returns: Json
+      }
+      add_addendum: {
+        Args: { p_content: string; p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      add_patient_note: {
+        Args: {
+          p_content: string
+          p_is_private?: boolean
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      add_visit_note: {
+        Args: { p_content: string; p_is_private?: boolean; p_visit_id: string }
+        Returns: Json
+      }
+      approve_patient:
+        | { Args: { p_visit_id: string }; Returns: Json }
+        | {
+            Args: {
+              p_follow_up_id?: string
+              p_follow_up_of_visit_id?: string
+              p_is_follow_up?: boolean
+              p_visit_id: string
+            }
+            Returns: Json
+          }
+      approve_summary: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
       assign_role: {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
         Returns: Json
       }
-      check_location_active: { Args: { p_location_id: string }; Returns: Json }
-      checkin_patient: {
+      cancel_claim: { Args: { p_visit_id: string }; Returns: Json }
+      cancel_subscription: { Args: never; Returns: Json }
+      change_subscription_plan: { Args: { p_new_plan: string }; Returns: Json }
+      check_credits: { Args: { p_org_id: string }; Returns: number }
+      check_incoming_referral: {
         Args: {
           p_birthday: string
           p_first_name: string
           p_last_name: string
           p_location_id: string
+        }
+        Returns: Json
+      }
+      check_location_active: { Args: { p_location_id: string }; Returns: Json }
+      checkin_patient:
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+            }
+            Returns: Json
+          }
+      claim_patient: { Args: { p_visit_id: string }; Returns: Json }
+      collect_phone_post_ai: {
+        Args: { p_phone: string; p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      complete_referral: { Args: { p_referral_id: string }; Returns: Json }
+      complete_visit:
+        | { Args: { p_diagnosis: string; p_visit_id: string }; Returns: Json }
+        | {
+            Args: {
+              p_diagnosis: string
+              p_follow_up?: Json
+              p_visit_id: string
+            }
+            Returns: Json
+          }
+      configure_review_platforms: {
+        Args: { p_location_id: string; p_platforms: Json }
+        Returns: Json
+      }
+      create_follow_up: {
+        Args: {
+          p_ai_instructions?: string
+          p_timeframe_days: number
+          p_visit_id: string
         }
         Returns: Json
       }
@@ -860,6 +1873,18 @@ export type Database = {
         }
         Returns: Json
       }
+      create_referral: {
+        Args: {
+          p_included_attachment_ids?: string[]
+          p_included_visit_ids: string[]
+          p_patient_id: string
+          p_referral_note: string
+          p_specialty: string
+          p_to_email?: string
+          p_to_location_id?: string
+        }
+        Returns: Json
+      }
       create_staff_user: {
         Args: {
           p_full_name: string
@@ -872,19 +1897,147 @@ export type Database = {
         Returns: Json
       }
       deactivate_staff: { Args: { p_staff_user_id: string }; Returns: Json }
+      decline_phone_verification: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      deduct_credits: {
+        Args: { p_ai_model: string; p_org_id: string; p_visit_id: string }
+        Returns: Json
+      }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       deny_patient: { Args: { p_visit_id: string }; Returns: Json }
+      edit_patient_record: {
+        Args: {
+          p_birthday?: string
+          p_first_name?: string
+          p_last_name?: string
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      generate_summary_token: { Args: { p_visit_id: string }; Returns: Json }
+      get_active_follow_ups: { Args: { p_patient_id: string }; Returns: Json }
+      get_audit_trail: {
+        Args: {
+          p_actor_id?: string
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_end_date?: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_limit?: number
+          p_org_id: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_checked_in_doctors: { Args: { p_location_id: string }; Returns: Json }
+      get_claimed_patients: { Args: { p_location_id: string }; Returns: Json }
+      get_collision_state: { Args: { p_visit_id: string }; Returns: Json }
+      get_completed_and_left_visits: {
+        Args: { p_date?: string; p_location_id: string }
+        Returns: Json
+      }
+      get_conversation: {
+        Args: { p_session_token?: string; p_visit_id: string }
+        Returns: Json
+      }
+      get_credit_dashboard: { Args: never; Returns: Json }
+      get_current_review_platform: {
+        Args: { p_location_id: string }
+        Returns: Json
+      }
+      get_employee_stats: {
+        Args: {
+          p_date?: string
+          p_location_id: string
+          p_staff_user_id?: string
+        }
+        Returns: Json
+      }
+      get_followup_compliance: {
+        Args: {
+          p_end_date: string
+          p_location_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_location_detail: { Args: { p_location_id: string }; Returns: Json }
       get_locations: { Args: never; Returns: Json }
       get_my_org: { Args: never; Returns: Json }
       get_my_roles: { Args: never; Returns: Json }
+      get_notes_for_patient: {
+        Args: { p_cursor?: string; p_limit?: number; p_patient_id: string }
+        Returns: Json
+      }
+      get_notes_for_visit: { Args: { p_visit_id: string }; Returns: Json }
       get_organization_overview: { Args: never; Returns: Json }
+      get_past_visit_summaries: {
+        Args: { p_limit?: number; p_patient_id: string }
+        Returns: Json
+      }
+      get_patient_full_profile: {
+        Args: { p_patient_id: string }
+        Returns: Json
+      }
+      get_patient_medical_records: {
+        Args: { p_patient_id: string }
+        Returns: Json
+      }
+      get_patient_profile: { Args: { p_patient_id: string }; Returns: Json }
+      get_patient_return_rate: {
+        Args: { p_end_date: string; p_org_id: string; p_start_date: string }
+        Returns: Json
+      }
       get_patient_session: { Args: { p_session_token: string }; Returns: Json }
+      get_patient_stats: {
+        Args: {
+          p_end_date?: string
+          p_location_id: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_patient_visit_history: {
+        Args: { p_cursor?: string; p_limit?: number; p_patient_id: string }
+        Returns: Json
+      }
       get_pending_approvals: { Args: { p_location_id: string }; Returns: Json }
+      get_queue: { Args: { p_location_id: string }; Returns: Json }
       get_receptionist_counts: {
         Args: { p_location_id: string }
         Returns: Json
       }
+      get_referral_analytics: {
+        Args: { p_end_date: string; p_org_id: string; p_start_date: string }
+        Returns: Json
+      }
+      get_referral_detail: { Args: { p_referral_id: string }; Returns: Json }
+      get_referral_history: {
+        Args: { p_cursor?: string; p_doctor_id: string; p_limit?: number }
+        Returns: Json
+      }
+      get_referral_inbox: {
+        Args: { p_cursor?: string; p_limit?: number; p_location_id: string }
+        Returns: Json
+      }
+      get_review_hub: {
+        Args: {
+          p_cursor_id?: string
+          p_cursor_ts?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_doctor_id?: string
+          p_limit?: number
+          p_location_id: string
+          p_rating?: number
+        }
+        Returns: Json
+      }
+      get_review_page: { Args: { p_token: string }; Returns: Json }
+      get_review_platforms: { Args: { p_location_id: string }; Returns: Json }
       get_similar_patients: {
         Args: {
           p_birthday: string
@@ -898,22 +2051,133 @@ export type Database = {
         Args: { p_location_id?: string; p_org_id: string }
         Returns: Json
       }
+      get_stale_session_count: {
+        Args: { p_location_id: string }
+        Returns: Json
+      }
+      get_visit_attachments: { Args: { p_visit_id: string }; Returns: Json }
+      get_visit_detail: { Args: { p_visit_id: string }; Returns: Json }
+      get_visit_summary_public: { Args: { p_token: string }; Returns: Json }
+      get_wait_time_heatmap: {
+        Args: {
+          p_end_date: string
+          p_location_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
       get_waitlist_count: { Args: never; Returns: number }
       give_patient_consent: {
         Args: { p_language: string; p_session_token: string }
         Returns: Json
       }
+      handle_collision_result: {
+        Args: {
+          p_phone_matches_existing: boolean
+          p_shared_phone?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      handle_collision_returning: {
+        Args: { p_visit_id: string }
+        Returns: Json
+      }
+      handle_collision_verify: { Args: { p_visit_id: string }; Returns: Json }
+      handle_no_phone_existing: { Args: { p_visit_id: string }; Returns: Json }
       handle_patient: { Args: { p_visit_id: string }; Returns: Json }
+      handle_payment_failure: { Args: { p_org_id: string }; Returns: Json }
+      increment_verification_attempt: {
+        Args: { p_verification_id: string }
+        Returns: number
+      }
+      link_referral_to_visit: {
+        Args: { p_referral_id: string; p_visit_id: string }
+        Returns: Json
+      }
+      mark_follow_up_completed: {
+        Args: { p_follow_up_id: string }
+        Returns: Json
+      }
       mark_patient_left: { Args: { p_visit_id: string }; Returns: Json }
+      move_to_queue_on_error: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      purchase_overage_credits: { Args: { p_amount: number }; Returns: Json }
+      reactivate_referral: { Args: { p_referral_id: string }; Returns: Json }
+      reject_summary: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
       remove_role: {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
         Returns: Json
       }
       requesting_org_id: { Args: never; Returns: string }
+      reset_monthly_credits: { Args: { p_org_id: string }; Returns: Json }
       reset_staff_password: {
         Args: { p_new_password: string; p_staff_user_id: string }
         Returns: Json
       }
+      rotate_review_platforms: { Args: never; Returns: undefined }
+      save_followup_sms_config:
+        | {
+            Args: {
+              p_first_reminder_days: number
+              p_location_id: string
+              p_max_reminders: number
+              p_org_id: string
+              p_second_reminder_days: number
+              p_template?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_first_reminder_days: number
+              p_max_reminders: number
+              p_org_id: string
+              p_second_reminder_days: number
+              p_template?: string
+            }
+            Returns: Json
+          }
+      save_summary: {
+        Args: {
+          p_diagnostic?: string
+          p_structured_card?: Json
+          p_summary: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      search_locations_public: {
+        Args: { p_exclude_org_id: string; p_query: string }
+        Returns: Json
+      }
+      search_patients: {
+        Args: { p_birthday?: string; p_limit?: number; p_query: string }
+        Returns: Json
+      }
+      search_referral_inbox: {
+        Args: { p_location_id: string; p_query: string }
+        Returns: Json
+      }
+      send_patient_message: {
+        Args: {
+          p_content: string
+          p_content_original?: string
+          p_session_token: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      set_review_cycle: {
+        Args: { p_cycle_days: number; p_location_id: string }
+        Returns: Json
+      }
+      set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       staff_check_in: {
@@ -928,6 +2192,20 @@ export type Database = {
         | { Args: { p_staff_user_id?: string }; Returns: Json }
         | {
             Args: { p_force?: boolean; p_staff_user_id?: string }
+            Returns: Json
+          }
+      start_ai_conversation: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      store_ai_message:
+        | { Args: { p_content: string; p_visit_id: string }; Returns: Json }
+        | {
+            Args: {
+              p_content: string
+              p_content_original?: string
+              p_visit_id: string
+            }
             Returns: Json
           }
       submit_contact: {
@@ -955,7 +2233,25 @@ export type Database = {
         }
         Returns: undefined
       }
+      submit_review: {
+        Args: { p_feedback_text?: string; p_rating: number; p_token: string }
+        Returns: Json
+      }
+      toggle_addon: {
+        Args: { p_addon_type: string; p_enabled: boolean }
+        Returns: Json
+      }
       toggle_gave_tablet: { Args: { p_visit_id: string }; Returns: Json }
+      trigger_review_sms: { Args: { p_visit_id: string }; Returns: Json }
+      trigger_visit_summary_sms: { Args: { p_visit_id: string }; Returns: Json }
+      update_allergies: {
+        Args: { p_allergies: string[]; p_patient_id: string }
+        Returns: Json
+      }
+      update_chronic_conditions: {
+        Args: { p_conditions: string[]; p_patient_id: string }
+        Returns: Json
+      }
       update_location:
         | {
             Args: {
@@ -988,7 +2284,42 @@ export type Database = {
             }
             Returns: Json
           }
+      update_medications: {
+        Args: { p_medications: string[]; p_patient_id: string }
+        Returns: Json
+      }
+      update_note_preference: {
+        Args: { p_default_private: boolean; p_patient_id: string }
+        Returns: Json
+      }
       update_organization: { Args: { p_name: string }; Returns: Json }
+      update_visit_priority: {
+        Args: { p_priority: number; p_visit_id: string }
+        Returns: Json
+      }
+      update_visit_status_system: {
+        Args: {
+          p_action?: string
+          p_new_status: string
+          p_timeout_flagged?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      upload_attachment: {
+        Args: {
+          p_file_name: string
+          p_file_size: number
+          p_file_url: string
+          p_mime_type: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      verify_phone_and_link: {
+        Args: { p_phone: string; p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

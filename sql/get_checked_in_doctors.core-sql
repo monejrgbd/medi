@@ -1,0 +1,81 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_checked_in_doctors(
+  p_caller_auth_uid uuid,
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_staff boolean := false;
+  v_result jsonb;
+BEGIN
+  -- Get location org
+  SELECT l.org_id INTO v_org_id
+  FROM public.locations l
+  WHERE l.id = p_location_id;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or any staff at org
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL;
+  ELSIF v_caller_staff_id IS NOT NULL THEN
+    NULL; -- Any active staff at org can view
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Get checked-in doctors
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'staff_user_id', sc.staff_user_id,
+    'full_name', su.full_name
+  )), '[]'::jsonb)
+  INTO v_result
+  FROM public.staff_checkins sc
+  JOIN public.staff_users su ON su.id = sc.staff_user_id
+  WHERE sc.location_id = p_location_id
+    AND sc.role = 'doctor'
+    AND sc.checked_out_at IS NULL;
+
+  RETURN jsonb_build_object('success', true, 'doctors', v_result);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_checked_in_doctors(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_checked_in_doctors(v_auth_uid, p_location_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_checked_in_doctors(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_checked_in_doctors(uuid) TO authenticated;

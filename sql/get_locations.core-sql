@@ -76,3 +76,6 @@ BEGIN
   RETURN private.get_locations(v_auth_uid);
 END;
 $$;
+
+REVOKE EXECUTE ON FUNCTION public.get_locations() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_locations() TO authenticated;
