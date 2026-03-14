@@ -232,6 +232,19 @@ export default function DoctorDashboard({
             Select a location to begin your shift.
           </p>
 
+          {locations.length === 0 ? (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-6 text-center">
+              <p className="text-sm text-amber-800 mb-3">
+                No locations have been set up yet.
+              </p>
+              <button
+                onClick={() => router.push("/d/owner")}
+                className="rounded-lg bg-hilt-blue px-4 py-2 text-sm font-semibold text-white hover:bg-hilt-blue-dark"
+              >
+                Go to Locations
+              </button>
+            </div>
+          ) : (
           <div className="space-y-3">
             {locations.map((loc) => (
               <button
@@ -244,6 +257,7 @@ export default function DoctorDashboard({
               </button>
             ))}
           </div>
+          )}
 
           {checkinError && (
             <p className="text-sm text-red-600 text-center mt-4">
@@ -354,9 +368,13 @@ export default function DoctorDashboard({
         {tab === "claimed" && (
           <div className="space-y-3">
             {claimed.length === 0 ? (
-              <p className="text-sm text-slate text-center py-8">
-                No claimed patients.
-              </p>
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+                <svg className="mx-auto mb-3 h-10 w-10 text-ash" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25Z" />
+                </svg>
+                <p className="text-sm font-medium text-slate">No claimed patients</p>
+                <p className="mt-1 text-xs text-ash">Claim a patient from the pending queue to get started.</p>
+              </div>
             ) : (
               claimed.map((v) => (
                 <ClaimedPatientCard key={v.visit_id} visit={v} />
@@ -368,9 +386,13 @@ export default function DoctorDashboard({
         {tab === "completed" && (
           <div className="space-y-3">
             {completed.length === 0 ? (
-              <p className="text-sm text-slate text-center py-8">
-                No completed visits today.
-              </p>
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+                <svg className="mx-auto mb-3 h-10 w-10 text-ash" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+                <p className="text-sm font-medium text-slate">No completed visits today</p>
+                <p className="mt-1 text-xs text-ash">Completed visits will appear here after you enter a diagnosis.</p>
+              </div>
             ) : (
               completed.map((v) => (
                 <CompletedVisitCard
@@ -395,9 +417,13 @@ export default function DoctorDashboard({
         {tab === "left" && (
           <div className="space-y-3">
             {left.length === 0 ? (
-              <p className="text-sm text-slate text-center py-8">
-                No cancelled visits today.
-              </p>
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
+                <svg className="mx-auto mb-3 h-10 w-10 text-ash" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+                </svg>
+                <p className="text-sm font-medium text-slate">No cancelled visits today</p>
+                <p className="mt-1 text-xs text-ash">Patients who left or were cancelled will appear here.</p>
+              </div>
             ) : (
               left.map((v) => (
                 <CompletedVisitCard

@@ -147,7 +147,7 @@ BEGIN
       'created_at', pn.created_at
     ) ORDER BY pn.created_at ASC) AS notes
     FROM public.patient_notes pn
-    JOIN public.staff_users su ON su.id = pn.author_id
+    JOIN public.staff_users su ON su.id = pn.doctor_id
     WHERE pn.patient_id = v_referral.patient_id
       AND pn.is_private = false
   ),
@@ -188,16 +188,19 @@ BEGIN
         SELECT jsonb_agg(jsonb_build_object('name', pm.name))
         FROM public.patient_medications pm
         WHERE pm.patient_id = v_referral.patient_id
+          AND pm.active = true
       ), '[]'::jsonb),
       'allergies', COALESCE((
         SELECT jsonb_agg(jsonb_build_object('name', pa.name))
         FROM public.patient_allergies pa
         WHERE pa.patient_id = v_referral.patient_id
+          AND pa.active = true
       ), '[]'::jsonb),
       'chronic_conditions', COALESCE((
         SELECT jsonb_agg(jsonb_build_object('name', pc.name))
         FROM public.patient_chronic_conditions pc
         WHERE pc.patient_id = v_referral.patient_id
+          AND pc.active = true
       ), '[]'::jsonb)
     ),
     'visits', COALESCE(vc.visits, '[]'::jsonb),

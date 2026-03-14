@@ -17,6 +17,7 @@ import WaitTimeHeatmap from "@/components/analytics/WaitTimeHeatmap";
 import ReturnRateChart from "@/components/analytics/ReturnRateChart";
 import FollowUpComplianceFunnel from "@/components/analytics/FollowUpComplianceFunnel";
 import PatientSearch from "@/components/dashboard/PatientSearch";
+import { TableSkeleton, CardSkeleton, ChartSkeleton } from "@/components/ui/Skeleton";
 
 type Tab = "employees" | "patients" | "waittimes" | "returns" | "followups";
 
@@ -35,6 +36,57 @@ function daysAgo(n: number) {
   const d = new Date();
   d.setDate(d.getDate() - n);
   return d;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function exportCSV(data: any, tab: Tab) {
+  if (!data) return;
+
+  let csv = "";
+  const filename = `hilt-${tab}-${formatDate(new Date())}.csv`;
+
+  try {
+    if (tab === "employees" && Array.isArray(data.employees)) {
+      csv = "Name,Role,Shift Hours,Utilization %,Patients,Throughput/h,Avg Handling Min,Idle Min\n";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.employees.forEach((e: any) => {
+        csv += `"${e.full_name}","${e.role}",${e.shift_hours ?? ""},${e.utilization ?? ""},${e.patients_handled ?? 0},${e.throughput ?? ""},${e.avg_handling_min ?? ""},${e.idle_min ?? ""}\n`;
+      });
+    } else if (tab === "patients" && data.daily) {
+      csv = "Date,New Patients,Returning,Total\n";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.daily.forEach((d: any) => {
+        csv += `${d.date},${d.new_patients ?? 0},${d.returning ?? 0},${d.total ?? 0}\n`;
+      });
+    } else if (tab === "waittimes" && Array.isArray(data)) {
+      csv = "Hour,Day,Avg Wait Min,Patient Count\n";
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.forEach((d: any) => {
+        csv += `${d.hour},${d.day_of_week},${d.avg_wait_min ?? ""},${d.patient_count ?? 0}\n`;
+      });
+    } else {
+      // Generic: stringify as JSON fallback
+      csv = JSON.stringify(data, null, 2);
+      const blob = new Blob([csv], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename.replace(".csv", ".json");
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch {
+    // silently fail
+  }
 }
 
 export default function ManagerDashboard({
@@ -101,7 +153,7 @@ export default function ManagerDashboard({
     { key: "employees", label: "Employees" },
     { key: "patients", label: "Patients" },
     { key: "waittimes", label: "Wait Times" },
-    { key: "returns", label: "Returns", ownerOnly: true },
+    { key: "returns", label: "Returns" },
     { key: "followups", label: "Follow-ups", hidden: !followupAddonEnabled },
   ];
 
@@ -119,12 +171,20 @@ export default function ManagerDashboard({
             Performance metrics and patient flow insights
           </p>
         </div>
-        <Link
-          href="/d/select-role"
-          className="text-sm text-slate hover:text-ink transition-colors"
-        >
-          &larr; Back
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/d/manager/location/${selectedLocation}`}
+            className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-slate hover:text-ink hover:border-gray-300 transition-colors"
+          >
+            Location Settings
+          </Link>
+          <Link
+            href="/d/select-role"
+            className="text-sm text-slate hover:text-ink transition-colors"
+          >
+            &larr; Back
+          </Link>
+        </div>
       </div>
 
       {/* Patient search */}
@@ -204,8 +264,31 @@ export default function ManagerDashboard({
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-16">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-hilt-blue" />
+        <>
+          {activeTab === "employees" && <TableSkeleton rows={4} />}
+          {activeTab === "patients" && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+              <CardSkeleton />
+            </div>
+          )}
+          {(activeTab === "waittimes" || activeTab === "returns" || activeTab === "followups") && (
+            <ChartSkeleton />
+          )}
+        </>
+      )}
+
+      {/* Export button */}
+      {!loading && data && (
+        <div className="mb-4 flex justify-end">
+          <button
+            onClick={() => exportCSV(data, activeTab)}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-slate hover:text-ink hover:border-gray-300 transition-colors"
+          >
+            Download CSV
+          </button>
         </div>
       )}
 

@@ -19,6 +19,7 @@ interface OrgData {
   trial_end_date: string;
   review_sms_addon: boolean;
   followup_sms_addon: boolean;
+  onboarding_completed_at: string | null;
   created_at: string;
 }
 

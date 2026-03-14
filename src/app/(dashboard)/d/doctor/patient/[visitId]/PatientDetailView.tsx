@@ -81,7 +81,7 @@ interface PatientDetailViewProps {
   staffUserId: string | null;
 }
 
-type DetailTab = "transcript" | "summary" | "diagnostic" | "addendums" | "history" | "notes" | "attachments" | "referrals";
+type DetailTab = "transcript" | "summary" | "history" | "notes" | "attachments" | "referrals";
 
 export default function PatientDetailView({
   detail: initialDetail,
@@ -155,11 +155,6 @@ export default function PatientDetailView({
     { key: "summary", label: "Summary", show: true },
     { key: "transcript", label: "Transcript", show: true },
     {
-      key: "diagnostic",
-      label: "AI Diagnostic",
-      show: !!visit.ai_diagnostic,
-    },
-    {
       key: "notes",
       label: `Notes (${(notes || []).length})`,
       show: true,
@@ -168,11 +163,6 @@ export default function PatientDetailView({
       key: "attachments",
       label: `Files (${(attachments || []).length})`,
       show: true,
-    },
-    {
-      key: "addendums",
-      label: `Addendums (${addendums.length})`,
-      show: addendums.length > 0,
     },
     { key: "history", label: "History", show: true },
     { key: "referrals", label: "Referrals", show: true },
@@ -240,6 +230,13 @@ export default function PatientDetailView({
           </div>
         )}
 
+        {/* AI Diagnostic (always visible if present, as a collapsible section) */}
+        {visit.ai_diagnostic && (
+          <div className="mt-4">
+            <AIDiagnosticPanel diagnostic={visit.ai_diagnostic} />
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="mt-6 flex gap-1 border-b border-gray-200">
           {tabs
@@ -262,17 +259,33 @@ export default function PatientDetailView({
         {/* Tab content */}
         <div className="mt-4">
           {tab === "summary" && (
-            <SummaryDisplay
-              summary={visit.ai_summary}
-              structuredCard={visit.ai_structured_card}
-            />
+            <div>
+              <SummaryDisplay
+                summary={visit.ai_summary}
+                structuredCard={visit.ai_structured_card}
+              />
+              {addendums.length > 0 && (
+                <div className="mt-6 space-y-3">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-slate">
+                    Addendums ({addendums.length})
+                  </h4>
+                  {addendums.map((a) => (
+                    <div
+                      key={a.id}
+                      className="rounded-lg border border-amber-100 bg-amber-50/50 p-4"
+                    >
+                      <AddendumBadge createdAt={a.created_at} />
+                      <p className="mt-2 text-sm text-ink whitespace-pre-wrap">
+                        {a.content}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
 
           {tab === "transcript" && <TranscriptView messages={transcript} />}
-
-          {tab === "diagnostic" && visit.ai_diagnostic && (
-            <AIDiagnosticPanel diagnostic={visit.ai_diagnostic} />
-          )}
 
           {tab === "notes" && (
             <NotesPanel
@@ -288,22 +301,6 @@ export default function PatientDetailView({
               initialAttachments={attachments || []}
               canUpload={canAct || isOwner}
             />
-          )}
-
-          {tab === "addendums" && (
-            <div className="space-y-3">
-              {addendums.map((a) => (
-                <div
-                  key={a.id}
-                  className="rounded-lg border border-gray-200 bg-white p-4"
-                >
-                  <AddendumBadge createdAt={a.created_at} />
-                  <p className="mt-2 text-sm text-ink whitespace-pre-wrap">
-                    {a.content}
-                  </p>
-                </div>
-              ))}
-            </div>
           )}
 
           {tab === "history" && (

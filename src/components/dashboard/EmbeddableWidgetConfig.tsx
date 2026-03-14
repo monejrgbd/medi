@@ -70,12 +70,22 @@ export default function EmbeddableWidgetConfig({
 
       {/* Live preview */}
       <div>
-        <h3 className="text-sm font-medium text-ink mb-2">Preview</h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium text-ink">Preview</h3>
+          <a
+            href={`/checkin/${selectedLocation}?embed=true`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-hilt-blue hover:underline"
+          >
+            Open in new tab &rarr;
+          </a>
+        </div>
         <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
           <iframe
             src={`/checkin/${selectedLocation}?embed=true`}
             width="100%"
-            height="400"
+            height="600"
             style={{ border: "none" }}
             title="Check-in widget preview"
           />

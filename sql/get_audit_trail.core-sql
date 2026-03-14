@@ -21,6 +21,8 @@ AS $$
 DECLARE
   v_owner_id uuid;
   v_caller_staff_id uuid;
+  v_is_owner boolean := false;
+  v_manager_location_ids uuid[];
   v_limit int;
   v_rows jsonb;
   v_has_more boolean := false;
@@ -40,8 +42,7 @@ BEGIN
 
   -- Auth: owner or manager at any location in org
   IF p_caller_auth_uid = v_owner_id THEN
-    -- Owner is authorized
-    NULL;
+    v_is_owner := true;
   ELSE
     -- Check if caller is a manager
     SELECT id INTO v_caller_staff_id
@@ -51,12 +52,18 @@ BEGIN
       AND is_active = true
       AND is_deleted = false;
 
-    IF v_caller_staff_id IS NULL OR NOT EXISTS (
-      SELECT 1 FROM public.staff_roles
-      WHERE staff_user_id = v_caller_staff_id
-        AND role = 'manager'
-        AND location_id IN (SELECT id FROM public.locations WHERE org_id = p_org_id)
-    ) THEN
+    IF v_caller_staff_id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized to view audit trail');
+    END IF;
+
+    -- Get manager's location IDs
+    SELECT array_agg(sr.location_id)
+    INTO v_manager_location_ids
+    FROM public.staff_roles sr
+    WHERE sr.staff_user_id = v_caller_staff_id
+      AND sr.role = 'manager';
+
+    IF v_manager_location_ids IS NULL THEN
       RETURN jsonb_build_object('success', false, 'error', 'Not authorized to view audit trail');
     END IF;
   END IF;
@@ -103,6 +110,7 @@ BEGIN
     FROM public.audit_trail at
     LEFT JOIN public.staff_users su ON su.id = at.actor_id
     WHERE at.org_id = p_org_id
+      AND (v_is_owner OR at.location_id = ANY(v_manager_location_ids))
       AND (p_entity_type IS NULL OR at.entity_type = p_entity_type)
       AND (p_entity_id IS NULL OR at.entity_id = p_entity_id)
       AND (p_actor_id IS NULL OR at.actor_id = p_actor_id)

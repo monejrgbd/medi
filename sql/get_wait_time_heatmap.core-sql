@@ -20,7 +20,7 @@ DECLARE
   v_heatmap jsonb;
 BEGIN
   -- Get org info and timezone for location
-  SELECT l.org_id, o.owner_id, COALESCE(l.timezone, 'America/New_York')
+  SELECT l.org_id, o.owner_id, COALESCE(l.timezone, 'America/Toronto')
   INTO v_org_id, v_owner_id, v_timezone
   FROM public.locations l
   JOIN public.organizations o ON o.id = l.org_id

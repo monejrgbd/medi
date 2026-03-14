@@ -34,7 +34,7 @@ BEGIN
     JOIN public.locations l ON l.id = v.location_id
     LEFT JOIN public.followup_sms_config fsc ON fsc.org_id = o.id
     WHERE f.status = 'active'
-      AND o.followup_sms_addon = true
+      AND (o.followup_sms_addon = true OR o.subscription_plan IN ('standard_trial', 'premium_trial'))
       AND o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
       AND p.phone IS NOT NULL
       AND f.reminders_sent < COALESCE(fsc.max_reminders, 2)
@@ -65,8 +65,7 @@ BEGIN
           'first_name', v_rec.first_name,
           'org_name', v_rec.org_name,
           'name', v_rec.first_name,
-          'clinic', v_rec.org_name,
-          'phone', ''
+          'clinic', v_rec.org_name
         )
       )
     );

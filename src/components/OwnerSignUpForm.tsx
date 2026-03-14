@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -13,6 +13,20 @@ export default function OwnerSignUpForm() {
   const [approvalCode, setApprovalCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // OTP step state
+  const [step, setStep] = useState<"form" | "otp">("form");
+  const [otp, setOtp] = useState("");
+  const [userId, setUserId] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((c) => (c <= 1 ? 0 : c - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,7 +46,6 @@ export default function OwnerSignUpForm() {
 
     const supabase = createClient();
 
-    // 1. Create auth user via client-side signUp (establishes session directly)
     const { data: authData, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
@@ -51,11 +64,44 @@ export default function OwnerSignUpForm() {
       return;
     }
 
-    // 2. Create organization via RPC (auth.uid() guard ensures user can only create for themselves)
+    // Duplicate email detection (Supabase returns empty identities)
+    if (authData.user.identities?.length === 0) {
+      setError("Unable to create account. This email may already be registered.");
+      setLoading(false);
+      return;
+    }
+
+    // With "Confirm email" enabled, session is null — user needs to verify OTP
+    setUserId(authData.user.id);
+    setStep("otp");
+    setResendCooldown(60);
+    setLoading(false);
+  }
+
+  async function handleVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
+    const supabase = createClient();
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: otp,
+      type: "signup",
+    });
+
+    if (verifyError) {
+      setError(verifyError.message);
+      setLoading(false);
+      return;
+    }
+
+    // Session is now established — create organization
     const { data: orgResult, error: orgError } = await supabase.rpc(
       "create_organization",
       {
-        p_owner_auth_uid: authData.user.id,
+        p_owner_auth_uid: userId,
         p_name: orgName,
         p_approval_code: approvalCode || null,
       }
@@ -69,8 +115,90 @@ export default function OwnerSignUpForm() {
       return;
     }
 
-    // 3. Redirect to dashboard
-    window.location.href = "/d/select-role";
+    window.location.href = "/d/onboarding";
+  }
+
+  async function handleResendOtp() {
+    if (resendCooldown > 0) return;
+    setError("");
+
+    const supabase = createClient();
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email,
+    });
+
+    if (resendError) {
+      setError(resendError.message);
+      return;
+    }
+
+    setResendCooldown(60);
+  }
+
+  if (step === "otp") {
+    return (
+      <form onSubmit={handleVerifyOtp} className="space-y-4">
+        <h1 className="text-2xl font-bold text-ink">Verify your email</h1>
+        <p className="text-sm text-slate">
+          We sent a 6-digit code to <span className="font-medium text-ink">{email}</span>
+        </p>
+
+        {error && (
+          <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-ink">
+            Verification Code
+          </label>
+          <input
+            type="text"
+            required
+            maxLength={6}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            autoFocus
+            value={otp}
+            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-center text-2xl font-bold tracking-[0.3em] focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+            placeholder="000000"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || otp.length !== 6}
+          className="w-full rounded-lg bg-hilt-blue py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark disabled:opacity-50"
+        >
+          {loading ? "Verifying..." : "Verify"}
+        </button>
+
+        <div className="flex items-center justify-between text-sm">
+          <button
+            type="button"
+            onClick={handleResendOtp}
+            disabled={resendCooldown > 0}
+            className="font-medium text-hilt-blue hover:underline disabled:text-ash disabled:no-underline"
+          >
+            {resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : "Resend code"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setStep("form");
+              setOtp("");
+              setError("");
+            }}
+            className="text-slate hover:underline"
+          >
+            Use a different email?
+          </button>
+        </div>
+      </form>
+    );
   }
 
   return (

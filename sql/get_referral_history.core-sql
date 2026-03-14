@@ -57,6 +57,7 @@ BEGIN
       'specialty', r.specialty,
       'status', r.status,
       'destination', COALESCE(o.name, r.to_email),
+      'pdf_url', r.pdf_url,
       'created_at', r.created_at
     ) AS row_data
     FROM public.referrals r

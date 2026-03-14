@@ -6,10 +6,10 @@ export default async function CheckinPage({
   searchParams,
 }: {
   params: Promise<{ locationId: string }>;
-  searchParams: Promise<{ embed?: string }>;
+  searchParams: Promise<{ embed?: string; kiosk?: string }>;
 }) {
   const { locationId } = await params;
-  const { embed } = await searchParams;
+  const { embed, kiosk } = await searchParams;
   const supabase = await createClient();
 
   const { data } = await supabase.rpc("check_location_active", {
@@ -21,6 +21,7 @@ export default async function CheckinPage({
       locationId={locationId}
       locationData={data ?? { active: false }}
       embed={embed === "true"}
+      kiosk={kiosk === "true"}
     />
   );
 }

@@ -272,11 +272,8 @@ Deno.serve(async (req) => {
       .update({ pdf_url: storagePath })
       .eq("id", referral_id);
 
-    // If external referral (to_email), send email with PDF attachment
+    // If external referral (to_email), queue email with PDF attachment
     if (referral.to_email) {
-      const edgeSecret = Deno.env.get("INTERNAL_EDGE_SECRET");
-      const edgeUrl = supabaseUrl.replace(".supabase.co", ".supabase.co/functions/v1");
-
       // Base64 encode PDF for email attachment (chunked to avoid stack overflow)
       const uint8 = new Uint8Array(pdfBytes);
       let binary = "";
@@ -286,14 +283,10 @@ Deno.serve(async (req) => {
       }
       const base64Pdf = btoa(binary);
 
-      const emailRes = await fetch(`${edgeUrl}/send-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-internal-secret": edgeSecret || "",
-        },
-        body: JSON.stringify({
-          to: referral.to_email,
+      const { error: emailQueueError } = await supabase
+        .from("pending_emails")
+        .insert({
+          to_email: referral.to_email,
           subject: `Patient Referral — ${referral.patient_name}`,
           html_body: `<h2>Patient Referral</h2>
             <p>You have received a patient referral from <strong>${(referral.from_org_name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong> (Dr. ${(referral.from_doctor_name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}).</p>
@@ -308,11 +301,12 @@ Deno.serve(async (req) => {
               content: base64Pdf,
             },
           ],
-        }),
-      });
+          priority: 2,
+          metadata: { type: "referral_pdf", referral_id },
+        });
 
-      if (!emailRes.ok) {
-        console.error(`send-email failed for referral ${referral_id}: ${emailRes.status}`);
+      if (emailQueueError) {
+        console.error(`Failed to queue referral email for ${referral_id}: ${emailQueueError.message}`);
       }
     }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
 
@@ -8,6 +8,7 @@ interface LocationData {
   id: string;
   name: string;
   address: string | null;
+  operating_hours: Record<string, string> | null;
   specialty: string | null;
   ai_model: string;
   display_format: string;
@@ -15,6 +16,8 @@ interface LocationData {
   tablet_count: number;
   timezone: string;
 }
+
+const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const SPECIALTIES = [
   "General Practice",
@@ -29,19 +32,41 @@ const SPECIALTIES = [
   "Other",
 ];
 
-const TIMEZONES = [
-  "America/Toronto",
-  "America/New_York",
-  "America/Chicago",
-  "America/Denver",
-  "America/Los_Angeles",
-  "America/Vancouver",
-  "America/Edmonton",
-  "America/Winnipeg",
-  "America/Halifax",
-  "America/St_Johns",
-  "UTC",
-];
+function getAllTimezones(): string[] {
+  try {
+    return Intl.supportedValuesOf("timeZone");
+  } catch {
+    // Fallback for older browsers
+    return ["UTC", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Toronto", "Europe/London", "Europe/Paris", "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney"];
+  }
+}
+
+function getBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return "UTC";
+  }
+}
+
+function formatTimezoneLabel(tz: string): string {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      timeZoneName: "shortOffset",
+    });
+    const parts = formatter.formatToParts(now);
+    const offsetPart = parts.find((p) => p.type === "timeZoneName");
+    const offset = offsetPart?.value || "";
+    const display = tz.replace(/_/g, " ");
+    return `${display} (${offset})`;
+  } catch {
+    return tz;
+  }
+}
+
+const ALL_TIMEZONES = getAllTimezones();
 
 export default function LocationSettingsForm({
   location,
@@ -57,21 +82,55 @@ export default function LocationSettingsForm({
     displayFormat: location.display_format,
     referralEmail: location.referral_email || "",
     tabletCount: location.tablet_count,
-    timezone: location.timezone,
+    timezone: location.timezone || getBrowserTimezone(),
+    operatingHours: DAYS_OF_WEEK.reduce((acc, day) => {
+      acc[day] = (location.operating_hours as Record<string, string>)?.[day] || "";
+      return acc;
+    }, {} as Record<string, string>),
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [tzSearch, setTzSearch] = useState("");
+  const [tzDropdownOpen, setTzDropdownOpen] = useState(false);
+  const tzContainerRef = useRef<HTMLDivElement>(null);
+
+  const filteredTimezones = useMemo(() => {
+    if (!tzSearch.trim()) return ALL_TIMEZONES;
+    const q = tzSearch.toLowerCase().replace(/\s+/g, "");
+    return ALL_TIMEZONES.filter((tz) => {
+      const label = formatTimezoneLabel(tz).toLowerCase().replace(/\s+/g, "");
+      const raw = tz.toLowerCase();
+      return label.includes(q) || raw.includes(q);
+    });
+  }, [tzSearch]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (tzContainerRef.current && !tzContainerRef.current.contains(e.target as Node)) {
+        setTzDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
 
+    // Build operating hours — only include days with values
+    const hours: Record<string, string> = {};
+    for (const [day, val] of Object.entries(form.operatingHours)) {
+      if (val.trim()) hours[day] = val.trim();
+    }
+
     const result = await updateLocation({
       locationId: location.id,
       name: form.name,
       address: form.address,
       specialty: form.specialty,
+      operatingHours: Object.keys(hours).length > 0 ? hours : undefined,
       aiModel: form.aiModel,
       displayFormat: form.displayFormat,
       referralEmail: form.referralEmail,
@@ -145,6 +204,31 @@ export default function LocationSettingsForm({
         </select>
       </div>
 
+      <div>
+        <label className="block text-sm font-medium text-ink mb-1">Operating Hours</label>
+        <p className="text-xs text-slate mb-2">Shown to patients when no receptionist is checked in.</p>
+        <div className="space-y-2">
+          {DAYS_OF_WEEK.map((day) => (
+            <div key={day} className="flex items-center gap-3">
+              <span className="text-sm text-slate w-24 shrink-0">{day}</span>
+              <input
+                type="text"
+                value={form.operatingHours[day]}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    operatingHours: { ...prev.operatingHours, [day]: e.target.value },
+                  }))
+                }
+                placeholder="e.g. 9:00 AM - 5:00 PM"
+                maxLength={50}
+                className="flex-1 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-ink mb-1">AI Model</label>
@@ -182,31 +266,69 @@ export default function LocationSettingsForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">Timezone</label>
-          <select
-            value={form.timezone}
-            onChange={(e) => update("timezone", e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+      <div>
+        <label className="block text-sm font-medium text-ink mb-1">Timezone</label>
+        <div ref={tzContainerRef} className="relative">
+          <button
+            type="button"
+            onClick={() => {
+              setTzDropdownOpen((o) => !o);
+              setTzSearch("");
+            }}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-left focus:border-hilt-blue focus:outline-none flex items-center justify-between"
           >
-            {TIMEZONES.map((tz) => (
-              <option key={tz} value={tz}>{tz.replace("America/", "")}</option>
-            ))}
-          </select>
+            <span className="truncate">{formatTimezoneLabel(form.timezone)}</span>
+            <svg className={`w-4 h-4 text-gray-400 shrink-0 ml-2 transition-transform ${tzDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </button>
+          {tzDropdownOpen && (
+            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
+              <div className="p-2 border-b border-gray-100">
+                <input
+                  type="text"
+                  value={tzSearch}
+                  onChange={(e) => setTzSearch(e.target.value)}
+                  placeholder="Search timezones..."
+                  autoFocus
+                  className="w-full rounded-md border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+                />
+              </div>
+              <div className="max-h-60 overflow-y-auto">
+                {filteredTimezones.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-slate">No timezones found</div>
+                ) : (
+                  filteredTimezones.map((tz) => (
+                    <button
+                      key={tz}
+                      type="button"
+                      onClick={() => {
+                        update("timezone", tz);
+                        setTzDropdownOpen(false);
+                        setTzSearch("");
+                      }}
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${
+                        form.timezone === tz ? "bg-blue-50 text-hilt-blue font-medium" : "text-ink"
+                      }`}
+                    >
+                      {formatTimezoneLabel(tz)}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">Tablet Count</label>
-          <input
-            type="number"
-            value={form.tabletCount}
-            onChange={(e) => update("tabletCount", parseInt(e.target.value) || 0)}
-            min={0}
-            max={100}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-          />
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-ink mb-1">Tablet Count</label>
+        <input
+          type="number"
+          value={form.tabletCount}
+          onChange={(e) => update("tabletCount", parseInt(e.target.value) || 0)}
+          min={0}
+          max={100}
+          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+        />
       </div>
 
       <button

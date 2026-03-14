@@ -23,6 +23,26 @@ const COUNTRY_CODES = [
   { code: "+86", label: "CN +86" },
   { code: "+52", label: "MX +52" },
   { code: "+55", label: "BR +55" },
+  { code: "+82", label: "KR +82" },
+  { code: "+84", label: "VN +84" },
+  { code: "+351", label: "PT +351" },
+  { code: "+7", label: "RU +7" },
+  { code: "+34", label: "ES +34" },
+  { code: "+39", label: "IT +39" },
+  { code: "+90", label: "TR +90" },
+  { code: "+66", label: "TH +66" },
+  { code: "+62", label: "ID +62" },
+  { code: "+48", label: "PL +48" },
+  { code: "+46", label: "SE +46" },
+  { code: "+380", label: "UA +380" },
+  { code: "+31", label: "NL +31" },
+  { code: "+971", label: "AE +971" },
+  { code: "+966", label: "SA +966" },
+  { code: "+20", label: "EG +20" },
+  { code: "+234", label: "NG +234" },
+  { code: "+254", label: "KE +254" },
+  { code: "+63", label: "PH +63" },
+  { code: "+65", label: "SG +65" },
 ];
 
 export default function PhoneInput({
@@ -128,7 +148,7 @@ export default function PhoneInput({
         {mode === "collection" && onSkip && (
           <button
             onClick={onSkip}
-            className="w-full rounded-lg bg-gray-100 px-4 py-2.5 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"
+            className="w-full text-xs text-ash hover:text-slate transition-colors py-2"
           >
             {t("phone.skip")}
           </button>

@@ -5,16 +5,18 @@ import { useLanguage } from "@/contexts/LanguageContext";
 interface WaitingApprovalProps {
   patientFirstName: string;
   locationName: string;
+  onCancel?: () => void;
 }
 
 export default function WaitingApproval({
   patientFirstName,
   locationName,
+  onCancel,
 }: WaitingApprovalProps) {
   const { t } = useLanguage();
 
   return (
-    <div className="w-full max-w-md text-center">
+    <div className="w-full max-w-md text-center" role="status" aria-live="polite">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-hilt-blue" />
       </div>
@@ -31,6 +33,15 @@ export default function WaitingApproval({
           {t("waiting.notice")}
         </p>
       </div>
+
+      {onCancel && (
+        <button
+          onClick={onCancel}
+          className="mt-4 text-xs text-ash hover:text-slate transition-colors"
+        >
+          {t("waiting.cancel")}
+        </button>
+      )}
     </div>
   );
 }

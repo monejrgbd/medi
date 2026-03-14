@@ -74,10 +74,10 @@ BEGIN
     v_usage_pct numeric;
     v_owner_email text;
     v_org_name text;
-    v_edge_url text;
-    v_edge_secret text;
     v_last_alert timestamptz;
     v_billing_start timestamptz;
+    v_unsub_token text;
+    v_edge_url text;
   BEGIN
     SELECT credits_used, credits_total, name, last_credit_alert_at, billing_cycle_start
     INTO v_updated_used, v_credits_total, v_org_name, v_last_alert, v_billing_start
@@ -88,33 +88,29 @@ BEGIN
     IF v_usage_pct >= 0.80 THEN
       -- Only alert once per billing cycle
       IF v_last_alert IS NULL OR v_last_alert < COALESCE(v_billing_start, now() - interval '30 days') THEN
-        -- Get owner email
         SELECT email INTO v_owner_email
         FROM auth.users
         WHERE id = (SELECT owner_id FROM public.organizations WHERE id = p_org_id);
 
         IF v_owner_email IS NOT NULL THEN
+          v_unsub_token := private.generate_unsubscribe_token(v_owner_email, 'credit_alerts');
           SELECT decrypted_secret INTO v_edge_url
           FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
-          SELECT decrypted_secret INTO v_edge_secret
-          FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
 
-          IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL THEN
-            PERFORM net.http_post(
-              url := v_edge_url || '/send-email',
-              headers := jsonb_build_object(
-                'Content-Type', 'application/json',
-                'x-internal-secret', v_edge_secret
-              ),
-              body := jsonb_build_object(
-                'to', v_owner_email,
-                'subject', 'Credits Running Low — ' || v_org_name,
-                'html_body', '<h2>Credits Alert</h2><p>Your organization <strong>' || replace(replace(v_org_name, '&', '&amp;'), '<', '&lt;') ||
-                  '</strong> has used ' || round(v_usage_pct * 100) || '% of its credits this billing cycle.</p>' ||
-                  '<p>Please top up to ensure uninterrupted AI pre-screening.</p>'
-              )
-            );
-          END IF;
+          INSERT INTO public.pending_emails (to_email, subject, html_body, priority, metadata)
+          VALUES (
+            v_owner_email,
+            'Credits Running Low — ' || v_org_name,
+            '<h2>Credits Alert</h2><p>Your organization <strong>' || replace(replace(v_org_name, '&', '&amp;'), '<', '&lt;') ||
+              '</strong> has used ' || round(v_usage_pct * 100) || '% of its credits this billing cycle.</p>' ||
+              '<p>Please top up to ensure uninterrupted AI pre-screening.</p>' ||
+              CASE WHEN v_unsub_token IS NOT NULL AND v_edge_url IS NOT NULL
+                THEN '<p style="color:#94a3b8;font-size:12px;margin-top:24px;"><a href="' || v_edge_url || '/unsubscribe?pref=' || v_unsub_token || '" style="color:#94a3b8;">Unsubscribe from credit alerts</a></p>'
+                ELSE ''
+              END,
+            2,
+            jsonb_build_object('type', 'credit_alert', 'pref_key', 'credit_alerts', 'org_id', p_org_id)
+          );
         END IF;
 
         UPDATE public.organizations
@@ -123,7 +119,6 @@ BEGIN
       END IF;
     END IF;
   EXCEPTION WHEN undefined_column THEN
-    -- last_credit_alert_at may not exist yet during incremental deployment
     NULL;
   END;
 

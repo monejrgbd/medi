@@ -1,19 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRole } from "@/contexts/RoleContext";
+import {
+  LayoutDashboard,
+  MapPin,
+  Users,
+  ClipboardList,
+  Star,
+  BarChart3,
+  CreditCard,
+  Tablet,
+  Settings,
+  Wrench,
+  ArrowLeftRight,
+  LogOut,
+} from "lucide-react";
 
-const NAV_ITEMS = [
-  { href: "/d/owner", label: "Overview", icon: "📊" },
-  { href: "/d/owner/locations", label: "Locations", icon: "📍" },
-  { href: "/d/owner/staff", label: "Staff", icon: "👥" },
-  { href: "/d/owner/audit", label: "Audit Trail", icon: "📋" },
-  { href: "/d/reviews", label: "Reviews", icon: "⭐" },
-  { href: "/d/manager", label: "Analytics", icon: "📈" },
-  { href: "/d/owner/billing", label: "Billing", icon: "💳" },
-  { href: "/d/owner/settings", label: "Settings", icon: "⚙️" },
+const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
+  { href: "/d/owner", label: "Overview", icon: <LayoutDashboard className="h-4 w-4" /> },
+  { href: "/d/owner/locations", label: "Locations", icon: <MapPin className="h-4 w-4" /> },
+  { href: "/d/owner/staff", label: "Staff", icon: <Users className="h-4 w-4" /> },
+  { href: "/d/owner/audit", label: "Audit Trail", icon: <ClipboardList className="h-4 w-4" /> },
+  { href: "/d/reviews", label: "Reviews", icon: <Star className="h-4 w-4" /> },
+  { href: "/d/manager", label: "Analytics", icon: <BarChart3 className="h-4 w-4" /> },
+  { href: "/d/owner/billing", label: "Billing", icon: <CreditCard className="h-4 w-4" /> },
+  { href: "/d/owner/kiosk", label: "Kiosk Setup", icon: <Tablet className="h-4 w-4" /> },
+  { href: "/d/owner/settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
 ];
 
 export default function Sidebar() {
@@ -45,7 +60,7 @@ export default function Sidebar() {
                 : "text-slate hover:bg-gray-50 hover:text-ink"
             }`}
           >
-            <span>{item.icon}</span>
+            {item.icon}
             {item.label}
           </Link>
         ))}
@@ -57,7 +72,7 @@ export default function Sidebar() {
           onClick={() => setMobileOpen(false)}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 hover:text-ink transition-colors"
         >
-          <span>🛠️</span>
+          <Wrench className="h-4 w-4" />
           Request Custom Build
         </a>
         <Link
@@ -65,7 +80,7 @@ export default function Sidebar() {
           onClick={() => setMobileOpen(false)}
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 hover:text-ink transition-colors"
         >
-          <span>🔄</span>
+          <ArrowLeftRight className="h-4 w-4" />
           Switch Role
         </Link>
         <button
@@ -77,7 +92,7 @@ export default function Sidebar() {
           }}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 hover:text-ink transition-colors"
         >
-          <span>🚪</span>
+          <LogOut className="h-4 w-4" />
           Sign Out
         </button>
       </div>

@@ -117,6 +117,35 @@ export default function FocusMode({
   useEffect(() => { currentVisitRef.current = currentVisit; }, [currentVisit]);
   useEffect(() => { autoClaimingRef.current = autoClaiming; }, [autoClaiming]);
 
+  // Keyboard shortcuts for focus mode speed
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't trigger shortcuts when typing in inputs/textareas
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        if (showDiagnosis) {
+          setShowDiagnosis(false);
+        } else if (cancelling) {
+          // do nothing while cancelling
+        } else {
+          onExit();
+        }
+      }
+
+      // Ctrl/Cmd + Enter to open diagnosis form (complete)
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter" && currentVisitRef.current && !showDiagnosis) {
+        e.preventDefault();
+        setShowDiagnosis(true);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showDiagnosis, cancelling, onExit]);
+
   useEffect(() => {
     if (!currentVisit) {
       setDetail(null);
@@ -429,6 +458,9 @@ export default function FocusMode({
               className="flex-1 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
             >
               Complete Visit & Claim Next
+              <kbd className="ml-2 hidden sm:inline rounded bg-green-700/50 px-1.5 py-0.5 text-[10px] font-mono">
+                {typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent) ? "⌘" : "Ctrl"}+↵
+              </kbd>
             </button>
           </div>
         </div>

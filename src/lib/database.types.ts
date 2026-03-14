@@ -512,6 +512,33 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          email: string
+          email_credit_alerts: boolean | null
+          email_daily_digest: boolean | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          email_credit_alerts?: boolean | null
+          email_daily_digest?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          email_credit_alerts?: boolean | null
+          email_daily_digest?: boolean | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       organizations: {
         Row: {
           billing_cycle_start: string | null
@@ -524,6 +551,7 @@ export type Database = {
           id: string
           last_credit_alert_at: string | null
           name: string
+          onboarding_completed_at: string | null
           owner_id: string
           payment_failure_count: number | null
           payment_first_failed_at: string | null
@@ -546,6 +574,7 @@ export type Database = {
           id?: string
           last_credit_alert_at?: string | null
           name: string
+          onboarding_completed_at?: string | null
           owner_id: string
           payment_failure_count?: number | null
           payment_first_failed_at?: string | null
@@ -568,6 +597,7 @@ export type Database = {
           id?: string
           last_credit_alert_at?: string | null
           name?: string
+          onboarding_completed_at?: string | null
           owner_id?: string
           payment_failure_count?: number | null
           payment_first_failed_at?: string | null
@@ -796,6 +826,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      pending_emails: {
+        Row: {
+          attachments: Json | null
+          attempt_count: number
+          created_at: string
+          error_message: string | null
+          from_name: string | null
+          html_body: string
+          id: string
+          last_attempt_at: string | null
+          metadata: Json | null
+          priority: number
+          reply_to: string | null
+          status: string
+          subject: string
+          text_body: string | null
+          to_email: string
+        }
+        Insert: {
+          attachments?: Json | null
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          from_name?: string | null
+          html_body: string
+          id?: string
+          last_attempt_at?: string | null
+          metadata?: Json | null
+          priority?: number
+          reply_to?: string | null
+          status?: string
+          subject: string
+          text_body?: string | null
+          to_email: string
+        }
+        Update: {
+          attachments?: Json | null
+          attempt_count?: number
+          created_at?: string
+          error_message?: string | null
+          from_name?: string | null
+          html_body?: string
+          id?: string
+          last_attempt_at?: string | null
+          metadata?: Json | null
+          priority?: number
+          reply_to?: string | null
+          status?: string
+          subject?: string
+          text_body?: string | null
+          to_email?: string
+        }
+        Relationships: []
       }
       phone_verifications: {
         Row: {
@@ -1838,6 +1922,7 @@ export type Database = {
         Args: { p_phone: string; p_session_token: string; p_visit_id: string }
         Returns: Json
       }
+      complete_onboarding: { Args: never; Returns: Json }
       complete_referral: { Args: { p_referral_id: string }; Returns: Json }
       complete_visit:
         | { Args: { p_diagnosis: string; p_visit_id: string }; Returns: Json }
@@ -2197,6 +2282,7 @@ export type Database = {
         Returns: Json
       }
       set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
+      setup_onboarding_demo: { Args: { p_location_id: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       staff_check_in: {
@@ -2471,4 +2557,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

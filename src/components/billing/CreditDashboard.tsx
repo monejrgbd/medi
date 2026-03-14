@@ -122,7 +122,7 @@ export default function CreditDashboard() {
           <h3 className="text-sm font-medium text-ink mb-2">Daily Usage</h3>
           {data.daily_usage.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
-              <LineChart data={data.daily_usage}>
+              <LineChart data={data.daily_usage.map((d: { date: string; credits: number }) => ({ ...d, credits: Math.max(0, d.credits) }))}>
                 <XAxis
                   dataKey="date"
                   tickFormatter={(d) =>

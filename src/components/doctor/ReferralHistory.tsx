@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { fetchReferralHistory } from "@/app/(dashboard)/d/_actions/referral";
+import { createClient } from "@/lib/supabase/client";
 import ReferralStatusTracker from "./ReferralStatusTracker";
 
 interface Referral {
@@ -10,6 +11,7 @@ interface Referral {
   specialty: string;
   status: string;
   destination: string;
+  pdf_url: string | null;
   created_at: string;
 }
 
@@ -136,6 +138,26 @@ export default function ReferralHistory() {
               </div>
             </div>
           </div>
+
+          {r.pdf_url && (
+            <div className="mt-2">
+              <button
+                onClick={async () => {
+                  const supabase = createClient();
+                  const { data } = await supabase.storage
+                    .from("referral-pdfs")
+                    .createSignedUrl(r.pdf_url!, 3600);
+                  if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+                }}
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-hilt-blue hover:underline"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Download PDF
+              </button>
+            </div>
+          )}
 
           <div className="mt-3 px-2">
             <ReferralStatusTracker status={r.status} />

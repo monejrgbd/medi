@@ -264,8 +264,8 @@ export default function StaffTable({
           title={confirmModal.action === "deactivate" ? "Deactivate Staff" : "Delete Staff"}
           message={
             confirmModal.action === "deactivate"
-              ? `Are you sure you want to deactivate ${confirmModal.staff.full_name}? They will no longer be able to log in.`
-              : `Are you sure you want to delete ${confirmModal.staff.full_name}? This action cannot be undone.`
+              ? `Are you sure you want to deactivate ${confirmModal.staff.full_name}? They will no longer be able to log in. This can be reversed — their records and history will be preserved.`
+              : `Are you sure you want to delete ${confirmModal.staff.full_name}? This action cannot be undone. Past records will show "Deleted staff member."`
           }
           confirmLabel={confirmModal.action === "deactivate" ? "Deactivate" : "Delete"}
           destructive

@@ -18,16 +18,27 @@ export default function QRCodeManager({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [brandedQR, setBrandedQR] = useState(!!logoUrl);
   const [uploading, setUploading] = useState(false);
+  const [kioskMode, setKioskMode] = useState(false);
   const [instructionText, setInstructionText] = useState(
     `Please scan this QR code to begin your check-in at ${locationName}.`
   );
   const [uploadError, setUploadError] = useState("");
 
-  const checkinUrl = `https://hilt.health/checkin/${locationId}`;
+  const checkinUrl = kioskMode
+    ? `https://hilt.health/checkin/${locationId}?kiosk=true`
+    : `https://hilt.health/checkin/${locationId}`;
 
   useEffect(() => {
     renderQR();
-  }, [brandedQR, logoUrl]);
+  }, [brandedQR, logoUrl, kioskMode]);
+
+  useEffect(() => {
+    setInstructionText(
+      kioskMode
+        ? `Scan this QR code on your check-in tablet to activate kiosk mode for ${locationName}.`
+        : `Please scan this QR code to begin your check-in at ${locationName}.`
+    );
+  }, [kioskMode, locationName]);
 
   async function renderQR() {
     const canvas = canvasRef.current;
@@ -124,7 +135,32 @@ export default function QRCodeManager({
         <canvas ref={canvasRef} className="rounded-lg" />
       </div>
 
-      <p className="text-center text-xs text-slate mb-6 break-all">{checkinUrl}</p>
+      <p className="text-center text-xs text-slate mb-4 break-all">{checkinUrl}</p>
+
+      <div className="mb-6 flex justify-center gap-1 rounded-lg bg-gray-100 p-1">
+        <button
+          onClick={() => setKioskMode(false)}
+          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            !kioskMode ? "bg-white text-ink shadow-sm" : "text-slate"
+          }`}
+        >
+          Patient QR
+        </button>
+        <button
+          onClick={() => setKioskMode(true)}
+          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            kioskMode ? "bg-white text-ink shadow-sm" : "text-slate"
+          }`}
+        >
+          Kiosk QR
+        </button>
+      </div>
+
+      {kioskMode && (
+        <p className="text-center text-xs text-slate mb-6">
+          Scan this on your check-in tablet. Enable Guided Access (iPad) or use Fully Kiosk Browser (Android) to lock the device.
+        </p>
+      )}
 
       {logoUrl && (
         <div className="mb-4 flex items-center gap-3">

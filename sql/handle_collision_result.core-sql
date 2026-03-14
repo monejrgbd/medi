@@ -108,6 +108,7 @@ BEGIN
     -- Same person confirmed: mark candidate as verified, clear collision flag
     UPDATE public.patients
     SET phone_verified = true,
+        collision_flag = false,
         updated_at = now()
     WHERE id = v_candidate_id;
 

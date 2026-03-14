@@ -18,6 +18,8 @@ import PhoneVerification from "@/components/patient/PhoneVerification";
 import PatientLeftScreen from "@/components/patient/PatientLeftScreen";
 import VisitCompletedScreen from "@/components/patient/VisitCompletedScreen";
 import SubscriptionExpiredScreen from "@/components/patient/SubscriptionExpiredScreen";
+import KioskAutoReset from "@/components/patient/KioskAutoReset";
+import KioskIdleTimeout from "@/components/patient/KioskIdleTimeout";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { t } from "@/lib/i18n";
 
@@ -58,6 +60,7 @@ interface CheckinFlowProps {
   locationId: string;
   locationData: LocationData;
   embed?: boolean;
+  kiosk?: boolean;
 }
 
 interface SummaryData {
@@ -75,6 +78,7 @@ export default function CheckinFlow({
   locationId,
   locationData,
   embed = false,
+  kiosk = false,
 }: CheckinFlowProps) {
   const [state, setState] = useState<FlowState>(
     locationData.active ? "form" : "inactive"
@@ -117,31 +121,49 @@ export default function CheckinFlow({
   const consentGivenRef = useRef(consentGiven);
   consentGivenRef.current = consentGiven;
 
-  // 60s timeout safety net for summary generation
+  // Kiosk mode: clear localStorage on mount to prevent session recovery
+  useEffect(() => {
+    if (!kiosk) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PHONE_STORAGE_KEY);
+  }, [kiosk]);
+
+  // Summary generation: 45s slow warning + 60s timeout
+  const [summaryWarning, setSummaryWarning] = useState(false);
+
   useEffect(() => {
     if (state !== "generating_summary") return;
     if (!visitId || !sessionToken) return;
+    setSummaryWarning(false);
+
+    const warningTimer = setTimeout(() => {
+      if (stateRef.current === "generating_summary") {
+        setSummaryWarning(true);
+      }
+    }, 45_000);
 
     const timer = setTimeout(async () => {
-      // Double-check we're still in generating_summary (avoid stale closure)
       if (stateRef.current !== "generating_summary") return;
 
-      // Move visit to queue server-side
       const supabase = createClient();
       await supabase.rpc("move_to_queue_on_error", {
         p_visit_id: visitId,
         p_session_token: sessionToken,
       });
 
-      // Transition to timeout view — summary was not generated in time
       setState("timeout");
     }, 60_000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(warningTimer);
+      clearTimeout(timer);
+    };
   }, [state, visitId, sessionToken]);
 
   // Session recovery on mount — requires birthday verification on shared kiosks
+  // Skipped entirely in kiosk mode (localStorage already cleared above)
   useEffect(() => {
+    if (kiosk) return;
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved || !locationData.active) return;
 
@@ -227,7 +249,7 @@ export default function CheckinFlow({
           setState("form");
       }
     })();
-  }, [locationData.active]);
+  }, [locationData.active, kiosk]);
 
   // Handle realtime events
   const handleRealtimeEvent = useCallback(
@@ -305,6 +327,40 @@ export default function CheckinFlow({
 
       if (status === "claimed_by_doctor") {
         setState("claimed");
+        // Sound + vibration — works even when tab is active
+        try {
+          const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+          if (ctx.state === "suspended") ctx.resume();
+          const now = ctx.currentTime;
+          [523, 659, 784].forEach((freq, i) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            gain.gain.value = 0.2;
+            gain.gain.exponentialRampToValueAtTime(0.001, now + (i + 1) * 0.15);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.15);
+            osc.stop(now + (i + 1) * 0.15);
+          });
+        } catch { /* audio not available */ }
+        // Vibration
+        if (typeof navigator !== "undefined" && navigator.vibrate) {
+          navigator.vibrate([200, 100, 200]);
+        }
+        // Browser notification when tab is backgrounded
+        if (
+          typeof document !== "undefined" &&
+          document.hidden &&
+          typeof Notification !== "undefined" &&
+          Notification.permission === "granted"
+        ) {
+          new Notification("Your doctor is ready", {
+            body: "Please proceed to the front desk.",
+            tag: `claimed-${visitId}`,
+          });
+        }
         return;
       }
 
@@ -462,6 +518,31 @@ export default function CheckinFlow({
     setPatientPhone(null);
     setVerificationId(null);
     setCollisionContext(null);
+    setState("form");
+  }
+
+  function handleKioskReset() {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(PHONE_STORAGE_KEY);
+    setSessionToken(null);
+    setVisitId(null);
+    setError("");
+    setLoading(false);
+    setLanguageLoading(false);
+    setPatientPhone(null);
+    setVerificationId(null);
+    setPhoneError("");
+    setPhoneLoading(false);
+    setCollisionContext(null);
+    setPatientLanguage("en");
+    setSummaryData(null);
+    setQueuePosition(null);
+    setEstimatedWait(null);
+    setPendingSession(null);
+    setBirthdayInput("");
+    setPatientFirstName("");
+    setHasPreviousVisits(false);
+    setConsentGiven(false);
     setState("form");
   }
 
@@ -784,11 +865,18 @@ export default function CheckinFlow({
         <WaitingApproval
           patientFirstName={patientFirstName}
           locationName={locationData.location_name || "the clinic"}
+          onCancel={handleRetry}
         />
       );
 
     case "denied":
-      return <DenialScreen onRetry={handleRetry} />;
+      return kiosk ? (
+        <KioskAutoReset onReset={handleKioskReset}>
+          <DenialScreen onRetry={handleKioskReset} />
+        </KioskAutoReset>
+      ) : (
+        <DenialScreen onRetry={handleRetry} />
+      );
 
     case "first_timer":
       return <FirstTimerExplainer onContinue={handleConsentContinue} />;
@@ -815,7 +903,7 @@ export default function CheckinFlow({
 
     case "generating_summary":
       return (
-        <div className="w-full max-w-md text-center">
+        <div className="w-full max-w-md text-center" role="status" aria-live="polite">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-hilt-blue" />
           </div>
@@ -823,7 +911,9 @@ export default function CheckinFlow({
             {t("generating.title", patientLanguage)}
           </h2>
           <p className="text-sm text-slate">
-            {t("generating.subtitle", patientLanguage)}
+            {summaryWarning
+              ? t("generating.slow", patientLanguage)
+              : t("generating.subtitle", patientLanguage)}
           </p>
         </div>
       );
@@ -853,8 +943,8 @@ export default function CheckinFlow({
     case "claimed":
       return <DoctorClaimedNotice />;
 
-    case "timeout":
-      return (
+    case "timeout": {
+      const timeoutContent = (
         <div className="w-full max-w-md text-center">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
             <span className="text-3xl">&#9201;</span>
@@ -867,9 +957,15 @@ export default function CheckinFlow({
           </p>
         </div>
       );
+      return kiosk ? (
+        <KioskAutoReset onReset={handleKioskReset}>{timeoutContent}</KioskAutoReset>
+      ) : timeoutContent;
+    }
 
     case "no_credits":
-      return <CreditWarning />;
+      return kiosk ? (
+        <KioskAutoReset onReset={handleKioskReset}><CreditWarning /></KioskAutoReset>
+      ) : <CreditWarning />;
 
     case "phone_input":
       return (
@@ -925,12 +1021,18 @@ export default function CheckinFlow({
       );
 
     case "patient_left":
-      return <PatientLeftScreen onRetry={handleRetry} />;
+      return kiosk ? (
+        <KioskAutoReset onReset={handleKioskReset}>
+          <PatientLeftScreen onRetry={handleKioskReset} />
+        </KioskAutoReset>
+      ) : (
+        <PatientLeftScreen onRetry={handleRetry} />
+      );
 
     case "visit_completed":
       return (
         <VisitCompletedScreen
-          onAutoReset={() => {
+          onAutoReset={kiosk ? handleKioskReset : () => {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(PHONE_STORAGE_KEY);
             handleRetry();
@@ -939,7 +1041,9 @@ export default function CheckinFlow({
       );
 
     case "subscription_inactive":
-      return <SubscriptionExpiredScreen />;
+      return kiosk ? (
+        <KioskAutoReset onReset={handleKioskReset}><SubscriptionExpiredScreen /></KioskAutoReset>
+      ) : <SubscriptionExpiredScreen />;
 
     default:
       return null;
@@ -949,8 +1053,16 @@ export default function CheckinFlow({
   return (
     <LanguageProvider language={patientLanguage}>
       <div dir={patientLanguage === "ar" ? "rtl" : "ltr"}>
-        {content}
-        {embed && (
+        <div key={state} className="animate-fade-in">
+          {content}
+        </div>
+        {kiosk && (
+          <KioskIdleTimeout
+            onReset={handleKioskReset}
+            active={state !== "form" && state !== "inactive" && state !== "subscription_inactive"}
+          />
+        )}
+        {embed && !kiosk && (
           <div className="fixed bottom-2 right-2 z-50">
             <a
               href="https://hilthealth.com"
@@ -960,6 +1072,24 @@ export default function CheckinFlow({
             >
               Powered by HiltHealth.com
             </a>
+          </div>
+        )}
+        {kiosk && (
+          <div className="fixed top-3 right-3 z-50 flex items-center gap-1.5">
+            {state !== "form" && state !== "inactive" && (
+              <button
+                onClick={handleKioskReset}
+                className="rounded-full bg-red-600/80 px-3 py-1.5 text-[10px] font-medium text-white hover:bg-red-600 transition-colors"
+              >
+                End Session
+              </button>
+            )}
+            <div className="flex items-center gap-1.5 rounded-full bg-gray-900/80 px-3 py-1.5">
+              <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              <span className="text-[10px] font-medium text-white">Kiosk Mode</span>
+            </div>
           </div>
         )}
       </div>

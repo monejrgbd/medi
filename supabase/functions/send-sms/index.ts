@@ -13,7 +13,7 @@ const TEMPLATES: Record<string, (params: Record<string, string>) => string> = {
   review: (p) =>
     `Hi ${p.first_name}, ${p.org_name} would appreciate your feedback: ${APP_BASE_URL}/review/${p.token}`,
   follow_up: (p) =>
-    `Hi ${p.first_name}, ${p.org_name} recommends a follow-up visit. Please call to schedule: ${p.phone}`,
+    `Hi ${p.first_name}, ${p.org_name} recommends a follow-up visit. Please call the clinic to schedule.`,
 };
 
 Deno.serve(async (req) => {
@@ -40,10 +40,18 @@ Deno.serve(async (req) => {
       template_params,
     } = payload;
 
-    // Build body from template or use directly
-    let body: string = payload.body || "";
-    if (template && TEMPLATES[template] && template_params) {
+    // Build body: custom_body with variable substitution > built-in template > raw body
+    let body: string = "";
+    if (payload.custom_body && template_params) {
+      // Owner-configured custom template with variable substitution
+      body = payload.custom_body;
+      for (const [key, val] of Object.entries(template_params)) {
+        body = body.replaceAll(`{${key}}`, String(val));
+      }
+    } else if (template && TEMPLATES[template] && template_params) {
       body = TEMPLATES[template](template_params);
+    } else {
+      body = payload.body || "";
     }
 
     if (!to || !body || !org_id || !sms_type) {

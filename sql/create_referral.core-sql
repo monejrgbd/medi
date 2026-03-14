@@ -116,8 +116,12 @@ BEGIN
   FROM public.staff_roles sr
   WHERE sr.staff_user_id = v_caller_staff_id
     AND sr.role = 'doctor'
-  ORDER BY sr.staff_user_id
+  ORDER BY sr.created_at DESC
   LIMIT 1;
+
+  IF v_caller_location_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'No doctor role assigned');
+  END IF;
 
   -- Validate all included visits exist and belong to caller's org
   SELECT count(*) INTO v_visit_count

@@ -75,7 +75,7 @@ export default function PatientQueueView({
   }
 
   return (
-    <div className="w-full max-w-md text-center">
+    <div className="w-full max-w-md text-center" role="status" aria-live="polite">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
         <span className="text-3xl text-green-600">&#10003;</span>
       </div>
@@ -84,14 +84,27 @@ export default function PatientQueueView({
         {t("queue.title")}
       </h2>
 
+      {/* Position with pulse animation */}
       {peopleAhead !== null ? (
-        <p className="text-sm text-slate mb-1">
-          {peopleAhead === 0
-            ? t("queue.next")
-            : t("queue.ahead")
-                .replace("{count}", String(peopleAhead))
-                .replace("{people}", peopleAhead === 1 ? t("queue.person") : t("queue.people"))}
-        </p>
+        <div className="mb-1">
+          {peopleAhead === 0 ? (
+            <p className="text-lg font-semibold text-green-600 animate-pulse">
+              {t("queue.next")}
+            </p>
+          ) : (
+            <p className="text-sm text-slate">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-hilt-blue opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-hilt-blue" />
+                </span>
+                {t("queue.ahead")
+                  .replace("{count}", String(peopleAhead))
+                  .replace("{people}", peopleAhead === 1 ? t("queue.person") : t("queue.people"))}
+              </span>
+            </p>
+          )}
+        </div>
       ) : (
         <p className="text-sm text-slate mb-1">
           {t("queue.doctorSoon")}
@@ -112,15 +125,15 @@ export default function PatientQueueView({
 
       {/* Notification request */}
       {!notifRequested && canShowNotifButton && (
-          <button
-            onClick={requestNotification}
-            className="mt-4 text-sm text-hilt-blue hover:underline"
-          >
-            {t("queue.enableNotif")}
-          </button>
-        )}
+        <button
+          onClick={requestNotification}
+          className="mt-4 text-sm text-hilt-blue hover:underline"
+        >
+          {t("queue.enableNotif")}
+        </button>
+      )}
 
-      {/* Add more details */}
+      {/* Add more details — visible card instead of hidden link */}
       <div className="mt-6">
         {submitted && !showForm && (
           <p className="text-sm text-green-600 mb-2">{t("queue.detailsAdded")}</p>
@@ -129,8 +142,11 @@ export default function PatientQueueView({
         {!showForm ? (
           <button
             onClick={() => setShowForm(true)}
-            className="text-sm font-medium text-hilt-blue hover:underline"
+            className="w-full rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-slate hover:border-hilt-blue hover:text-hilt-blue transition-colors"
           >
+            <svg className="mx-auto mb-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
             {t("queue.addDetails")}
           </button>
         ) : (
@@ -141,11 +157,12 @@ export default function PatientQueueView({
               placeholder={t("queue.addDetailsPlaceholder")}
               rows={4}
               maxLength={2000}
+              aria-label={t("queue.addDetailsPlaceholder")}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-none"
             />
             <div className="mt-1 flex items-center justify-between">
               <p className="text-xs text-slate">{content.length} / 2,000</p>
-              {error && <p className="text-xs text-red-600">{error}</p>}
+              {error && <p className="text-xs text-red-600" role="alert">{error}</p>}
             </div>
             <div className="mt-3 flex gap-2">
               <button

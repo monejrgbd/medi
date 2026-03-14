@@ -10,7 +10,7 @@ interface LocationData {
   org_id: string;
   name: string;
   address: string | null;
-  operating_hours: Record<string, unknown> | null;
+  operating_hours: Record<string, string> | null;
   specialty: string | null;
   logo_url: string | null;
   qr_code_url: string | null;

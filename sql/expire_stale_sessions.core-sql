@@ -33,7 +33,14 @@ BEGIN
   DELETE FROM public.phone_verifications
   WHERE expires_at < now() - interval '24 hours';
 
-  -- 5. Owner alerts (trial expiry + daily digest)
+  -- 5. Expire trial subscriptions past their end date
+  UPDATE public.organizations
+  SET subscription_plan = 'expired', updated_at = now()
+  WHERE subscription_plan IN ('standard_trial', 'premium_trial')
+    AND trial_end_date IS NOT NULL
+    AND trial_end_date < now();
+
+  -- 6. Owner alerts (trial expiry + daily digest)
   PERFORM private.send_trial_expiry_alert();
   PERFORM private.send_daily_digest();
 END;

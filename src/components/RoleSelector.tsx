@@ -62,6 +62,20 @@ export default function RoleSelector() {
         </div>
       )}
 
+      {isOwner && locations.length === 0 && (
+        <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 mb-6 text-center">
+          <p className="text-sm text-blue-800">
+            Set up your first location to get started.
+          </p>
+          <button
+            onClick={() => router.push("/d/onboarding")}
+            className="mt-2 rounded-lg bg-hilt-blue px-4 py-2 text-sm font-semibold text-white hover:bg-hilt-blue-dark"
+          >
+            Start Setup
+          </button>
+        </div>
+      )}
+
       {isOwner && (
         <button
           onClick={() => router.push("/d/owner")}

@@ -11,8 +11,6 @@ AS $$
 DECLARE
   v_org record;
   v_owner_email text;
-  v_edge_url text;
-  v_edge_secret text;
 BEGIN
   -- Lock org and verify ownership
   SELECT id, subscription_plan, name, owner_id
@@ -41,25 +39,16 @@ BEGIN
   SELECT email INTO v_owner_email FROM auth.users WHERE id = v_org.owner_id;
 
   IF v_owner_email IS NOT NULL THEN
-    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
-    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
-
-    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL THEN
-      PERFORM net.http_post(
-        url := v_edge_url || '/send-email',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'x-internal-secret', v_edge_secret
-        ),
-        body := jsonb_build_object(
-          'to', v_owner_email,
-          'subject', 'Subscription Cancelled — ' || v_org.name,
-          'html_body', '<h2>Subscription Cancelled</h2>' ||
-            '<p>Your subscription for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') || '</strong> has been cancelled.</p>' ||
-            '<p>Your data will be retained for 90 days. You can reactivate anytime during this period.</p>'
-        )
-      );
-    END IF;
+    INSERT INTO public.pending_emails (to_email, subject, html_body, priority, metadata)
+    VALUES (
+      v_owner_email,
+      'Subscription Cancelled — ' || v_org.name,
+      '<h2>Subscription Cancelled</h2>' ||
+        '<p>Your subscription for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') || '</strong> has been cancelled.</p>' ||
+        '<p>Your data will be retained for 90 days. You can reactivate anytime during this period.</p>',
+      2,
+      jsonb_build_object('type', 'subscription_cancelled', 'org_id', v_org.id)
+    );
   END IF;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)

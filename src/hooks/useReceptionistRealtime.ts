@@ -99,10 +99,29 @@ export function useReceptionistRealtime(
             (old.priority as number) !== 3
           ) {
             playUrgentChime(soundOn);
-            optionsRef.current?.onNotification?.({
-              type: "urgent",
-              patientName: "Patient",
-            });
+
+            // Fetch patient name for the urgent notification banner
+            const patientId = visit.patient_id as string;
+            if (patientId) {
+              supabase
+                .from("patients")
+                .select("first_name, last_name")
+                .eq("id", patientId)
+                .single()
+                .then(({ data: pt }) => {
+                  optionsRef.current?.onNotification?.({
+                    type: "urgent",
+                    patientName: pt
+                      ? `${pt.first_name} ${pt.last_name}`
+                      : "Patient",
+                  });
+                });
+            } else {
+              optionsRef.current?.onNotification?.({
+                type: "urgent",
+                patientName: "Patient",
+              });
+            }
           }
 
           // Patient entered queue

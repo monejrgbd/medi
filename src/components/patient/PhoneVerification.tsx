@@ -175,7 +175,8 @@ export default function PhoneVerification({
             value={digit}
             onChange={(e) => handleDigitChange(i, e.target.value)}
             onKeyDown={(e) => handleKeyDown(i, e)}
-            className="h-12 w-10 rounded-lg border border-gray-300 text-center text-lg font-semibold text-ink focus:border-hilt-blue focus:ring-1 focus:ring-hilt-blue"
+            aria-label={`Digit ${i + 1} of 6`}
+            className="h-12 w-12 rounded-lg border border-gray-300 text-center text-lg font-semibold text-ink focus:border-hilt-blue focus:ring-1 focus:ring-hilt-blue"
           />
         ))}
       </div>

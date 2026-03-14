@@ -2090,6 +2090,53 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 - [ ] Mobile layouts usable on phones
 - [ ] Kiosk auto-clear returns to check-in page after completion
 
+### Phase 12: Kiosk Mode
+
+**Goal:** App-level kiosk hardening so clinics can use an iPad/Android tablet as a dedicated check-in station. Device-level lockdown (Guided Access on iPad, Fully Kiosk Browser on Android) handles back prevention, wake lock, fullscreen, and text selection. These changes cover what the OS can't.
+
+**No new tables or SQL functions.**
+
+**`?kiosk=true` query param — `CheckinFlow.tsx`:**
+- `kiosk=true` implies `embed=true` behavior (no need for both)
+- Auto-reset on ALL terminal states (`patient_left`, `denied`, `subscription_inactive`, `timeout`, `no_credits`) — same 10s countdown as `visit_completed`
+- Skip session recovery on mount — clear localStorage immediately, never enter `verify_birthday` flow (prevents Patient B seeing Patient A's session prompt on a shared device)
+- Reset language to "en" on every auto-reset (prevents next patient seeing previous patient's language)
+- Hide the "Powered by" link (prevents navigation away)
+- Clear localStorage on every reset (shared device, don't persist session tokens between patients)
+- Show "Kiosk Mode" badge — small locked icon + text in corner so staff knows it's active
+
+**End Session button — `CheckinFlow.tsx`:**
+- Red "End Session" button in kiosk badge area (top-right), visible only when mid-flow
+- Receptionist taps it to clear the current patient and reset to a fresh check-in form
+- No inactivity timeout — receptionist manages the device manually
+
+**New components:**
+- `KioskAutoReset` — wraps child content + countdown bar + auto-calls reset after 10s. Reuses countdown pattern from `VisitCompletedScreen`. Used to wrap `PatientLeftScreen`, `DenialScreen`, `SubscriptionExpiredScreen`, `timeout` inline, `CreditWarning` in kiosk mode.
+
+**Kiosk setup guide page — `/d/owner/kiosk`:**
+- `KioskSetupGuide` component with two tabs: iPad and Android
+- iPad: Safari → scan Kiosk QR → Settings → Accessibility → Guided Access → ON → triple-click side button → set passcode → Start
+- Android: Install Fully Kiosk Browser (~$7) → enter kiosk URL → enable Kiosk Mode → set PIN
+- Both tabs include tips: plug in charger, set brightness, disable notifications
+- Links to location's QR Code tab for the kiosk QR
+
+**QRCodeManager — kiosk toggle:**
+- Toggle: "Patient QR" vs "Kiosk QR"
+- Kiosk QR encodes `/checkin/{locationId}?kiosk=true`
+- PDF instruction text updates for kiosk context
+- Helper text: "Scan this on your check-in tablet"
+
+**Sidebar:** Add "Kiosk" nav item for owner → `/d/owner/kiosk`
+
+**Files:**
+1. `src/app/checkin/[locationId]/page.tsx` — pass `kiosk` prop
+2. `src/app/checkin/[locationId]/CheckinFlow.tsx` — kiosk prop, skip session recovery, auto-reset all terminal states, End Session button, language reset, kiosk badge, hide powered-by
+3. `src/components/patient/KioskAutoReset.tsx` — new, countdown wrapper
+4. `src/app/(dashboard)/d/owner/kiosk/page.tsx` — new, setup guide page
+5. `src/components/dashboard/KioskSetupGuide.tsx` — new, tabbed iPad/Android guide
+6. `src/components/dashboard/QRCodeManager.tsx` — kiosk URL toggle
+7. `src/components/dashboard/Sidebar.tsx` — add Kiosk nav item
+
 ---
 
 ## End-to-End Verification

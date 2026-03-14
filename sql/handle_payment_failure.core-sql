@@ -13,8 +13,6 @@ DECLARE
   v_new_count int;
   v_owner_email text;
   v_org_name text;
-  v_edge_url text;
-  v_edge_secret text;
   v_new_plan text := NULL;
 BEGIN
   -- Lock and fetch org
@@ -56,28 +54,19 @@ BEGIN
   WHERE id = v_org.owner_id;
 
   IF v_owner_email IS NOT NULL THEN
-    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
-    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
-
-    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL THEN
-      PERFORM net.http_post(
-        url := v_edge_url || '/send-email',
-        headers := jsonb_build_object(
-          'Content-Type', 'application/json',
-          'x-internal-secret', v_edge_secret
-        ),
-        body := jsonb_build_object(
-          'to', v_owner_email,
-          'subject', 'Payment Failed — ' || v_org.name,
-          'html_body', '<h2>Payment Failed</h2><p>We were unable to process your payment for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') ||
-            '</strong>. This is attempt #' || v_new_count || '.</p>' ||
-            CASE WHEN v_new_plan = 'read_only' THEN '<p><strong>Your account has been set to read-only mode.</strong> Please update your payment method to restore full access.</p>'
-                 WHEN v_new_plan = 'suspended' THEN '<p><strong>Your account has been suspended.</strong> Please contact support to restore access.</p>'
-                 ELSE '<p>Please update your payment method to avoid service interruption.</p>'
-            END
-        )
-      );
-    END IF;
+    INSERT INTO public.pending_emails (to_email, subject, html_body, priority, metadata)
+    VALUES (
+      v_owner_email,
+      'Payment Failed — ' || v_org.name,
+      '<h2>Payment Failed</h2><p>We were unable to process your payment for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') ||
+        '</strong>. This is attempt #' || v_new_count || '.</p>' ||
+        CASE WHEN v_new_plan = 'read_only' THEN '<p><strong>Your account has been set to read-only mode.</strong> Please update your payment method to restore full access.</p>'
+             WHEN v_new_plan = 'suspended' THEN '<p><strong>Your account has been suspended.</strong> Please contact support to restore access.</p>'
+             ELSE '<p>Please update your payment method to avoid service interruption.</p>'
+        END,
+      3,
+      jsonb_build_object('type', 'payment_failure', 'org_id', p_org_id)
+    );
   END IF;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)

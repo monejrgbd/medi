@@ -1,0 +1,36 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.generate_unsubscribe_token(
+  p_email text,
+  p_pref_type text
+)
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_secret text;
+  v_data text;
+  v_signature text;
+BEGIN
+  SELECT decrypted_secret INTO v_secret
+  FROM vault.decrypted_secrets
+  WHERE name = 'unsubscribe_secret';
+
+  IF v_secret IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  v_data := p_email || ':' || p_pref_type;
+  v_signature := encode(
+    extensions.hmac(v_data::bytea, v_secret::bytea, 'sha256'),
+    'base64'
+  );
+
+  RETURN encode(
+    convert_to(v_data || ':' || v_signature, 'UTF8'),
+    'base64'
+  );
+END;
+$$;

@@ -76,6 +76,7 @@ export async function updateLocation(formData: {
   if (data && !data.success) return { success: false, error: data.error };
 
   revalidatePath("/d/owner");
+  revalidatePath("/d/manager");
   return { success: true };
 }
 

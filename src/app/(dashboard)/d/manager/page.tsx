@@ -34,7 +34,7 @@ export default async function ManagerPage() {
     locations = Array.from(locationMap.entries()).map(([id, name]) => ({ id, name }));
   }
 
-  if (locations.length === 0) redirect("/d/select-role");
+  if (locations.length === 0) redirect("/d/owner");
 
   const followupAddonEnabled = !!(org as { followup_sms_addon?: boolean })?.followup_sms_addon;
 

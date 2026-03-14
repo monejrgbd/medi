@@ -1,0 +1,26 @@
+CREATE TABLE IF NOT EXISTS public.pending_emails (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  to_email        text        NOT NULL,
+  subject         text        NOT NULL,
+  html_body       text        NOT NULL,
+  text_body       text,
+  from_name       text        DEFAULT 'Hilt Health',
+  reply_to        text,
+  attachments     jsonb,
+  created_at      timestamptz DEFAULT now() NOT NULL,
+  last_attempt_at timestamptz,
+  attempt_count   integer     DEFAULT 0 NOT NULL,
+  status          text        DEFAULT 'pending' NOT NULL
+    CHECK (status IN ('pending', 'sent', 'failed', 'skipped')),
+  error_message   text,
+  priority        integer     DEFAULT 2 NOT NULL
+    CHECK (priority BETWEEN 1 AND 3),
+  metadata        jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_emails_queue
+  ON public.pending_emails (priority DESC, created_at ASC)
+  WHERE status = 'pending';
+
+ALTER TABLE public.pending_emails ENABLE ROW LEVEL SECURITY;
+-- No public access — only SECURITY DEFINER functions and service_role

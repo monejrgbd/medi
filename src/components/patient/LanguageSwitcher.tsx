@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import LanguagePicker from "./LanguagePicker";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface LanguageSwitcherProps {
   currentLanguage: string;
@@ -37,6 +38,7 @@ export default function LanguageSwitcher({
   onLanguageChange,
   loading,
 }: LanguageSwitcherProps) {
+  const { t } = useLanguage();
   const [showPicker, setShowPicker] = useState(false);
 
   if (showPicker) {
@@ -54,7 +56,7 @@ export default function LanguageSwitcher({
             onClick={() => setShowPicker(false)}
             className="mt-3 w-full text-sm text-slate hover:text-ink"
           >
-            Cancel
+            {t("queue.cancel")}
           </button>
         </div>
       </div>

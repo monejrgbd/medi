@@ -60,7 +60,7 @@ BEGIN
   FROM public.referrals r
   JOIN public.organizations org ON org.id = r.from_org_id
   JOIN public.staff_users su ON su.id = r.from_doctor_id
-  WHERE r.patient_name ILIKE replace(replace(p_first_name, '%', '\%'), '_', '\_') || '%' || replace(replace(p_last_name, '%', '\%'), '_', '\_')
+  WHERE lower(r.patient_name) = lower(p_first_name || ' ' || p_last_name)
     AND r.patient_birthday = p_birthday
     AND r.to_location_id = p_location_id
     AND r.status IN ('sent', 'viewed')
