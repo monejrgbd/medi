@@ -1,6 +1,6 @@
 "use client";
 
-const STEPS = ["Welcome", "Location", "Try It", "Done"];
+const STEPS = ["Welcome", "Location", "Try it", "Done"];
 
 export default function StepIndicator({ currentStep }: { currentStep: number }) {
   return (

@@ -198,37 +198,70 @@ export default function OnboardingWizard({
             </span>
           </div>
 
-          <div className="max-w-md mx-auto text-left space-y-4 mb-8">
+          <div className="max-w-md mx-auto text-left space-y-3 mb-8">
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-sm font-semibold">1</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Save 5&ndash;10 minutes per patient on intake
+                  AI pre screening saves 5 to 10 min per patient
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  AI handles symptom collection so doctors don&apos;t start from zero
+                  Collects symptoms, meds, allergies, and chronic conditions before the doctor walks in
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-sm font-semibold">2</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Doctors read a structured summary before walking in
+                  Structured summary + AI diagnostic for doctors
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  No more &quot;so what brings you in today?&quot; from scratch
+                  Patient approved summary and a doctor eyes only AI assessment with every visit
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-sm font-semibold">3</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <div>
+                <p className="text-sm font-medium text-ink">
+                  130+ languages with voice input
+                </p>
+                <p className="text-xs text-slate mt-0.5">
+                  Patients type or speak in their language, doctors always see English
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <div>
+                <p className="text-sm font-medium text-ink">
+                  Urgency detection &amp; smart queue
+                </p>
+                <p className="text-xs text-slate mt-0.5">
+                  AI flags high priority patients so they are seen first
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <div>
+                <p className="text-sm font-medium text-ink">
+                  Visit summaries, referrals &amp; review collection
+                </p>
+                <p className="text-xs text-slate mt-0.5">
+                  SMS summaries after every visit, seamless cross clinic referrals, and automated review funnels
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
               <div>
                 <p className="text-sm font-medium text-ink">
                   Zero hardware needed to start
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Patients check in on their own phone; add a waiting room tablet later if you want
+                  Patients check in on their own phone via QR code; add a tablet later if you want
                 </p>
               </div>
             </div>
@@ -238,7 +271,7 @@ export default function OnboardingWizard({
             onClick={() => setStep(1)}
             className="rounded-lg bg-hilt-blue px-6 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark"
           >
-            Set Up Your First Location &rarr;
+            Set Up Your First Location
           </button>
         </div>
       )}
@@ -303,7 +336,7 @@ export default function OnboardingWizard({
               onClick={() => router.push("/d/owner")}
               className="w-full text-sm text-slate hover:text-ink transition-colors py-2"
             >
-              I&apos;ll do this later
+              I will do this later
             </button>
           </div>
         </div>
@@ -313,7 +346,7 @@ export default function OnboardingWizard({
       {step === 2 && (
         <div className="max-w-md mx-auto text-center">
           <h2 className="text-xl font-bold text-ink mb-1">
-            Try the Check-in
+            Try the Check in
           </h2>
           <p className="text-sm text-slate mb-6">
             See how patients will check in at{" "}
@@ -345,7 +378,7 @@ export default function OnboardingWizard({
                 rel="noopener noreferrer"
                 className="block w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark text-center mb-4"
               >
-                Open Check-in Page
+                Open Check in Page
               </a>
               <div className="flex items-center justify-center gap-2 mb-3">
                 <span className="relative flex h-3 w-3">
@@ -353,7 +386,7 @@ export default function OnboardingWizard({
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-hilt-blue" />
                 </span>
                 <span className="text-sm text-slate">
-                  Waiting for a check-in...
+                  Waiting for a check in...
                 </span>
               </div>
               <p className="text-xs text-ash mb-2">
@@ -368,7 +401,7 @@ export default function OnboardingWizard({
           {demoReady && tryPhase === "detected" && detectedVisit && (
             <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6 mb-4">
               <p className="text-sm font-medium text-green-800 mb-1">
-                New check-in detected!
+                New check in detected!
               </p>
               <p className="text-lg font-semibold text-ink mb-4">
                 {detectedVisit.patientName}
@@ -378,7 +411,7 @@ export default function OnboardingWizard({
                 disabled={approving}
                 className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
               >
-                {approving ? "Approving..." : "Approve Check-in"}
+                {approving ? "Approving..." : "Approve Check in"}
               </button>
             </div>
           )}
@@ -390,7 +423,7 @@ export default function OnboardingWizard({
                 Your test patient is now talking with the AI!
               </p>
               <p className="text-xs text-green-700">
-                They&apos;ll answer symptom questions, and the doctor will get a structured summary.
+                They will answer symptom questions, and the doctor will get a structured summary.
               </p>
             </div>
           )}
@@ -417,10 +450,10 @@ export default function OnboardingWizard({
         <div className="max-w-lg mx-auto text-center">
           <div className="text-4xl mb-3">&#10003;</div>
           <h2 className="text-2xl font-bold text-ink mb-2">
-            You&apos;re All Set!
+            You Are All Set!
           </h2>
           <p className="text-sm text-slate mb-8">
-            Here&apos;s what to explore next:
+            Here is what to explore next:
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2 mb-8">
@@ -440,7 +473,7 @@ export default function OnboardingWizard({
             >
               <div className="text-lg mb-1">&#128241;</div>
               <h3 className="text-sm font-semibold text-ink">
-                Set up a check-in tablet
+                Set up a check in tablet
               </h3>
               <p className="text-xs text-slate mt-1">
                 Use an iPad or tablet in your waiting room
