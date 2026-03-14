@@ -30,7 +30,7 @@ BEGIN
   END IF;
 
   -- Guard: blocked plans cannot change
-  IF v_org.subscription_plan IN ('expired', 'suspended') THEN
+  IF v_org.subscription_plan IN ('expired', 'suspended', 'read_only') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Cannot change plan while account is ' || v_org.subscription_plan || '. Please reactivate first.');
   END IF;
 
@@ -43,10 +43,11 @@ BEGIN
     WHEN 'pay_as_you_go' THEN v_allocation := 0;
   END CASE;
 
+  -- On upgrade: keep credits_used, increase total. On downgrade: cap and keep used.
+  -- Prevents credit gaming via plan cycling.
   UPDATE public.organizations
   SET subscription_plan = p_new_plan,
-      credits_total = v_allocation,
-      credits_used = LEAST(credits_used, v_allocation)
+      credits_total = v_allocation
   WHERE id = v_org.id;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)

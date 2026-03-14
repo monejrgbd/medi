@@ -46,11 +46,12 @@ BEGIN
   END IF;
 
   -- Load patient with cross-org guard
-  SELECT id, first_name, last_name, birthday, phone, phone_verified,
-         language, has_previous_visits, created_at
+  SELECT p.id, p.first_name, p.last_name, p.birthday, p.phone, p.phone_verified,
+         p.language, p.created_at,
+         EXISTS(SELECT 1 FROM public.visits v WHERE v.patient_id = p.id AND v.status = 'completed') AS has_previous_visits
   INTO v_patient
-  FROM public.patients
-  WHERE id = p_patient_id AND org_id = v_caller_org_id;
+  FROM public.patients p
+  WHERE p.id = p_patient_id AND p.org_id = v_caller_org_id;
 
   IF v_patient IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
@@ -79,9 +80,9 @@ BEGIN
     SELECT pn.id, pn.content, pn.is_private, pn.created_at,
            su.full_name AS author_name
     FROM public.patient_notes pn
-    LEFT JOIN public.staff_users su ON su.id = pn.author_id
+    LEFT JOIN public.staff_users su ON su.id = pn.doctor_id
     WHERE pn.patient_id = p_patient_id
-      AND (pn.is_private = false OR pn.author_id = v_caller_staff_id OR v_owner_auth_uid = p_caller_auth_uid)
+      AND (pn.is_private = false OR pn.doctor_id = v_caller_staff_id OR v_owner_auth_uid = p_caller_auth_uid)
     ORDER BY pn.created_at DESC
   ) n;
 
@@ -107,9 +108,12 @@ BEGIN
   SELECT COALESCE(jsonb_agg(row_to_json(ref.*) ORDER BY ref.created_at DESC), '[]'::jsonb)
   INTO v_referrals
   FROM (
-    SELECT r.id, r.specialty, r.status, r.urgency, r.created_at,
-           r.to_org_name, r.from_org_name
+    SELECT r.id, r.specialty, r.status, r.created_at,
+           to_org.name AS to_org_name,
+           from_org.name AS from_org_name
     FROM public.referrals r
+    LEFT JOIN public.organizations to_org ON to_org.id = r.to_org_id
+    LEFT JOIN public.organizations from_org ON from_org.id = r.from_org_id
     WHERE r.patient_id = p_patient_id
       AND (r.from_org_id = v_caller_org_id OR r.to_org_id = v_caller_org_id)
     ORDER BY r.created_at DESC

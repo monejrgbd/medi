@@ -1,4 +1,4 @@
-import { requireAuth, getStaffUser, isOwner } from "@/lib/auth";
+import { requireAuth, getStaffUser, isOwner, getMyRoles } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect, notFound } from "next/navigation";
 import PatientDetailView from "./PatientDetailView";
@@ -30,6 +30,14 @@ export default async function PatientDetailPage({ params }: PageProps) {
   }
 
   if (!orgId) redirect("/d/select-role");
+
+  // Role guard: must be owner or have a doctor role
+  if (!ownerCheck) {
+    const roles = await getMyRoles();
+    if (!roles.some((r: { role: string }) => r.role === "doctor")) {
+      redirect("/d/select-role");
+    }
+  }
 
   // Fetch visit detail
   const { data, error } = await supabase.rpc("get_visit_detail", {

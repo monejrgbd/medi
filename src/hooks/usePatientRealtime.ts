@@ -114,6 +114,7 @@ export function usePatientRealtime(
             status: data.status,
             old_status: "",
             timeout_flagged: data.timeout_flagged,
+            denied: data.patient_denied,
           },
         });
       }

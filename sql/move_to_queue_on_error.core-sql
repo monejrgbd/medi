@@ -58,8 +58,8 @@ BEGIN
       body := jsonb_build_object(
         'visit_id', p_visit_id,
         'session_token', p_session_token,
-        'type', 'status_change',
-        'status', 'waiting_doctor_claim',
+        'old_status', 'still_answering_ai',
+        'new_status', 'waiting_doctor_claim',
         'timeout_flagged', true
       )
     );

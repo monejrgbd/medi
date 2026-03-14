@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -331,9 +332,9 @@ export default function SignUpForm() {
             <p className="text-xs text-ash text-center leading-relaxed">
               By submitting, you consent to Hilt Health contacting you by email about
               our services. You can unsubscribe at any time. See our{" "}
-              <a href="/privacy" className="text-hilt-blue hover:underline">
+              <Link href="/privacy" className="text-hilt-blue hover:underline">
                 Privacy Policy
-              </a>.
+              </Link>.
             </p>
           </motion.form>
         )}

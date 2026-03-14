@@ -38,6 +38,11 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Session expired');
   END IF;
 
+  -- Rate limit: max 30 patient messages per visit
+  IF (SELECT count(*) FROM public.visit_messages WHERE visit_id = p_visit_id AND role = 'patient') >= 30 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'message_limit_reached');
+  END IF;
+
   -- Strip HTML and enforce 5000-char limit
   v_clean := trim(regexp_replace(p_content, '<[^>]*>', '', 'g'));
   IF length(v_clean) = 0 THEN

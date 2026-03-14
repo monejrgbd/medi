@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Privacy Policy — Hilt Health",
   description: "How Hilt Health collects, uses, and protects your personal and health information.",
@@ -408,18 +410,18 @@ export default function PrivacyPage() {
             Built in Toronto. Expanding across Canada.
           </p>
           <div className="mb-4 flex items-center justify-center gap-6 text-sm text-ash">
-            <a href="/blog" className="hover:text-slate transition-colors">
+            <Link href="/blog" className="hover:text-slate transition-colors">
               Blog
-            </a>
-            <a href="/privacy" className="text-slate font-medium transition-colors">
+            </Link>
+            <Link href="/privacy" className="text-slate font-medium transition-colors">
               Privacy Policy
-            </a>
-            <a href="/terms" className="hover:text-slate transition-colors">
+            </Link>
+            <Link href="/terms" className="hover:text-slate transition-colors">
               Terms of Service
-            </a>
-            <a href="/pricing" className="hover:text-slate transition-colors">
+            </Link>
+            <Link href="/pricing" className="hover:text-slate transition-colors">
               Pricing
-            </a>
+            </Link>
             <a
               href="mailto:business@hilthealth.com"
               className="hover:text-slate transition-colors"

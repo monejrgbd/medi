@@ -42,7 +42,7 @@ export default function AuditTrailViewer({ orgId }: AuditTrailViewerProps) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const loadEntries = useCallback(async (append = false) => {
+  const loadEntries = useCallback(async (append = false, cursor?: { createdAt: string; id: string } | null) => {
     setLoading(true);
     setError(null);
 
@@ -51,9 +51,9 @@ export default function AuditTrailViewer({ orgId }: AuditTrailViewerProps) {
     if (actorFilter) filters.actorId = actorFilter;
     if (startDate) filters.startDate = new Date(startDate).toISOString();
     if (endDate) filters.endDate = new Date(endDate + "T23:59:59").toISOString();
-    if (append && cursorCreatedAt && cursorId) {
-      filters.cursorCreatedAt = cursorCreatedAt;
-      filters.cursorId = cursorId;
+    if (append && cursor) {
+      filters.cursorCreatedAt = cursor.createdAt;
+      filters.cursorId = cursor.id;
     }
 
     const result = await fetchAuditTrail(orgId, filters);
@@ -71,7 +71,7 @@ export default function AuditTrailViewer({ orgId }: AuditTrailViewerProps) {
       setError(result.error || "Failed to load audit trail");
     }
     setLoading(false);
-  }, [orgId, entityType, actorFilter, startDate, endDate, cursorCreatedAt, cursorId]);
+  }, [orgId, entityType, actorFilter, startDate, endDate]);
 
   function handleSearch() {
     setCursorCreatedAt(null);
@@ -181,7 +181,7 @@ export default function AuditTrailViewer({ orgId }: AuditTrailViewerProps) {
 
       {hasMore && (
         <button
-          onClick={() => loadEntries(true)}
+          onClick={() => loadEntries(true, cursorCreatedAt && cursorId ? { createdAt: cursorCreatedAt, id: cursorId } : null)}
           disabled={loading}
           className="mt-4 w-full rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-slate hover:bg-gray-200 disabled:opacity-50"
         >

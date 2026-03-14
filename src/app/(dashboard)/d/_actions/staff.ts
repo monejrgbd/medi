@@ -86,6 +86,8 @@ export async function resetStaffPassword(
   staffUserId: string,
   newPassword: string
 ) {
+  await requireAuth();
+
   if (newPassword.length < 8) {
     return { success: false, error: "Password must be at least 8 characters" };
   }
@@ -93,8 +95,6 @@ export async function resetStaffPassword(
   if (newPassword.length > 72) {
     return { success: false, error: "Password must be at most 72 characters" };
   }
-
-  await requireAuth();
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("reset_staff_password", {

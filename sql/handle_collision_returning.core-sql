@@ -29,10 +29,11 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Visit is not pending approval');
   END IF;
 
-  -- Get caller staff id
+  -- Get caller staff id (scoped to visit's org)
   SELECT su.id INTO v_caller_staff_id
   FROM public.staff_users su
   WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
     AND su.is_active = true
     AND su.is_deleted = false;
 

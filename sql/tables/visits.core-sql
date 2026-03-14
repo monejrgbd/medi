@@ -36,6 +36,7 @@ CREATE TABLE public.visits (
   is_return_visit       boolean DEFAULT false,
   patient_approved      boolean DEFAULT false,
   patient_approved_at   timestamptz,
+  patient_denied        boolean DEFAULT false,
   gave_tablet           boolean DEFAULT false,
   handled               boolean DEFAULT false,
   updated_at            timestamptz DEFAULT now(),

@@ -220,23 +220,6 @@ export default function ReferralDetail({
                 </div>
               )}
 
-              {visit.ai_diagnostic && (
-                <div>
-                  <p className="text-xs font-medium text-ash mb-1">
-                    AI Diagnostic
-                  </p>
-                  <div className="rounded-lg bg-blue-50 p-2 text-sm text-ink">
-                    {typeof visit.ai_diagnostic === "object" &&
-                    visit.ai_diagnostic !== null ? (
-                      <pre className="text-xs whitespace-pre-wrap">
-                        {JSON.stringify(visit.ai_diagnostic, null, 2)}
-                      </pre>
-                    ) : (
-                      <p>{String(visit.ai_diagnostic)}</p>
-                    )}
-                  </div>
-                </div>
-              )}
 
               {visit.transcript && visit.transcript.length > 0 && (
                 <div>

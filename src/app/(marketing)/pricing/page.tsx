@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 import CustomPlanModal from "@/components/CustomPlanModal";
 
@@ -430,18 +431,18 @@ function Footer() {
           Built in Toronto. Expanding across Canada.
         </p>
         <div className="mb-4 flex items-center justify-center gap-6 text-sm text-ash">
-          <a href="/blog" className="hover:text-slate transition-colors">
+          <Link href="/blog" className="hover:text-slate transition-colors">
             Blog
-          </a>
-          <a href="/privacy" className="hover:text-slate transition-colors">
+          </Link>
+          <Link href="/privacy" className="hover:text-slate transition-colors">
             Privacy Policy
-          </a>
-          <a href="/terms" className="hover:text-slate transition-colors">
+          </Link>
+          <Link href="/terms" className="hover:text-slate transition-colors">
             Terms of Service
-          </a>
-          <a href="/pricing" className="text-slate font-medium transition-colors">
+          </Link>
+          <Link href="/pricing" className="text-slate font-medium transition-colors">
             Pricing
-          </a>
+          </Link>
           <a
             href="mailto:business@hilthealth.com"
             className="hover:text-slate transition-colors"

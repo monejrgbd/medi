@@ -3,7 +3,8 @@ CREATE OR REPLACE FUNCTION private.get_completed_and_left_visits(
   p_caller_auth_uid uuid,
   p_location_id uuid,
   p_date date DEFAULT CURRENT_DATE,
-  p_cursor timestamptz DEFAULT NULL,
+  p_cursor_completed timestamptz DEFAULT NULL,
+  p_cursor_left timestamptz DEFAULT NULL,
   p_page_size int DEFAULT 50
 )
 RETURNS jsonb
@@ -75,7 +76,7 @@ BEGIN
       AND v.status = 'completed'
       AND v.completed_at >= p_date AND v.completed_at < p_date + interval '1 day'
       AND (v_owner_id = p_caller_auth_uid OR v.claimed_by = v_caller_staff_id)
-      AND (p_cursor IS NULL OR v.completed_at < p_cursor)
+      AND (p_cursor_completed IS NULL OR v.completed_at < p_cursor_completed)
     ORDER BY v.completed_at DESC
     LIMIT p_page_size + 1
   ) q;
@@ -101,7 +102,7 @@ BEGIN
     WHERE v.location_id = p_location_id
       AND v.status = 'left'
       AND v.updated_at >= p_date AND v.updated_at < p_date + interval '1 day'
-      AND (p_cursor IS NULL OR v.updated_at < p_cursor)
+      AND (p_cursor_left IS NULL OR v.updated_at < p_cursor_left)
     ORDER BY v.updated_at DESC
     LIMIT p_page_size + 1
   ) q;
@@ -121,7 +122,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.get_completed_and_left_visits(
   p_location_id uuid,
   p_date date DEFAULT CURRENT_DATE,
-  p_cursor timestamptz DEFAULT NULL,
+  p_cursor_completed timestamptz DEFAULT NULL,
+  p_cursor_left timestamptz DEFAULT NULL,
   p_page_size int DEFAULT 50
 )
 RETURNS jsonb
@@ -133,9 +135,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.get_completed_and_left_visits(v_auth_uid, p_location_id, p_date, p_cursor, p_page_size);
+  RETURN private.get_completed_and_left_visits(v_auth_uid, p_location_id, p_date, p_cursor_completed, p_cursor_left, p_page_size);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.get_completed_and_left_visits(uuid, date, timestamptz, int) FROM anon;
-GRANT EXECUTE ON FUNCTION public.get_completed_and_left_visits(uuid, date, timestamptz, int) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_completed_and_left_visits(uuid, date, timestamptz, timestamptz, int) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_completed_and_left_visits(uuid, date, timestamptz, timestamptz, int) TO authenticated;

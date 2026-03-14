@@ -79,7 +79,7 @@ export default function SubscriptionManager({
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {PLANS.map((plan) => {
-          const isActive = currentPlan === plan.key;
+          const isActive = currentPlan === plan.key || currentPlan === plan.key + "_trial";
           return (
             <div
               key={plan.key}

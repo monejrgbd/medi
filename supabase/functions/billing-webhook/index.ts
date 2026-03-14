@@ -245,6 +245,7 @@ Deno.serve(async (req) => {
       }
 
       case "BILLING.SUBSCRIPTION.CANCELLED": {
+        // Only set to expired if not already suspended (suspended is a stronger state)
         await supabase
           .from("organizations")
           .update({
@@ -254,7 +255,8 @@ Deno.serve(async (req) => {
               Date.now() + 90 * 24 * 60 * 60 * 1000
             ).toISOString(),
           })
-          .eq("id", orgId);
+          .eq("id", orgId)
+          .neq("subscription_plan", "suspended");
         await supabase.from("audit_trail").insert({
           org_id: orgId,
           actor_type: "system",

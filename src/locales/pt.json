@@ -105,5 +105,10 @@
   "completed.subtitle": "Sua consulta foi concluída. Você receberá um resumo por SMS em breve.",
   "completed.countdown": "Reiniciando em {seconds}s...",
   "subscription_expired.title": "Temporariamente indisponível",
-  "subscription_expired.subtitle": "Esta clínica está temporariamente impossibilitada de iniciar novas sessões. Por favor fale com a recepção."
+  "subscription_expired.subtitle": "Esta clínica está temporariamente impossibilitada de iniciar novas sessões. Por favor fale com a recepção.",
+  "checkin.verifyBirthday": "Confirme sua identidade",
+  "checkin.verifyBirthdayDesc": "Por favor insira sua data de nascimento para retomar sua sessão.",
+  "checkin.birthdayMismatch": "Data de nascimento não corresponde. Por favor tente novamente ou inicie um novo registro.",
+  "checkin.startOver": "Recomeçar",
+  "checkin.confirm": "Confirmar"
 }

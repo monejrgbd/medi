@@ -76,6 +76,8 @@ interface DoctorDashboardProps {
   initialCompleted: CompletedVisit[];
   initialLeft: CompletedVisit[];
   initialDoctors: Doctor[];
+  initialHasMoreCompleted?: boolean;
+  initialHasMoreLeft?: boolean;
 }
 
 type Tab = "pending" | "claimed" | "completed" | "left";
@@ -92,6 +94,8 @@ export default function DoctorDashboard({
   initialCompleted,
   initialLeft,
   initialDoctors,
+  initialHasMoreCompleted = false,
+  initialHasMoreLeft = false,
 }: DoctorDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("pending");
@@ -106,6 +110,9 @@ export default function DoctorDashboard({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [urgentPatient, setUrgentPatient] = useState<string | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  const [hasMoreCompleted, setHasMoreCompleted] = useState(initialHasMoreCompleted);
+  const [hasMoreLeft, setHasMoreLeft] = useState(initialHasMoreLeft);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Load notification preference + unlock audio
   useEffect(() => {
@@ -137,7 +144,9 @@ export default function DoctorDashboard({
     setCompleted(initialCompleted);
     setLeft(initialLeft);
     setDoctors(initialDoctors);
-  }, [initialQueue, initialClaimed, initialCompleted, initialLeft, initialDoctors]);
+    setHasMoreCompleted(initialHasMoreCompleted);
+    setHasMoreLeft(initialHasMoreLeft);
+  }, [initialQueue, initialClaimed, initialCompleted, initialLeft, initialDoctors, initialHasMoreCompleted, initialHasMoreLeft]);
 
   useEffect(() => {
     return () => {
@@ -155,8 +164,33 @@ export default function DoctorDashboard({
     [router]
   );
 
+  const loadMoreVisits = useCallback(async (type: "completed" | "left") => {
+    if (!locationId || loadingMore) return;
+    setLoadingMore(true);
+    const supabase = createClient();
+    const items = type === "completed" ? completed : left;
+    const lastItem = items[items.length - 1];
+    const cursorCompleted = type === "completed" && lastItem?.completed_at ? lastItem.completed_at : null;
+    const cursorLeft = type === "left" && lastItem?.created_at ? lastItem.created_at : null;
+    const { data } = await supabase.rpc("get_completed_and_left_visits", {
+      p_location_id: locationId,
+      p_cursor_completed: cursorCompleted,
+      p_cursor_left: cursorLeft,
+    });
+    if (data?.success) {
+      if (type === "completed") {
+        setCompleted(prev => [...prev, ...(data.completed ?? [])]);
+        setHasMoreCompleted(data.has_more_completed ?? false);
+      } else {
+        setLeft(prev => [...prev, ...(data.left ?? [])]);
+        setHasMoreLeft(data.has_more_left ?? false);
+      }
+    }
+    setLoadingMore(false);
+  }, [locationId, completed, left, loadingMore]);
+
   useDoctorRealtime(
-    mode === "dashboard" ? locationId : null,
+    mode === "dashboard" && !focusMode ? locationId : null,
     handleVisitChange,
     {
       soundEnabled,
@@ -346,6 +380,15 @@ export default function DoctorDashboard({
                 />
               ))
             )}
+            {hasMoreCompleted && (
+              <button
+                onClick={() => loadMoreVisits("completed")}
+                disabled={loadingMore}
+                className="mt-3 w-full rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-slate hover:bg-gray-200 disabled:opacity-50"
+              >
+                {loadingMore ? "Loading..." : "Load More"}
+              </button>
+            )}
           </div>
         )}
 
@@ -363,6 +406,15 @@ export default function DoctorDashboard({
                   type="left"
                 />
               ))
+            )}
+            {hasMoreLeft && (
+              <button
+                onClick={() => loadMoreVisits("left")}
+                disabled={loadingMore}
+                className="mt-3 w-full rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-slate hover:bg-gray-200 disabled:opacity-50"
+              >
+                {loadingMore ? "Loading..." : "Load More"}
+              </button>
             )}
           </div>
         )}

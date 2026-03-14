@@ -42,7 +42,7 @@ BEGIN
         body := jsonb_build_object(
           'to', v_owner_email,
           'subject', 'Trial Expiring Soon — ' || v_org.name,
-          'html_body', '<h2>Trial Expiry Notice</h2><p>Your trial for <strong>' || v_org.name ||
+          'html_body', '<h2>Trial Expiry Notice</h2><p>Your trial for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') ||
             '</strong> expires on ' || to_char(v_org.trial_end_date, 'Month DD, YYYY') ||
             '.</p><p>Upgrade to keep your AI pre-screening running.</p>'
         )

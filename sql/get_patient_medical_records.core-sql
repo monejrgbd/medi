@@ -60,9 +60,7 @@ BEGIN
 
   -- Get medications
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
-    'name', pm.name,
-    'dosage', pm.dosage,
-    'frequency', pm.frequency
+    'name', pm.name
   )), '[]'::jsonb)
   INTO v_meds
   FROM public.patient_medications pm

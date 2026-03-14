@@ -23,6 +23,14 @@ export default async function ReceptionistPage() {
 
   if (!orgId) redirect("/d/select-role");
 
+  // Role guard: must be owner or have a receptionist role
+  if (!ownerCheck) {
+    const roles = await getMyRoles();
+    if (!roles.some((r: { role: string }) => r.role === "receptionist")) {
+      redirect("/d/select-role");
+    }
+  }
+
   // Check if user is currently checked in as receptionist
   let checkedInLocationId: string | null = null;
 

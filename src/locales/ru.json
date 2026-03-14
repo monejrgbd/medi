@@ -105,5 +105,10 @@
   "completed.subtitle": "Ваш визит завершён. Вы скоро получите сводку по СМС.",
   "completed.countdown": "Сброс через {seconds} сек...",
   "subscription_expired.title": "Временно недоступно",
-  "subscription_expired.subtitle": "Эта клиника временно не может начинать новые сессии. Обратитесь на ресепшен."
+  "subscription_expired.subtitle": "Эта клиника временно не может начинать новые сессии. Обратитесь на ресепшен.",
+  "checkin.verifyBirthday": "Подтвердите вашу личность",
+  "checkin.verifyBirthdayDesc": "Пожалуйста, введите дату рождения, чтобы продолжить сессию.",
+  "checkin.birthdayMismatch": "Дата рождения не совпадает. Попробуйте снова или начните новую регистрацию.",
+  "checkin.startOver": "Начать заново",
+  "checkin.confirm": "Подтвердить"
 }

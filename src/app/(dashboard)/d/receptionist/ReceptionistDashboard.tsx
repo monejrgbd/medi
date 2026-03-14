@@ -280,7 +280,11 @@ export default function ReceptionistDashboard({
 
   async function handleCheckOut() {
     const supabase = createClient();
-    await supabase.rpc("staff_check_out");
+    const { error } = await supabase.rpc("staff_check_out");
+    if (error) {
+      alert("Failed to check out. Please try again.");
+      return;
+    }
     router.push("/d/select-role");
   }
 

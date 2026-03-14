@@ -528,6 +528,7 @@ export type Database = {
           payment_failure_count: number | null
           payment_first_failed_at: string | null
           paypal_subscription_id: string | null
+          purged: boolean | null
           review_sms_addon: boolean | null
           slug: string
           subscription_plan: string | null
@@ -549,6 +550,7 @@ export type Database = {
           payment_failure_count?: number | null
           payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
+          purged?: boolean | null
           review_sms_addon?: boolean | null
           slug: string
           subscription_plan?: string | null
@@ -570,6 +572,7 @@ export type Database = {
           payment_failure_count?: number | null
           payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
+          purged?: boolean | null
           review_sms_addon?: boolean | null
           slug?: string
           subscription_plan?: string | null
@@ -1617,6 +1620,7 @@ export type Database = {
           org_id: string
           patient_approved: boolean | null
           patient_approved_at: string | null
+          patient_denied: boolean | null
           patient_id: string
           phone_verification_pending: boolean | null
           priority: number | null
@@ -1656,6 +1660,7 @@ export type Database = {
           org_id: string
           patient_approved?: boolean | null
           patient_approved_at?: string | null
+          patient_denied?: boolean | null
           patient_id: string
           phone_verification_pending?: boolean | null
           priority?: number | null
@@ -1695,6 +1700,7 @@ export type Database = {
           org_id?: string
           patient_approved?: boolean | null
           patient_approved_at?: string | null
+          patient_denied?: boolean | null
           patient_id?: string
           phone_verification_pending?: boolean | null
           priority?: number | null
@@ -1935,10 +1941,18 @@ export type Database = {
       get_checked_in_doctors: { Args: { p_location_id: string }; Returns: Json }
       get_claimed_patients: { Args: { p_location_id: string }; Returns: Json }
       get_collision_state: { Args: { p_visit_id: string }; Returns: Json }
-      get_completed_and_left_visits: {
-        Args: { p_date?: string; p_location_id: string }
-        Returns: Json
-      }
+      get_completed_and_left_visits:
+        | { Args: { p_date?: string; p_location_id: string }; Returns: Json }
+        | {
+            Args: {
+              p_cursor_completed?: string
+              p_cursor_left?: string
+              p_date?: string
+              p_location_id: string
+              p_page_size?: number
+            }
+            Returns: Json
+          }
       get_conversation: {
         Args: { p_session_token?: string; p_visit_id: string }
         Returns: Json
@@ -2095,6 +2109,10 @@ export type Database = {
         Args: { p_referral_id: string; p_visit_id: string }
         Returns: Json
       }
+      log_phi_access: {
+        Args: { p_entity_id: string; p_entity_type: string }
+        Returns: undefined
+      }
       mark_follow_up_completed: {
         Args: { p_follow_up_id: string }
         Returns: Json
@@ -2105,6 +2123,7 @@ export type Database = {
         Returns: Json
       }
       purchase_overage_credits: { Args: { p_amount: number }; Returns: Json }
+      purge_expired_orgs: { Args: never; Returns: Json }
       reactivate_referral: { Args: { p_referral_id: string }; Returns: Json }
       reject_summary: {
         Args: { p_session_token: string; p_visit_id: string }
@@ -2452,3 +2471,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

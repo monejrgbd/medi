@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     }
 
     const emailPayload: Record<string, unknown> = {
-      from: `${from_name || "Hilt Health"} <notifications@hilthealth.com>`,
+      from: `${(from_name || "Hilt Health").replace(/[\n\r<>"]/g, "").slice(0, 78)} <notifications@hilthealth.com>`,
       to: Array.isArray(to) ? to : [to],
       subject,
       html: html_body,

@@ -105,5 +105,10 @@
   "completed.subtitle": "您的就诊已完成。您将很快通过短信收到摘要。",
   "completed.countdown": "{seconds}秒后重置...",
   "subscription_expired.title": "暂时不可用",
-  "subscription_expired.subtitle": "该诊所暂时无法开始新的会话。请联系前台。"
+  "subscription_expired.subtitle": "该诊所暂时无法开始新的会话。请联系前台。",
+  "checkin.verifyBirthday": "确认您的身份",
+  "checkin.verifyBirthdayDesc": "请输入您的出生日期以恢复您的会话。",
+  "checkin.birthdayMismatch": "出生日期不匹配。请重试或开始新的登记。",
+  "checkin.startOver": "重新开始",
+  "checkin.confirm": "确认"
 }

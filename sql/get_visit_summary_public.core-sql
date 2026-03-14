@@ -23,17 +23,17 @@ BEGIN
     'medications', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', pm.name))
       FROM public.patient_medications pm
-      WHERE pm.patient_id = v.patient_id
+      WHERE pm.patient_id = v.patient_id AND pm.active = true
     ), '[]'::jsonb),
     'allergies', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', pa.name))
       FROM public.patient_allergies pa
-      WHERE pa.patient_id = v.patient_id
+      WHERE pa.patient_id = v.patient_id AND pa.active = true
     ), '[]'::jsonb),
     'chronic_conditions', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', pc.name))
       FROM public.patient_chronic_conditions pc
-      WHERE pc.patient_id = v.patient_id
+      WHERE pc.patient_id = v.patient_id AND pc.active = true
     ), '[]'::jsonb)
   )
   INTO v_result
@@ -42,7 +42,8 @@ BEGIN
   JOIN public.locations l ON l.id = v.location_id
   LEFT JOIN public.staff_users doc ON doc.id = v.claimed_by
   WHERE v.summary_token = p_token
-    AND v.status = 'completed';
+    AND v.status = 'completed'
+    AND v.completed_at > now() - interval '365 days';
 
   IF v_result IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Summary not found');

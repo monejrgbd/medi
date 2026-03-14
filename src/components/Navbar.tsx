@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -22,35 +23,35 @@ export default function Navbar() {
         }`}
       >
         <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">
-          <a href="/" className="text-2xl font-bold text-hilt-blue tracking-tight">
+          <Link href="/" className="text-2xl font-bold text-hilt-blue tracking-tight">
             Hilt Health
-          </a>
+          </Link>
 
           <div className="hidden sm:flex items-center gap-3">
-            <a
+            <Link
               href="/blog"
               className="px-4 py-2.5 text-sm font-medium text-slate transition-colors hover:text-ink"
             >
               Blog
-            </a>
-            <a
+            </Link>
+            <Link
               href="/pricing"
               className="px-4 py-2.5 text-sm font-medium text-slate transition-colors hover:text-ink"
             >
               Pricing
-            </a>
-            <a
+            </Link>
+            <Link
               href="/login"
               className="rounded-xl border-2 border-hilt-blue px-5 py-2.5 text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
             >
               Sign In
-            </a>
-            <a
+            </Link>
+            <Link
               href="/signup"
               className="rounded-xl bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
             >
               Request Free Trial
-            </a>
+            </Link>
           </div>
 
           <button
@@ -66,30 +67,30 @@ export default function Navbar() {
 
         {mobileOpen && (
           <div className="sm:hidden border-t border-gray-100 bg-white px-6 pb-4 pt-2 space-y-3">
-            <a
+            <Link
               href="/blog"
               className="block w-full rounded-xl px-5 py-3 text-center text-sm font-medium text-slate"
             >
               Blog
-            </a>
-            <a
+            </Link>
+            <Link
               href="/pricing"
               className="block w-full rounded-xl px-5 py-3 text-center text-sm font-medium text-slate"
             >
               Pricing
-            </a>
-            <a
+            </Link>
+            <Link
               href="/login"
               className="block w-full rounded-xl border-2 border-hilt-blue px-5 py-3 text-center text-sm font-semibold text-hilt-blue"
             >
               Sign In
-            </a>
-            <a
+            </Link>
+            <Link
               href="/signup"
               className="block w-full rounded-xl bg-hilt-blue px-5 py-3 text-center text-sm font-semibold text-white"
             >
               Request Free Trial
-            </a>
+            </Link>
           </div>
         )}
       </nav>

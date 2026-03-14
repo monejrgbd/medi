@@ -108,6 +108,10 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION public.purge_expired_orgs() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.purge_expired_orgs() FROM anon;
+REVOKE ALL ON FUNCTION public.purge_expired_orgs() FROM authenticated;
+
 -- pg_cron job: daily at 3 AM — purge orgs past their 90-day data retention period
 SELECT cron.schedule(
   'purge_expired_orgs',

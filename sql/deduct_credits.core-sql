@@ -109,7 +109,7 @@ BEGIN
               body := jsonb_build_object(
                 'to', v_owner_email,
                 'subject', 'Credits Running Low — ' || v_org_name,
-                'html_body', '<h2>Credits Alert</h2><p>Your organization <strong>' || v_org_name ||
+                'html_body', '<h2>Credits Alert</h2><p>Your organization <strong>' || replace(replace(v_org_name, '&', '&amp;'), '<', '&lt;') ||
                   '</strong> has used ' || round(v_usage_pct * 100) || '% of its credits this billing cycle.</p>' ||
                   '<p>Please top up to ensure uninterrupted AI pre-screening.</p>'
               )

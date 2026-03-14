@@ -105,5 +105,10 @@
   "completed.subtitle": "आपकी विजिट पूर्ण हो गई है। आपको जल्द ही संदेश द्वारा सारांश प्राप्त होगा।",
   "completed.countdown": "{seconds} सेकंड में रीसेट...",
   "subscription_expired.title": "अस्थायी रूप से अनुपलब्ध",
-  "subscription_expired.subtitle": "यह क्लिनिक अस्थायी रूप से नए सत्र शुरू करने में असमर्थ है। कृपया फ्रंट डेस्क से बात करें।"
+  "subscription_expired.subtitle": "यह क्लिनिक अस्थायी रूप से नए सत्र शुरू करने में असमर्थ है। कृपया फ्रंट डेस्क से बात करें।",
+  "checkin.verifyBirthday": "अपनी पहचान की पुष्टि करें",
+  "checkin.verifyBirthdayDesc": "अपने सत्र को फिर से शुरू करने के लिए कृपया अपनी जन्म तिथि दर्ज करें।",
+  "checkin.birthdayMismatch": "जन्म तिथि मेल नहीं खाती। कृपया पुनः प्रयास करें या नया चेक इन शुरू करें।",
+  "checkin.startOver": "फिर से शुरू करें",
+  "checkin.confirm": "पुष्टि करें"
 }

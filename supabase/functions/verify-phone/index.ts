@@ -251,8 +251,9 @@ async function handleVerifyCode(
     p_phone: verification.phone,
   });
 
-  // Broadcast phone_verified event
+  // Broadcast phone_verified event — subscribe before sending
   const channel = supabase.channel(`patient:${session_token}`);
+  await channel.subscribe();
   await channel.send({
     type: "broadcast",
     event: "phone_verified",

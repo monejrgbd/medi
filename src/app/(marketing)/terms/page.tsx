@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export const metadata = {
   title: "Terms of Service — Hilt Health",
   description: "Terms and conditions for using the Hilt Health AI-powered patient pre-screening platform.",
@@ -222,7 +224,7 @@ export default function TermsPage() {
             <h3>Subscription Plans</h3>
             <p>
               After the trial, Clinics select a subscription plan. Plan details, pricing, and included
-              credits are listed on our <a href="/pricing" className="text-hilt-blue hover:underline">Pricing</a> page.
+              credits are listed on our <Link href="/pricing" className="text-hilt-blue hover:underline">Pricing</Link> page.
               All prices are in Canadian dollars unless otherwise stated.
             </p>
 
@@ -260,7 +262,7 @@ export default function TermsPage() {
               <strong>Your data:</strong> The Clinic retains ownership of all patient data, clinical
               records, and information entered into the Platform. We do not claim ownership of your
               data. We process your data solely to provide the Service as described in these Terms and
-              our <a href="/privacy" className="text-hilt-blue hover:underline">Privacy Policy</a>.
+              our <Link href="/privacy" className="text-hilt-blue hover:underline">Privacy Policy</Link>.
             </p>
             <p>
               <strong>AI-generated content:</strong> Summaries, structured cards, and diagnostic opinions
@@ -342,7 +344,7 @@ export default function TermsPage() {
             <p>
               Our use of third-party services is governed by our agreements with those providers, which
               include appropriate data protection provisions. For details on data sharing with third
-              parties, see our <a href="/privacy" className="text-hilt-blue hover:underline">Privacy Policy</a>.
+              parties, see our <Link href="/privacy" className="text-hilt-blue hover:underline">Privacy Policy</Link>.
             </p>
           </section>
 
@@ -456,7 +458,7 @@ export default function TermsPage() {
             <h2>20. Privacy</h2>
             <p>
               Our collection, use, and disclosure of personal information and PHI is governed by our{" "}
-              <a href="/privacy" className="text-hilt-blue hover:underline">Privacy Policy</a>, which
+              <Link href="/privacy" className="text-hilt-blue hover:underline">Privacy Policy</Link>, which
               is incorporated into these Terms by reference. By using the Service, you acknowledge that
               you have read and understood our Privacy Policy.
             </p>
@@ -549,18 +551,18 @@ export default function TermsPage() {
             Built in Toronto. Expanding across Canada.
           </p>
           <div className="mb-4 flex items-center justify-center gap-6 text-sm text-ash">
-            <a href="/blog" className="hover:text-slate transition-colors">
+            <Link href="/blog" className="hover:text-slate transition-colors">
               Blog
-            </a>
-            <a href="/privacy" className="hover:text-slate transition-colors">
+            </Link>
+            <Link href="/privacy" className="hover:text-slate transition-colors">
               Privacy Policy
-            </a>
-            <a href="/terms" className="text-slate font-medium transition-colors">
+            </Link>
+            <Link href="/terms" className="text-slate font-medium transition-colors">
               Terms of Service
-            </a>
-            <a href="/pricing" className="hover:text-slate transition-colors">
+            </Link>
+            <Link href="/pricing" className="hover:text-slate transition-colors">
               Pricing
-            </a>
+            </Link>
             <a
               href="mailto:business@hilthealth.com"
               className="hover:text-slate transition-colors"

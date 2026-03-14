@@ -296,9 +296,9 @@ Deno.serve(async (req) => {
           to: referral.to_email,
           subject: `Patient Referral — ${referral.patient_name}`,
           html_body: `<h2>Patient Referral</h2>
-            <p>You have received a patient referral from <strong>${referral.from_org_name}</strong> (Dr. ${referral.from_doctor_name}).</p>
-            <p><strong>Patient:</strong> ${referral.patient_name}</p>
-            <p><strong>Specialty:</strong> ${referral.specialty}</p>
+            <p>You have received a patient referral from <strong>${(referral.from_org_name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</strong> (Dr. ${(referral.from_doctor_name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}).</p>
+            <p><strong>Patient:</strong> ${(referral.patient_name || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
+            <p><strong>Specialty:</strong> ${(referral.specialty || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>
             <p>Please see the attached PDF for the full referral package.</p>
             <br/><p style="color: #999;">Sent via Hilt Health — hilthealth.com</p>`,
           from_name: referral.from_org_name,

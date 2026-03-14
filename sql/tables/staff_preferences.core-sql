@@ -10,3 +10,11 @@ CREATE POLICY "own_prefs_read" ON public.staff_preferences FOR SELECT
   USING (staff_user_id = (
     SELECT su.id FROM staff_users su WHERE su.auth_uid = auth.uid() LIMIT 1
   ));
+
+CREATE POLICY "own_prefs_write" ON public.staff_preferences FOR ALL
+  USING (staff_user_id = (
+    SELECT su.id FROM staff_users su WHERE su.auth_uid = auth.uid() LIMIT 1
+  ))
+  WITH CHECK (staff_user_id = (
+    SELECT su.id FROM staff_users su WHERE su.auth_uid = auth.uid() LIMIT 1
+  ));

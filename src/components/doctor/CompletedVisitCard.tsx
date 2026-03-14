@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { CompletedVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 
 interface CompletedVisitCardProps {
@@ -20,7 +21,10 @@ export default function CompletedVisitCard({
     : "";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-4">
+    <Link
+      href={`/d/doctor/patient/${visit.visit_id}`}
+      className="block rounded-xl border border-gray-200 bg-white p-4 hover:border-gray-300 transition-colors"
+    >
       <div className="flex items-start justify-between">
         <div>
           <h3 className="font-semibold text-ink">
@@ -45,6 +49,6 @@ export default function CompletedVisitCard({
           {type === "completed" ? "Done" : "Left"}
         </span>
       </div>
-    </div>
+    </Link>
   );
 }

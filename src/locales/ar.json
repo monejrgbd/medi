@@ -105,5 +105,10 @@
   "completed.subtitle": "اكتملت زيارتك. ستتلقى ملخصاً عبر رسالة نصية قريباً.",
   "completed.countdown": "إعادة التعيين خلال {seconds} ثانية...",
   "subscription_expired.title": "غير متاح مؤقتاً",
-  "subscription_expired.subtitle": "لا يمكن لهذه العيادة بدء جلسات جديدة مؤقتاً. يرجى التحدث مع الاستقبال."
+  "subscription_expired.subtitle": "لا يمكن لهذه العيادة بدء جلسات جديدة مؤقتاً. يرجى التحدث مع الاستقبال.",
+  "checkin.verifyBirthday": "تأكيد هويتك",
+  "checkin.verifyBirthdayDesc": "يرجى إدخال تاريخ ميلادك لاستئناف جلستك.",
+  "checkin.birthdayMismatch": "تاريخ الميلاد غير مطابق. يرجى المحاولة مرة أخرى أو بدء تسجيل وصول جديد.",
+  "checkin.startOver": "البدء من جديد",
+  "checkin.confirm": "تأكيد"
 }

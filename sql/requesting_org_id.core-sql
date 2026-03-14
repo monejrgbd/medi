@@ -2,6 +2,6 @@ CREATE OR REPLACE FUNCTION public.requesting_org_id() RETURNS uuid
 LANGUAGE sql STABLE AS $$
   SELECT COALESCE(
     ((auth.jwt() -> 'app_metadata' ->> 'org_id')::uuid),
-    (SELECT su.org_id FROM staff_users su WHERE su.auth_uid = auth.uid() LIMIT 1)
+    (SELECT su.org_id FROM staff_users su WHERE su.auth_uid = auth.uid() AND su.is_active = true AND su.is_deleted = false LIMIT 1)
   );
 $$;

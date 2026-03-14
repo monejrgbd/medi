@@ -216,10 +216,14 @@ Deno.serve(async (req) => {
 
     // Store patient message via RPC (validates session_token + status again)
     // content = English (for doctors), content_original = what patient typed (their language)
+    // When translation failed, prefix content so doctors know it's untranslated
+    const storedContent = translationFailed
+      ? `[Translation unavailable] ${englishMessage}`
+      : englishMessage;
     const { data: sendResult } = await supabase.rpc("send_patient_message", {
       p_visit_id: visit_id,
       p_session_token: session_token,
-      p_content: englishMessage,
+      p_content: storedContent,
       p_content_original: patientLanguage !== "en" ? originalMessage : null,
     });
 
@@ -316,12 +320,10 @@ Deno.serve(async (req) => {
     }
 
     if (!claudeResponse || !claudeResponse.ok) {
-      // Use RPC to set audit context atomically with the status update
-      await supabase.rpc("update_visit_status_system", {
+      // Move to queue with proper status guard (only transitions from still_answering_ai)
+      await supabase.rpc("move_to_queue_on_error", {
         p_visit_id: visit_id,
-        p_new_status: "waiting_doctor_claim",
-        p_timeout_flagged: true,
-        p_action: "ai_failure_fallback",
+        p_session_token: session_token,
       });
 
       return new Response(

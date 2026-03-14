@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function AuthLayout({
   children,
 }: {
@@ -7,9 +9,9 @@ export default function AuthLayout({
     <div className="flex min-h-screen items-center justify-center bg-white px-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <a href="/" className="text-2xl font-bold text-hilt-blue tracking-tight">
+          <Link href="/" className="text-2xl font-bold text-hilt-blue tracking-tight">
             Hilt Health
-          </a>
+          </Link>
         </div>
         {children}
       </div>

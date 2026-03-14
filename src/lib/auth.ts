@@ -24,6 +24,7 @@ export async function getStaffUser(authUid: string) {
     .from("staff_users")
     .select("*")
     .eq("auth_uid", authUid)
+    .eq("is_active", true)
     .eq("is_deleted", false)
     .single();
   return data;
@@ -51,6 +52,8 @@ export async function requireRole(locationId: string, role: string) {
     .eq("location_id", locationId)
     .eq("role", role)
     .eq("staff_users.auth_uid", user.id)
+    .eq("staff_users.is_active", true)
+    .eq("staff_users.is_deleted", false)
     .single();
 
   if (!data) {

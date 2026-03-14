@@ -16,6 +16,17 @@ export default async function AuditTrailPage() {
   if (ownerCheck) {
     const staff = await getStaffUser(user.id);
     orgId = staff?.org_id ?? null;
+    if (!orgId) {
+      // Owner without staff record — look up org directly
+      const { createClient } = await import("@/lib/supabase/server");
+      const supabase = await createClient();
+      const { data: org } = await supabase
+        .from("organizations")
+        .select("id")
+        .eq("owner_id", user.id)
+        .single();
+      orgId = org?.id ?? null;
+    }
   } else {
     const roles = await getMyRoles();
     const hasManager = (roles as { role: string }[]).some(

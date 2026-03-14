@@ -58,7 +58,7 @@ BEGIN
         'location_id', v_rec.location_id,
         'visit_id', v_rec.visit_id,
         'patient_id', v_rec.patient_id,
-        'sms_type', 'follow_up_reminder',
+        'sms_type', 'follow_up',
         'template', 'follow_up',
         'custom_body', v_rec.reminder_template,
         'template_params', jsonb_build_object(

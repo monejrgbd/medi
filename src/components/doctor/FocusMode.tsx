@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useDoctorRealtime } from "@/hooks/useDoctorRealtime";
 import {
   claimPatient,
+  cancelClaim,
   fetchVisitDetail,
   fetchQueue,
 } from "@/app/(dashboard)/d/_actions/doctor";
@@ -105,10 +106,16 @@ export default function FocusMode({
   const [loading, setLoading] = useState(false);
   const [autoClaiming, setAutoClaiming] = useState(false);
   const [showDiagnosis, setShowDiagnosis] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [tab, setTab] = useState<FocusTab>("summary");
   const [updateNotice, setUpdateNotice] = useState(false);
   const supabaseRef = useRef(createClient());
   const updatedAtRef = useRef<string | null>(null);
+  const currentVisitRef = useRef(currentVisit);
+  const autoClaimingRef = useRef(autoClaiming);
+
+  useEffect(() => { currentVisitRef.current = currentVisit; }, [currentVisit]);
+  useEffect(() => { autoClaimingRef.current = autoClaiming; }, [autoClaiming]);
 
   useEffect(() => {
     if (!currentVisit) {
@@ -173,18 +180,18 @@ export default function FocusMode({
       if (result.success) {
         const newQueue = result.queue || [];
         setQueue(newQueue);
-        if (!currentVisit && newQueue.length > 0 && !autoClaiming) {
+        if (!currentVisitRef.current && newQueue.length > 0 && !autoClaimingRef.current) {
           doClaimNext(newQueue);
         }
       }
     });
-  }, [router, locationId, currentVisit, autoClaiming]);
+  }, [router, locationId]);
 
   useDoctorRealtime(locationId, handleVisitChange, { soundEnabled });
 
   async function doClaimNext(fromQueue?: QueueVisit[]) {
     const q = fromQueue || queue;
-    if (q.length === 0 || autoClaiming) return;
+    if (q.length === 0 || autoClaimingRef.current) return;
 
     setAutoClaiming(true);
     const result = await claimPatient(q[0].visit_id);
@@ -399,10 +406,27 @@ export default function FocusMode({
       {/* Action bar */}
       {detail && (
         <div className="fixed bottom-0 inset-x-0 border-t border-gray-200 bg-white px-4 py-3 lg:px-6">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto flex items-center gap-3">
+            <button
+              onClick={async () => {
+                if (!currentVisit) return;
+                setCancelling(true);
+                const result = await cancelClaim(currentVisit.visit_id);
+                setCancelling(false);
+                if (result.success) {
+                  setCurrentVisit(null);
+                  setDetail(null);
+                  setShowDiagnosis(false);
+                }
+              }}
+              disabled={cancelling}
+              className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              {cancelling ? "Cancelling..." : "Cancel Claim"}
+            </button>
             <button
               onClick={() => setShowDiagnosis(true)}
-              className="w-full rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+              className="flex-1 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
             >
               Complete Visit & Claim Next
             </button>

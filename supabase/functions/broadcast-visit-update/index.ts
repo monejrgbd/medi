@@ -29,6 +29,7 @@ Deno.serve(async (req) => {
     );
 
     const channel = supabase.channel(`patient:${session_token}`);
+    await channel.subscribe();
 
     if (event_type === "phone_required") {
       // Broadcast phone_required event

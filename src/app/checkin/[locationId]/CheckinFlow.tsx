@@ -112,6 +112,10 @@ export default function CheckinFlow({
   summaryDataRef.current = summaryData;
   const stateRef = useRef<FlowState>(state);
   stateRef.current = state;
+  const hasPreviousVisitsRef = useRef(hasPreviousVisits);
+  hasPreviousVisitsRef.current = hasPreviousVisits;
+  const consentGivenRef = useRef(consentGiven);
+  consentGivenRef.current = consentGiven;
 
   // 60s timeout safety net for summary generation
   useEffect(() => {
@@ -275,7 +279,9 @@ export default function CheckinFlow({
       }
 
       if (status === "left") {
-        setState("patient_left");
+        if (stateRef.current !== "denied") {
+          setState("patient_left");
+        }
         return;
       }
 
@@ -284,7 +290,7 @@ export default function CheckinFlow({
         if (current === "chatting" || current === "generating_summary" || current === "summary_review") {
           return;
         }
-        if (!hasPreviousVisits && !consentGiven) {
+        if (!hasPreviousVisitsRef.current && !consentGivenRef.current) {
           setState("first_timer");
         } else {
           setState("chatting");
@@ -306,12 +312,14 @@ export default function CheckinFlow({
         setState("visit_completed");
       }
     },
-    [hasPreviousVisits, consentGiven, visitId]
+    [visitId]
   );
 
   // Activate realtime during waiting, chatting, generating_summary, summary_review, queued, timeout, phone states
   const realtimeActive =
     state === "waiting" ||
+    state === "first_timer" ||
+    state === "language" ||
     state === "chatting" ||
     state === "generating_summary" ||
     state === "summary_review" ||

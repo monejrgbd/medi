@@ -29,7 +29,7 @@ BEGIN
   END IF;
 
   -- Guard: blocked plans cannot purchase
-  IF v_org.subscription_plan IN ('expired', 'suspended') THEN
+  IF v_org.subscription_plan IN ('expired', 'suspended', 'read_only') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Cannot purchase credits while account is ' || v_org.subscription_plan);
   END IF;
 
@@ -49,7 +49,7 @@ BEGIN
 
   RETURN jsonb_build_object(
     'success', true,
-    'new_credits_total', v_org.credits_total + p_amount,
+    'new_credits_total', (SELECT credits_total FROM public.organizations WHERE id = v_org.id),
     'credits_purchased', p_amount
   );
 END;

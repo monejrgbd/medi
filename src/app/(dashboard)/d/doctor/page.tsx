@@ -22,6 +22,14 @@ export default async function DoctorPage() {
 
   if (!orgId) redirect("/d/select-role");
 
+  // Role guard: must be owner or have a doctor role
+  if (!ownerCheck) {
+    const roles = await getMyRoles();
+    if (!roles.some((r: { role: string }) => r.role === "doctor")) {
+      redirect("/d/select-role");
+    }
+  }
+
   // Check if checked in as doctor
   let checkedInLocationId: string | null = null;
 
@@ -110,6 +118,8 @@ export default async function DoctorPage() {
       initialCompleted={completedLeftRes.data?.completed ?? []}
       initialLeft={completedLeftRes.data?.left ?? []}
       initialDoctors={doctorsRes.data?.doctors ?? []}
+      initialHasMoreCompleted={completedLeftRes.data?.has_more_completed ?? false}
+      initialHasMoreLeft={completedLeftRes.data?.has_more_left ?? false}
     />
   );
 }

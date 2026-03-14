@@ -105,5 +105,10 @@
   "completed.subtitle": "Buổi khám của bạn đã hoàn tất. Bạn sẽ nhận được tóm tắt qua tin nhắn sớm.",
   "completed.countdown": "Đặt lại sau {seconds} giây...",
   "subscription_expired.title": "Tạm thời không khả dụng",
-  "subscription_expired.subtitle": "Phòng khám tạm thời không thể bắt đầu phiên mới. Vui lòng nói với lễ tân."
+  "subscription_expired.subtitle": "Phòng khám tạm thời không thể bắt đầu phiên mới. Vui lòng nói với lễ tân.",
+  "checkin.verifyBirthday": "Xác nhận danh tính",
+  "checkin.verifyBirthdayDesc": "Vui lòng nhập ngày sinh để tiếp tục phiên của bạn.",
+  "checkin.birthdayMismatch": "Ngày sinh không khớp. Vui lòng thử lại hoặc bắt đầu đăng ký mới.",
+  "checkin.startOver": "Bắt đầu lại",
+  "checkin.confirm": "Xác nhận"
 }

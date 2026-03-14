@@ -102,7 +102,7 @@ export async function fetchVisitDetail(visitId: string) {
   if (error) return { success: false, error: "Failed to fetch visit detail" };
   if (data && !data.success) return { success: false, error: data.error };
 
-  supabase.rpc("log_phi_access", { p_entity_type: "visit", p_entity_id: visitId });
+  supabase.rpc("log_phi_access", { p_entity_type: "visit", p_entity_id: visitId }).then(() => {}, () => {});
   return { success: true, data: data.data };
 }
 
@@ -120,7 +120,7 @@ export async function fetchPatientProfile(patientId: string) {
     return { success: false, error: "Failed to fetch patient profile" };
   if (data && !data.success) return { success: false, error: data.error };
 
-  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId });
+  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId }).then(() => {}, () => {});
   return { success: true, patient: data.patient };
 }
 
@@ -143,7 +143,7 @@ export async function fetchPatientHistory(
     return { success: false, error: "Failed to fetch patient history" };
   if (data && !data.success) return { success: false, error: data.error };
 
-  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId });
+  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId }).then(() => {}, () => {});
   return {
     success: true,
     visits: data.visits,
@@ -401,7 +401,7 @@ export async function fetchPatientMedicalRecords(patientId: string) {
     return { success: false, error: "Failed to fetch medical records" };
   if (data && !data.success) return { success: false, error: data.error };
 
-  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId });
+  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId }).then(() => {}, () => {});
   return {
     success: true,
     medications: data.medications,

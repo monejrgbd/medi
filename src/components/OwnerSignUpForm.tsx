@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function OwnerSignUpForm() {
@@ -182,9 +183,9 @@ export default function OwnerSignUpForm() {
 
       <p className="text-center text-sm text-slate">
         Already have an account?{" "}
-        <a href="/login" className="font-medium text-hilt-blue hover:underline">
+        <Link href="/login" className="font-medium text-hilt-blue hover:underline">
           Log in
-        </a>
+        </Link>
       </p>
     </form>
   );

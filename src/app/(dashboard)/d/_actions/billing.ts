@@ -208,7 +208,7 @@ export async function fetchPatientFullProfile(patientId: string) {
   });
   if (error) return { success: false, error: error.message };
 
-  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId });
+  supabase.rpc("log_phi_access", { p_entity_type: "patient", p_entity_id: patientId }).then(() => {}, () => {});
   return data;
 }
 
