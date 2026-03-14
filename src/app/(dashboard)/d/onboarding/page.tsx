@@ -23,11 +23,6 @@ export default async function OnboardingPage() {
     (l: { id: string; name: string }) => ({ id: l.id, name: l.name })
   );
 
-  // Only skip onboarding if completed AND they actually have locations
-  if (org?.onboarding_completed_at && existingLocations.length > 0) {
-    redirect("/d/select-role");
-  }
-
   return (
     <OnboardingWizard
       org={{

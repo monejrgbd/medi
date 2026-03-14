@@ -31,13 +31,8 @@ export async function getStaffUser(authUid: string) {
 }
 
 export async function isOwner(authUid: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("organizations")
-    .select("owner_id")
-    .eq("owner_id", authUid)
-    .single();
-  return !!data;
+  const org = await getMyOrg();
+  return !!org?.owner_id && org.owner_id === authUid;
 }
 
 export async function requireRole(locationId: string, role: string) {

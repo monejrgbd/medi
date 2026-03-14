@@ -75,12 +75,12 @@ export default function RoleSelector() {
           <Building2 className="mx-auto mb-3 h-10 w-10 text-ash" />
           <p className="text-sm font-medium text-slate">No locations set up yet</p>
           <p className="mt-1 text-xs text-ash">Create your first location to start accepting patients.</p>
-          <button
-            onClick={() => router.push("/d/onboarding")}
-            className="mt-4 rounded-lg bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark transition-colors"
+          <a
+            href="/d/onboarding"
+            className="mt-4 inline-block rounded-lg bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark transition-colors"
           >
             Start Setup
-          </button>
+          </a>
         </div>
       ) : (
         <>
