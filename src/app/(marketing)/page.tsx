@@ -422,7 +422,7 @@ function Footer() {
         <p className="mb-4 text-slate">
           Built in Toronto. Expanding across Canada.
         </p>
-        <div className="mb-4 flex items-center justify-center gap-6 text-sm text-ash">
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ash">
           <Link href="/blog" className="hover:text-slate transition-colors">
             Blog
           </Link>

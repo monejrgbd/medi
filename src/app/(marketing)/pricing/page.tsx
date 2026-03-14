@@ -145,7 +145,7 @@ function AIModelSelector({ model, setModel }: { model: AIModel; setModel: (m: AI
 
 function PricingCards({ model, onContactCustom }: { model: AIModel; onContactCustom: () => void }) {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+    <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-5">
       {PLANS.map((plan, i) => {
         const patientCount = patients(plan.credits, model);
         const perPatient = (plan.price / patientCount).toFixed(2);
@@ -297,85 +297,94 @@ function PayAsYouGo() {
 }
 
 function ComparisonTable({ model }: { model: AIModel }) {
+  const rows = [
+    { label: "Monthly price", values: PLANS.map((p) => `$${p.price.toLocaleString()}`), custom: "Custom" },
+    { label: "Credits included", values: PLANS.map((p) => p.credits.toLocaleString()), custom: "Custom" },
+    { label: `Patients/month (${model === "standard" ? "Standard" : "Advanced"} AI)`, values: PLANS.map((p) => `~${patients(p.credits, model).toLocaleString()}`), custom: "Unlimited", highlight: true },
+    { label: "Cost per patient", values: PLANS.map((p) => `$${(p.price / patients(p.credits, model)).toFixed(2)}`), custom: "Custom" },
+    { label: "Overuse rate", values: PLANS.map(() => "$1/credit"), custom: "Custom" },
+  ];
+
   return (
     <FadeIn>
-      <div className="mx-auto mt-16 max-w-4xl overflow-x-auto">
+      <div className="mx-auto mt-16 max-w-4xl">
         <h3 className="mb-6 text-center text-2xl font-bold text-ink">Plan comparison</h3>
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="border-b border-gray-200">
-              <th className="pb-4 pr-4 font-medium text-slate" />
-              {PLANS.map((p) => (
-                <th key={p.name} className={`pb-4 px-4 font-semibold ${p.highlight ? "text-hilt-blue" : "text-ink"}`}>
-                  {p.name}
-                </th>
-              ))}
-              <th className="pb-4 px-4 font-semibold text-ink">Custom</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            <tr>
-              <td className="py-3 pr-4 text-slate">Monthly price</td>
-              {PLANS.map((p) => (
-                <td key={p.name} className="px-4 py-3 font-medium text-ink">${p.price.toLocaleString()}</td>
-              ))}
-              <td className="px-4 py-3 font-medium text-ink">Custom</td>
-            </tr>
-            <tr>
-              <td className="py-3 pr-4 text-slate">Credits included</td>
-              {PLANS.map((p) => (
-                <td key={p.name} className="px-4 py-3 font-medium text-ink">{p.credits.toLocaleString()}</td>
-              ))}
-              <td className="px-4 py-3 font-medium text-ink">Custom</td>
-            </tr>
-            <tr>
-              <td className="py-3 pr-4 text-slate">
-                Patients/month <span className="text-xs text-ash">({model === "standard" ? "Standard" : "Advanced"} AI)</span>
-              </td>
-              {PLANS.map((p) => (
-                <td key={p.name} className="px-4 py-3 font-medium text-hilt-blue">~{patients(p.credits, model).toLocaleString()}</td>
-              ))}
-              <td className="px-4 py-3 font-medium text-hilt-blue">Unlimited</td>
-            </tr>
-            <tr>
-              <td className="py-3 pr-4 text-slate">Cost per patient</td>
-              {PLANS.map((p) => (
-                <td key={p.name} className="px-4 py-3 font-medium text-ink">
-                  ${(p.price / patients(p.credits, model)).toFixed(2)}
-                </td>
-              ))}
-              <td className="px-4 py-3 font-medium text-ink">Custom</td>
-            </tr>
-            <tr>
-              <td className="py-3 pr-4 text-slate">Overuse rate</td>
-              {PLANS.map((p) => (
-                <td key={p.name} className="px-4 py-3 text-ink">$1/credit</td>
-              ))}
-              <td className="px-4 py-3 text-ink">Custom</td>
-            </tr>
-            {[
-              "Standard + Advanced AI",
-              "Doctor summary + transcript",
-              "Analytics dashboard",
-            ].map((feature) => (
-              <tr key={feature}>
-                <td className="py-3 pr-4 text-slate">{feature}</td>
+
+        {/* Desktop table */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="pb-4 pr-4 font-medium text-slate" />
                 {PLANS.map((p) => (
-                  <td key={p.name} className="px-4 py-3">
+                  <th key={p.name} className={`pb-4 px-4 font-semibold ${p.highlight ? "text-hilt-blue" : "text-ink"}`}>
+                    {p.name}
+                  </th>
+                ))}
+                <th className="pb-4 px-4 font-semibold text-ink">Custom</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {rows.map((row) => (
+                <tr key={row.label}>
+                  <td className="py-3 pr-4 text-slate">{row.label}</td>
+                  {row.values.map((val, i) => (
+                    <td key={PLANS[i].name} className={`px-4 py-3 font-medium ${row.highlight ? "text-hilt-blue" : "text-ink"}`}>{val}</td>
+                  ))}
+                  <td className={`px-4 py-3 font-medium ${row.highlight ? "text-hilt-blue" : "text-ink"}`}>{row.custom}</td>
+                </tr>
+              ))}
+              {[
+                "Standard + Advanced AI",
+                "Doctor summary + transcript",
+                "Analytics dashboard",
+              ].map((feature) => (
+                <tr key={feature}>
+                  <td className="py-3 pr-4 text-slate">{feature}</td>
+                  {PLANS.map((p) => (
+                    <td key={p.name} className="px-4 py-3">
+                      <svg className="h-5 w-5 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                      </svg>
+                    </td>
+                  ))}
+                  <td className="px-4 py-3">
                     <svg className="h-5 w-5 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
                   </td>
-                ))}
-                <td className="px-4 py-3">
-                  <svg className="h-5 w-5 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile stacked cards */}
+        <div className="sm:hidden space-y-4">
+          {[...PLANS, { name: "Custom", price: 0, credits: 0, savings: "", desc: "", highlight: false }].map((plan) => {
+            const isCustom = plan.name === "Custom";
+            return (
+              <div
+                key={plan.name}
+                className={`rounded-xl border p-4 ${plan.highlight ? "border-hilt-blue bg-hilt-blue/5" : "border-gray-200 bg-white"}`}
+              >
+                <h4 className={`font-semibold mb-3 ${plan.highlight ? "text-hilt-blue" : "text-ink"}`}>{plan.name}</h4>
+                <div className="space-y-2 text-sm">
+                  {rows.map((row) => {
+                    const idx = PLANS.findIndex((p) => p.name === plan.name);
+                    const val = isCustom ? row.custom : row.values[idx];
+                    return (
+                      <div key={row.label} className="flex justify-between">
+                        <span className="text-slate">{row.label}</span>
+                        <span className={`font-medium ${row.highlight ? "text-hilt-blue" : "text-ink"}`}>{val}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </FadeIn>
   );
@@ -430,7 +439,7 @@ function Footer() {
         <p className="mb-4 text-slate">
           Built in Toronto. Expanding across Canada.
         </p>
-        <div className="mb-4 flex items-center justify-center gap-6 text-sm text-ash">
+        <div className="mb-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ash">
           <Link href="/blog" className="hover:text-slate transition-colors">
             Blog
           </Link>

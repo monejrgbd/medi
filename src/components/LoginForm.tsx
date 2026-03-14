@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginForm() {
@@ -10,18 +9,8 @@ export default function LoginForm() {
   const [orgSlug, setOrgSlug] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [resetSent, setResetSent] = useState(false);
-  const [resetLoading, setResetLoading] = useState(false);
 
-  const searchParams = useSearchParams();
   const isEmail = identifier.includes("@");
-
-  useEffect(() => {
-    const errorParam = searchParams.get("error");
-    if (errorParam === "reset_failed") {
-      setError("Password reset link is invalid or expired. Please try again.");
-    }
-  }, [searchParams]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -32,10 +21,8 @@ export default function LoginForm() {
     let email: string;
 
     if (isEmail) {
-      // Owner login with real email
       email = identifier;
     } else {
-      // Staff login with synthetic email
       if (!orgSlug.trim()) {
         setError("Please enter your organization identifier");
         setLoading(false);
@@ -109,32 +96,13 @@ export default function LoginForm() {
           <label className="block text-sm font-medium text-ink">
             Password
           </label>
-          {isEmail && (
-            <button
-              type="button"
-              disabled={resetLoading}
-              onClick={async () => {
-                if (!identifier.trim()) {
-                  setError("Enter your email first, then click Forgot password.");
-                  return;
-                }
-                setResetLoading(true);
-                setError("");
-                const supabase = createClient();
-                const { error: resetError } = await supabase.auth.resetPasswordForEmail(identifier.trim(), {
-                  redirectTo: window.location.origin + "/auth/callback?next=/update-password",
-                });
-                setResetLoading(false);
-                if (resetError) {
-                  setError("Could not send reset email. Please try again.");
-                } else {
-                  setResetSent(true);
-                }
-              }}
-              className="text-xs text-hilt-blue hover:underline disabled:opacity-50"
+          {(isEmail || identifier.length === 0) && (
+            <a
+              href="/reset-password"
+              className="text-xs text-hilt-blue hover:underline"
             >
-              {resetLoading ? "Sending..." : "Forgot password?"}
-            </button>
+              Forgot password?
+            </a>
           )}
         </div>
         <input
@@ -144,11 +112,6 @@ export default function LoginForm() {
           onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
         />
-        {resetSent && (
-          <p className="mt-1 text-xs text-green-600">
-            Password reset email sent. Check your inbox.
-          </p>
-        )}
       </div>
 
       <button

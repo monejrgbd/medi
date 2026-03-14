@@ -94,15 +94,15 @@ export default function EmployeeStatsTable({ data }: Props) {
       ? doctorsWithData.reduce((s, e) => s + e.avg_handling_minutes!, 0) / doctorsWithData.length
       : null;
 
-  const columns: { key: SortKey; label: string; doctorOnly?: boolean }[] = [
+  const columns: { key: SortKey; label: string; doctorOnly?: boolean; hideOnMobile?: boolean }[] = [
     { key: "full_name", label: "Name" },
     { key: "role", label: "Role" },
     { key: "shift_hours", label: "Hours" },
-    { key: "utilization", label: "Utilization" },
+    { key: "utilization", label: "Utilization", hideOnMobile: true },
     { key: "patients_handled", label: "Patients" },
-    { key: "throughput", label: "Throughput" },
-    { key: "avg_handling_minutes", label: "Avg Handling", doctorOnly: true },
-    { key: "idle_hours", label: "Idle Time", doctorOnly: true },
+    { key: "throughput", label: "Throughput", hideOnMobile: true },
+    { key: "avg_handling_minutes", label: "Avg Handling", doctorOnly: true, hideOnMobile: true },
+    { key: "idle_hours", label: "Idle Time", doctorOnly: true, hideOnMobile: true },
   ];
 
   return (
@@ -114,7 +114,7 @@ export default function EmployeeStatsTable({ data }: Props) {
               <th
                 key={col.key}
                 onClick={() => handleSort(col.key)}
-                className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase cursor-pointer hover:text-ink select-none whitespace-nowrap"
+                className={`px-4 py-3 text-left text-xs font-semibold text-slate uppercase cursor-pointer hover:text-ink select-none whitespace-nowrap${col.hideOnMobile ? " hidden sm:table-cell" : ""}`}
               >
                 {col.label}
                 {sortKey === col.key && (
@@ -144,21 +144,21 @@ export default function EmployeeStatsTable({ data }: Props) {
                   <td className="px-4 py-3">
                     {fmtVal(emp.shift_hours, "h")}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     {fmtVal(emp.utilization, "%")}
                   </td>
                   <td className="px-4 py-3">
                     {emp.patients_handled}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     {fmtVal(emp.throughput, "/h")}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     {emp.role === "doctor"
                       ? fmtVal(emp.avg_handling_minutes, "m")
                       : "—"}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden sm:table-cell">
                     {emp.role === "doctor"
                       ? fmtVal(emp.idle_hours, "h")
                       : "—"}

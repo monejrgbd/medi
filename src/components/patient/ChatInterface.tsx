@@ -345,7 +345,7 @@ export default function ChatInterface({
       {isFollowUp && (
         <div className="rounded-lg bg-blue-50 px-3 py-2 mx-1 mb-2 shrink-0">
           <p className="text-xs font-medium text-blue-800">{t("followUp.label")}</p>
-          <p className="text-[10px] text-blue-600">{t("followUp.subtitle")}</p>
+          <p className="text-xs text-blue-600">{t("followUp.subtitle")}</p>
         </div>
       )}
 
@@ -422,7 +422,7 @@ export default function ChatInterface({
               className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:bg-white focus:outline-none disabled:opacity-50"
             />
             {input.length > MAX_CHARS * 0.9 && (
-              <span className="absolute right-2 bottom-1 text-[10px] text-ash">
+              <span className="absolute right-2 bottom-1 text-xs text-ash">
                 {input.length}/{MAX_CHARS}
               </span>
             )}

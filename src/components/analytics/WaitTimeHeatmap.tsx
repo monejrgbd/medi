@@ -75,12 +75,12 @@ export default function WaitTimeHeatmap({ data }: Props) {
       </div>
 
       <div className="overflow-x-auto relative">
-        <div className="min-w-[500px]">
+        <div>
           {/* Header row */}
-          <div className="grid gap-1 mb-1" style={{ gridTemplateColumns: "48px repeat(7, 1fr)" }}>
+          <div className="grid gap-1 mb-1" style={{ gridTemplateColumns: "36px repeat(7, 1fr)" }}>
             <div />
             {DAYS.map((day) => (
-              <div key={day} className="text-center text-xs font-medium text-slate">
+              <div key={day} className="text-center text-[10px] sm:text-xs font-medium text-slate">
                 {day}
               </div>
             ))}
@@ -90,10 +90,10 @@ export default function WaitTimeHeatmap({ data }: Props) {
           {HOURS.map((hour) => (
             <div
               key={hour}
-              className="grid gap-1 mb-1"
-              style={{ gridTemplateColumns: "48px repeat(7, 1fr)" }}
+              className="grid gap-0.5 sm:gap-1 mb-0.5 sm:mb-1"
+              style={{ gridTemplateColumns: "36px repeat(7, 1fr)" }}
             >
-              <div className="text-xs text-slate flex items-center justify-end pr-2">
+              <div className="text-[10px] sm:text-xs text-slate flex items-center justify-end pr-1 sm:pr-2">
                 {fmtHour(hour)}
               </div>
               {DAYS.map((_, dayIdx) => {
@@ -101,7 +101,7 @@ export default function WaitTimeHeatmap({ data }: Props) {
                 return (
                   <div
                     key={dayIdx}
-                    className="aspect-[2/1] rounded cursor-default flex items-center justify-center text-xs relative"
+                    className="aspect-[2/1] rounded cursor-default flex items-center justify-center text-[10px] sm:text-xs relative"
                     style={{
                       backgroundColor: cell
                         ? getColor(cell.avg_wait_minutes, maxWait)

@@ -104,7 +104,7 @@ export default function FollowUpComplianceFunnel({ data }: Props) {
             const width = Math.max(pct, 4);
             return (
               <div key={bar.label} className="flex items-center gap-3">
-                <div className="w-44 text-sm text-slate flex-shrink-0 text-right">
+                <div className="w-28 sm:w-44 text-xs sm:text-sm text-slate flex-shrink-0 text-right">
                   {bar.label}
                 </div>
                 <div className="flex-1">
@@ -127,7 +127,7 @@ export default function FollowUpComplianceFunnel({ data }: Props) {
           })}
         </div>
         <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3">
-          <div className="w-44 text-sm text-slate text-right">Expired</div>
+          <div className="w-28 sm:w-44 text-xs sm:text-sm text-slate text-right">Expired</div>
           <div className="text-sm font-medium text-red-600">
             {funnel.expired}
           </div>

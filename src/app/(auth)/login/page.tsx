@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import LoginForm from "@/components/LoginForm";
@@ -12,9 +11,5 @@ export default async function LoginPage() {
   const user = await getUser();
   if (user) redirect("/d/select-role");
 
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
-  );
+  return <LoginForm />;
 }
