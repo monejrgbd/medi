@@ -1,6 +1,7 @@
 "use client";
 
 import { useLanguage } from "@/contexts/LanguageContext";
+import { AlertTriangle } from "lucide-react";
 
 export default function CreditWarning() {
   const { t } = useLanguage();
@@ -8,7 +9,7 @@ export default function CreditWarning() {
   return (
     <div className="w-full max-w-md text-center">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
-        <span className="text-3xl">⚠</span>
+        <AlertTriangle className="h-8 w-8 text-amber-500" />
       </div>
       <h2 className="text-xl font-bold text-ink mb-2">
         {t("credit.title")}

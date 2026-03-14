@@ -74,7 +74,7 @@ export default async function ReviewPage({ params }: PageProps) {
       <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-            <span className="text-3xl text-green-600">&#10003;</span>
+            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
             Thank You!

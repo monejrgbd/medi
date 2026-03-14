@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
+
 const STEPS = ["Welcome", "Location", "Try it", "Done"];
 
 export default function StepIndicator({ currentStep }: { currentStep: number }) {
@@ -20,7 +22,7 @@ export default function StepIndicator({ currentStep }: { currentStep: number }) 
                     : "bg-gray-200 text-slate"
                 }`}
               >
-                {isCompleted ? "\u2713" : i + 1}
+                {isCompleted ? <Check className="h-4 w-4" /> : i + 1}
               </div>
               <span
                 className={`mt-1 text-xs ${

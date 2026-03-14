@@ -1,5 +1,7 @@
 "use client";
 
+import { type ReactNode } from "react";
+
 export default function StatCard({
   label,
   value,
@@ -8,14 +10,14 @@ export default function StatCard({
 }: {
   label: string;
   value: string | number;
-  icon?: string;
+  icon?: ReactNode;
   color?: string;
 }) {
   return (
     <div className={`rounded-xl border border-gray-100 ${color} p-5`}>
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-slate">{label}</p>
-        {icon && <span className="text-xl">{icon}</span>}
+        {icon}
       </div>
       <p className="mt-2 text-2xl font-bold text-ink">{value}</p>
     </div>

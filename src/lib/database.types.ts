@@ -1897,26 +1897,16 @@ export type Database = {
         Returns: Json
       }
       check_location_active: { Args: { p_location_id: string }; Returns: Json }
-      checkin_patient:
-        | {
-            Args: {
-              p_birthday: string
-              p_first_name: string
-              p_last_name: string
-              p_location_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_birthday: string
-              p_first_name: string
-              p_last_name: string
-              p_location_id: string
-              p_phone?: string
-            }
-            Returns: Json
-          }
+      checkin_patient: {
+        Args: {
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
+          p_phone?: string
+        }
+        Returns: Json
+      }
       claim_patient: { Args: { p_visit_id: string }; Returns: Json }
       collect_phone_post_ai: {
         Args: { p_phone: string; p_session_token: string; p_visit_id: string }

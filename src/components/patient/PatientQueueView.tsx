@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Check } from "lucide-react";
 
 interface PatientQueueViewProps {
   queuePosition: number | null;
@@ -77,7 +78,7 @@ export default function PatientQueueView({
   return (
     <div className="w-full max-w-md text-center" role="status" aria-live="polite">
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
-        <span className="text-3xl text-green-600">&#10003;</span>
+        <Check className="h-8 w-8 text-green-600" />
       </div>
 
       <h2 className="text-xl font-bold text-ink mb-2">

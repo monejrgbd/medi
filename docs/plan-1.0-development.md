@@ -724,7 +724,7 @@ visits (
   review_sms_sent       boolean DEFAULT false,
   timeout_flagged       boolean DEFAULT false,     -- true if 30-min timeout hit
   is_return_visit       boolean DEFAULT false,     -- pre-computed at completion: patient had prior completed visit within 90 days
-  gave_tablet           boolean DEFAULT false,     -- receptionist tracks loaner device
+  gave_tablet           boolean DEFAULT false,     -- receptionist tracks clinic device
   handled               boolean DEFAULT false,     -- receptionist "Handled" dismiss (UI only)
   updated_at            timestamptz DEFAULT now(), -- touched on addendum insert to fire doctors' Realtime subscription
   created_at            timestamptz DEFAULT now(),
@@ -1141,7 +1141,7 @@ CREATE INDEX idx_phone_verifications_lookup ON phone_verifications(phone, expire
 - `get_patient_session(session_token)` — returns visit status + patient info for patient's screen
 - `get_similar_patients(org_id, first_name, last_name, birthday)` — for "Similar patients" hint (same birthday OR similar names via `pg_trgm` `similarity()` function, uses `idx_patients_name_trgm` GIN index). `LIMIT 5`.
 - `mark_patient_left(visit_id)` — receptionist marks patient as `left` from any pre-claim status (pending_approval, still_answering_ai, waiting_doctor_claim). Sets audit context before status update.
-- `toggle_gave_tablet(visit_id)` — receptionist tracks loaner device
+- `toggle_gave_tablet(visit_id)` — receptionist tracks clinic device
 - `handle_patient(visit_id)` — sets `handled = true`. Does NOT change status — just dismisses from receptionist's active view.
 
 **Visit-Aware Staff Function Extensions (updating Phase 1 base versions):**

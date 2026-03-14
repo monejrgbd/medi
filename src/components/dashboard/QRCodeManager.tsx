@@ -130,7 +130,7 @@ export default function QRCodeManager({
   }
 
   return (
-    <div className="max-w-md">
+    <div className="max-w-md mx-auto">
       <div className="flex justify-center mb-6">
         <canvas ref={canvasRef} className="rounded-lg" />
       </div>

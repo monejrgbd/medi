@@ -50,7 +50,7 @@ export default function Navbar() {
               href="/signup"
               className="rounded-xl bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
             >
-              Request Free Trial
+              Start Free Trial
             </Link>
           </div>
 
@@ -89,7 +89,7 @@ export default function Navbar() {
               href="/signup"
               className="block w-full rounded-xl bg-hilt-blue px-5 py-3 text-center text-sm font-semibold text-white"
             >
-              Request Free Trial
+              Start Free Trial
             </Link>
           </div>
         )}

@@ -11,6 +11,8 @@ import {
   approveOnboardingVisit,
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES } from "@/lib/constants";
+import SearchableSelect from "@/components/ui/SearchableSelect";
+import { Check, Users, Tablet, Star, CreditCard, ArrowRight } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 
 interface OrgInfo {
@@ -200,68 +202,68 @@ export default function OnboardingWizard({
 
           <div className="max-w-md mx-auto text-left space-y-3 mb-8">
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  AI pre screening saves 5 to 10 min per patient
+                  Save 5 to 10 minutes per patient on intake
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Collects symptoms, meds, allergies, and chronic conditions before the doctor walks in
+                  AI collects symptoms, medications, allergies, and chronic conditions before the doctor walks in
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Structured summary + AI diagnostic for doctors
+                  Doctors start every visit already informed
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Patient approved summary and a doctor eyes only AI assessment with every visit
+                  Structured summary approved by the patient, plus an AI diagnostic visible only to doctors
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  130+ languages with voice input
+                  Works in 130+ languages with voice input
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Patients type or speak in their language, doctors always see English
+                  Patients type or speak in their own language, doctors always see everything in English
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Urgency detection &amp; smart queue
+                  Urgent patients are seen first, automatically
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  AI flags high priority patients so they are seen first
+                  AI detects severity during the conversation and sorts the queue by priority
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Visit summaries, referrals &amp; review collection
+                  Summaries, referrals, reviews, and follow ups built in
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  SMS summaries after every visit, seamless cross clinic referrals, and automated review funnels
+                  Patients get an SMS visit summary, you can refer between clinics, and collect reviews automatically
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700 text-xs font-semibold">&#10003;</span>
+              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Zero hardware needed to start
+                  No new hardware needed
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Patients check in on their own phone via QR code; add a tablet later if you want
+                  Patients scan a QR code on their own phone to check in, add a waiting room tablet later if you want
                 </p>
               </div>
             </div>
@@ -306,18 +308,13 @@ export default function OnboardingWizard({
                 Specialty{" "}
                 <span className="font-normal text-ash">(optional)</span>
               </label>
-              <select
+              <SearchableSelect
+                options={ALLOWED_SPECIALTIES}
                 value={specialty}
-                onChange={(e) => setSpecialty(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-              >
-                <option value="">Select a specialty</option>
-                {ALLOWED_SPECIALTIES.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
+                onChange={setSpecialty}
+                placeholder="Search specialties..."
+                emptyLabel="Select a specialty"
+              />
             </div>
 
             {createError && (
@@ -418,7 +415,7 @@ export default function OnboardingWizard({
 
           {demoReady && tryPhase === "success" && (
             <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6 mb-4">
-              <div className="text-3xl mb-2">&#10003;</div>
+              <div className="mb-2 flex justify-center"><Check className="h-8 w-8 text-green-600" /></div>
               <p className="text-sm font-medium text-green-800 mb-1">
                 Your test patient is now talking with the AI!
               </p>
@@ -448,30 +445,43 @@ export default function OnboardingWizard({
       {/* Step 3: All Set */}
       {step === 3 && (
         <div className="max-w-lg mx-auto text-center">
-          <div className="text-4xl mb-3">&#10003;</div>
+          <div className="mb-3 flex justify-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+              <Check className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
           <h2 className="text-2xl font-bold text-ink mb-2">
             You Are All Set!
           </h2>
-          <p className="text-sm text-slate mb-8">
-            Here is what to explore next:
+
+          <button
+            onClick={handleFinish}
+            className="w-full rounded-lg bg-hilt-blue px-6 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark flex items-center justify-center gap-2 mb-8"
+          >
+            Go to Dashboard
+            <ArrowRight className="h-4 w-4" />
+          </button>
+
+          <p className="text-xs text-ash mb-4">
+            Or jump to a specific section:
           </p>
 
-          <div className="grid gap-3 sm:grid-cols-2 mb-8">
+          <div className="grid gap-3 sm:grid-cols-2 mb-4">
             <button
-              onClick={() => router.push("/d/owner/staff")}
-              className="rounded-xl border-2 border-gray-200 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
+              onClick={async () => { await completeOnboarding(); router.push("/d/owner/staff"); }}
+              className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
-              <div className="text-lg mb-1">&#128101;</div>
+              <Users className="h-5 w-5 text-hilt-blue mb-1" />
               <h3 className="text-sm font-semibold text-ink">Add your staff</h3>
               <p className="text-xs text-slate mt-1">
                 Create accounts for doctors and receptionists
               </p>
             </button>
             <button
-              onClick={() => router.push("/d/owner/kiosk")}
-              className="rounded-xl border-2 border-gray-200 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
+              onClick={async () => { await completeOnboarding(); router.push("/d/owner/kiosk"); }}
+              className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
-              <div className="text-lg mb-1">&#128241;</div>
+              <Tablet className="h-5 w-5 text-hilt-blue mb-1" />
               <h3 className="text-sm font-semibold text-ink">
                 Set up a check in tablet
               </h3>
@@ -480,10 +490,10 @@ export default function OnboardingWizard({
               </p>
             </button>
             <button
-              onClick={() => router.push("/d/reviews")}
-              className="rounded-xl border-2 border-gray-200 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
+              onClick={async () => { await completeOnboarding(); router.push("/d/reviews"); }}
+              className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
-              <div className="text-lg mb-1">&#11088;</div>
+              <Star className="h-5 w-5 text-hilt-blue mb-1" />
               <h3 className="text-sm font-semibold text-ink">
                 Configure review collection
               </h3>
@@ -492,10 +502,10 @@ export default function OnboardingWizard({
               </p>
             </button>
             <button
-              onClick={() => router.push("/d/owner/billing")}
-              className="rounded-xl border-2 border-gray-200 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
+              onClick={async () => { await completeOnboarding(); router.push("/d/owner/billing"); }}
+              className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
-              <div className="text-lg mb-1">&#128179;</div>
+              <CreditCard className="h-5 w-5 text-hilt-blue mb-1" />
               <h3 className="text-sm font-semibold text-ink">
                 Check billing &amp; credits
               </h3>
@@ -505,12 +515,9 @@ export default function OnboardingWizard({
             </button>
           </div>
 
-          <button
-            onClick={handleFinish}
-            className="rounded-lg bg-hilt-blue px-6 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark"
-          >
-            Go to Dashboard
-          </button>
+          <p className="text-xs text-ash">
+            You can always find these in your dashboard sidebar.
+          </p>
         </div>
       )}
     </div>

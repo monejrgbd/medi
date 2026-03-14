@@ -5,11 +5,18 @@ import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import StructuredCard from "./StructuredCard";
 
+interface MedicalInfo {
+  medications: { name: string }[];
+  allergies: { name: string }[];
+  chronic_conditions: { name: string }[];
+}
+
 interface SummaryReviewProps {
   visitId: string;
   sessionToken: string;
   summary: string;
   structuredCard?: Record<string, unknown> | null;
+  medicalInfo?: MedicalInfo | null;
   onApprove: () => void;
   onReject: () => void;
 }
@@ -19,6 +26,7 @@ export default function SummaryReview({
   sessionToken,
   summary,
   structuredCard,
+  medicalInfo,
   onApprove,
   onReject,
 }: SummaryReviewProps) {
@@ -90,6 +98,51 @@ export default function SummaryReview({
         <div className="rounded-lg border border-gray-100 bg-gray-50 p-3 mb-4">
           <p className="text-xs text-slate font-medium mb-1">Summary</p>
           <p className="text-sm text-ink">{summary}</p>
+        </div>
+      )}
+
+      {/* Medical info confirmation */}
+      {medicalInfo && (medicalInfo.medications.length > 0 || medicalInfo.allergies.length > 0 || medicalInfo.chronic_conditions.length > 0) && (
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 mb-4">
+          <p className="text-xs font-semibold text-ink mb-3">Your medical information on file</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <p className="text-[11px] font-medium text-slate mb-1">Medications</p>
+              {medicalInfo.medications.length === 0 ? (
+                <p className="text-xs text-ash">None</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {medicalInfo.medications.map((m, i) => (
+                    <li key={i} className="text-xs text-ink">{m.name}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className={`text-[11px] font-medium mb-1 ${medicalInfo.allergies.length > 0 ? "text-red-600" : "text-slate"}`}>Allergies</p>
+              {medicalInfo.allergies.length === 0 ? (
+                <p className="text-xs text-ash">None</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {medicalInfo.allergies.map((a, i) => (
+                    <li key={i} className="text-xs text-ink">{a.name}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className="text-[11px] font-medium text-slate mb-1">Chronic conditions</p>
+              {medicalInfo.chronic_conditions.length === 0 ? (
+                <p className="text-xs text-ash">None</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {medicalInfo.chronic_conditions.map((c, i) => (
+                    <li key={i} className="text-xs text-ink">{c.name}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

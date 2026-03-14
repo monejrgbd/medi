@@ -25,10 +25,13 @@ export const REVIEW_PLATFORMS = [
 
 export const ALLOWED_SPECIALTIES = [
   "Cardiology",
+  "Dentistry",
   "Dermatology",
   "Endocrinology",
   "ENT",
+  "Family Medicine",
   "Gastroenterology",
+  "General Practice",
   "General Surgery",
   "Hematology",
   "Infectious Disease",
@@ -38,6 +41,7 @@ export const ALLOWED_SPECIALTIES = [
   "Obstetrics/Gynecology",
   "Oncology",
   "Ophthalmology",
+  "Optometry",
   "Orthopedics",
   "Pain Management",
   "Pediatrics",
@@ -46,6 +50,8 @@ export const ALLOWED_SPECIALTIES = [
   "Pulmonology",
   "Radiology",
   "Rheumatology",
+  "Urgent Care",
   "Urology",
+  "Walk-in Clinic",
   "Other",
 ];

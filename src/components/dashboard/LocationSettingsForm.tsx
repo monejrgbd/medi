@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
+import { ALLOWED_SPECIALTIES } from "@/lib/constants";
+import SearchableSelect from "@/components/ui/SearchableSelect";
 
 interface LocationData {
   id: string;
@@ -19,18 +21,6 @@ interface LocationData {
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const SPECIALTIES = [
-  "General Practice",
-  "Family Medicine",
-  "Pediatrics",
-  "Dermatology",
-  "Cardiology",
-  "Orthopedics",
-  "Dentistry",
-  "Optometry",
-  "Urgent Care",
-  "Other",
-];
 
 function getAllTimezones(): string[] {
   try {
@@ -90,29 +80,6 @@ export default function LocationSettingsForm({
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [tzSearch, setTzSearch] = useState("");
-  const [tzDropdownOpen, setTzDropdownOpen] = useState(false);
-  const tzContainerRef = useRef<HTMLDivElement>(null);
-
-  const filteredTimezones = useMemo(() => {
-    if (!tzSearch.trim()) return ALL_TIMEZONES;
-    const q = tzSearch.toLowerCase().replace(/\s+/g, "");
-    return ALL_TIMEZONES.filter((tz) => {
-      const label = formatTimezoneLabel(tz).toLowerCase().replace(/\s+/g, "");
-      const raw = tz.toLowerCase();
-      return label.includes(q) || raw.includes(q);
-    });
-  }, [tzSearch]);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (tzContainerRef.current && !tzContainerRef.current.contains(e.target as Node)) {
-        setTzDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,7 +121,7 @@ export default function LocationSettingsForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 max-w-xl">
+    <form onSubmit={handleSubmit} className="space-y-5 max-w-xl mx-auto">
       {message && (
         <div
           className={`rounded-lg p-3 text-sm ${
@@ -192,16 +159,13 @@ export default function LocationSettingsForm({
 
       <div>
         <label className="block text-sm font-medium text-ink mb-1">Specialty</label>
-        <select
+        <SearchableSelect
+          options={ALLOWED_SPECIALTIES}
           value={form.specialty}
-          onChange={(e) => update("specialty", e.target.value)}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-        >
-          <option value="">None</option>
-          {SPECIALTIES.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+          onChange={(v) => update("specialty", v)}
+          placeholder="Search specialties..."
+          emptyLabel="None"
+        />
       </div>
 
       <div>
@@ -268,55 +232,14 @@ export default function LocationSettingsForm({
 
       <div>
         <label className="block text-sm font-medium text-ink mb-1">Timezone</label>
-        <div ref={tzContainerRef} className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setTzDropdownOpen((o) => !o);
-              setTzSearch("");
-            }}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-left focus:border-hilt-blue focus:outline-none flex items-center justify-between"
-          >
-            <span className="truncate">{formatTimezoneLabel(form.timezone)}</span>
-            <svg className={`w-4 h-4 text-gray-400 shrink-0 ml-2 transition-transform ${tzDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-          </button>
-          {tzDropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg">
-              <div className="p-2 border-b border-gray-100">
-                <input
-                  type="text"
-                  value={tzSearch}
-                  onChange={(e) => setTzSearch(e.target.value)}
-                  placeholder="Search timezones..."
-                  autoFocus
-                  className="w-full rounded-md border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
-                />
-              </div>
-              <div className="max-h-60 overflow-y-auto">
-                {filteredTimezones.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-slate">No timezones found</div>
-                ) : (
-                  filteredTimezones.map((tz) => (
-                    <button
-                      key={tz}
-                      type="button"
-                      onClick={() => {
-                        update("timezone", tz);
-                        setTzDropdownOpen(false);
-                        setTzSearch("");
-                      }}
-                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-gray-50 ${
-                        form.timezone === tz ? "bg-blue-50 text-hilt-blue font-medium" : "text-ink"
-                      }`}
-                    >
-                      {formatTimezoneLabel(tz)}
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        <SearchableSelect
+          options={ALL_TIMEZONES}
+          value={form.timezone}
+          onChange={(v) => update("timezone", v)}
+          placeholder="Search timezones..."
+          emptyLabel="Select timezone..."
+          formatLabel={formatTimezoneLabel}
+        />
       </div>
 
       <div>

@@ -22,6 +22,7 @@ BEGIN
          p.birthday AS patient_birthday,
          p.phone_verified AS patient_phone_verified,
          (p.phone IS NOT NULL) AS patient_has_phone,
+         p.medications, p.allergies, p.chronic_conditions,
          l.name AS location_name, l.estimated_wait_minutes
   INTO v_visit
   FROM public.visits v
@@ -73,7 +74,10 @@ BEGIN
     'patient_phone_verified', v_visit.patient_phone_verified,
     'patient_has_phone', v_visit.patient_has_phone,
     'patient_birthday', v_visit.patient_birthday,
-    'patient_denied', v_visit.patient_denied
+    'patient_denied', v_visit.patient_denied,
+    'medications', v_visit.medications,
+    'allergies', v_visit.allergies,
+    'chronic_conditions', v_visit.chronic_conditions
   );
 END;
 $$;

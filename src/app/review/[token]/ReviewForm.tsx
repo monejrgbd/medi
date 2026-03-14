@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import ReviewStars from "@/components/reviews/ReviewStars";
+import { Check } from "lucide-react";
 
 interface ReviewFormProps {
   token: string;
@@ -56,7 +57,7 @@ export default function ReviewForm({ token }: ReviewFormProps) {
     return (
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-          <span className="text-3xl text-green-600">&#10003;</span>
+          <Check className="h-8 w-8 text-green-600" />
         </div>
         <h2 className="text-xl font-bold text-gray-900 mb-2">
           Thank you for your feedback!

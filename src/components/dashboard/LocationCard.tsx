@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { MapPin } from "lucide-react";
 
 interface LocationData {
   id: string;
@@ -26,8 +27,8 @@ export default function LocationCard({ location }: { location: LocationData }) {
             className="h-10 w-10 rounded-lg object-cover"
           />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-lg">
-            📍
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50">
+            <MapPin className="h-5 w-5 text-hilt-blue" />
           </div>
         )}
         <div className="flex-1 min-w-0">

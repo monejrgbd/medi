@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Check } from "lucide-react";
 
 export default function DoctorClaimedNotice() {
   const { t } = useLanguage();
@@ -24,7 +25,7 @@ export default function DoctorClaimedNotice() {
   return (
     <div className="w-full max-w-md text-center">
       <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
-        <span className="text-5xl text-green-600">&#10003;</span>
+        <Check className="h-12 w-12 text-green-600" />
       </div>
 
       <h2 className="text-2xl font-bold text-ink mb-2">

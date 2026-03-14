@@ -30,8 +30,7 @@ export default function PatientProfileCard({
             {patient.first_name} {patient.last_name}
           </h2>
           <p className="text-sm text-slate">
-            {age} years old &middot; DOB{" "}
-            {new Date(patient.birthday).toLocaleDateString()}
+            {age} years old
           </p>
         </div>
         {patient.visit_count > 0 && (

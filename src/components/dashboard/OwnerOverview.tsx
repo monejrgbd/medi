@@ -6,6 +6,7 @@ import LocationCard from "./LocationCard";
 import LocationFormModal from "./LocationFormModal";
 import PatientSearch from "./PatientSearch";
 import { getPlanLabel, getTrialDaysLeft } from "@/lib/utils";
+import { MapPin, Users, CreditCard, ClipboardList } from "lucide-react";
 
 interface OrgOverview {
   org: {
@@ -62,17 +63,17 @@ export default function OwnerOverview({
         <StatCard
           label="Locations"
           value={overview.location_count}
-          icon="📍"
+          icon={<MapPin className="h-5 w-5 text-hilt-blue" />}
         />
         <StatCard
           label="Staff Members"
           value={overview.staff_count}
-          icon="👥"
+          icon={<Users className="h-5 w-5 text-hilt-blue" />}
         />
         <div className="rounded-xl border border-gray-100 bg-white p-5">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-slate">Credits</p>
-            <span className="text-xl">💳</span>
+            <CreditCard className="h-5 w-5 text-hilt-blue" />
           </div>
           <p className="mt-2 text-2xl font-bold text-ink">
             {overview.org.credits_used}/{overview.org.credits_total}
@@ -87,7 +88,7 @@ export default function OwnerOverview({
         <div className="rounded-xl border border-gray-100 bg-white p-5">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-slate">Plan</p>
-            <span className="text-xl">📋</span>
+            <ClipboardList className="h-5 w-5 text-hilt-blue" />
           </div>
           <p className="mt-2 text-lg font-bold text-ink">
             {getPlanLabel(overview.org.subscription_plan)}

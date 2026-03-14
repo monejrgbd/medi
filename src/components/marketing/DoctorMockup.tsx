@@ -1,0 +1,192 @@
+"use client";
+
+import { useState } from "react";
+
+type Tab = "summary" | "transcript" | "notes" | "history";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "summary", label: "Summary" },
+  { key: "transcript", label: "Transcript" },
+  { key: "notes", label: "Notes" },
+  { key: "history", label: "History" },
+];
+
+function SummaryTab() {
+  return (
+    <>
+      <div className="rounded-lg border border-gray-200 bg-white p-3">
+        <div className="mb-1.5 flex items-center justify-between">
+          <p className="text-[10px] font-semibold text-ink">AI Summary</p>
+          <p className="text-[9px] text-ash">6 min conversation</p>
+        </div>
+        <p className="text-[11px] leading-relaxed text-ink">
+          Returning patient, previously seen for right knee pain. Now reports bilateral knee involvement and morning stiffness in hands lasting approximately 1 hour daily, with knuckle swelling. Ibuprofen provides partial relief. Reports recent fatigue. Family history of rheumatoid arthritis (mother).
+        </p>
+      </div>
+      <p className="mt-2 text-[9px] italic text-ash">
+        AI generated summary approved by patient at 9:09 AM.
+      </p>
+    </>
+  );
+}
+
+function TranscriptTab() {
+  const messages = [
+    { role: "ai", text: "Hi Sarah, welcome back! Last time you came in for knee pain. Is today\u2019s visit related?", time: "9:03" },
+    { role: "patient", text: "ya its worse now... my hands r stiff every morning too idk whats going on", time: "9:04" },
+    { role: "ai", text: "I am sorry to hear that. How long does the morning stiffness in your hands usually last?", time: "9:04" },
+    { role: "patient", text: "like an hour maybe? sometimes more. its hard to even open jars now", time: "9:05" },
+    { role: "ai", text: "That is helpful to know. Have you noticed any swelling or redness in your joints?", time: "9:05" },
+    { role: "patient", text: "my knuckles look swollen ya, my husband pointed it out. the knee is also more puffy than before", time: "9:06" },
+    { role: "ai", text: "Are you still taking ibuprofen? Is it helping with these new symptoms?", time: "9:06" },
+    { role: "patient", text: "ya i take it for the knee still but it doesnt do much for my hands honestly", time: "9:07" },
+    { role: "ai", text: "Have you had any fever, fatigue, or unexplained weight changes recently?", time: "9:07" },
+    { role: "patient", text: "now that u mention it ive been really tired lately. i thought it was just work stress", time: "9:07" },
+    { role: "ai", text: "That is important context. Any family history of arthritis or autoimmune conditions?", time: "9:08" },
+    { role: "patient", text: "my mom has rheumatoid arthritis actually... do u think thats what this is??", time: "9:08" },
+    { role: "ai", text: "That is something your doctor will assess. I want to make sure they have all the details. Is there anything else you would like to mention?", time: "9:08" },
+    { role: "patient", text: "no i think thats everything. i just want to know whats going on with my body", time: "9:09" },
+  ];
+
+  return (
+    <div>
+      <p className="mb-2 text-[9px] text-ash">9:03 AM to 9:09 AM · 6 minutes · 14 messages</p>
+      <div className="space-y-1.5">
+        {messages.map((m, i) => (
+          <div key={i} className={m.role === "patient" ? "ml-4" : ""}>
+            <div className={`rounded-lg px-2.5 py-1.5 ${m.role === "ai" ? "bg-gray-50" : "bg-hilt-blue/5"}`}>
+              <p className="text-[10px] leading-relaxed text-ink">{m.text}</p>
+            </div>
+            <p className={`mt-0.5 text-[8px] text-ash ${m.role === "patient" ? "text-right" : ""}`}>{m.time}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function NotesTab() {
+  return (
+    <div className="space-y-2.5">
+      <div className="rounded-lg border border-gray-200 bg-white p-2.5">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] font-medium text-ink">Dr. Patel</p>
+          <p className="text-[9px] text-ash">Today</p>
+        </div>
+        <p className="text-[10px] leading-relaxed text-slate">
+          Bilateral joint symptoms with prolonged morning stiffness suggests inflammatory process. Family hx of RA noted. Order RF, anti-CCP, ESR, CRP. Rheumatology referral if positive.
+        </p>
+      </div>
+      <div className="rounded-lg border border-dashed border-gray-200 py-2.5 text-center">
+        <p className="text-[10px] text-ash">+ Add note</p>
+      </div>
+    </div>
+  );
+}
+
+function HistoryTab() {
+  const visits = [
+    { date: "Jan 15, 2026", summary: "Right knee pain, prescribed ibuprofen, advised rest" },
+    { date: "Sep 8, 2025", summary: "Annual physical, all vitals normal" },
+    { date: "Mar 10, 2025", summary: "Upper respiratory infection, resolved" },
+  ];
+
+  return (
+    <div className="space-y-2">
+      {visits.map((v, i) => (
+        <div key={i} className="rounded-lg bg-gray-50 p-2.5">
+          <p className="text-[10px] font-medium text-ink">{v.date}</p>
+          <p className="text-[10px] text-slate leading-relaxed">{v.summary}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function DoctorMockup() {
+  const [tab, setTab] = useState<Tab>("summary");
+  const [hasInteracted, setHasInteracted] = useState(false);
+
+  return (
+    <div className="w-[280px] sm:w-[300px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
+      {/* Profile card header */}
+      <div className="border-b border-gray-100 p-4">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm font-bold text-ink">Sarah Martinez</p>
+            <p className="text-[11px] text-ash">32 years old</p>
+          </div>
+          <span className="text-[10px] text-ash">3 visits</span>
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+          <div>
+            <p className="font-medium text-slate">Meds (1)</p>
+            <p className="text-ink">Ibuprofen PRN</p>
+          </div>
+          <div>
+            <p className="font-medium text-red-600">Allergies (1)</p>
+            <p className="text-ink">Penicillin</p>
+          </div>
+          <div>
+            <p className="font-medium text-slate">Chronic (0)</p>
+            <p className="text-ash">None</p>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Diagnostic,collapsible row */}
+      <div className="border-b border-gray-100">
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <p className="text-[11px] font-semibold text-ink">AI Diagnostic Analysis</p>
+          <span className="text-[10px] text-ash">▸</span>
+        </div>
+      </div>
+
+      {/* Tabs + content */}
+      <div className="p-4">
+        {/* Interactive hint, pulses until user clicks a tab */}
+        {!hasInteracted && (
+          <p className="mb-2 text-center text-[9px] text-hilt-blue animate-pulse">
+            Click the tabs to explore
+          </p>
+        )}
+
+        <div className="mb-3 flex gap-3 border-b border-gray-100 text-[10px]">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => {
+                setTab(t.key);
+                setHasInteracted(true);
+              }}
+              className={`pb-1.5 font-medium transition-colors cursor-pointer ${
+                tab === t.key
+                  ? "border-b-2 border-hilt-blue text-hilt-blue"
+                  : "text-ash hover:text-slate"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div>
+          {tab === "summary" && <SummaryTab />}
+          {tab === "transcript" && <TranscriptTab />}
+          {tab === "notes" && <NotesTab />}
+          {tab === "history" && <HistoryTab />}
+        </div>
+      </div>
+
+      {/* Action bar */}
+      <div className="border-t border-gray-100 p-3 flex gap-2">
+        <div className="rounded-lg border border-gray-200 px-3 py-1.5 text-center text-[10px] font-medium text-slate">
+          Cancel
+        </div>
+        <div className="flex-1 rounded-lg bg-green-600 py-1.5 text-center text-[10px] font-semibold text-white">
+          Complete Visit
+        </div>
+      </div>
+    </div>
+  );
+}

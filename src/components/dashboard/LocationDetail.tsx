@@ -57,7 +57,7 @@ export default function LocationDetail({
   const activeTab = searchParams.get("tab") || "general";
 
   return (
-    <div>
+    <div className="max-w-2xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-ink">{location.name}</h1>
         {location.address && (

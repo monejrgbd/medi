@@ -22,6 +22,7 @@ import KioskAutoReset from "@/components/patient/KioskAutoReset";
 import KioskIdleTimeout from "@/components/patient/KioskIdleTimeout";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { t } from "@/lib/i18n";
+import { Clock } from "lucide-react";
 
 type FlowState =
   | "inactive"
@@ -63,6 +64,12 @@ interface CheckinFlowProps {
   kiosk?: boolean;
 }
 
+interface MedicalInfo {
+  medications: { name: string }[];
+  allergies: { name: string }[];
+  chronic_conditions: { name: string }[];
+}
+
 interface SummaryData {
   summary: string;
   structured_card?: Record<string, unknown> | null;
@@ -93,6 +100,7 @@ export default function CheckinFlow({
   const [languageLoading, setLanguageLoading] = useState(false);
   const [patientLanguage, setPatientLanguage] = useState("en");
   const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
+  const [medicalInfo, setMedicalInfo] = useState<MedicalInfo | null>(null);
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [estimatedWait, setEstimatedWait] = useState<number | null>(null);
 
@@ -266,6 +274,7 @@ export default function CheckinFlow({
           summary: payload.summary,
           structured_card: payload.structured_card,
         });
+        fetchMedicalInfo();
         setState("summary_review");
         return;
       }
@@ -574,7 +583,23 @@ export default function CheckinFlow({
     setState("chatting");
   }
 
+  async function fetchMedicalInfo() {
+    if (!sessionToken) return;
+    const supabase = createClient();
+    const { data } = await supabase.rpc("get_patient_session", {
+      p_session_token: sessionToken,
+    });
+    if (data?.success) {
+      setMedicalInfo({
+        medications: (data.medications || []) as { name: string }[],
+        allergies: (data.allergies || []) as { name: string }[],
+        chronic_conditions: (data.chronic_conditions || []) as { name: string }[],
+      });
+    }
+  }
+
   function handleConversationComplete() {
+    fetchMedicalInfo();
     if (summaryDataRef.current) {
       setState("summary_review");
     } else {
@@ -925,6 +950,7 @@ export default function CheckinFlow({
           sessionToken={sessionToken}
           summary={summaryData.summary}
           structuredCard={summaryData.structured_card}
+          medicalInfo={medicalInfo}
           onApprove={handleSummaryApprove}
           onReject={handleSummaryReject}
         />
@@ -947,7 +973,7 @@ export default function CheckinFlow({
       const timeoutContent = (
         <div className="w-full max-w-md text-center">
           <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
-            <span className="text-3xl">&#9201;</span>
+            <Clock className="h-8 w-8 text-amber-500" />
           </div>
           <h2 className="text-xl font-bold text-ink mb-2">
             {t("timeout.title", patientLanguage)}

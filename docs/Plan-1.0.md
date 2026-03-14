@@ -94,6 +94,7 @@ This section exists to prevent implementation ambiguity. The check-in identity s
   - **Structured card mode** — standardized intake form (chief complaint, onset, duration, severity, location, associated symptoms, aggravating/relieving factors, what they've tried)
   - The clinic picks one. That's what the patient approves, and that's what the doctor reads. Everyone sees the same patient-approved format.
   - The summary is always generated and stored in the database regardless of display mode. The structured card is only generated if the clinic has it set as their default.
+  - **Medical info confirmation** — alongside the summary, the patient sees their medications, allergies, and chronic conditions currently on file. This lets the patient confirm or flag outdated medical info in the same approval step. Displayed as a compact card below the summary: "Your information on file" with meds, allergies, and chronic conditions. If the patient rejects, they return to the conversation to correct the information.
 
 ### Output to Doctor
 The doctor sees the full raw transcript, plus two things at the bottom:
@@ -165,7 +166,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
   1. **Add user** — owner or manager creates a user at a location (username + password + full name). Each user gets a unique user ID on creation. Managers can only add/see users at their location. Owner can add/see users across all locations.
   2. **Assign roles** — assign one or more roles (doctor, receptionist, manager) to that user at that location. A user can have multiple roles at the same location and different roles at different locations.
 - **QR code generation** — when a location is created, the system auto-generates a unique QR code (plain by default). A tiny hint underneath says "Upload a logo for this location" to show it in the center. Logo is per location. Once uploaded, a toggle appears to switch between branded and plain. Owner can download/print as a PDF with configurable patient instructions (defaults to "Scan this to check in"). The instructions text is editable per PDF download, not saved in the system.
-- **Tablet logistics** — Premium trial includes one loaner tablet per location, shipped by Hilt Health. Return shipping prepaid label included. Standard trial does not include a tablet (clinic uses their own device or patients use their phones). Post-trial: clinics purchase their own tablets (any iPad or Android tablet). Hilt Health provides setup guide. Kiosk mode uses iOS Guided Access or Android kiosk mode (built-in OS features). No MDM required. Setup instructions provided.
+- **Tablet logistics** — Clinics use their own device or patients use their phones. Post-trial: clinics purchase their own tablets (any iPad or Android tablet). Hilt Health provides setup guide. Kiosk mode uses iOS Guided Access or Android kiosk mode (built-in OS features). No MDM required. Setup instructions provided.
 
 ### Manager
 - Adds/removes people from roles within their location.
@@ -223,7 +224,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
   - When approving a new patient, receptionist sees a "Similar patients" hint (same birthday or similar names). Receptionist is the human filter for typos. All new patient registrations require receptionist approval.
   - Patient sees a "Waiting for approval" screen until the receptionist approves. Once approved, transitions into the AI conversation. Receptionist can deny if something looks wrong.
 - **New visit vs. follow-up** — when activating a returning patient, if they have an active follow-up tag, a "Follow-up" button appears specifying the visit instance (date + reason). Receptionist chooses "Follow-up" (AI enters follow-up mode with prior context + doctor's instructions) or "New visit" (AI starts fresh, still has past summaries). If no follow-up tag exists, it just starts a new visit. If multiple active follow-ups exist from different visits, all are shown and receptionist picks the relevant one.
-- **Tablet tracking** — a "Gave Tablet" toggle per patient to track loaner devices. When that patient completes, the receptionist can see they still have a tablet and should collect it before they leave.
+- **Tablet tracking** — a "Gave Tablet" toggle per patient to track clinic owned devices. When that patient completes, the receptionist can see they still have a tablet and should collect it before they leave.
 - **Patient record editing** — receptionist, manager, and owner can edit a patient's first name, last name, and birthday. All edits logged in the audit trail (who changed what, old value → new value, timestamp). Editing is allowed at any time, even during an active session. Edits are validated against the uniqueness constraint — the system blocks any change that would create a duplicate (same first + last + birthday + phone as another patient in the org).
 - **Handled button** — "Handled" dismisses a patient from the receptionist's active view. Does not change patient status. Like archiving — clears clutter so the receptionist focuses on patients still needing attention.
 - **Live view** — can see the status of patients as they fill out the AI conversation.
@@ -256,7 +257,6 @@ Two trial tiers. No credit card required for either.
 
 **Premium Trial** (approval-only, code-gated)
 - **$200 worth of credits** (200 credits) + full platform access for 30 days
-- Includes a loaner tablet per location (shipped by Hilt Health, prepaid return label included)
 - Requires an approval code to activate — clinic enters the code during signup
 - Codes are generated by our team and given to clinics identified through outreach
 - 7 days before trial ends, we contact them with pricing based on the plan they choose
@@ -295,7 +295,6 @@ Two trial tiers. No credit card required for either.
 - AI pre-screening (Standard + Advanced models)
 - Doctor summary + full transcript
 - Analytics dashboard
-- Premium trial also includes a loaner tablet per location
 
 ---
 
