@@ -17,15 +17,16 @@ export default async function OnboardingPage() {
 
   const org = await getMyOrg();
 
-  if (org?.onboarding_completed_at) {
-    redirect("/d/select-role");
-  }
-
   const supabase = await createClient();
   const { data: locations } = await supabase.rpc("get_locations");
   const existingLocations = (locations ?? []).map(
     (l: { id: string; name: string }) => ({ id: l.id, name: l.name })
   );
+
+  // Only skip onboarding if completed AND they actually have locations
+  if (org?.onboarding_completed_at && existingLocations.length > 0) {
+    redirect("/d/select-role");
+  }
 
   return (
     <OnboardingWizard
