@@ -22,6 +22,7 @@ interface ChatInterfaceProps {
   locationName: string;
   onConversationComplete: () => void;
   onError: (error: string) => void;
+  onLanguageChange?: (lang: string) => void;
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -35,6 +36,7 @@ export default function ChatInterface({
   locationName,
   onConversationComplete,
   onError,
+  onLanguageChange,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -295,6 +297,7 @@ export default function ChatInterface({
 
     if (data?.success) {
       setLanguage(lang);
+      onLanguageChange?.(lang);
     }
   }
 

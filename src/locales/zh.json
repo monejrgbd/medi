@@ -18,7 +18,7 @@
   "firstTimer.continue": "继续",
   "language.title": "选择您的语言",
   "language.search": "搜索语言...",
-  "chat.placeholder": "描述您的感受...",
+  "chat.placeholder": "输入消息...",
   "chat.send": "发送",
   "chat.starting": "正在开始对话...",
   "chat.connectionError": "连接出现问题，请稍后再试。",

@@ -930,6 +930,7 @@ export default function CheckinFlow({
           locationName={locationData.location_name || "Clinic"}
           onConversationComplete={handleConversationComplete}
           onError={handleChatError}
+          onLanguageChange={(lang) => setPatientLanguage(lang)}
         />
       ) : null;
 

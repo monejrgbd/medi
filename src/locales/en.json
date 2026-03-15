@@ -18,7 +18,7 @@
   "firstTimer.continue": "Continue",
   "language.title": "Select Your Language",
   "language.search": "Search languages...",
-  "chat.placeholder": "Describe what you're feeling...",
+  "chat.placeholder": "Type a message...",
   "chat.send": "Send",
   "chat.starting": "Starting conversation...",
   "chat.connectionError": "We're having trouble connecting. Please try again in a moment.",

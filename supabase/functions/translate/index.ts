@@ -31,22 +31,16 @@ async function googleTranslate(
   target: string,
   source?: string
 ): Promise<string> {
-  const params: Record<string, string> = {
-    q: text,
-    target,
-    key: GOOGLE_API_KEY!,
-    format: "text",
-  };
-  if (source) params.source = source;
+  const url = new URL("https://translation.googleapis.com/language/translate/v2");
+  url.searchParams.set("key", GOOGLE_API_KEY!);
+  const body: Record<string, string> = { q: text, target, format: "text" };
+  if (source) body.source = source;
 
-  const res = await fetch(
-    "https://translation.googleapis.com/language/translate/v2",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(params),
-    }
-  );
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 
   if (!res.ok) {
     throw new Error(`Google Translate API error: ${res.status}`);
@@ -59,17 +53,13 @@ async function googleTranslate(
 async function googleDetect(
   text: string
 ): Promise<{ language: string; confidence: number }> {
-  const res = await fetch(
-    "https://translation.googleapis.com/language/translate/v2/detect",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        q: text,
-        key: GOOGLE_API_KEY!,
-      }),
-    }
-  );
+  const url = new URL("https://translation.googleapis.com/language/translate/v2/detect");
+  url.searchParams.set("key", GOOGLE_API_KEY!);
+  const res = await fetch(url.toString(), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ q: text }),
+  });
 
   if (!res.ok) {
     throw new Error(`Google Detect API error: ${res.status}`);
