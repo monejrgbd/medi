@@ -20,7 +20,7 @@ BEGIN
   SELECT id, name, credits_total, credits_used, subscription_plan,
          billing_cycle_start, trial_end_date, payment_failure_count,
          review_sms_addon, followup_sms_addon, paypal_subscription_id,
-         cancelled_at, data_retention_until
+         cancelled_at, data_retention_until, cancel_at_period_end
   INTO v_org
   FROM public.organizations
   WHERE owner_id = p_caller_auth_uid;
@@ -74,7 +74,8 @@ BEGIN
     'followup_sms_addon', v_org.followup_sms_addon,
     'paypal_subscription_id', v_org.paypal_subscription_id,
     'cancelled_at', v_org.cancelled_at,
-    'data_retention_until', v_org.data_retention_until
+    'data_retention_until', v_org.data_retention_until,
+    'cancel_at_period_end', v_org.cancel_at_period_end
   );
 END;
 $$;

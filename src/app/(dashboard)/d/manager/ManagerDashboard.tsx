@@ -162,15 +162,9 @@ export default function ManagerDashboard({
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6">
+    <div className="mx-auto max-w-7xl">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-ink">Analytics</h1>
-          <p className="text-sm text-slate mt-1">
-            Performance metrics and patient flow insights
-          </p>
-        </div>
+      <div className="mb-6 flex items-center justify-end">
         <div className="flex items-center gap-3">
           <Link
             href={`/d/manager/location/${selectedLocation}`}

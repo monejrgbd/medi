@@ -2,14 +2,16 @@ import type { NextConfig } from "next";
 
 const SUPABASE_HOST = "https://sdzeoeturtpkqlagobwj.supabase.co";
 const SUPABASE_WSS = "wss://sdzeoeturtpkqlagobwj.supabase.co";
+const PAYPAL_HOSTS = "https://www.paypal.com https://www.sandbox.paypal.com";
 
 const cspBase = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'`,
+  `script-src 'self' 'unsafe-inline' ${PAYPAL_HOSTS}`,
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' blob: data: ${SUPABASE_HOST}`,
   "font-src 'self'",
-  `connect-src 'self' ${SUPABASE_HOST} ${SUPABASE_WSS}`,
+  `connect-src 'self' ${SUPABASE_HOST} ${SUPABASE_WSS} ${PAYPAL_HOSTS}`,
+  `frame-src ${PAYPAL_HOSTS}`,
   "media-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

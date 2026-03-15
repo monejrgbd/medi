@@ -11,9 +11,10 @@ AS $$
 DECLARE
   v_org record;
   v_owner_email text;
+  v_end_date timestamptz;
 BEGIN
   -- Lock org and verify ownership
-  SELECT id, subscription_plan, name, owner_id
+  SELECT id, subscription_plan, name, owner_id, billing_cycle_start, cancel_at_period_end
   INTO v_org
   FROM public.organizations
   WHERE owner_id = p_caller_auth_uid
@@ -23,16 +24,22 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
   END IF;
 
-  -- Guard: already cancelled/suspended
+  -- Guard: already cancelled/suspended/expired
   IF v_org.subscription_plan IN ('expired', 'suspended') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Subscription is already ' || v_org.subscription_plan);
   END IF;
 
-  -- Cancel
+  -- Guard: already pending cancel
+  IF v_org.cancel_at_period_end IS NOT NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Cancellation already scheduled');
+  END IF;
+
+  -- Calculate period end date
+  v_end_date := COALESCE(v_org.billing_cycle_start + interval '30 days', now());
+
+  -- Set cancel flag — keep plan active until period ends
   UPDATE public.organizations
-  SET subscription_plan = 'expired',
-      cancelled_at = now(),
-      data_retention_until = now() + interval '90 days'
+  SET cancel_at_period_end = v_end_date
   WHERE id = v_org.id;
 
   -- Send confirmation email
@@ -42,20 +49,21 @@ BEGIN
     INSERT INTO public.pending_emails (to_email, subject, html_body, priority, metadata)
     VALUES (
       v_owner_email,
-      'Subscription Cancelled — ' || v_org.name,
-      '<h2>Subscription Cancelled</h2>' ||
-        '<p>Your subscription for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') || '</strong> has been cancelled.</p>' ||
-        '<p>Your data will be retained for 90 days. You can reactivate anytime during this period.</p>',
+      'Subscription Cancellation Scheduled — ' || v_org.name,
+      '<h2>Subscription Cancellation Scheduled</h2>' ||
+        '<p>Your subscription for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') || '</strong> will end on <strong>' || to_char(v_end_date, 'Month DD, YYYY') || '</strong>.</p>' ||
+        '<p>You have full access until then. Your dashboard will remain accessible after that date, but AI features will be unavailable without credits.</p>' ||
+        '<p>You can resubscribe anytime from the billing page.</p>',
       2,
-      jsonb_build_object('type', 'subscription_cancelled', 'org_id', v_org.id)
+      jsonb_build_object('type', 'subscription_cancel_scheduled', 'org_id', v_org.id, 'end_date', v_end_date)
     );
   END IF;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
-  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'subscription_cancelled', 'organization', v_org.id,
-    jsonb_build_object('old_plan', v_org.subscription_plan));
+  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'subscription_cancel_scheduled', 'organization', v_org.id,
+    jsonb_build_object('plan', v_org.subscription_plan, 'cancel_at_period_end', v_end_date));
 
-  RETURN jsonb_build_object('success', true);
+  RETURN jsonb_build_object('success', true, 'cancel_at_period_end', v_end_date);
 END;
 $$;
 

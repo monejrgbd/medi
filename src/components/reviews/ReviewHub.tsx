@@ -124,8 +124,12 @@ export default function ReviewHub({ locations, isOwnerOrManager }: ReviewHubProp
         )}
       </div>
 
-      {tab === "config" && isOwnerOrManager && selectedLocation ? (
-        <ReviewPlatformConfig locationId={selectedLocation} />
+      {tab === "config" && isOwnerOrManager ? (
+        selectedLocation ? (
+          <ReviewPlatformConfig locationId={selectedLocation} />
+        ) : (
+          <p className="text-sm text-slate text-center py-8">Select a location to configure platforms.</p>
+        )
       ) : (
         <>
           {/* Stats cards */}

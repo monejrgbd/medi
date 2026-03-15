@@ -51,10 +51,6 @@ export default function OwnerOverview({
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-ink">Overview</h1>
-      </div>
-
       <div className="mb-6">
         <PatientSearch />
       </div>

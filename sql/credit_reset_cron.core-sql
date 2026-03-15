@@ -12,6 +12,7 @@ SELECT cron.schedule(
       WHERE subscription_plan IN ('starter', 'standard', 'plus', 'enterprise')
         AND billing_cycle_start IS NOT NULL
         AND billing_cycle_start + interval '1 month' <= now()
+        AND cancel_at_period_end IS NULL
     LOOP
       PERFORM private.reset_monthly_credits(v_org_id);
     END LOOP;

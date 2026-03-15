@@ -7,12 +7,14 @@ import { toast } from "sonner";
 interface CancelSubscriptionProps {
   orgId: string;
   currentPlan: string;
+  cancelAtPeriodEnd?: string | null;
   onCancelled: () => void;
 }
 
 export default function CancelSubscription({
   orgId,
   currentPlan,
+  cancelAtPeriodEnd,
   onCancelled,
 }: CancelSubscriptionProps) {
   const [step, setStep] = useState<"idle" | "confirm">("idle");
@@ -26,7 +28,7 @@ export default function CancelSubscription({
     setCancelling(false);
 
     if (result?.success) {
-      toast.success("Subscription cancelled");
+      toast.success("Subscription cancellation scheduled");
       setStep("idle");
       onCancelled();
     } else {
@@ -35,6 +37,30 @@ export default function CancelSubscription({
   }
 
   if (isBlocked) return null;
+
+  // Already pending cancel
+  if (cancelAtPeriodEnd) {
+    const endDate = new Date(cancelAtPeriodEnd).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+    return (
+      <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-6">
+        <h2 className="text-lg font-semibold text-ink mb-2">
+          Cancellation Scheduled
+        </h2>
+        <p className="text-sm text-slate">
+          Your subscription will end on <span className="font-medium text-ink">{endDate}</span>.
+          You have full access until then. After that, your dashboard remains accessible but
+          AI features will be unavailable without credits.
+        </p>
+        <p className="text-sm text-slate mt-2">
+          To resubscribe, choose a plan above.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl border border-red-100 bg-red-50/50 p-6">
@@ -45,8 +71,8 @@ export default function CancelSubscription({
       {step === "idle" ? (
         <>
           <p className="text-sm text-slate mb-4">
-            Cancelling will set your account to expired. Your data will be
-            retained for 90 days.
+            Cancel your subscription. You&apos;ll keep full access until the end of
+            your current billing period.
           </p>
           <button
             onClick={() => setStep("confirm")}
@@ -62,10 +88,10 @@ export default function CancelSubscription({
               Are you sure you want to cancel?
             </p>
             <ul className="text-xs text-red-600 mt-2 space-y-1 list-disc list-inside">
-              <li>AI pre-screening will stop for new patients</li>
-              <li>Active sessions will be allowed to finish</li>
-              <li>Your data will be retained for 90 days</li>
-              <li>You can reactivate anytime during the retention period</li>
+              <li>You keep full access until the end of your billing period</li>
+              <li>After that, AI features stop (no credits)</li>
+              <li>Dashboard and patient data remain accessible</li>
+              <li>You can resubscribe anytime</li>
             </ul>
           </div>
           <div className="flex gap-2">

@@ -4,11 +4,15 @@ import { useState } from "react";
 import { purchaseOverageCredits } from "@/app/(dashboard)/d/_actions/billing";
 import { toast } from "sonner";
 
+const RESETTING_PLANS = ["starter", "standard", "plus", "enterprise"];
+
 interface OveragePurchaseProps {
   onPurchased: () => void;
+  subscriptionPlan: string;
+  billingCycleStart: string | null;
 }
 
-export default function OveragePurchase({ onPurchased }: OveragePurchaseProps) {
+export default function OveragePurchase({ onPurchased, subscriptionPlan, billingCycleStart }: OveragePurchaseProps) {
   const [amount, setAmount] = useState(50);
   const [purchasing, setPurchasing] = useState(false);
 
@@ -77,7 +81,20 @@ export default function OveragePurchase({ onPurchased }: OveragePurchaseProps) {
       </div>
 
       <p className="text-xs text-slate mt-2">
-        Credits are added immediately and do not expire within the billing cycle.
+        {RESETTING_PLANS.includes(subscriptionPlan)
+          ? (() => {
+              if (!billingCycleStart) return "Credits are added immediately and expire at the end of your billing cycle.";
+              const daysLeft = Math.max(
+                0,
+                Math.ceil(
+                  (new Date(billingCycleStart).getTime() + 30 * 86400000 - Date.now()) / 86400000
+                )
+              );
+              return daysLeft > 0
+                ? `Credits are added immediately and expire in ${daysLeft} day${daysLeft !== 1 ? "s" : ""} with your billing cycle reset.`
+                : "Credits are added immediately and expire at the end of your billing cycle.";
+            })()
+          : "Credits are added immediately and do not expire. If you subscribe to a plan, unused credits will reset with each billing cycle."}
       </p>
     </div>
   );

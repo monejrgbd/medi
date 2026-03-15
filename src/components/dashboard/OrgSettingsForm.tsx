@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { updateOrganization } from "@/app/(dashboard)/d/_actions/locations";
+import { updateOrganization, deactivateAccount } from "@/app/(dashboard)/d/_actions/locations";
 import { getPlanLabel, getTrialDaysLeft } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface OrgOverview {
   org: {
@@ -27,6 +28,8 @@ export default function OrgSettingsForm({
   const [name, setName] = useState(overview.org.name);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [deactivateStep, setDeactivateStep] = useState<"idle" | "confirm">("idle");
+  const [deactivating, setDeactivating] = useState(false);
 
   const trialDays = getTrialDaysLeft(overview.org.trial_end_date);
   const creditPercent =
@@ -51,8 +54,6 @@ export default function OrgSettingsForm({
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-ink mb-8">Settings</h1>
-
       {message && (
         <div
           className={`mb-6 rounded-lg p-3 text-sm ${
@@ -144,6 +145,67 @@ export default function OrgSettingsForm({
               readOnly
               className="w-full rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5 text-sm text-slate"
             />
+          </div>
+        )}
+
+        {overview.org.subscription_plan !== "expired" && (
+          <div className="mt-10 pt-6 border-t border-red-200">
+            <h3 className="text-sm font-semibold text-red-600 mb-2">Danger Zone</h3>
+            {deactivateStep === "idle" ? (
+              <>
+                <p className="text-xs text-slate mb-3">
+                  Deactivating your account will immediately stop all AI sessions,
+                  remove staff access, and set a 90-day data retention window.
+                </p>
+                <button
+                  onClick={() => setDeactivateStep("confirm")}
+                  className="rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  Deactivate Account
+                </button>
+              </>
+            ) : (
+              <div className="space-y-3">
+                <div className="rounded-lg bg-red-100 border border-red-200 p-3">
+                  <p className="text-sm text-red-700 font-medium">
+                    This action is immediate and cannot be undone easily.
+                  </p>
+                  <ul className="text-xs text-red-600 mt-2 space-y-1 list-disc list-inside">
+                    <li>All AI sessions stop immediately</li>
+                    <li>Staff lose access</li>
+                    <li>Data retained for 90 days</li>
+                    <li>You can reactivate by resubscribing</li>
+                  </ul>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={async () => {
+                      setDeactivating(true);
+                      const result = await deactivateAccount(overview.org.id);
+                      setDeactivating(false);
+                      if (result?.success) {
+                        toast.success("Account deactivated");
+                        router.refresh();
+                      } else {
+                        toast.error(result?.error || "Failed to deactivate");
+                      }
+                      setDeactivateStep("idle");
+                    }}
+                    disabled={deactivating}
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {deactivating ? "Deactivating..." : "Yes, Deactivate"}
+                  </button>
+                  <button
+                    onClick={() => setDeactivateStep("idle")}
+                    disabled={deactivating}
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

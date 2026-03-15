@@ -1,6 +1,5 @@
 import { requireAuth, isOwner } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 
 export default async function OnboardingLayout({
   children,
@@ -21,14 +20,6 @@ export default async function OnboardingLayout({
           <h1 className="text-xl font-bold text-hilt-blue">Hilt Health</h1>
         </div>
         {children}
-        <div className="mt-8 text-center">
-          <Link
-            href="/d/owner"
-            className="text-xs text-slate hover:text-ink transition-colors"
-          >
-            Go to dashboard
-          </Link>
-        </div>
       </div>
     </div>
   );

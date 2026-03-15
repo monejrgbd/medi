@@ -108,7 +108,7 @@ export default function DoctorMockup() {
   const [hasInteracted, setHasInteracted] = useState(false);
 
   return (
-    <div className="w-[280px] sm:w-[300px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
+    <div className="w-full rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
       {/* Profile card header */}
       <div className="border-b border-gray-100 p-4">
         <div className="flex items-start justify-between">

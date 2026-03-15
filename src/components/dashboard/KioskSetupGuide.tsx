@@ -8,12 +8,9 @@ export default function KioskSetupGuide() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-ink">Kiosk Setup</h1>
-        <p className="text-sm text-slate mt-1">
-          Turn any tablet into a dedicated check-in station for your waiting room.
-        </p>
-      </div>
+      <p className="text-sm text-slate mb-2">
+        Turn any tablet into a dedicated check-in station for your waiting room.
+      </p>
 
       <div className="rounded-xl border border-gray-100 bg-white p-6">
         <h2 className="text-lg font-semibold text-ink mb-1">Before You Start</h2>

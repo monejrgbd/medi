@@ -1,5 +1,6 @@
 import { requireAuth, isOwner, getMyRoles } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import Sidebar from "@/components/dashboard/Sidebar";
 
 export default async function ManagerLayout({
   children,
@@ -19,5 +20,10 @@ export default async function ManagerLayout({
     }
   }
 
-  return <div className="min-h-screen bg-snow">{children}</div>;
+  return (
+    <div className="min-h-screen bg-snow lg:flex">
+      <Sidebar />
+      <main className="flex-1 p-6 lg:p-8">{children}</main>
+    </div>
+  );
 }

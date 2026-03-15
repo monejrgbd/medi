@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
 const PAYPAL_CLIENT_SECRET = Deno.env.get("PAYPAL_CLIENT_SECRET");
 const PAYPAL_WEBHOOK_ID = Deno.env.get("PAYPAL_WEBHOOK_ID");
-const PAYPAL_API_BASE = "https://api-m.paypal.com";
+const PAYPAL_API_BASE = Deno.env.get("PAYPAL_API_BASE") || "https://api-m.paypal.com";
 
 // In-memory rate limiting: 100 req/min per IP
 const ipCounts = new Map<string, { count: number; resetAt: number }>();
@@ -205,6 +205,35 @@ Deno.serve(async (req) => {
           if (parts[1]) plan = parts[1];
         }
 
+        // Cancel old PayPal subscription if switching plans
+        const { data: currentOrg } = await supabase
+          .from("organizations")
+          .select("paypal_subscription_id")
+          .eq("id", orgId)
+          .single();
+
+        if (
+          currentOrg?.paypal_subscription_id &&
+          currentOrg.paypal_subscription_id !== subscriptionId
+        ) {
+          try {
+            const accessToken = await getPayPalAccessToken();
+            await fetch(
+              `${PAYPAL_API_BASE}/v1/billing/subscriptions/${currentOrg.paypal_subscription_id}/cancel`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ reason: "Replaced by new subscription" }),
+              }
+            );
+          } catch {
+            // Log but don't fail — new subscription is already active
+          }
+        }
+
         await supabase.rpc("activate_subscription", {
           p_org_id: orgId,
           p_paypal_subscription_id: subscriptionId || "",
@@ -245,25 +274,34 @@ Deno.serve(async (req) => {
       }
 
       case "BILLING.SUBSCRIPTION.CANCELLED": {
-        // Only set to expired if not already suspended (suspended is a stronger state)
-        await supabase
+        // If cancel_at_period_end is set, we're managing the timing — skip expire
+        const { data: cancelOrg } = await supabase
           .from("organizations")
-          .update({
-            subscription_plan: "expired",
-            cancelled_at: new Date().toISOString(),
-            data_retention_until: new Date(
-              Date.now() + 90 * 24 * 60 * 60 * 1000
-            ).toISOString(),
-          })
+          .select("cancel_at_period_end")
           .eq("id", orgId)
-          .neq("subscription_plan", "suspended");
+          .single();
+
+        if (!cancelOrg?.cancel_at_period_end) {
+          // External/admin cancel — expire immediately
+          await supabase
+            .from("organizations")
+            .update({
+              subscription_plan: "expired",
+              cancelled_at: new Date().toISOString(),
+              data_retention_until: new Date(
+                Date.now() + 90 * 24 * 60 * 60 * 1000
+              ).toISOString(),
+            })
+            .eq("id", orgId)
+            .neq("subscription_plan", "suspended");
+        }
         await supabase.from("audit_trail").insert({
           org_id: orgId,
           actor_type: "system",
           action: "subscription_cancelled_webhook",
           entity_type: "organization",
           entity_id: orgId,
-          details: { event_id: eventId },
+          details: { event_id: eventId, managed: !!cancelOrg?.cancel_at_period_end },
         });
         break;
       }

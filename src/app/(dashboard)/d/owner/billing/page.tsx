@@ -60,9 +60,7 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-ink">Billing & Credits</h1>
-
+    <div className="max-w-4xl mx-auto space-y-6">
       <CreditDashboard key={refreshKey} />
 
       <SubscriptionManager
@@ -83,13 +81,18 @@ export default function BillingPage() {
         <FollowUpSmsConfig orgId={org.id} />
       )}
 
-      <OveragePurchase onPurchased={handleRefresh} />
+      <OveragePurchase
+        onPurchased={handleRefresh}
+        subscriptionPlan={org.subscription_plan}
+        billingCycleStart={dashData?.billing_cycle_start as string | null ?? null}
+      />
 
       <PaymentHistory orgId={org.id} />
 
       <CancelSubscription
         orgId={org.id}
         currentPlan={org.subscription_plan}
+        cancelAtPeriodEnd={dashData?.cancel_at_period_end as string | null ?? null}
         onCancelled={handleRefresh}
       />
     </div>

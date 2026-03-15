@@ -86,4 +86,4 @@ END;
 $$;
 
 REVOKE EXECUTE ON FUNCTION public.change_subscription_plan(text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.change_subscription_plan(text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.change_subscription_plan(text) FROM authenticated;

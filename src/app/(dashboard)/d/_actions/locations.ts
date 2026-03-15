@@ -100,6 +100,60 @@ export async function updateOrganization(formData: { name: string }) {
   return { success: true };
 }
 
+export async function deactivateAccount(orgId: string) {
+  await requireAuth();
+  const supabase = await createClient();
+
+  // Cancel PayPal subscription if active
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("paypal_subscription_id")
+    .eq("id", orgId)
+    .single();
+
+  const PAYPAL_API_BASE =
+    process.env.PAYPAL_API_BASE || "https://api-m.paypal.com";
+
+  if (
+    org?.paypal_subscription_id &&
+    process.env.PAYPAL_CLIENT_ID &&
+    process.env.PAYPAL_CLIENT_SECRET
+  ) {
+    try {
+      const auth = Buffer.from(
+        `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+      ).toString("base64");
+      const tokenRes = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+        method: "POST",
+        headers: {
+          Authorization: `Basic ${auth}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: "grant_type=client_credentials",
+      });
+      const tokenData = await tokenRes.json();
+      await fetch(
+        `${PAYPAL_API_BASE}/v1/billing/subscriptions/${org.paypal_subscription_id}/cancel`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ reason: "Account deactivated" }),
+        }
+      );
+    } catch {
+      // Continue — deactivation should proceed even if PayPal fails
+    }
+  }
+
+  const { data, error } = await supabase.rpc("deactivate_account");
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/d/owner");
+  return data;
+}
+
 export async function uploadLocationLogo(locationId: string, formData: FormData) {
   await requireAuth();
   const file = formData.get("file") as File | null;

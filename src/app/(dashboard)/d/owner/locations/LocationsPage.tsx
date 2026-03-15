@@ -23,8 +23,7 @@ export default function LocationsPage({
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-ink">Locations</h1>
+      <div className="flex items-center justify-end mb-6">
         <button
           onClick={() => setAddModalOpen(true)}
           className="rounded-lg bg-hilt-blue px-4 py-2 text-sm font-semibold text-white hover:bg-hilt-blue-dark"

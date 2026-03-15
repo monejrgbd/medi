@@ -1,0 +1,87 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.deactivate_account(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_owner_email text;
+BEGIN
+  -- Lock org and verify ownership
+  SELECT id, subscription_plan, name, owner_id
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  IF v_org.subscription_plan = 'expired' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Account is already deactivated');
+  END IF;
+
+  -- Deactivate — full lockout
+  UPDATE public.organizations
+  SET subscription_plan = 'expired',
+      cancelled_at = now(),
+      data_retention_until = now() + interval '90 days',
+      cancel_at_period_end = NULL,
+      billing_cycle_start = NULL,
+      paypal_subscription_id = NULL,
+      credits_total = 0,
+      credits_used = 0
+  WHERE id = v_org.id;
+
+  -- Send confirmation email
+  SELECT email INTO v_owner_email FROM auth.users WHERE id = v_org.owner_id;
+
+  IF v_owner_email IS NOT NULL THEN
+    INSERT INTO public.pending_emails (to_email, subject, html_body, priority, metadata)
+    VALUES (
+      v_owner_email,
+      'Account Deactivated — ' || v_org.name,
+      '<h2>Account Deactivated</h2>' ||
+        '<p>Your account for <strong>' || replace(replace(v_org.name, '&', '&amp;'), '<', '&lt;') || '</strong> has been deactivated.</p>' ||
+        '<p>Your data will be retained for 90 days. You can reactivate by subscribing again from the billing page.</p>',
+      1,
+      jsonb_build_object('type', 'account_deactivated', 'org_id', v_org.id)
+    );
+  END IF;
+
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'account_deactivated', 'organization', v_org.id,
+    jsonb_build_object('old_plan', v_org.subscription_plan));
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.deactivate_account()
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.deactivate_account(v_uid);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.deactivate_account() FROM anon;
+GRANT EXECUTE ON FUNCTION public.deactivate_account() TO authenticated;

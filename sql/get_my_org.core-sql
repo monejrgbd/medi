@@ -22,6 +22,7 @@ BEGIN
     'review_sms_addon', o.review_sms_addon,
     'followup_sms_addon', o.followup_sms_addon,
     'onboarding_completed_at', o.onboarding_completed_at,
+    'cancel_at_period_end', o.cancel_at_period_end,
     'created_at', o.created_at
   )
   INTO v_result

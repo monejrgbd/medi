@@ -53,55 +53,53 @@ function ChatMockup() {
         </div>
       </div>
 
-      {/* Arrow: chat → summary */}
-      <div
-        className="hero-msg flex justify-center"
-        style={{ "--delay": "6.5s" } as React.CSSProperties}
-      >
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-          </svg>
+      {/* Arrow: chat → summary (scroll-based) */}
+      <FadeIn>
+        <div className="flex justify-center">
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+            </svg>
+          </div>
         </div>
-      </div>
+      </FadeIn>
 
-      {/* Summary confirmation card */}
-      <div
-        className="hero-msg w-[300px] sm:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5"
-        style={{ "--delay": "7s" } as React.CSSProperties}
-      >
-        <p className="text-[10px] font-semibold text-green-700 mb-2">Summary for your approval</p>
-        <p className="text-sm leading-relaxed text-green-900 mb-3">
-          Returning patient with worsening knee pain, new morning stiffness in hands lasting about 1 hour, and knuckle swelling. Ibuprofen provides partial relief. Fatigue reported. Family history of rheumatoid arthritis.
-        </p>
-        {/* Medical info on file */}
-        <div className="rounded-lg bg-white/60 p-2.5 mb-3">
-          <p className="text-[9px] font-semibold text-green-800 mb-1.5">Your information on file</p>
-          <div className="grid grid-cols-3 gap-2 text-[10px]">
-            <div>
-              <p className="font-medium text-slate">Meds</p>
-              <p className="text-ink">Ibuprofen</p>
-            </div>
-            <div>
-              <p className="font-medium text-red-600">Allergies</p>
-              <p className="text-ink">Penicillin</p>
-            </div>
-            <div>
-              <p className="font-medium text-slate">Chronic</p>
-              <p className="text-ash">None</p>
+      {/* Summary confirmation card (scroll-based) */}
+      <FadeIn delay={0.1}>
+        <div className="w-[300px] sm:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5">
+          <p className="text-[10px] font-semibold text-green-700 mb-2">Summary for your approval</p>
+          <p className="text-sm leading-relaxed text-green-900 mb-3">
+            Returning patient with worsening knee pain, new morning stiffness in hands lasting about 1 hour, and knuckle swelling. Ibuprofen provides partial relief. Fatigue reported. Family history of rheumatoid arthritis.
+          </p>
+          {/* Medical info on file */}
+          <div className="rounded-lg bg-white/60 p-2.5 mb-3">
+            <p className="text-[9px] font-semibold text-green-800 mb-1.5">Your information on file</p>
+            <div className="grid grid-cols-3 gap-2 text-[10px]">
+              <div>
+                <p className="font-medium text-slate">Meds</p>
+                <p className="text-ink">Ibuprofen</p>
+              </div>
+              <div>
+                <p className="font-medium text-red-600">Allergies</p>
+                <p className="text-ink">Penicillin</p>
+              </div>
+              <div>
+                <p className="font-medium text-slate">Chronic</p>
+                <p className="text-ash">None</p>
+              </div>
             </div>
           </div>
+          <div className="flex gap-2">
+            <div className="flex-1 rounded-lg border border-green-300 bg-white py-2 text-center text-xs font-medium text-green-700">
+              Something is not right
+            </div>
+            <div className="flex-1 rounded-lg bg-green-600 py-2 text-center text-xs font-semibold text-white">
+              This is accurate ✓
+            </div>
+          </div>
+          <p className="mt-2 text-[9px] text-right text-ash">9:09 AM</p>
         </div>
-        <div className="flex gap-2">
-          <div className="flex-1 rounded-lg border border-green-300 bg-white py-2 text-center text-xs font-medium text-green-700">
-            Something is not right
-          </div>
-          <div className="flex-1 rounded-lg bg-green-600 py-2 text-center text-xs font-semibold text-white">
-            This is accurate ✓
-          </div>
-        </div>
-        <p className="mt-2 text-[9px] text-right text-ash">9:09 AM</p>
-      </div>
+      </FadeIn>
     </div>
   );
 }
@@ -109,7 +107,7 @@ function ChatMockup() {
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-24 pb-32 lg:pt-32 lg:pb-40">
+    <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-24 pb-8 lg:pt-32 lg:pb-10">
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="grid items-start gap-16 lg:grid-cols-2 lg:pt-8">
           {/* Copy */}
@@ -166,27 +164,27 @@ function HeroSection() {
             </Link>
           </div>
 
-          {/* Mockup flow: chat → summary → doctor */}
+          {/* Patient flow: chat → summary (phone-sized, right column) */}
           <div className="flex flex-col items-center gap-3 mt-8 mb-8 lg:mt-0 lg:mb-0">
             {/* Glow behind everything */}
             <div className="relative">
               <div className="absolute -inset-8 rounded-3xl bg-hilt-blue/5 blur-3xl" />
-              <div className="relative z-10 -rotate-1">
+              <div className="relative z-10">
                 <ChatMockup />
               </div>
             </div>
-
-            {/* Arrow: chat → doctor */}
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-              </svg>
-            </div>
-
-            {/* Doctor card */}
-            <DoctorMockup />
           </div>
         </div>
+
+        {/* Doctor view: centered, wider */}
+        <FadeIn>
+          <div className="mt-12">
+            <p className="mb-4 text-center text-sm font-medium text-slate">Doctor sees</p>
+            <div className="mx-auto max-w-3xl">
+              <DoctorMockup />
+            </div>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );

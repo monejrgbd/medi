@@ -99,18 +99,26 @@ export default function Sidebar() {
     </>
   );
 
+  // Derive page title from pathname
+  const activeItem = NAV_ITEMS.find((item) => isActive(item.href));
+  const pageTitle = activeItem?.label || "Dashboard";
+
   return (
     <>
-      {/* Mobile hamburger */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-40 rounded-lg bg-white p-2 shadow-md lg:hidden"
-        aria-label="Open menu"
-      >
-        <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
+      {/* Mobile top bar */}
+      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden">
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="rounded-lg p-1.5 text-ink hover:bg-gray-100"
+          aria-label="Open menu"
+        >
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <span className="text-sm font-semibold text-ink truncate">{pageTitle}</span>
+        <span className="ml-auto text-xs text-slate truncate">{org.name}</span>
+      </div>
 
       {/* Mobile overlay */}
       {mobileOpen && (

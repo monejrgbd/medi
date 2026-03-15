@@ -27,7 +27,6 @@ export default async function OwnerStaffPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-ink mb-6">Staff</h1>
       <StaffTable staff={staffList || []} locations={locationOptions} />
     </div>
   );

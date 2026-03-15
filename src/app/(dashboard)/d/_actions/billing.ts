@@ -13,6 +13,8 @@ const VALID_PLANS = [
   "enterprise",
   "pay_as_you_go",
 ];
+const PAYPAL_API_BASE =
+  process.env.PAYPAL_API_BASE || "https://api-m.paypal.com";
 const VALID_ADDONS = ["review_sms", "followup_sms"];
 
 export async function fetchCreditDashboard() {
@@ -33,68 +35,6 @@ export async function purchaseOverageCredits(amount: number) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("purchase_overage_credits", {
     p_amount: amount,
-  });
-  if (error) return { success: false, error: error.message };
-  return data;
-}
-
-export async function changeSubscriptionPlan(orgId: string, newPlan: string) {
-  await requireAuth();
-
-  if (!UUID_RE.test(orgId))
-    return { success: false, error: "Invalid org ID" };
-  if (!VALID_PLANS.includes(newPlan))
-    return { success: false, error: "Invalid plan" };
-
-  // If org has PayPal subscription, cancel it first
-  const supabase = await createClient();
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("paypal_subscription_id")
-    .eq("id", orgId)
-    .single();
-
-  if (
-    org?.paypal_subscription_id &&
-    process.env.PAYPAL_CLIENT_ID &&
-    process.env.PAYPAL_CLIENT_SECRET
-  ) {
-    try {
-      const auth = Buffer.from(
-        `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
-      ).toString("base64");
-
-      const tokenRes = await fetch(
-        "https://api-m.paypal.com/v1/oauth2/token",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Basic ${auth}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: "grant_type=client_credentials",
-        }
-      );
-      const tokenData = await tokenRes.json();
-
-      await fetch(
-        `https://api-m.paypal.com/v1/billing/subscriptions/${org.paypal_subscription_id}/cancel`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${tokenData.access_token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ reason: "Plan change" }),
-        }
-      );
-    } catch {
-      // Continue with plan change even if PayPal cancel fails
-    }
-  }
-
-  const { data, error } = await supabase.rpc("change_subscription_plan", {
-    p_new_plan: newPlan,
   });
   if (error) return { success: false, error: error.message };
   return data;
@@ -143,7 +83,7 @@ export async function cancelSubscription(orgId: string) {
       ).toString("base64");
 
       const tokenRes = await fetch(
-        "https://api-m.paypal.com/v1/oauth2/token",
+        `${PAYPAL_API_BASE}/v1/oauth2/token`,
         {
           method: "POST",
           headers: {
@@ -155,8 +95,8 @@ export async function cancelSubscription(orgId: string) {
       );
       const tokenData = await tokenRes.json();
 
-      await fetch(
-        `https://api-m.paypal.com/v1/billing/subscriptions/${org.paypal_subscription_id}/cancel`,
+      const cancelRes = await fetch(
+        `${PAYPAL_API_BASE}/v1/billing/subscriptions/${org.paypal_subscription_id}/cancel`,
         {
           method: "POST",
           headers: {
@@ -166,8 +106,12 @@ export async function cancelSubscription(orgId: string) {
           body: JSON.stringify({ reason: "Subscription cancelled by owner" }),
         }
       );
+      // 204 = success, 422 = already cancelled — both are fine
+      if (!cancelRes.ok && cancelRes.status !== 422) {
+        return { success: false, error: "Failed to cancel PayPal subscription. Please try again." };
+      }
     } catch {
-      // Continue with cancellation even if PayPal fails
+      return { success: false, error: "Could not reach PayPal. Please try again." };
     }
   }
 

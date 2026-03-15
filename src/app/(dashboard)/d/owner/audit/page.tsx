@@ -41,9 +41,6 @@ export default async function AuditTrailPage() {
   if (!orgId) redirect("/d/select-role");
 
   return (
-    <div className="p-6">
-      <h1 className="text-xl font-bold text-ink mb-6">Audit Trail</h1>
-      <AuditTrailViewer orgId={orgId} />
-    </div>
+    <AuditTrailViewer orgId={orgId} />
   );
 }
