@@ -135,26 +135,12 @@ export default function CheckinFlow({
   sessionTokenRef.current = sessionToken;
   const demoModeRef = useRef(demoMode);
 
-  // Demo mode: auto-consent and skip to chatting (bypasses first_timer + language picker)
-  async function autoDemoConsent() {
-    const token = sessionTokenRef.current;
-    if (!token) return;
-    const supabase = createClient();
-    await supabase.rpc("give_patient_consent", {
-      p_session_token: token,
-      p_language: "en",
-    });
-    setConsentGiven(true);
-    setPatientLanguage("en");
-    setState("chatting");
-  }
-
-  // Kiosk mode: clear localStorage on mount to prevent session recovery
+  // Kiosk/demo mode: clear localStorage on mount to prevent session recovery
   useEffect(() => {
-    if (!kiosk) return;
+    if (!kiosk && !demoMode) return;
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(PHONE_STORAGE_KEY);
-  }, [kiosk]);
+  }, [kiosk, demoMode]);
 
   // Summary generation: 45s slow warning + 60s timeout
   const [summaryWarning, setSummaryWarning] = useState(false);
@@ -212,7 +198,8 @@ export default function CheckinFlow({
       }
 
       // If we have a birthday on file, require verification before restoring
-      if (data.patient_birthday) {
+      // (skip in demo mode — random birthdays, no need to verify)
+      if (data.patient_birthday && !demoMode) {
         setPendingSession({
           token: saved,
           birthday: data.patient_birthday,
@@ -252,8 +239,8 @@ export default function CheckinFlow({
             setState("summary_review");
           } else if (data.ai_completed_at) {
             setState("generating_summary");
-          } else if (!data.has_previous_visits && !data.consent_given) {
-            if (demoMode) { autoDemoConsent(); } else { setState("first_timer"); }
+          } else if (demoMode || (!data.has_previous_visits && !data.consent_given)) {
+            setState("first_timer");
           } else {
             setState("chatting");
           }
@@ -345,12 +332,8 @@ export default function CheckinFlow({
         if (current === "chatting" || current === "generating_summary" || current === "summary_review") {
           return;
         }
-        if (!hasPreviousVisitsRef.current && !consentGivenRef.current) {
-          if (demoModeRef.current) {
-            autoDemoConsent();
-          } else {
-            setState("first_timer");
-          }
+        if (demoModeRef.current || (!hasPreviousVisitsRef.current && !consentGivenRef.current)) {
+          setState("first_timer");
         } else {
           setState("chatting");
         }
@@ -505,8 +488,8 @@ export default function CheckinFlow({
               setState("summary_review");
             } else if (session.ai_completed_at) {
               setState("generating_summary");
-            } else if (!session.has_previous_visits && !session.consent_given) {
-              if (demoMode) { autoDemoConsent(); } else { setState("first_timer"); }
+            } else if (demoMode || (!session.has_previous_visits && !session.consent_given)) {
+              setState("first_timer");
             } else {
               setState("chatting");
             }
@@ -848,7 +831,14 @@ export default function CheckinFlow({
           onSubmit={handleCheckin}
           loading={loading}
           error={error}
-          demoDefaults={demoMode ? { firstName: "Demo", lastName: "Patient", birthday: "2000-01-15" } : undefined}
+          demoDefaults={demoMode ? (() => {
+            const firsts = ["Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Sam", "Jamie", "Avery", "Quinn"];
+            const lasts = ["Smith", "Johnson", "Lee", "Garcia", "Chen", "Patel", "Kim", "Brown", "Wilson", "Davis"];
+            const y = 1985 + Math.floor(Math.random() * 20);
+            const m = String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
+            const d = String(1 + Math.floor(Math.random() * 28)).padStart(2, "0");
+            return { firstName: firsts[Math.floor(Math.random() * firsts.length)], lastName: lasts[Math.floor(Math.random() * lasts.length)], birthday: `${y}-${m}-${d}` };
+          })() : undefined}
         />
       );
 
@@ -906,8 +896,8 @@ export default function CheckinFlow({
                       setState("summary_review");
                     } else if (data.ai_completed_at) {
                       setState("generating_summary");
-                    } else if (!(data.has_previous_visits as boolean) && !(data.consent_given as boolean)) {
-                      if (demoMode) { autoDemoConsent(); } else { setState("first_timer"); }
+                    } else if (demoMode || (!(data.has_previous_visits as boolean) && !(data.consent_given as boolean))) {
+                      setState("first_timer");
                     } else {
                       setState("chatting");
                     }
@@ -979,9 +969,11 @@ export default function CheckinFlow({
           sessionToken={sessionToken}
           patientName={patientFirstName}
           locationName={locationData.location_name || "Clinic"}
+          logoUrl={locationData.logo_url || null}
           onConversationComplete={handleConversationComplete}
           onError={handleChatError}
           onLanguageChange={(lang) => setPatientLanguage(lang)}
+          heightClass={demoMode ? "flex-1 min-h-0" : undefined}
         />
       ) : null;
 
@@ -1135,10 +1127,12 @@ export default function CheckinFlow({
   }
   })();
 
+  const needsFullHeight = demoMode && (state === "chatting" || state === "generating_summary");
+
   return (
     <LanguageProvider language={patientLanguage}>
-      <div dir={patientLanguage === "ar" ? "rtl" : "ltr"}>
-        <div key={state} className="animate-fade-in">
+      <div dir={patientLanguage === "ar" ? "rtl" : "ltr"} className={needsFullHeight ? "flex-1 w-full min-h-0 flex flex-col" : "flex items-center justify-center flex-1"}>
+        <div key={state} className={`animate-fade-in ${needsFullHeight ? "flex-1 min-h-0 w-full flex flex-col items-center" : ""}`}>
           {content}
         </div>
         {kiosk && (

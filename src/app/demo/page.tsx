@@ -90,6 +90,7 @@ export default async function DemoPage() {
       locationData={{
         active: locationData.active ?? true,
         location_name: locationData.location_name,
+        address: locationData.address,
         specialty: locationData.specialty,
         operating_hours: locationData.operating_hours ?? null,
         org_name: locationData.org_name,

@@ -20,9 +20,11 @@ interface ChatInterfaceProps {
   sessionToken: string;
   patientName: string;
   locationName: string;
+  logoUrl?: string | null;
   onConversationComplete: () => void;
   onError: (error: string) => void;
   onLanguageChange?: (lang: string) => void;
+  heightClass?: string;
 }
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -34,9 +36,11 @@ export default function ChatInterface({
   sessionToken,
   patientName,
   locationName,
+  logoUrl,
   onConversationComplete,
   onError,
   onLanguageChange,
+  heightClass,
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -322,10 +326,15 @@ export default function ChatInterface({
   }
 
   return (
-    <div className="w-full max-w-md flex flex-col h-[calc(100dvh-4rem)]">
+    <div className={`w-full max-w-md flex flex-col ${heightClass ?? "h-[calc(100dvh-4rem)]"}`}>
       {/* Header with language switcher */}
       <div className="flex items-center justify-between py-2 px-1 shrink-0">
-        <h2 className="text-sm font-semibold text-ink">{locationName}</h2>
+        <div className="flex items-center gap-2">
+          {logoUrl && (
+            <img src={logoUrl} alt="" className="h-7 w-7 rounded-md object-cover" />
+          )}
+          <h2 className="text-sm font-semibold text-ink">{locationName}</h2>
+        </div>
         <LanguageSwitcher
           currentLanguage={language}
           onLanguageChange={handleLanguageChange}

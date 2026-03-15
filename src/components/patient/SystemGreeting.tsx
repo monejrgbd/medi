@@ -15,9 +15,9 @@ export default function SystemGreeting({ patientName, clinicName }: SystemGreeti
     .replace("{clinic}", clinicName);
 
   return (
-    <div className="flex justify-center my-4">
-      <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 px-5 py-4 max-w-sm text-center">
-        <p className="text-sm text-ink">{greeting}</p>
+    <div className="flex justify-start mb-3">
+      <div className="rounded-2xl rounded-bl-md bg-gray-100 text-ink px-4 py-2.5 max-w-[80%]">
+        <p className="text-sm whitespace-pre-wrap break-words">{greeting}</p>
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 "use client";
 
-import { User, ClipboardList, Stethoscope } from "lucide-react";
+import { User, ClipboardList, Stethoscope, HelpCircle } from "lucide-react";
 
-type Tab = "patient" | "receptionist" | "doctor";
+export type Tab = "patient" | "receptionist" | "doctor" | "faq";
 
 interface DemoTabBarProps {
   activeTab: Tab;
@@ -34,6 +34,14 @@ const tabs: { key: Tab; label: string; icon: typeof User; accent: string; bg: st
     accent: "border-purple-500 text-purple-600",
     bg: "bg-purple-50",
     dot: "bg-purple-500",
+  },
+  {
+    key: "faq",
+    label: "Q&A",
+    icon: HelpCircle,
+    accent: "border-amber-500 text-amber-600",
+    bg: "bg-amber-50",
+    dot: "bg-amber-500",
   },
 ];
 

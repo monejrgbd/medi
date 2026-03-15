@@ -30,14 +30,14 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
         </h1>
 
         <p className="text-slate mb-6">
-          From patient check-in to AI pre-screening to doctor-ready summary
-          — all in minutes.
+          From patient check in to AI pre screening to doctor ready summary,
+          all in minutes.
         </p>
 
         {/* Flow recap */}
         <div className="flex items-center justify-center gap-3 mb-8 text-sm">
           <span className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full font-medium">
-            AI Pre-screening
+            AI Pre screening
           </span>
           <span className="text-gray-300">&rarr;</span>
           <span className="bg-green-50 text-green-700 px-3 py-1.5 rounded-full font-medium">

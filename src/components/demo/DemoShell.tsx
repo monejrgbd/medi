@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
-import DemoTabBar from "@/components/demo/DemoTabBar";
+import DemoTabBar, { type Tab } from "@/components/demo/DemoTabBar";
 import DemoGuide from "@/components/demo/DemoGuide";
 import DemoComplete from "@/components/demo/DemoComplete";
+import DemoFAQ from "@/components/demo/DemoFAQ";
 import CheckinFlow from "@/app/checkin/[locationId]/CheckinFlow";
 import ReceptionistDashboard from "@/app/(dashboard)/d/receptionist/ReceptionistDashboard";
 import DoctorDashboard from "@/app/(dashboard)/d/doctor/DoctorDashboard";
@@ -16,6 +17,7 @@ interface DemoShellProps {
   locationData: {
     active: boolean;
     location_name?: string;
+    address?: string;
     specialty?: string;
     operating_hours?: Record<string, string> | null;
     org_name?: string;
@@ -41,7 +43,7 @@ interface DemoShellProps {
   };
 }
 
-type Tab = "patient" | "receptionist" | "doctor";
+// Tab type imported from DemoTabBar
 
 export default function DemoShell({
   locationId,
@@ -55,10 +57,10 @@ export default function DemoShell({
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
   const [guideMessage, setGuideMessage] = useState<string | null>(
-    "Welcome! Fill in the check-in form to start the demo."
+    "Welcome! Fill in the check in form to start the demo."
   );
   const [guideHint, setGuideHint] = useState<string | null>(
-    "This is what your patients see when they scan the QR code."
+    "This is what your patients see when they scan the QR code. You are given one after you sign up."
   );
   const [demoComplete, setDemoComplete] = useState(false);
 
@@ -80,7 +82,7 @@ export default function DemoShell({
             setPulsingTab("receptionist");
             setGuideMessage("A new patient just checked in!");
             setGuideHint(
-              "Switch to the Receptionist tab to approve them."
+              "Switch to the Receptionist view to approve them. The patient's name and date of birth are how returning patients are identified. You can edit their details by clicking the edit icon next to the status badge."
             );
             setTimeout(() => {
               setActiveTab("receptionist");
@@ -108,7 +110,7 @@ export default function DemoShell({
             setPulsingTab("patient");
             setGuideMessage("The AI conversation has started!");
             setGuideHint(
-              "Switch to the Patient tab to chat with the AI."
+              "Switch to the Patient view to chat with the AI."
             );
             setTimeout(() => {
               setActiveTab("patient");
@@ -120,7 +122,7 @@ export default function DemoShell({
             setPulsingTab("doctor");
             setGuideMessage("The patient is ready for a doctor!");
             setGuideHint(
-              "Switch to the Doctor tab to claim the patient."
+              "Switch to the Doctor view to claim the patient."
             );
             setTimeout(() => {
               setActiveTab("doctor");
@@ -145,6 +147,19 @@ export default function DemoShell({
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
     setPulsingTab(null);
+    if (tab === "patient") {
+      setGuideMessage("Patient View");
+      setGuideHint("This is what your patients see when they scan the QR code. You are given one after you sign up.");
+    } else if (tab === "receptionist") {
+      setGuideMessage("Receptionist View");
+      setGuideHint("Manage check ins, approve patients, and monitor the queue.");
+    } else if (tab === "doctor") {
+      setGuideMessage("Doctor View");
+      setGuideHint("Claim patients, review AI summaries, and complete visits.");
+    } else if (tab === "faq") {
+      setGuideMessage(null);
+      setGuideHint(null);
+    }
   }
 
   function handleDismissGuide() {
@@ -155,9 +170,9 @@ export default function DemoShell({
   function handleRestart() {
     setDemoComplete(false);
     setActiveTab("patient");
-    setGuideMessage("Welcome! Fill in the check-in form to start the demo.");
+    setGuideMessage("Welcome! Fill in the check in form to start the demo.");
     setGuideHint(
-      "This is what your patients see when they scan the QR code."
+      "This is what your patients see when they scan the QR code. You are given one after you sign up."
     );
   }
 
@@ -166,7 +181,7 @@ export default function DemoShell({
   }
 
   return (
-    <div className="min-h-screen bg-ash flex flex-col">
+    <div className="min-h-screen bg-snow flex flex-col">
       {/* Top bar */}
       <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <Link
@@ -196,14 +211,19 @@ export default function DemoShell({
         onDismiss={handleDismissGuide}
       />
 
+
       {/* Content area — all 3 mounted, toggled via display */}
-      <div className="flex-1">
-        <div style={{ display: activeTab === "patient" ? "block" : "none" }}>
-          <CheckinFlow
-            locationId={locationId}
-            locationData={locationData}
-            demoMode={true}
-          />
+      <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0 bg-snow" style={{ display: activeTab === "patient" ? "flex" : "none" }}>
+          <div className="h-full w-full flex flex-col items-center px-4 pt-6">
+            <div className="flex-1 w-full max-w-[40rem] min-h-0 flex flex-col items-center mx-auto">
+              <CheckinFlow
+                locationId={locationId}
+                locationData={locationData}
+                demoMode={true}
+              />
+            </div>
+          </div>
         </div>
 
         <div
@@ -246,6 +266,10 @@ export default function DemoShell({
             initialHasMoreLeft={doctorInitial.hasMoreLeft}
             demoMode={true}
           />
+        </div>
+
+        <div style={{ display: activeTab === "faq" ? "block" : "none" }}>
+          <DemoFAQ />
         </div>
       </div>
     </div>
