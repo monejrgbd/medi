@@ -3,10 +3,12 @@
 import { useEffect, useRef } from "react";
 import QRCode from "qrcode";
 
+const DEMO_LOCATION_ID = process.env.NEXT_PUBLIC_DEMO_LOCATION_ID!;
+const DEMO_ORG_ID = process.env.NEXT_PUBLIC_DEMO_ORG_ID!;
 const CHECKIN_URL =
-  `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/6e52c30b-c40c-4ec2-81c4-a37e89c0b03b`;
+  `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${DEMO_LOCATION_ID}`;
 const LOGO_URL =
-  "https://sdzeoeturtpkqlagobwj.supabase.co/storage/v1/object/public/logos/a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0/6e52c30b-c40c-4ec2-81c4-a37e89c0b03b/logo?v=1773603057168";
+  `https://sdzeoeturtpkqlagobwj.supabase.co/storage/v1/object/public/logos/${DEMO_ORG_ID}/${DEMO_LOCATION_ID}/logo`;
 
 export default function DemoQR() {
   const canvasRef = useRef<HTMLCanvasElement>(null);

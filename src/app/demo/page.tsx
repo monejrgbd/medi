@@ -3,8 +3,8 @@ import { getUser } from "@/lib/auth";
 import DemoGate from "@/components/demo/DemoGate";
 import DemoShell from "@/components/demo/DemoShell";
 
-const DEMO_LOCATION_ID = "6e52c30b-c40c-4ec2-81c4-a37e89c0b03b";
-const DEMO_ORG_ID = "a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0";
+const DEMO_LOCATION_ID = process.env.DEMO_LOCATION_ID!;
+const DEMO_ORG_ID = process.env.DEMO_ORG_ID!;
 
 export default async function DemoPage() {
   const supabase = await createClient();

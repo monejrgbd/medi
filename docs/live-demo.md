@@ -50,11 +50,8 @@ Access is email-gated: the `request_demo_otp` SQL function generates a 6-digit O
 - Nothing — self-contained feature
 
 **Demo org details:**
-- Org: Smith Family Clinic — `a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0`
-- Location: `6e52c30b-c40c-4ec2-81c4-a37e89c0b03b`
-- Demo staff user: `demo@smith-family-clinic-c863.staff.hilt` (receptionist + doctor, NO owner access)
-- Staff user ID: `dc81e052-cbfd-4a7b-86dc-ce48ad2b60a0`
-- Env vars: `DEMO_STAFF_EMAIL`, `DEMO_STAFF_PASSWORD`, `DEMO_LOCATION_ID`
+- Org, location, and staff IDs are stored in env vars (not committed to source)
+- Env vars: `DEMO_STAFF_EMAIL`, `DEMO_STAFF_PASSWORD`, `DEMO_LOCATION_ID`, `DEMO_ORG_ID`, `NEXT_PUBLIC_DEMO_LOCATION_ID`, `NEXT_PUBLIC_DEMO_ORG_ID`
 
 ## Testing
 
