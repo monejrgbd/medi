@@ -82,7 +82,7 @@ export default function CheckinForm({
             onChange={(e) => setFirstName(e.target.value)}
             maxLength={100}
             required
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
           />
         </div>
 
@@ -96,7 +96,7 @@ export default function CheckinForm({
             onChange={(e) => setLastName(e.target.value)}
             maxLength={100}
             required
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
           />
         </div>
 
@@ -110,7 +110,7 @@ export default function CheckinForm({
             onChange={(e) => setBirthday(e.target.value)}
             max={new Date().toISOString().split("T")[0]}
             required
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
           />
         </div>
 

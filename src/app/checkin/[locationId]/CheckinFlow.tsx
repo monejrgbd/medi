@@ -814,7 +814,7 @@ export default function CheckinFlow({
             type="date"
             value={birthdayInput}
             onChange={(e) => { setBirthdayInput(e.target.value); setError(""); }}
-            className="w-full rounded-lg border border-gray-200 px-4 py-3 text-ink mb-3"
+            className="w-full rounded-lg border border-gray-200 px-4 py-3 text-base text-ink mb-3"
           />
           {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
           <div className="flex gap-3">

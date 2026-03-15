@@ -419,7 +419,7 @@ export default function ChatInterface({
               placeholder={t("chat.placeholder")}
               rows={1}
               disabled={isAiTyping || rateLimited}
-              className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:bg-white focus:outline-none disabled:opacity-50"
+              className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-base text-ink placeholder:text-ash focus:border-hilt-blue focus:bg-white focus:outline-none disabled:opacity-50"
             />
             {input.length > MAX_CHARS * 0.9 && (
               <span className="absolute right-2 bottom-1 text-xs text-ash">

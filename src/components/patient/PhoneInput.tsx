@@ -122,7 +122,7 @@ export default function PhoneInput({
               value={phoneNumber}
               onChange={(e) => setPhoneNumber(e.target.value)}
               placeholder="(555) 123-4567"
-              className="flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:ring-1 focus:ring-hilt-blue"
+              className="flex-1 rounded-lg border border-gray-300 px-3 py-2.5 text-base text-ink placeholder:text-ash focus:border-hilt-blue focus:ring-1 focus:ring-hilt-blue"
               autoComplete="tel"
               inputMode="tel"
             />

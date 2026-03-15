@@ -12,17 +12,19 @@ DECLARE
   v_visit record;
   v_queue_position int;
   v_estimated_wait numeric;
+  v_meds jsonb;
+  v_allergies jsonb;
+  v_chronic jsonb;
 BEGIN
   -- Look up visit by session token
   SELECT v.id AS visit_id, v.status, v.has_previous_visits, v.created_at,
          v.timeout_flagged, v.ai_summary, v.ai_structured_card, v.ai_completed_at,
          v.priority, v.location_id, v.phone_verification_pending,
-         v.entered_queue_at, v.patient_denied,
+         v.entered_queue_at, v.patient_denied, v.patient_id,
          p.first_name AS patient_first_name, p.language, p.consent_given,
          p.birthday AS patient_birthday,
          p.phone_verified AS patient_phone_verified,
          (p.phone IS NOT NULL) AS patient_has_phone,
-         p.medications, p.allergies, p.chronic_conditions,
          l.name AS location_name, l.estimated_wait_minutes
   INTO v_visit
   FROM public.visits v
@@ -55,6 +57,22 @@ BEGIN
     v_queue_position := 0;
   END IF;
 
+  -- Load medical info from separate tables
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('name', pm.name)), '[]'::jsonb)
+  INTO v_meds
+  FROM public.patient_medications pm
+  WHERE pm.patient_id = v_visit.patient_id AND pm.active = true;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('name', pa.name)), '[]'::jsonb)
+  INTO v_allergies
+  FROM public.patient_allergies pa
+  WHERE pa.patient_id = v_visit.patient_id AND pa.active = true;
+
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('name', pc.name)), '[]'::jsonb)
+  INTO v_chronic
+  FROM public.patient_chronic_conditions pc
+  WHERE pc.patient_id = v_visit.patient_id AND pc.active = true;
+
   RETURN jsonb_build_object(
     'success', true,
     'visit_id', v_visit.visit_id,
@@ -75,9 +93,9 @@ BEGIN
     'patient_has_phone', v_visit.patient_has_phone,
     'patient_birthday', v_visit.patient_birthday,
     'patient_denied', v_visit.patient_denied,
-    'medications', v_visit.medications,
-    'allergies', v_visit.allergies,
-    'chronic_conditions', v_visit.chronic_conditions
+    'medications', v_meds,
+    'allergies', v_allergies,
+    'chronic_conditions', v_chronic
   );
 END;
 $$;
