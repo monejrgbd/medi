@@ -621,6 +621,9 @@ export default function CheckinFlow({
       // The realtime listener will pick up the status change to waiting_doctor_claim
       // with timeout_flagged=true and transition to the timeout/queued state
       setState("timeout");
+    } else {
+      // Unknown error (e.g. function crash, session invalid) — move to timeout/queue as fallback
+      setState("timeout");
     }
   }
 

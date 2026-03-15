@@ -27,6 +27,8 @@ DECLARE
   v_follow_up_section text := '';
   v_prior_visit record;
   v_follow_up record;
+  v_prior_summary text;
+  v_prior_date timestamptz;
 BEGIN
   -- Look up visit with joins
   SELECT v.id, v.status, v.session_token, v.patient_id, v.location_id,
@@ -96,7 +98,7 @@ BEGIN
   IF v_existing_messages > 0 THEN
     -- Load follow-up fields for early return (page refresh of follow-up visit)
     IF v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL THEN
-      SELECT ai_summary, completed_at INTO v_prior_visit
+      SELECT left(ai_summary, 200), completed_at INTO v_prior_summary, v_prior_date
       FROM public.visits WHERE id = v_visit.follow_up_of AND status = 'completed';
     END IF;
     -- Already initialized, return context without re-inserting
@@ -111,8 +113,8 @@ BEGIN
       'display_format', v_location.display_format,
       'already_initialized', true,
       'is_follow_up', COALESCE(v_visit.is_follow_up, false),
-      'follow_up_prior_summary', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN left(v_prior_visit.ai_summary, 200) ELSE NULL END,
-      'follow_up_prior_date', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN v_prior_visit.completed_at ELSE NULL END
+      'follow_up_prior_summary', v_prior_summary,
+      'follow_up_prior_date', v_prior_date
     );
   END IF;
 
@@ -168,7 +170,9 @@ BEGIN
     SELECT ai_summary, doctor_diagnosis, completed_at INTO v_prior_visit
     FROM public.visits WHERE id = v_visit.follow_up_of AND status = 'completed';
 
-    IF v_prior_visit IS NOT NULL THEN
+    IF FOUND THEN
+      v_prior_summary := left(v_prior_visit.ai_summary, 200);
+      v_prior_date := v_prior_visit.completed_at;
       SELECT ai_instructions INTO v_follow_up
       FROM public.follow_ups
       WHERE visit_id = v_visit.follow_up_of AND patient_id = v_visit.patient_id AND status = 'completed'
@@ -250,8 +254,8 @@ BEGIN
     'display_format', v_location.display_format,
     'already_initialized', false,
     'is_follow_up', COALESCE(v_visit.is_follow_up, false),
-    'follow_up_prior_summary', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN left(v_prior_visit.ai_summary, 200) ELSE NULL END,
-    'follow_up_prior_date', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN v_prior_visit.completed_at ELSE NULL END
+    'follow_up_prior_summary', v_prior_summary,
+    'follow_up_prior_date', v_prior_date
   );
 END;
 $$;
