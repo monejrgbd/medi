@@ -460,35 +460,30 @@ Deno.serve(async (req) => {
             encoder.encode(`data: ${JSON.stringify({ type: "conversation_complete" })}\n\n`)
           );
 
-          // Fire-and-forget: invoke generate-summary with fallback
+          // Invoke generate-summary (must await or Deno kills the fetch on isolate termination)
           const edgeFunctionUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/generate-summary";
-          fetch(edgeFunctionUrl, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-internal-secret": INTERNAL_SECRET!,
-            },
-            body: JSON.stringify({ visit_id }),
-          }).then(async (res) => {
-            if (!res.ok) {
-              console.error("generate-summary returned error:", res.status);
-              // generate-summary itself handles move_to_queue_on_error internally,
-              // but if it returned a non-OK status, the patient may already be moved.
-              // Log for monitoring.
+          try {
+            const summaryRes = await fetch(edgeFunctionUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+                "x-internal-secret": INTERNAL_SECRET!,
+              },
+              body: JSON.stringify({ visit_id }),
+            });
+            if (!summaryRes.ok) {
+              console.error("generate-summary returned error:", summaryRes.status);
             }
-          }).catch(async (err) => {
-            console.error("generate-summary invoke error:", err);
-            // Network-level failure — generate-summary never ran, so move patient forward
+          } catch (summaryErr) {
+            console.error("generate-summary invoke error:", summaryErr);
             try {
               await supabase.rpc("move_to_queue_on_error", {
                 p_visit_id: visit_id,
                 p_session_token: session_token,
               });
-              console.error("Moved visit to queue after generate-summary invoke failure:", visit_id);
-            } catch (fallbackErr) {
-              console.error("Failed to move patient to queue:", fallbackErr);
-            }
-          });
+            } catch { /* best effort */ }
+          }
         }
       } catch (err) {
         console.error("Stream processing error:", err);

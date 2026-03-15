@@ -153,7 +153,7 @@ export default function LanguagePicker({ onSelect, loading }: LanguagePickerProp
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Search languages..."
-        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none mb-3"
+        className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none mb-3"
       />
 
       <div className="max-h-60 overflow-y-auto rounded-lg border border-gray-200 mb-4">

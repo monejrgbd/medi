@@ -275,6 +275,7 @@ Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
             "x-internal-secret": INTERNAL_SECRET!,
           },
           body: JSON.stringify({
@@ -303,7 +304,8 @@ Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "x-internal-secret": INTERNAL_SECRET!,
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+            "x-internal-secret": INTERNAL_SECRET!,
               },
               body: JSON.stringify({
                 action: "batch",

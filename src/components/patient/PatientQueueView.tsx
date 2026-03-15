@@ -159,7 +159,7 @@ export default function PatientQueueView({
               rows={4}
               maxLength={2000}
               aria-label={t("queue.addDetailsPlaceholder")}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-none"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-base text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-none"
             />
             <div className="mt-1 flex items-center justify-between">
               <p className="text-xs text-slate">{content.length} / 2,000</p>
