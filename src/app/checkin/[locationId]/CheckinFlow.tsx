@@ -177,11 +177,15 @@ export default function CheckinFlow({
 
     (async () => {
       const supabase = createClient();
-      const { data } = await supabase.rpc("get_patient_session", {
+      const { data, error } = await supabase.rpc("get_patient_session", {
         p_session_token: saved,
       });
 
-      if (!data?.success) {
+      // Transient RPC error — keep token for next reload attempt
+      if (error || !data) return;
+
+      // Definitive session failure (not found, expired) — clear token
+      if (!data.success) {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(PHONE_STORAGE_KEY);
         return;

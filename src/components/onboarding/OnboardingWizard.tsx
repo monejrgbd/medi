@@ -86,7 +86,7 @@ export default function OnboardingWizard({
     if (step === 2 && locationId && demoReady && canvasRef.current) {
       QRCode.toCanvas(
         canvasRef.current,
-        `${window.location.origin}/checkin/${locationId}`,
+        `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
         { width: 200, margin: 2, color: { dark: "#111827", light: "#ffffff" } }
       );
     }
@@ -179,7 +179,7 @@ export default function OnboardingWizard({
   );
   const creditsRemaining = Math.max(0, org.credits_total - org.credits_used);
   const checkinUrl = locationId
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/checkin/${locationId}`
+    ? `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`
     : "";
 
   return (

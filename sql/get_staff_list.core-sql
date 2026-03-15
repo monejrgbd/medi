@@ -67,6 +67,7 @@ BEGIN
   ) lr
   WHERE su.org_id = p_org_id
     AND su.is_deleted = false
+    AND su.username != 'owner'
     AND (p_location_id IS NULL OR su.id IN (
       SELECT sr2.staff_user_id FROM public.staff_roles sr2 WHERE sr2.location_id = p_location_id
     ));

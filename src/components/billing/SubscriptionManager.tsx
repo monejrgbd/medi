@@ -155,6 +155,12 @@ export default function SubscriptionManager({
         )}
       </p>
 
+      {!isExpired && (
+        <p className="text-xs text-slate mb-4">
+          Remaining credits are carried over when switching plans.
+        </p>
+      )}
+
       {isExpired && (
         <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 mb-4">
           <p className="text-sm text-blue-700">

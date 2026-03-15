@@ -103,6 +103,7 @@ interface ReceptionistDashboardProps {
   mode: "select_location" | "dashboard";
   locations: Location[];
   staffUserId: string | null;
+  isOwner?: boolean;
   orgId: string;
   locationId: string | null;
   locationName?: string;
@@ -125,6 +126,7 @@ export default function ReceptionistDashboard({
   mode,
   locations,
   staffUserId,
+  isOwner = false,
   orgId,
   locationId,
   locationName = "Reception",
@@ -139,10 +141,19 @@ export default function ReceptionistDashboard({
   const [active, setActive] = useState<ActiveVisit[]>(initialActive);
   const [completed, setCompleted] = useState<CompletedVisit[]>(initialCompleted);
   const [counts, setCounts] = useState<Counts>(initialCounts ?? DEFAULT_COUNTS);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    locations.length === 1 ? locations[0].id : null
+  );
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [urgentPatient, setUrgentPatient] = useState<string | null>(null);
+
+  // Sync state with server props after router.refresh()
+  useEffect(() => { setPending(initialPending); }, [initialPending]);
+  useEffect(() => { setActive(initialActive); }, [initialActive]);
+  useEffect(() => { setCompleted(initialCompleted); }, [initialCompleted]);
+  useEffect(() => { setCounts(initialCounts ?? DEFAULT_COUNTS); }, [initialCounts]);
 
   // Load notification preference + unlock audio
   useEffect(() => {
@@ -263,19 +274,24 @@ export default function ReceptionistDashboard({
     setCheckingIn(true);
     setCheckinError(null);
 
-    const supabase = createClient();
-    const { data, error } = await supabase.rpc("staff_check_in", {
-      p_location_id: locId,
-      p_role: "receptionist",
-    });
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase.rpc("staff_check_in", {
+        p_location_id: locId,
+        p_role: "receptionist",
+      });
 
-    if (error || (data && !data.success)) {
-      setCheckinError(data?.error ?? error?.message ?? "Check-in failed. Try again.");
+      if (error || (data && !(data as { success?: boolean }).success)) {
+        setCheckinError((data as { error?: string })?.error ?? error?.message ?? "Check-in failed. Try again.");
+        setCheckingIn(false);
+        return;
+      }
+
+      router.refresh();
+    } catch {
+      setCheckinError("Check-in failed. Try again.");
       setCheckingIn(false);
-      return;
     }
-
-    router.refresh();
   }
 
   async function handleCheckOut() {
@@ -313,25 +329,45 @@ export default function ReceptionistDashboard({
               </button>
             </div>
           ) : (
+          <>
           <div className="space-y-3">
             {locations.map((loc) => (
               <button
                 key={loc.id}
-                onClick={() => handleCheckIn(loc.id)}
-                disabled={checkingIn || !staffUserId}
-                className="w-full rounded-xl border-2 border-gray-200 bg-white p-4 text-left transition-all hover:border-hilt-blue disabled:opacity-50"
+                onClick={() => setSelectedLocationId(loc.id)}
+                disabled={checkingIn}
+                className={`w-full rounded-xl border-2 p-4 text-left transition-all ${
+                  selectedLocationId === loc.id
+                    ? "border-hilt-blue bg-blue-50"
+                    : "border-gray-200 bg-white hover:border-hilt-blue"
+                } disabled:opacity-50`}
               >
                 <h3 className="font-semibold text-ink">{loc.name}</h3>
               </button>
             ))}
           </div>
+
+          {selectedLocationId && (
+            <button
+              onClick={() =>
+                isOwner
+                  ? router.push(`?location=${selectedLocationId}`)
+                  : handleCheckIn(selectedLocationId)
+              }
+              disabled={checkingIn || (!staffUserId && !isOwner)}
+              className="mt-4 w-full rounded-lg bg-hilt-blue px-4 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50 transition-colors"
+            >
+              {checkingIn ? "Checking in..." : isOwner ? "Enter" : "Begin Shift"}
+            </button>
+          )}
+          </>
           )}
 
           {checkinError && (
             <p className="text-sm text-red-600 text-center mt-4">{checkinError}</p>
           )}
 
-          {!staffUserId && (
+          {!staffUserId && !isOwner && (
             <p className="text-sm text-ash text-center mt-4">
               You need a staff account to check in. Create one from the Owner Dashboard.
             </p>

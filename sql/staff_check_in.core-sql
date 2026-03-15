@@ -2,8 +2,7 @@
 CREATE OR REPLACE FUNCTION private.staff_check_in(
   p_caller_auth_uid uuid,
   p_location_id uuid,
-  p_role text,
-  p_shift_duration interval DEFAULT NULL
+  p_role text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -54,8 +53,8 @@ BEGIN
     AND checked_out_at IS NULL;
 
   -- Create new checkin
-  INSERT INTO public.staff_checkins (staff_user_id, location_id, role, shift_duration)
-  VALUES (v_staff_user_id, p_location_id, p_role, p_shift_duration);
+  INSERT INTO public.staff_checkins (staff_user_id, location_id, role)
+  VALUES (v_staff_user_id, p_location_id, p_role);
 
   RETURN jsonb_build_object('success', true);
 END;
@@ -64,8 +63,7 @@ $$;
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.staff_check_in(
   p_location_id uuid,
-  p_role text,
-  p_shift_duration interval DEFAULT NULL
+  p_role text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -76,9 +74,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.staff_check_in(v_auth_uid, p_location_id, p_role, p_shift_duration);
+  RETURN private.staff_check_in(v_auth_uid, p_location_id, p_role);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.staff_check_in(uuid, text, interval) FROM anon;
-GRANT EXECUTE ON FUNCTION public.staff_check_in(uuid, text, interval) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.staff_check_in(uuid, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.staff_check_in(uuid, text) TO authenticated;

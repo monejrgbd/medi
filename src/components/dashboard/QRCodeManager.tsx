@@ -24,9 +24,10 @@ export default function QRCodeManager({
   );
   const [uploadError, setUploadError] = useState("");
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com";
   const checkinUrl = kioskMode
-    ? `https://hilt.health/checkin/${locationId}?kiosk=true`
-    : `https://hilt.health/checkin/${locationId}`;
+    ? `${appUrl}/checkin/${locationId}?kiosk=true`
+    : `${appUrl}/checkin/${locationId}`;
 
   useEffect(() => {
     renderQR();

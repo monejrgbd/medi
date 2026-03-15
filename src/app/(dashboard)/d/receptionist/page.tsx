@@ -1,24 +1,25 @@
-import { requireAuth, getStaffUser, isOwner, getMyRoles } from "@/lib/auth";
+import { requireAuth, getStaffUser, isOwner, getMyRoles, getMyOrg } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import ReceptionistDashboard from "./ReceptionistDashboard";
 import { redirect } from "next/navigation";
 
-export default async function ReceptionistPage() {
+export default async function ReceptionistPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ location?: string }>;
+}) {
+  const params = await searchParams;
   const user = await requireAuth();
   const supabase = await createClient();
 
   const staffUser = await getStaffUser(user.id);
   const ownerCheck = await isOwner(user.id);
 
-  // Get org_id - staff user has it, owner needs lookup
+  // Get org_id - staff user has it, owner uses getMyOrg (SECURITY DEFINER, bypasses RLS)
   let orgId: string | null = staffUser?.org_id ?? null;
   if (!orgId && ownerCheck) {
-    const { data: org } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("owner_id", user.id)
-      .single();
-    orgId = org?.id ?? null;
+    const org = await getMyOrg();
+    orgId = (org as { id?: string })?.id ?? null;
   }
 
   if (!orgId) redirect("/d/select-role");
@@ -31,8 +32,19 @@ export default async function ReceptionistPage() {
     }
   }
 
+  // Get all org locations via SECURITY DEFINER RPC (bypasses RLS)
+  const allLocations: { id: string; name: string }[] = ownerCheck
+    ? await supabase.rpc("get_locations").then((r) =>
+        (r.data ?? []).map((l: { id: string; name: string }) => ({
+          id: l.id,
+          name: l.name,
+        }))
+      )
+    : [];
+
   // Check if user is currently checked in as receptionist
   let checkedInLocationId: string | null = null;
+  let locationName = "Reception";
 
   if (staffUser) {
     const { data: checkin } = await supabase
@@ -46,29 +58,35 @@ export default async function ReceptionistPage() {
       .single();
 
     checkedInLocationId = checkin?.location_id ?? null;
+
+    if (checkedInLocationId) {
+      const { data: locationRow } = await supabase
+        .from("locations")
+        .select("name")
+        .eq("id", checkedInLocationId)
+        .single();
+      locationName = locationRow?.name ?? "Reception";
+    }
   }
 
-  // Get location name if checked in
-  let locationName = "Reception";
-  if (checkedInLocationId) {
-    const { data: locationRow } = await supabase
-      .from("locations")
-      .select("name")
-      .eq("id", checkedInLocationId)
-      .single();
-    locationName = locationRow?.name ?? "Reception";
+  // Owner direct access via ?location= param or auto-select if single location
+  if (!checkedInLocationId && ownerCheck) {
+    const match = params.location
+      ? allLocations.find((l) => l.id === params.location)
+      : allLocations.length === 1
+        ? allLocations[0]
+        : null;
+    if (match) {
+      checkedInLocationId = match.id;
+      locationName = match.name;
+    }
   }
 
-  // If not checked in, get available locations
+  // No location yet — show picker
   if (!checkedInLocationId) {
     const roles = await getMyRoles();
     const receptionistLocations = ownerCheck
-      ? await supabase.rpc("get_locations").then((r) =>
-          (r.data ?? []).map((l: { id: string; name: string }) => ({
-            id: l.id,
-            name: l.name,
-          }))
-        )
+      ? allLocations
       : roles
           .filter((r: { role: string }) => r.role === "receptionist")
           .map((r: { location_id: string; location_name: string }) => ({
@@ -81,6 +99,7 @@ export default async function ReceptionistPage() {
         mode="select_location"
         locations={receptionistLocations}
         staffUserId={staffUser?.id ?? null}
+        isOwner={ownerCheck}
         orgId={orgId}
         locationId={null}
         initialPending={[]}
@@ -91,14 +110,18 @@ export default async function ReceptionistPage() {
     );
   }
 
-  // Checked in — load initial data
-  const [pendingRes, countsRes, activeRes, completedRes] = await Promise.all([
+  // Have a location — load initial data via RPCs (SECURITY DEFINER)
+  const [pendingRes, countsRes] = await Promise.all([
     supabase.rpc("get_pending_approvals", {
       p_location_id: checkedInLocationId,
     }),
     supabase.rpc("get_receptionist_counts", {
       p_location_id: checkedInLocationId,
     }),
+  ]);
+
+  // Active/completed visits — direct queries (work for staff via RLS, may be empty for owner)
+  const [activeRes, completedRes] = await Promise.all([
     supabase
       .from("visits")
       .select(
@@ -124,6 +147,7 @@ export default async function ReceptionistPage() {
       mode="dashboard"
       locations={[]}
       staffUserId={staffUser?.id ?? null}
+      isOwner={ownerCheck}
       orgId={orgId}
       locationId={checkedInLocationId}
       locationName={locationName}

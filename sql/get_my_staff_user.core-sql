@@ -1,0 +1,46 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_my_staff_user(p_caller_auth_uid uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  SELECT jsonb_build_object(
+    'id', su.id,
+    'org_id', su.org_id,
+    'auth_uid', su.auth_uid,
+    'full_name', su.full_name,
+    'username', su.username
+  )
+  INTO v_result
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false
+  LIMIT 1;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_my_staff_user()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.get_my_staff_user(v_auth_uid);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_my_staff_user() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_my_staff_user() TO authenticated;

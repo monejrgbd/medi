@@ -18,16 +18,10 @@ export async function requireAuth() {
   return user;
 }
 
-export async function getStaffUser(authUid: string) {
+export async function getStaffUser(_authUid: string) {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("staff_users")
-    .select("*")
-    .eq("auth_uid", authUid)
-    .eq("is_active", true)
-    .eq("is_deleted", false)
-    .single();
-  return data;
+  const { data } = await supabase.rpc("get_my_staff_user");
+  return data as { id: string; org_id: string; auth_uid: string; full_name: string; username: string } | null;
 }
 
 export async function isOwner(authUid: string) {

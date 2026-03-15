@@ -14,10 +14,7 @@ export default function EmbeddableWidgetConfig({
     locations[0]?.id || ""
   );
 
-  const baseUrl =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://hilthealth.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com";
   const iframeCode = `<iframe src="${baseUrl}/checkin/${selectedLocation}?embed=true" width="100%" height="600" style="border:none;border-radius:12px;" allow="microphone"></iframe>`;
 
   function handleCopy() {

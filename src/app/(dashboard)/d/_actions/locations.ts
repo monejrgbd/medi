@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { stripHtml } from "@/lib/utils";
-import { getMyOrg, requireAuth } from "@/lib/auth";
+import { getMyOrg, requireAuth, isOwner } from "@/lib/auth";
 
 export async function createLocation(formData: {
   orgId: string;
@@ -101,7 +101,11 @@ export async function updateOrganization(formData: { name: string }) {
 }
 
 export async function deactivateAccount(orgId: string) {
-  await requireAuth();
+  const user = await requireAuth();
+
+  const ownerCheck = await isOwner(user.id);
+  if (!ownerCheck) return { success: false, error: "Not authorized" };
+
   const supabase = await createClient();
 
   // Cancel PayPal subscription if active

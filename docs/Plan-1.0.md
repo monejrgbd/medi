@@ -187,7 +187,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
 - All statistics keyed per day.
 
 ### Doctor
-- **Check in/out** — doctors and receptionists must check in when logging in, can specify shift duration, can check in/out anytime. Managers don't check in — they're just logged in or not.
+- **Check in/out** — doctors and receptionists must check in to a location when starting their shift and check out when done. No shift duration — simply check in and check out. Managers don't check in — they're just logged in or not. Owners can enter any role view directly without checking in.
 - **Queue** — sees all patients with `waiting_doctor_claim` status (not yet claimed). Sorted by priority: high → medium → low, FIFO within each level.
 - **Claim is atomic** — if two doctors click "Claim" on the same patient simultaneously, the first one wins. The second doctor sees "Already claimed by Dr. [Name]" and the patient is removed from their pending queue in real-time.
 - **Four tabs:** Pending | Claimed by You | Completed | Cancelled

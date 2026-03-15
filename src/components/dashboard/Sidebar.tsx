@@ -46,6 +46,14 @@ export default function Sidebar() {
       <div className="p-6 border-b border-gray-100">
         <h2 className="font-semibold text-ink truncate">{org.name}</h2>
         <p className="text-xs text-slate mt-0.5">Owner Dashboard</p>
+        <Link
+          href="/d/select-role"
+          onClick={() => setMobileOpen(false)}
+          className="mt-3 flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-2 text-xs font-medium text-purple-600 hover:bg-purple-100 transition-colors"
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" />
+          Switch Role
+        </Link>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
@@ -75,14 +83,6 @@ export default function Sidebar() {
           <Wrench className="h-4 w-4" />
           Request Custom Build
         </a>
-        <Link
-          href="/d/select-role"
-          onClick={() => setMobileOpen(false)}
-          className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 hover:text-ink transition-colors"
-        >
-          <ArrowLeftRight className="h-4 w-4" />
-          Switch Role
-        </Link>
         <button
           onClick={async () => {
             const { createClient } = await import("@/lib/supabase/client");

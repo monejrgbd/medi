@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, isOwner } from "@/lib/auth";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -59,10 +59,13 @@ export async function toggleAddon(
 }
 
 export async function cancelSubscription(orgId: string) {
-  await requireAuth();
+  const user = await requireAuth();
 
   if (!UUID_RE.test(orgId))
     return { success: false, error: "Invalid org ID" };
+
+  const ownerCheck = await isOwner(user.id);
+  if (!ownerCheck) return { success: false, error: "Not authorized" };
 
   // Cancel PayPal subscription if exists
   const supabase = await createClient();

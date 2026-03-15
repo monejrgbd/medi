@@ -12,6 +12,7 @@ SET search_path TO ''
 AS $$
 DECLARE
   v_allocation int;
+  v_remaining numeric;
 BEGIN
   -- Validate plan
   IF p_plan NOT IN ('starter', 'standard', 'plus', 'enterprise', 'pay_as_you_go') THEN
@@ -27,12 +28,18 @@ BEGIN
     WHEN 'pay_as_you_go' THEN v_allocation := 0;
   END CASE;
 
+  -- Carry over remaining credits from previous plan
+  SELECT GREATEST(0, credits_total - credits_used)
+  INTO v_remaining
+  FROM public.organizations
+  WHERE id = p_org_id;
+
   UPDATE public.organizations
   SET paypal_subscription_id = p_paypal_subscription_id,
       subscription_plan = p_plan,
       billing_cycle_start = now(),
       credits_used = 0,
-      credits_total = v_allocation,
+      credits_total = v_allocation + COALESCE(v_remaining, 0),
       trial_end_date = NULL,
       cancelled_at = NULL,
       data_retention_until = NULL,

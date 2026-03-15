@@ -115,6 +115,9 @@ export default function OwnerSignUpForm() {
       return;
     }
 
+    // Refresh session so JWT picks up org_id from app_metadata
+    await supabase.auth.refreshSession();
+
     window.location.href = "/d/onboarding";
   }
 
