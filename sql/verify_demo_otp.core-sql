@@ -1,0 +1,66 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.verify_demo_otp(
+  p_email text,
+  p_code text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_row public.demo_access%ROWTYPE;
+BEGIN
+  p_email := lower(trim(p_email));
+
+  -- Look up demo_access row
+  SELECT * INTO v_row
+  FROM public.demo_access
+  WHERE lower(email) = p_email;
+
+  IF v_row IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'No OTP requested for this email.');
+  END IF;
+
+  -- Check expiry
+  IF v_row.otp_expires_at < now() THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Code expired. Request a new one.');
+  END IF;
+
+  -- Check demo limit
+  IF v_row.access_count >= 3 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Demo limit reached for this email.');
+  END IF;
+
+  -- Verify bcrypt hash
+  IF v_row.otp_hash IS NULL OR extensions.crypt(p_code, v_row.otp_hash) != v_row.otp_hash THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid code.');
+  END IF;
+
+  -- Success: increment count, clear OTP
+  UPDATE public.demo_access
+  SET access_count = access_count + 1,
+      otp_hash = NULL,
+      otp_expires_at = NULL
+  WHERE id = v_row.id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.verify_demo_otp(
+  p_email text,
+  p_code text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.verify_demo_otp(p_email, p_code);
+END;
+$$;

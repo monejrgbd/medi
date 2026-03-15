@@ -52,7 +52,7 @@ BEGIN
   END IF;
 
   -- Get queue
-  SELECT COALESCE(jsonb_agg(row_to_json(q) ORDER BY q.priority DESC, q.entered_queue_at ASC), '[]'::jsonb)
+  SELECT COALESCE(jsonb_agg(row_to_json(q) ORDER BY q.priority DESC, q.created_at ASC), '[]'::jsonb)
   INTO v_result
   FROM (
     SELECT

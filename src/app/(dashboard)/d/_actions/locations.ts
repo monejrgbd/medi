@@ -187,9 +187,11 @@ export async function uploadLocationLogo(locationId: string, formData: FormData)
     .from("logos")
     .getPublicUrl(path);
 
+  const logoUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
   const { data, error } = await supabase.rpc("update_location", {
     p_location_id: locationId,
-    p_logo_url: urlData.publicUrl,
+    p_logo_url: logoUrl,
   });
 
   if (error) return { success: false, error: "Failed to update location logo" };

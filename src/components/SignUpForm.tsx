@@ -170,7 +170,7 @@ export default function SignUpForm() {
           >
             {/* Honeypot — hidden from real users, bots fill it */}
             <div className="absolute -left-[9999px]" aria-hidden="true">
-              <input type="text" name="company_url" tabIndex={-1} autoComplete="off" />
+              <input type="text" name="company_url" tabIndex={-1} autoComplete="off" suppressHydrationWarning />
             </div>
 
             <div>
@@ -184,6 +184,7 @@ export default function SignUpForm() {
                 required
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
                 placeholder="Niagara Family Health Clinic"
+                suppressHydrationWarning
               />
             </div>
 
@@ -198,6 +199,7 @@ export default function SignUpForm() {
                 required
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
                 placeholder="Dr. Sarah Chen"
+                suppressHydrationWarning
               />
             </div>
 
@@ -212,6 +214,7 @@ export default function SignUpForm() {
                 required
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
                 placeholder="sarah@clinic.ca"
+                suppressHydrationWarning
               />
             </div>
 
@@ -225,6 +228,7 @@ export default function SignUpForm() {
                 name="phone"
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
                 placeholder="(905) 555-0123"
+                suppressHydrationWarning
               />
             </div>
 
@@ -270,6 +274,7 @@ export default function SignUpForm() {
                   required
                   defaultValue=""
                   className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-10 text-ink focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors appearance-none bg-white"
+                  suppressHydrationWarning
                 >
                   <option value="" disabled>
                     Select your city

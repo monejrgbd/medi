@@ -1,0 +1,38 @@
+-- Trigger function: calls process-email-queue edge function on INSERT into pending_emails
+-- Uses pg_net for async HTTP call so the INSERT isn't blocked
+CREATE OR REPLACE FUNCTION private.trigger_process_email_queue()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_edge_url text;
+  v_secret text;
+BEGIN
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+  SELECT decrypted_secret INTO v_secret
+  FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  -- Fire-and-forget HTTP POST via pg_net (non-blocking)
+  PERFORM net.http_post(
+    url := v_edge_url || '/process-email-queue',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-internal-secret', v_secret
+    ),
+    body := '{}'::jsonb
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+-- Create or replace the trigger
+DROP TRIGGER IF EXISTS trg_process_email_on_insert ON public.pending_emails;
+CREATE TRIGGER trg_process_email_on_insert
+  AFTER INSERT ON public.pending_emails
+  FOR EACH ROW
+  EXECUTE FUNCTION private.trigger_process_email_queue();

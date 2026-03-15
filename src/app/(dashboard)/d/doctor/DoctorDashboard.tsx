@@ -71,12 +71,14 @@ interface DoctorDashboardProps {
   isOwner?: boolean;
   orgId: string;
   locationId: string | null;
+  suggestedLocationId?: string | null;
   locationName?: string;
   initialQueue: QueueVisit[];
   initialClaimed: ClaimedVisit[];
   initialCompleted: CompletedVisit[];
   initialLeft: CompletedVisit[];
   initialDoctors: Doctor[];
+  demoMode?: boolean;
   initialHasMoreCompleted?: boolean;
   initialHasMoreLeft?: boolean;
 }
@@ -90,6 +92,7 @@ export default function DoctorDashboard({
   isOwner = false,
   orgId,
   locationId,
+  suggestedLocationId,
   locationName = "Clinic",
   initialQueue,
   initialClaimed,
@@ -98,6 +101,7 @@ export default function DoctorDashboard({
   initialDoctors,
   initialHasMoreCompleted = false,
   initialHasMoreLeft = false,
+  demoMode = false,
 }: DoctorDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("pending");
@@ -107,14 +111,14 @@ export default function DoctorDashboard({
   const [left, setLeft] = useState<CompletedVisit[]>(initialLeft);
   const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    locations.length === 1 ? locations[0].id : null
+    suggestedLocationId ?? (locations.length === 1 ? locations[0].id : null)
   );
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [urgentPatient, setUrgentPatient] = useState<string | null>(null);
-  const [focusMode, setFocusMode] = useState(false);
+  const [focusMode, setFocusMode] = useState(demoMode);
   const [hasMoreCompleted, setHasMoreCompleted] = useState(initialHasMoreCompleted);
   const [hasMoreLeft, setHasMoreLeft] = useState(initialHasMoreLeft);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -274,17 +278,26 @@ export default function DoctorDashboard({
           </div>
 
           {selectedLocationId && (
-            <button
-              onClick={() =>
-                isOwner
-                  ? router.push(`?location=${selectedLocationId}`)
-                  : handleCheckIn(selectedLocationId)
-              }
-              disabled={checkingIn || (!staffUserId && !isOwner)}
-              className="mt-4 w-full rounded-lg bg-hilt-blue px-4 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50 transition-colors"
-            >
-              {checkingIn ? "Checking in..." : isOwner ? "Enter" : "Begin Shift"}
-            </button>
+            <>
+              {staffUserId && (
+                <button
+                  onClick={() => handleCheckIn(selectedLocationId)}
+                  disabled={checkingIn}
+                  className="mt-4 w-full rounded-lg bg-hilt-blue px-4 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50 transition-colors"
+                >
+                  {checkingIn ? "Checking in..." : "Begin Shift"}
+                </button>
+              )}
+              {isOwner && (
+                <button
+                  onClick={() => router.push(`?location=${selectedLocationId}&skip=1`)}
+                  disabled={checkingIn}
+                  className={`${staffUserId ? "mt-2" : "mt-4"} w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-slate hover:bg-gray-50 disabled:opacity-50 transition-colors`}
+                >
+                  Skip
+                </button>
+              )}
+            </>
           )}
           </>
           )}
@@ -369,9 +382,11 @@ export default function DoctorDashboard({
         </div>
 
         {/* Check-out */}
+        {!demoMode && (
         <div className="mb-4 flex justify-end">
           <CheckInOutButton />
         </div>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 mb-4 border-b border-gray-200">

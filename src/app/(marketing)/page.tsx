@@ -3,6 +3,7 @@ import SignUpForm from "@/components/SignUpForm";
 import FadeIn from "@/components/FadeIn";
 import DoctorMockup from "@/components/marketing/DoctorMockup";
 import { getAllPosts } from "@/lib/blog";
+import DemoQR from "@/components/marketing/DemoQR";
 
 /* ── Hero ─────────────────────────────────────────────── */
 
@@ -110,58 +111,55 @@ function HeroSection() {
     <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-24 pb-8 lg:pt-32 lg:pb-10">
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="grid items-start gap-16 lg:grid-cols-2 lg:pt-8">
-          {/* Copy */}
+          {/* Left column */}
           <div>
-            <h1 className="mb-4 text-5xl font-bold leading-[1.05] tracking-tight text-ink sm:text-6xl lg:text-7xl">
+            <h1 className="mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-5xl lg:text-6xl">
               Patients describe
               <br />
               symptoms to AI.
+              <br />
+              In 130+ languages.
               <br />
               <span className="text-hilt-blue">Doctors read
               <br />
               the summary.</span>
             </h1>
             <p className="mb-8 text-lg text-slate sm:text-xl">
-              Your doctor walks in prepared. In 130+ languages.
+              Doctors walk in prepared.
             </p>
-            {/* Trial options */}
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 max-w-lg">
-              <div className="rounded-xl border border-gray-200 bg-white p-5">
-                <p className="text-sm font-bold text-ink">Standard Trial</p>
-                <p className="mt-1 text-xs text-slate">$20 USD in credits · 14 days</p>
-                <p className="text-xs text-slate">Full access to all features</p>
-                <p className="text-xs text-slate">No card required</p>
-                <Link
-                  href="/signup"
-                  className="mt-3 block rounded-lg bg-hilt-blue py-2.5 text-center text-sm font-semibold text-white shadow-md shadow-hilt-blue/20 transition-all hover:shadow-lg hover:-translate-y-0.5"
-                >
-                  Start Now
-                </Link>
-              </div>
-              <div className="rounded-xl border-2 border-hilt-blue bg-hilt-blue/5 p-5">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-ink">Premium Trial</p>
-                  <span className="rounded-full bg-hilt-blue px-2 py-0.5 text-[9px] font-semibold text-white">Recommended</span>
-                </div>
-                <p className="mt-1 text-xs text-slate">$200 USD in credits · 30 days</p>
-                <p className="text-xs text-slate">Full access to all features</p>
-                <a
-                  href="#contact"
-                  className="mt-3 block rounded-lg border-2 border-hilt-blue py-2.5 text-center text-sm font-semibold text-hilt-blue transition-all hover:bg-hilt-blue hover:text-white"
-                >
-                  Apply for Access
-                </a>
-              </div>
-            </div>
+            {/* Start Trial CTA */}
             <Link
-              href="/pricing"
-              className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-hilt-blue transition-colors hover:text-hilt-blue-dark"
+              href="/start-trial"
+              className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
             >
-              See full pricing
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              Start Trial, Up to $200 in Free Credits
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
               </svg>
             </Link>
+            <p className="mt-2 text-xs text-slate">No credit card required</p>
+
+            {/* Live Demo Card */}
+            <div className="mt-8 rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-5 shadow-lg">
+              <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
+                <div className="shrink-0 rounded-xl bg-white p-2 shadow-sm ring-1 ring-gray-900/5">
+                  <DemoQR />
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="text-lg font-bold text-ink mb-1">See it in action</p>
+                  <p className="text-sm text-slate mb-3">Experience the full patient to doctor flow.</p>
+                  <Link
+                    href="/demo"
+                    className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-green-600/20 transition-all hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
+                  >
+                    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                    </svg>
+                    Try Live Demo
+                  </Link>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Patient flow: chat → summary (phone-sized, right column) */}
@@ -524,7 +522,7 @@ function Footer() {
 
 /* ── Page ─────────────────────────────────────────────── */
 
-export default function Home() {
+export default async function Home() {
   return (
     <>
       <main>

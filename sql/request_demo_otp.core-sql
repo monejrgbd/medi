@@ -1,0 +1,92 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.request_demo_otp(
+  p_email text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_otp text;
+  v_hash text;
+  v_recent_count int;
+  v_existing public.demo_access%ROWTYPE;
+BEGIN
+  -- Validate email format
+  IF p_email !~ '^[^@]+@[^@]+\.[^@]+$' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid email format');
+  END IF;
+
+  p_email := lower(trim(p_email));
+
+  -- Look up existing row
+  SELECT * INTO v_existing
+  FROM public.demo_access
+  WHERE lower(email) = p_email;
+
+  -- Check if already at demo limit
+  IF v_existing IS NOT NULL AND v_existing.access_count >= 3 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Demo limit reached for this email.');
+  END IF;
+
+  -- Rate limit: max 5 OTP requests per email per hour (count recent pending_emails)
+  SELECT COUNT(*) INTO v_recent_count
+  FROM public.pending_emails
+  WHERE to_email = p_email
+    AND subject = 'Your Hilt Health Demo Code'
+    AND created_at > now() - interval '1 hour';
+
+  IF v_recent_count >= 5 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Too many attempts. Try again later.');
+  END IF;
+
+  -- Generate 6-digit OTP
+  v_otp := lpad(floor(random() * 1000000)::text, 6, '0');
+  v_hash := extensions.crypt(v_otp, extensions.gen_salt('bf'));
+
+  -- Upsert demo_access row
+  IF v_existing IS NULL THEN
+    INSERT INTO public.demo_access (email, otp_hash, otp_expires_at)
+    VALUES (p_email, v_hash, now() + interval '10 minutes');
+  ELSE
+    UPDATE public.demo_access
+    SET otp_hash = v_hash, otp_expires_at = now() + interval '10 minutes'
+    WHERE id = v_existing.id;
+  END IF;
+
+  -- Queue OTP email via pending_emails (process-email-queue picks it up)
+  INSERT INTO public.pending_emails (to_email, subject, html_body, priority)
+  VALUES (
+    p_email,
+    'Your Hilt Health Demo Code',
+    '<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">'
+    || '<h2 style="color: #1a1a1a; margin-bottom: 8px;">Hilt Health Demo</h2>'
+    || '<p style="color: #555; font-size: 15px;">Here is your 6-digit verification code:</p>'
+    || '<div style="background: #f4f4f5; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">'
+    || '<span style="font-size: 32px; font-weight: 700; letter-spacing: 6px; color: #1a1a1a;">' || v_otp || '</span>'
+    || '</div>'
+    || '<p style="color: #888; font-size: 13px;">This code expires in 10 minutes.</p>'
+    || '</div>',
+    1  -- high priority
+  );
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.request_demo_otp(
+  p_email text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.request_demo_otp(p_email);
+END;
+$$;

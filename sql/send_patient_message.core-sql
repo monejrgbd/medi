@@ -52,7 +52,7 @@ BEGIN
 
   -- Insert patient message (cap original at 5000 chars too)
   INSERT INTO public.visit_messages (visit_id, role, content, content_original)
-  VALUES (p_visit_id, 'patient', v_clean, substring(trim(regexp_replace(COALESCE(p_content_original, ''), '<[^>]*>', '', 'g')), 1, 5000));
+  VALUES (p_visit_id, 'patient', v_clean, CASE WHEN p_content_original IS NOT NULL THEN substring(trim(regexp_replace(p_content_original, '<[^>]*>', '', 'g')), 1, 5000) ELSE NULL END);
 
   RETURN jsonb_build_object('success', true);
 END;

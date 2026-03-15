@@ -106,6 +106,7 @@ interface ReceptionistDashboardProps {
   isOwner?: boolean;
   orgId: string;
   locationId: string | null;
+  suggestedLocationId?: string | null;
   locationName?: string;
   initialPending: PendingVisit[];
   initialActive: ActiveVisit[];
@@ -129,6 +130,7 @@ export default function ReceptionistDashboard({
   isOwner = false,
   orgId,
   locationId,
+  suggestedLocationId,
   locationName = "Reception",
   initialPending,
   initialActive,
@@ -142,7 +144,7 @@ export default function ReceptionistDashboard({
   const [completed, setCompleted] = useState<CompletedVisit[]>(initialCompleted);
   const [counts, setCounts] = useState<Counts>(initialCounts ?? DEFAULT_COUNTS);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
-    locations.length === 1 ? locations[0].id : null
+    suggestedLocationId ?? (locations.length === 1 ? locations[0].id : null)
   );
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
@@ -348,17 +350,26 @@ export default function ReceptionistDashboard({
           </div>
 
           {selectedLocationId && (
-            <button
-              onClick={() =>
-                isOwner
-                  ? router.push(`?location=${selectedLocationId}`)
-                  : handleCheckIn(selectedLocationId)
-              }
-              disabled={checkingIn || (!staffUserId && !isOwner)}
-              className="mt-4 w-full rounded-lg bg-hilt-blue px-4 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50 transition-colors"
-            >
-              {checkingIn ? "Checking in..." : isOwner ? "Enter" : "Begin Shift"}
-            </button>
+            <>
+              {staffUserId && (
+                <button
+                  onClick={() => handleCheckIn(selectedLocationId)}
+                  disabled={checkingIn}
+                  className="mt-4 w-full rounded-lg bg-hilt-blue px-4 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50 transition-colors"
+                >
+                  {checkingIn ? "Checking in..." : "Begin Shift"}
+                </button>
+              )}
+              {isOwner && (
+                <button
+                  onClick={() => router.push(`?location=${selectedLocationId}&skip=1`)}
+                  disabled={checkingIn}
+                  className={`${staffUserId ? "mt-2" : "mt-4"} w-full rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-slate hover:bg-gray-50 disabled:opacity-50 transition-colors`}
+                >
+                  Skip
+                </button>
+              )}
+            </>
           )}
           </>
           )}

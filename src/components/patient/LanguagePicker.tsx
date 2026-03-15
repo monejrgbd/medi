@@ -5,6 +5,7 @@ import { useState } from "react";
 interface LanguagePickerProps {
   onSelect: (language: string) => void;
   loading: boolean;
+  initialLanguage?: string;
 }
 
 const TOP_LANGUAGES = [
@@ -121,8 +122,8 @@ const OTHER_LANGUAGES = [
 
 const ALL_LANGUAGES = [...TOP_LANGUAGES, ...OTHER_LANGUAGES];
 
-export default function LanguagePicker({ onSelect, loading }: LanguagePickerProps) {
-  const [selected, setSelected] = useState("en");
+export default function LanguagePicker({ onSelect, loading, initialLanguage }: LanguagePickerProps) {
+  const [selected, setSelected] = useState(initialLanguage ?? "en");
   const [search, setSearch] = useState("");
   // LanguagePicker is shown before language is set, so we keep English labels here (language names are universal)
 

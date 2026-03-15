@@ -51,6 +51,7 @@ type FlowState =
 interface LocationData {
   active: boolean;
   location_name?: string;
+  address?: string;
   specialty?: string;
   operating_hours?: Record<string, string> | null;
   org_name?: string;
@@ -62,6 +63,7 @@ interface CheckinFlowProps {
   locationData: LocationData;
   embed?: boolean;
   kiosk?: boolean;
+  demoMode?: boolean;
 }
 
 interface MedicalInfo {
@@ -86,6 +88,7 @@ export default function CheckinFlow({
   locationData,
   embed = false,
   kiosk = false,
+  demoMode = false,
 }: CheckinFlowProps) {
   const [state, setState] = useState<FlowState>(
     locationData.active ? "form" : "inactive"
@@ -128,6 +131,23 @@ export default function CheckinFlow({
   hasPreviousVisitsRef.current = hasPreviousVisits;
   const consentGivenRef = useRef(consentGiven);
   consentGivenRef.current = consentGiven;
+  const sessionTokenRef = useRef(sessionToken);
+  sessionTokenRef.current = sessionToken;
+  const demoModeRef = useRef(demoMode);
+
+  // Demo mode: auto-consent and skip to chatting (bypasses first_timer + language picker)
+  async function autoDemoConsent() {
+    const token = sessionTokenRef.current;
+    if (!token) return;
+    const supabase = createClient();
+    await supabase.rpc("give_patient_consent", {
+      p_session_token: token,
+      p_language: "en",
+    });
+    setConsentGiven(true);
+    setPatientLanguage("en");
+    setState("chatting");
+  }
 
   // Kiosk mode: clear localStorage on mount to prevent session recovery
   useEffect(() => {
@@ -233,7 +253,7 @@ export default function CheckinFlow({
           } else if (data.ai_completed_at) {
             setState("generating_summary");
           } else if (!data.has_previous_visits && !data.consent_given) {
-            setState("first_timer");
+            if (demoMode) { autoDemoConsent(); } else { setState("first_timer"); }
           } else {
             setState("chatting");
           }
@@ -242,7 +262,7 @@ export default function CheckinFlow({
           if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
           if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
           // Check if phone collection needed
-          if (!data.patient_phone_verified && !data.patient_has_phone) {
+          if (!demoMode && !data.patient_phone_verified && !data.patient_has_phone) {
             setState("phone_collection");
           } else {
             setState(data.timeout_flagged ? "timeout" : "queued");
@@ -326,7 +346,11 @@ export default function CheckinFlow({
           return;
         }
         if (!hasPreviousVisitsRef.current && !consentGivenRef.current) {
-          setState("first_timer");
+          if (demoModeRef.current) {
+            autoDemoConsent();
+          } else {
+            setState("first_timer");
+          }
         } else {
           setState("chatting");
         }
@@ -334,6 +358,13 @@ export default function CheckinFlow({
       }
 
       if (status === "waiting_doctor_claim") {
+        // Skip if summary_review — handleSummaryApprove will handle
+        // the transition with proper phone collection check
+        const current = stateRef.current;
+        if (current === "summary_review" || current === "generating_summary") {
+          return;
+        }
+        fetchQueuePosition();
         setState(timeout_flagged ? "timeout" : "queued");
         return;
       }
@@ -475,7 +506,7 @@ export default function CheckinFlow({
             } else if (session.ai_completed_at) {
               setState("generating_summary");
             } else if (!session.has_previous_visits && !session.consent_given) {
-              setState("first_timer");
+              if (demoMode) { autoDemoConsent(); } else { setState("first_timer"); }
             } else {
               setState("chatting");
             }
@@ -483,7 +514,7 @@ export default function CheckinFlow({
             if (session.queue_position !== undefined) setQueuePosition(session.queue_position);
             if (session.estimated_wait_minutes !== undefined) setEstimatedWait(session.estimated_wait_minutes);
             // Check if phone collection needed
-            if (!session.patient_phone_verified && !session.patient_has_phone) {
+            if (!demoMode && !session.patient_phone_verified && !session.patient_has_phone) {
               setState("phone_collection");
             } else {
               setState(session.timeout_flagged ? "timeout" : "queued");
@@ -627,6 +658,18 @@ export default function CheckinFlow({
     }
   }
 
+  async function fetchQueuePosition() {
+    if (!sessionToken) return;
+    const supabase = createClient();
+    const { data } = await supabase.rpc("get_patient_session", {
+      p_session_token: sessionToken,
+    });
+    if (data?.success) {
+      if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
+      if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
+    }
+  }
+
   async function handleSummaryApprove() {
     // Check if phone collection needed
     const supabase = createClient();
@@ -634,9 +677,13 @@ export default function CheckinFlow({
       const { data } = await supabase.rpc("get_patient_session", {
         p_session_token: sessionToken,
       });
-      if (data?.success && !data.patient_phone_verified && !data.patient_has_phone) {
-        setState("phone_collection");
-        return;
+      if (data?.success) {
+        if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
+        if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
+        if (!demoMode && !data.patient_phone_verified && !data.patient_has_phone) {
+          setState("phone_collection");
+          return;
+        }
       }
     }
     setState("queued");
@@ -665,6 +712,7 @@ export default function CheckinFlow({
 
       if (data?.already_verified) {
         setPhoneLoading(false);
+        await fetchQueuePosition();
         setState("queued");
         return;
       }
@@ -710,12 +758,13 @@ export default function CheckinFlow({
     }
   }
 
-  function handlePhoneVerified() {
+  async function handlePhoneVerified() {
     if (collisionContext) {
       // Pre-approval collision flow: go back to waiting (receptionist still processes)
       setState("waiting");
     } else {
-      // Post-AI collection: go to queue
+      // Post-AI collection: fetch queue position then go to queue
+      await fetchQueuePosition();
       setState("queued");
     }
   }
@@ -725,7 +774,8 @@ export default function CheckinFlow({
     await handlePhoneSubmit(patientPhone);
   }
 
-  function handlePhoneSkip() {
+  async function handlePhoneSkip() {
+    await fetchQueuePosition();
     setState("queued");
   }
 
@@ -793,11 +843,12 @@ export default function CheckinFlow({
       return (
         <CheckinForm
           locationName={locationData.location_name || "Check In"}
-          orgName={locationData.org_name || ""}
+          address={locationData.address || ""}
           logoUrl={locationData.logo_url || null}
           onSubmit={handleCheckin}
           loading={loading}
           error={error}
+          demoDefaults={demoMode ? { firstName: "Demo", lastName: "Patient", birthday: "2000-01-15" } : undefined}
         />
       );
 
@@ -856,14 +907,14 @@ export default function CheckinFlow({
                     } else if (data.ai_completed_at) {
                       setState("generating_summary");
                     } else if (!(data.has_previous_visits as boolean) && !(data.consent_given as boolean)) {
-                      setState("first_timer");
+                      if (demoMode) { autoDemoConsent(); } else { setState("first_timer"); }
                     } else {
                       setState("chatting");
                     }
                   } else if (status === "waiting_doctor_claim") {
                     if (data.queue_position !== undefined) setQueuePosition(data.queue_position as number);
                     if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes as number | null);
-                    if (!(data.patient_phone_verified as boolean) && !(data.patient_has_phone as boolean)) {
+                    if (!demoMode && !(data.patient_phone_verified as boolean) && !(data.patient_has_phone as boolean)) {
                       setState("phone_collection");
                     } else {
                       setState((data.timeout_flagged as boolean) ? "timeout" : "queued");

@@ -51,6 +51,7 @@ export default function LanguageSwitcher({
               setShowPicker(false);
             }}
             loading={loading || false}
+            initialLanguage={currentLanguage}
           />
           <button
             onClick={() => setShowPicker(false)}

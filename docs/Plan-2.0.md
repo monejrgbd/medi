@@ -71,6 +71,20 @@ An internal dashboard for the Hilt Health team to view and manage all incoming f
 
 ---
 
+## Doctor-Side Language Preference
+
+Doctors set their preferred language in settings. All transcripts, summaries, and structured cards are displayed in that language.
+
+- **New column:** `preferred_language` on `staff_users` (default `'en'`)
+- **Settings UI:** Language dropdown in doctor profile/settings
+- **Translation:** On-the-fly Google Translate when doctor views a visit — translate `content` (English) to doctor's language
+- **Caching:** Store translated versions in a `visit_translations` table keyed by `(visit_id, language)` to avoid re-translating on every view
+- **Summary:** Translate the AI summary + structured card fields on first view, cache result
+- **Transcript:** Translate each message on first view of that visit in that language
+- **Fallback:** If translation fails, show English with a notice
+
+---
+
 ## Open Questions for V2
 
 - Can patients reschedule their timeslot online?

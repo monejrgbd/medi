@@ -13,7 +13,7 @@ DECLARE
   v_active boolean;
 BEGIN
   -- Validate location exists
-  SELECT l.id, l.name, l.specialty, l.operating_hours, l.logo_url,
+  SELECT l.id, l.name, l.address, l.specialty, l.operating_hours, l.logo_url,
          o.name AS org_name
   INTO v_location
   FROM public.locations l
@@ -35,6 +35,7 @@ BEGIN
   RETURN jsonb_build_object(
     'active', v_active,
     'location_name', v_location.name,
+    'address', v_location.address,
     'specialty', v_location.specialty,
     'operating_hours', v_location.operating_hours,
     'org_name', v_location.org_name,

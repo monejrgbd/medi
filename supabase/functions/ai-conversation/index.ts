@@ -471,7 +471,7 @@ Deno.serve(async (req) => {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`,
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
                 "x-internal-secret": INTERNAL_SECRET!,
               },
               body: JSON.stringify({ visit_id }),

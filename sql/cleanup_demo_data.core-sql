@@ -1,0 +1,69 @@
+-- Private implementation — called by hourly pg_cron
+CREATE OR REPLACE FUNCTION private.cleanup_demo_data()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_demo_org_id uuid := 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0';
+  v_cutoff timestamptz := now() - interval '2 hours';
+  v_visit_ids uuid[];
+BEGIN
+  -- Collect visit IDs to delete
+  SELECT array_agg(id) INTO v_visit_ids
+  FROM public.visits
+  WHERE org_id = v_demo_org_id
+    AND created_at < v_cutoff;
+
+  IF v_visit_ids IS NOT NULL AND array_length(v_visit_ids, 1) > 0 THEN
+    -- Cascade through ALL dependent tables before deleting visits
+    DELETE FROM public.visit_messages WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.visit_notes WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.visit_attachments WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.visit_addendums WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.ai_conversations WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.follow_ups WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.credits_log WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.reviews WHERE visit_id = ANY(v_visit_ids);
+    DELETE FROM public.phone_verifications WHERE visit_id = ANY(v_visit_ids);
+
+    -- Referrals: clear linked_visit_id references
+    UPDATE public.referrals
+    SET linked_visit_id = NULL
+    WHERE linked_visit_id = ANY(v_visit_ids);
+
+    -- audit_trail references visits by entity_id (text)
+    DELETE FROM public.audit_trail
+    WHERE org_id = v_demo_org_id
+      AND entity_id = ANY(SELECT unnest(v_visit_ids)::text);
+
+    DELETE FROM public.sms_log
+    WHERE visit_id = ANY(v_visit_ids);
+
+    -- Delete the visits themselves
+    DELETE FROM public.visits WHERE id = ANY(v_visit_ids);
+  END IF;
+
+  -- Delete orphan patients (no remaining visits)
+  DELETE FROM public.patients p
+  WHERE p.org_id = v_demo_org_id
+    AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = p.id);
+
+  -- NOTE: demo_access rows are NOT deleted — kept as leads for outreach
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.cleanup_demo_data()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  PERFORM private.cleanup_demo_data();
+END;
+$$;

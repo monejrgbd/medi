@@ -112,12 +112,10 @@ export default function PatientQueueView({
         </p>
       )}
 
-      {estimatedWait !== null ? (
+      {estimatedWait !== null && (
         <p className="text-sm text-slate">
           {t("queue.estimatedWait").replace("{minutes}", String(Math.round(estimatedWait)))}
         </p>
-      ) : (
-        <p className="text-sm text-ash">{t("queue.waitUnavailable")}</p>
       )}
 
       <p className="mt-4 text-xs text-ash">

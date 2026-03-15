@@ -46,8 +46,9 @@ export default function QRCodeManager({
     if (!canvas) return;
 
     await QRCode.toCanvas(canvas, checkinUrl, {
-      width: 256,
+      width: 512,
       margin: 2,
+      errorCorrectionLevel: "H",
       color: { dark: "#111827", light: "#ffffff" },
     });
 
@@ -55,16 +56,24 @@ export default function QRCodeManager({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+
       const img = new Image();
       img.crossOrigin = "anonymous";
       img.onload = () => {
-        const size = 56;
+        const size = 112;
         const x = (canvas.width - size) / 2;
         const y = (canvas.height - size) / 2;
 
+        // Center-crop to square from source image
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - side) / 2;
+        const sy = (img.naturalHeight - side) / 2;
+
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(x - 4, y - 4, size + 8, size + 8);
-        ctx.drawImage(img, x, y, size, size);
+        ctx.fillRect(x - 6, y - 6, size + 12, size + 12);
+        ctx.drawImage(img, sx, sy, side, side, x, y, size, size);
       };
       img.src = logoUrl;
     }
@@ -133,7 +142,7 @@ export default function QRCodeManager({
   return (
     <div className="max-w-md mx-auto">
       <div className="flex justify-center mb-6">
-        <canvas ref={canvasRef} className="rounded-lg" />
+        <canvas ref={canvasRef} className="rounded-lg" style={{ width: 256, height: 256 }} />
       </div>
 
       <p className="text-center text-xs text-slate mb-4 break-all">{checkinUrl}</p>

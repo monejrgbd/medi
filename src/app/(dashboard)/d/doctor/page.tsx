@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 export default async function DoctorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ location?: string }>;
+  searchParams: Promise<{ location?: string; skip?: string }>;
 }) {
   const params = await searchParams;
   const user = await requireAuth();
@@ -69,16 +69,19 @@ export default async function DoctorPage({
     }
   }
 
-  // Owner direct access via ?location= param or auto-select if single location
+  // Owner direct access: only if explicitly skipping check-in
+  let suggestedLocationId: string | null = null;
   if (!checkedInLocationId && ownerCheck) {
     const match = params.location
       ? allLocations.find((l) => l.id === params.location)
       : allLocations.length === 1
         ? allLocations[0]
         : null;
-    if (match) {
+    if (params.skip === "1" && match) {
       checkedInLocationId = match.id;
       locationName = match.name;
+    } else if (match) {
+      suggestedLocationId = match.id;
     }
   }
 
@@ -102,6 +105,7 @@ export default async function DoctorPage({
         isOwner={ownerCheck}
         orgId={orgId}
         locationId={null}
+        suggestedLocationId={suggestedLocationId}
         initialQueue={[]}
         initialClaimed={[]}
         initialCompleted={[]}

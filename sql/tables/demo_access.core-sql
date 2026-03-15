@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS public.demo_access (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email           text NOT NULL,
+  otp_hash        text,
+  otp_expires_at  timestamptz,
+  access_count    int DEFAULT 0 NOT NULL,
+  created_at      timestamptz DEFAULT now() NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_demo_access_email ON public.demo_access (lower(email));
+
+ALTER TABLE public.demo_access ENABLE ROW LEVEL SECURITY;
+-- No public RLS policies — only SECURITY DEFINER functions access this table

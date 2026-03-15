@@ -6,24 +6,26 @@ import { useLanguage } from "@/contexts/LanguageContext";
 
 interface CheckinFormProps {
   locationName: string;
-  orgName: string;
+  address: string;
   logoUrl: string | null;
   onSubmit: (firstName: string, lastName: string, birthday: string) => void;
   loading: boolean;
   error: string;
+  demoDefaults?: { firstName: string; lastName: string; birthday: string };
 }
 
 export default function CheckinForm({
   locationName,
-  orgName,
+  address,
   logoUrl,
   onSubmit,
   loading,
   error,
+  demoDefaults,
 }: CheckinFormProps) {
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [birthday, setBirthday] = useState("");
+  const [firstName, setFirstName] = useState(demoDefaults?.firstName ?? "");
+  const [lastName, setLastName] = useState(demoDefaults?.lastName ?? "");
+  const [birthday, setBirthday] = useState(demoDefaults?.birthday ?? "");
   const [validationError, setValidationError] = useState("");
   const { t } = useLanguage();
 
@@ -63,12 +65,12 @@ export default function CheckinForm({
         {logoUrl && (
           <img
             src={logoUrl}
-            alt={orgName}
+            alt={locationName}
             className="mx-auto mb-4 h-16 w-16 rounded-xl object-cover"
           />
         )}
         <h1 className="text-2xl font-bold text-ink">{locationName}</h1>
-        <p className="mt-1 text-sm text-slate">{orgName}</p>
+        {address && <p className="mt-1 text-sm text-slate">{address}</p>}
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
