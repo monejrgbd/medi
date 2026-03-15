@@ -10,13 +10,15 @@ DECLARE
   v_rec record;
   v_edge_url text;
   v_edge_secret text;
+  v_anon_key text;
   v_org_phone text;
   v_config record;
 BEGIN
   SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
   SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+  SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
 
-  IF v_edge_url IS NULL OR v_edge_secret IS NULL THEN
+  IF v_edge_url IS NULL OR v_edge_secret IS NULL OR v_anon_key IS NULL THEN
     RETURN;
   END IF;
 
@@ -50,6 +52,7 @@ BEGIN
       url := v_edge_url || '/send-sms',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || v_anon_key,
         'x-internal-secret', v_edge_secret
       ),
       body := jsonb_build_object(

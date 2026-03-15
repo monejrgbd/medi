@@ -250,8 +250,8 @@ BEGIN
     'display_format', v_location.display_format,
     'already_initialized', false,
     'is_follow_up', COALESCE(v_visit.is_follow_up, false),
-    'follow_up_prior_summary', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN left(v_prior_visit.ai_summary, 200) ELSE NULL END,
-    'follow_up_prior_date', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN v_prior_visit.completed_at ELSE NULL END
+    'follow_up_prior_summary', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN left(v_prior_visit.ai_summary, 200) ELSE NULL END,
+    'follow_up_prior_date', CASE WHEN v_visit.is_follow_up AND v_visit.follow_up_of IS NOT NULL AND v_prior_visit IS NOT NULL AND v_prior_visit.completed_at IS NOT NULL THEN v_prior_visit.completed_at ELSE NULL END
   );
 END;
 $$;

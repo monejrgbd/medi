@@ -18,6 +18,7 @@ DECLARE
   v_caller_staff_id uuid;
   v_edge_url text;
   v_edge_secret text;
+  v_anon_key text;
   v_sms_log_id uuid;
 BEGIN
   -- Get visit details
@@ -85,7 +86,11 @@ BEGIN
   FROM vault.decrypted_secrets
   WHERE name = 'internal_edge_secret';
 
-  IF v_edge_url IS NULL OR v_edge_secret IS NULL THEN
+  SELECT decrypted_secret INTO v_anon_key
+  FROM vault.decrypted_secrets
+  WHERE name = 'supabase_anon_key';
+
+  IF v_edge_url IS NULL OR v_edge_secret IS NULL OR v_anon_key IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Configuration missing');
   END IF;
 
@@ -99,6 +104,7 @@ BEGIN
     url := v_edge_url || '/send-sms',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || v_anon_key,
       'x-internal-secret', v_edge_secret
     ),
     body := jsonb_build_object(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { fetchSimilarPatients } from "@/app/(dashboard)/d/_actions/receptionist";
+import { fetchSimilarPatients, editPatientRecord } from "@/app/(dashboard)/d/_actions/receptionist";
 import FollowUpIndicator from "./FollowUpIndicator";
 
 interface FollowUpInfo {
@@ -78,6 +78,19 @@ export default function ApprovalCard({
   const [similarPatients, setSimilarPatients] = useState<SimilarPatient[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
 
+  // Edit mode state
+  const [editing, setEditing] = useState(false);
+  const [editFirst, setEditFirst] = useState(visit.first_name);
+  const [editLast, setEditLast] = useState(visit.last_name);
+  const [editBirthday, setEditBirthday] = useState(visit.birthday);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  // Display values (updated after successful edit)
+  const [displayFirst, setDisplayFirst] = useState(visit.first_name);
+  const [displayLast, setDisplayLast] = useState(visit.last_name);
+  const [displayBirthday, setDisplayBirthday] = useState(visit.birthday);
+
   async function handleExpand() {
     if (expanded) {
       setExpanded(false);
@@ -103,8 +116,66 @@ export default function ApprovalCard({
     setLoadingSimilar(false);
   }
 
+  function handleEditStart() {
+    setEditFirst(displayFirst);
+    setEditLast(displayLast);
+    setEditBirthday(displayBirthday);
+    setEditError("");
+    setEditing(true);
+  }
+
+  function handleEditCancel() {
+    setEditing(false);
+    setEditError("");
+  }
+
+  async function handleEditSave() {
+    setEditError("");
+    const trimFirst = editFirst.trim();
+    const trimLast = editLast.trim();
+
+    if (!trimFirst || !trimLast) {
+      setEditError("Name cannot be empty.");
+      return;
+    }
+    if (!editBirthday) {
+      setEditError("Birthday is required.");
+      return;
+    }
+
+    // Only send changed fields
+    const changedFirst = trimFirst !== displayFirst ? trimFirst : undefined;
+    const changedLast = trimLast !== displayLast ? trimLast : undefined;
+    const changedBirthday = editBirthday !== displayBirthday ? editBirthday : undefined;
+
+    if (!changedFirst && !changedLast && !changedBirthday) {
+      setEditing(false);
+      return;
+    }
+
+    setEditLoading(true);
+    const result = await editPatientRecord(
+      visit.patient_id,
+      changedFirst,
+      changedLast,
+      changedBirthday
+    );
+    setEditLoading(false);
+
+    if (!result.success) {
+      setEditError(result.error ?? "Failed to update patient.");
+      return;
+    }
+
+    // Update display values
+    setDisplayFirst(trimFirst);
+    setDisplayLast(trimLast);
+    setDisplayBirthday(editBirthday);
+    setEditing(false);
+  }
+
   const isReturning = visit.match_type === "returning";
-  const busy = approving || denying || !!verifying || !!confirming;
+  const busy = approving || denying || !!verifying || !!confirming || editing;
   const isPending = visit.phone_verification_pending;
   const isCollision = visit.collision_flag;
   const isPhoneVerified = visit.phone_verified;
@@ -129,28 +200,89 @@ export default function ApprovalCard({
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-semibold text-ink">
-              {visit.first_name} {visit.last_name}
-            </h3>
-            <span
-              className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}`}
-            >
-              {badgeLabel}
-            </span>
-          </div>
-          <p className="text-sm text-slate">DOB: {visit.birthday}</p>
-          {visit.phone_masked && (
-            <p className="text-xs text-ash mt-0.5">Phone: {visit.phone_masked}</p>
+        <div className="flex-1 min-w-0">
+          {editing ? (
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={editFirst}
+                  onChange={(e) => setEditFirst(e.target.value)}
+                  placeholder="First name"
+                  className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+                />
+                <input
+                  type="text"
+                  value={editLast}
+                  onChange={(e) => setEditLast(e.target.value)}
+                  placeholder="Last name"
+                  className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+                />
+              </div>
+              <input
+                type="date"
+                value={editBirthday}
+                onChange={(e) => setEditBirthday(e.target.value)}
+                max={new Date().toISOString().split("T")[0]}
+                className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+              />
+              {editError && (
+                <p className="text-xs text-red-600">{editError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={handleEditSave}
+                  disabled={editLoading}
+                  className="rounded-lg bg-hilt-blue px-3 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {editLoading ? "Saving..." : "Save"}
+                </button>
+                <button
+                  onClick={handleEditCancel}
+                  disabled={editLoading}
+                  className="rounded-lg bg-gray-100 px-3 py-1 text-xs font-medium text-slate hover:bg-gray-200 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-ink">
+                  {displayFirst} {displayLast}
+                </h3>
+                <span
+                  className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass}`}
+                >
+                  {badgeLabel}
+                </span>
+                <button
+                  onClick={handleEditStart}
+                  disabled={approving || denying || !!verifying || !!confirming}
+                  className="text-ash hover:text-ink transition-colors disabled:opacity-50"
+                  title="Edit patient info"
+                >
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+                  </svg>
+                </button>
+              </div>
+              <p className="text-sm text-slate">DOB: {displayBirthday}</p>
+              {visit.phone_masked && (
+                <p className="text-xs text-ash mt-0.5">Phone: {visit.phone_masked}</p>
+              )}
+            </>
           )}
         </div>
-        <p className="text-xs text-ash">
-          {new Date(visit.created_at).toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
+        {!editing && (
+          <p className="text-xs text-ash">
+            {new Date(visit.created_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        )}
       </div>
 
       {/* Pending verification spinner */}
@@ -214,6 +346,7 @@ export default function ApprovalCard({
         </div>
       )}
 
+      {!editing && (
       <div className="flex flex-col gap-2">
         {/* Primary action buttons */}
         {isCollision && !isPhoneVerified && !isPending ? (
@@ -328,6 +461,7 @@ export default function ApprovalCard({
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }

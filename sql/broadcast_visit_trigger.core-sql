@@ -8,6 +8,7 @@ AS $$
 DECLARE
   v_edge_url text;
   v_secret text;
+  v_anon_key text;
 BEGIN
   -- Read from Supabase Vault
   SELECT decrypted_secret INTO v_edge_url
@@ -16,12 +17,16 @@ BEGIN
   SELECT decrypted_secret INTO v_secret
   FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
 
+  SELECT decrypted_secret INTO v_anon_key
+  FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
   -- Only fire if edge function is configured
-  IF v_edge_url IS NOT NULL AND v_edge_url <> '' AND v_secret IS NOT NULL AND v_secret <> '' THEN
+  IF v_edge_url IS NOT NULL AND v_edge_url <> '' AND v_secret IS NOT NULL AND v_secret <> '' AND v_anon_key IS NOT NULL THEN
     PERFORM net.http_post(
       url := v_edge_url || '/broadcast-visit-update',
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || v_anon_key,
         'x-internal-secret', v_secret
       ),
       body := jsonb_build_object(

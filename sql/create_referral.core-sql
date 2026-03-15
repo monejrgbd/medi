@@ -29,6 +29,7 @@ DECLARE
   v_referral_id uuid;
   v_edge_url text;
   v_secret text;
+  v_anon_key text;
   v_visit_count int;
   v_attachment_count int;
 BEGIN
@@ -199,11 +200,15 @@ BEGIN
     SELECT decrypted_secret INTO v_secret
     FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
 
-    IF v_edge_url IS NOT NULL AND v_edge_url <> '' AND v_secret IS NOT NULL AND v_secret <> '' THEN
+    SELECT decrypted_secret INTO v_anon_key
+    FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+    IF v_edge_url IS NOT NULL AND v_edge_url <> '' AND v_secret IS NOT NULL AND v_secret <> '' AND v_anon_key IS NOT NULL THEN
       PERFORM net.http_post(
         url := v_edge_url || '/generate-referral-pdf',
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
+          'Authorization', 'Bearer ' || v_anon_key,
           'x-internal-secret', v_secret
         ),
         body := jsonb_build_object(
