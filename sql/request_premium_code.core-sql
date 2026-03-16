@@ -1,0 +1,172 @@
+-- Private implementation
+-- Three identifiers: p_email, p_domain, p_phone (any combination, at least one required)
+-- Generates approval code with any identifier. Returns the code in the response.
+-- If p_email is provided, also queues an approval email (5-15 min delay).
+-- If no p_email, code is only returned — caller delivers it however they want (call, SMS, mail, etc.)
+-- Generic domains (gmail, etc.) are never claimed as a domain.
+CREATE OR REPLACE FUNCTION private.request_premium_code(
+  p_email text DEFAULT NULL,
+  p_domain text DEFAULT NULL,
+  p_phone text DEFAULT NULL,
+  p_send_email boolean DEFAULT true
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_domain text;
+  v_existing_email text;
+  v_code text;
+  v_delay int;
+  v_clean_phone text;
+  v_clean_email text;
+  v_queue_email boolean;
+  v_checks jsonb := '{}'::jsonb;
+  v_any_taken boolean := false;
+  v_generic_domains text[] := ARRAY[
+    'gmail.com','googlemail.com','outlook.com','hotmail.com',
+    'live.com','msn.com','aol.com','icloud.com','me.com','mac.com','mail.com',
+    'protonmail.com','proton.me','zoho.com','yandex.com','gmx.com','gmx.net',
+    'yahoo.com','yahoo.ca'
+  ];
+BEGIN
+  -- Clean phone
+  IF p_phone IS NOT NULL THEN
+    v_clean_phone := regexp_replace(trim(p_phone), '[^0-9+]', '', 'g');
+    IF v_clean_phone = '' THEN v_clean_phone := NULL; END IF;
+  END IF;
+
+  -- Clean email
+  IF p_email IS NOT NULL THEN
+    v_clean_email := lower(trim(p_email));
+    IF v_clean_email !~ '^[^@]+@[^@]+\.[^@]+$' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'invalid_email');
+    END IF;
+  END IF;
+
+  -- Clean domain: explicit p_domain, or extract from email
+  IF p_domain IS NOT NULL THEN
+    v_domain := lower(trim(p_domain));
+  ELSIF v_clean_email IS NOT NULL THEN
+    v_domain := split_part(v_clean_email, '@', 2);
+  END IF;
+  -- Null out generic domains (never claimable)
+  IF v_domain IS NOT NULL AND v_domain = ANY(v_generic_domains) THEN
+    v_domain := NULL;
+  END IF;
+
+  -- Must provide at least one usable identifier
+  IF v_clean_email IS NULL AND v_domain IS NULL AND v_clean_phone IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'provide_at_least_one_identifier');
+  END IF;
+
+  -------------------------------------------------------
+  -- CHECK: each identifier against existing codes
+  -------------------------------------------------------
+  IF v_clean_email IS NOT NULL THEN
+    IF EXISTS (SELECT 1 FROM public.approval_codes WHERE email = v_clean_email) THEN
+      v_checks := v_checks || jsonb_build_object('email', 'taken');
+      v_any_taken := true;
+    ELSE
+      v_checks := v_checks || jsonb_build_object('email', 'available');
+    END IF;
+  END IF;
+
+  IF v_domain IS NOT NULL THEN
+    SELECT email INTO v_existing_email
+    FROM public.approval_codes WHERE domain = v_domain AND domain IS NOT NULL LIMIT 1;
+    IF v_existing_email IS NOT NULL THEN
+      v_checks := v_checks || jsonb_build_object('domain', 'taken', 'domain_approved_email', v_existing_email);
+      v_any_taken := true;
+    ELSE
+      v_checks := v_checks || jsonb_build_object('domain', 'available');
+    END IF;
+  END IF;
+
+  IF v_clean_phone IS NOT NULL THEN
+    SELECT email INTO v_existing_email
+    FROM public.approval_codes WHERE phone = v_clean_phone LIMIT 1;
+    IF v_existing_email IS NOT NULL THEN
+      v_checks := v_checks || jsonb_build_object('phone', 'taken', 'phone_approved_email', v_existing_email);
+      v_any_taken := true;
+    ELSE
+      v_checks := v_checks || jsonb_build_object('phone', 'available');
+    END IF;
+  END IF;
+
+  -- If any identifier is taken, return check results (no code generated)
+  IF v_any_taken THEN
+    RETURN jsonb_build_object('success', false, 'error', 'identifier_taken', 'available', false) || v_checks;
+  END IF;
+
+  -------------------------------------------------------
+  -- GENERATE: all identifiers are available
+  -------------------------------------------------------
+  v_code := upper(substr(md5(random()::text), 1, 8));
+  v_delay := 5 + floor(random() * 11)::int;
+
+  -- Queue email only if: email provided AND p_send_email is true (marketing form)
+  v_queue_email := v_clean_email IS NOT NULL AND p_send_email;
+
+  INSERT INTO public.approval_codes (code, email, domain, phone, expires_at, send_after, email_sent)
+  VALUES (
+    v_code,
+    v_clean_email,
+    v_domain,
+    v_clean_phone,
+    NULL,
+    CASE WHEN v_queue_email THEN now() + (v_delay || ' minutes')::interval ELSE NULL END,
+    NOT v_queue_email
+  );
+
+  -- Always return the code. Caller delivers it however they want.
+  RETURN jsonb_build_object(
+    'success', true,
+    'code', v_code,
+    'email_queued', v_queue_email
+  );
+
+EXCEPTION WHEN unique_violation THEN
+  -- Race condition on domain or phone unique index
+  IF v_domain IS NOT NULL THEN
+    SELECT email INTO v_existing_email
+    FROM public.approval_codes WHERE domain = v_domain AND domain IS NOT NULL LIMIT 1;
+    IF v_existing_email IS NOT NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'identifier_taken', 'domain', 'taken', 'domain_approved_email', v_existing_email);
+    END IF;
+  END IF;
+
+  IF v_clean_phone IS NOT NULL THEN
+    SELECT email INTO v_existing_email
+    FROM public.approval_codes WHERE phone = v_clean_phone LIMIT 1;
+    IF v_existing_email IS NOT NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'identifier_taken', 'phone', 'taken', 'phone_approved_email', v_existing_email);
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object('success', false, 'error', 'identifier_taken');
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.request_premium_code(
+  p_email text DEFAULT NULL,
+  p_domain text DEFAULT NULL,
+  p_phone text DEFAULT NULL,
+  p_send_email boolean DEFAULT true
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.request_premium_code(p_email, p_domain, p_phone, p_send_email);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.request_premium_code(text, text, text, boolean) TO anon;

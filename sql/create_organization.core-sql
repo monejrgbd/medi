@@ -32,7 +32,8 @@ BEGIN
     SELECT id INTO v_code_id
     FROM public.approval_codes
     WHERE code = p_approval_code
-      AND used_by_org_id IS NULL;
+      AND used_by_org_id IS NULL
+      AND (expires_at IS NULL OR expires_at > now());
 
     IF v_code_id IS NULL THEN
       RETURN jsonb_build_object('success', false, 'error', 'Invalid or already used approval code');

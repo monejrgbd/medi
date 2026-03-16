@@ -34,13 +34,21 @@ const fieldVariants = {
   visible: { opacity: 1, height: "auto", marginTop: 16, overflow: "visible" as const },
 };
 
+const GENERIC_DOMAINS = new Set([
+  "gmail.com","googlemail.com","outlook.com","hotmail.com",
+  "live.com","msn.com","aol.com","icloud.com","me.com","mac.com","mail.com",
+  "protonmail.com","proton.me","zoho.com","yandex.com","gmx.com","gmx.net",
+  "yahoo.com","yahoo.ca",
+]);
+
 export default function SignUpForm() {
   const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | React.ReactNode>("");
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
   const [interest, setInterest] = useState<"free_trial" | "meet">("free_trial");
+  const [submittedEmail, setSubmittedEmail] = useState("");
 
   useEffect(() => {
     if (!supabase) return;
@@ -79,12 +87,71 @@ export default function SignUpForm() {
       return;
     }
 
+    const emailValue = data.get("email") as string;
+
+    // Premium trial path: validate domain + request code first
+    if (interest === "free_trial") {
+      // Client-side generic domain check for instant feedback
+      const domain = emailValue.split("@")[1]?.toLowerCase();
+      if (domain && GENERIC_DOMAINS.has(domain)) {
+        setLoading(false);
+        setError(
+          <>Premium trial requires a clinic email address. Do not have one? Select <strong>Meet with Us</strong> above to book a meeting.</>
+        );
+        return;
+      }
+
+      const { data: premiumResult, error: premiumError } = await supabase.rpc(
+        "request_premium_code",
+        { p_email: emailValue }
+      );
+
+      if (premiumError) {
+        setLoading(false);
+        setError("Something went wrong. Please try again.");
+        return;
+      }
+
+      if (premiumResult && !premiumResult.success) {
+        setLoading(false);
+        if (premiumResult.error === "identifier_taken" && premiumResult.email === "taken") {
+          setError(
+            <>You have already applied. Check your email including spam. Contact <a href="mailto:support@hilthealth.com" className="text-hilt-blue hover:underline">support@hilthealth.com</a> if you did not receive it.</>
+          );
+        } else if (premiumResult.error === "identifier_taken" && premiumResult.domain === "taken") {
+          setError(
+            <>Your clinic has already been approved. The code was sent to <strong>{premiumResult.domain_approved_email}</strong>. Contact <a href="mailto:support@hilthealth.com" className="text-hilt-blue hover:underline">support@hilthealth.com</a> if you need help.</>
+          );
+        } else {
+          setError("Something went wrong. Please try again.");
+        }
+        return;
+      }
+
+      // Premium code request succeeded — also store contact for lead tracking (fire-and-forget)
+      supabase.rpc("submit_contact", {
+        p_clinic_name: (data.get("clinic_name") as string) || null,
+        p_contact_name: data.get("contact_name") as string,
+        p_email: emailValue,
+        p_phone: (data.get("phone") as string) || null,
+        p_city: (data.get("city") as string) || null,
+        p_interest: interest,
+        p_notes: (data.get("notes") as string) || null,
+      });
+
+      setLoading(false);
+      setSubmittedEmail(emailValue);
+      setSubmitted(true);
+      return;
+    }
+
+    // Meet path — unchanged
     const { error: dbError } = await supabase.rpc("submit_contact", {
-      p_clinic_name: (data.get("clinic_name") as string) || null,
+      p_clinic_name: null,
       p_contact_name: data.get("contact_name") as string,
-      p_email: data.get("email") as string,
+      p_email: emailValue,
       p_phone: (data.get("phone") as string) || null,
-      p_city: interest === "free_trial" ? (data.get("city") as string) : null,
+      p_city: null,
       p_interest: interest,
       p_notes: (data.get("notes") as string) || null,
     });
@@ -95,8 +162,6 @@ export default function SignUpForm() {
       const msg = dbError.message?.toLowerCase() ?? "";
       if (msg.includes("email")) {
         setError("Please enter a valid email address.");
-      } else if (msg.includes("clinic name")) {
-        setError("Please enter your clinic name.");
       } else if (msg.includes("contact name")) {
         setError("Please enter your name.");
       } else {
@@ -105,12 +170,7 @@ export default function SignUpForm() {
       return;
     }
 
-    if (interest === "meet") {
-      router.push("/book");
-      return;
-    }
-
-    setSubmitted(true);
+    router.push("/book");
   }
 
   return (
@@ -177,10 +237,10 @@ export default function SignUpForm() {
               </motion.svg>
             </div>
             <h3 className="mb-2 text-2xl font-semibold text-ink">
-              We&apos;ll be in touch!
+              Application received
             </h3>
-            <p className="text-slate">
-              Expect to hear from us within 48 hours.
+            <p className="text-slate max-w-sm">
+              Good news! A staff member is currently online, expect a rejection or approval within one hour sent to <strong className="text-ink">{submittedEmail}</strong>.
             </p>
           </motion.div>
         ) : (
@@ -363,7 +423,7 @@ export default function SignUpForm() {
             </div>
 
             {error && (
-              <p className="mt-4 text-sm text-red-600">{error}</p>
+              <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
             )}
 
             <button

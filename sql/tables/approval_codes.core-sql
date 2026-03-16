@@ -3,9 +3,21 @@ CREATE TABLE public.approval_codes (
   code                  text NOT NULL UNIQUE,
   used_by_org_id        uuid REFERENCES public.organizations(id),
   created_at            timestamptz DEFAULT now(),
-  used_at               timestamptz
+  used_at               timestamptz,
+  email                 text,
+  domain                text,
+  expires_at            timestamptz,
+  send_after            timestamptz,
+  email_sent            boolean DEFAULT false,
+  phone                 text
 );
 
 ALTER TABLE public.approval_codes ENABLE ROW LEVEL SECURITY;
 
--- No SELECT policy: only accessed inside SECURITY DEFINER functions (create_organization)
+-- No SELECT policy: only accessed inside SECURITY DEFINER functions
+-- One premium trial per domain (manual codes have NULL domain, excluded)
+CREATE UNIQUE INDEX idx_approval_codes_domain_unique ON public.approval_codes(domain) WHERE domain IS NOT NULL;
+-- Fast lookup for cron job processing pending approvals
+CREATE INDEX idx_approval_codes_pending ON public.approval_codes(send_after) WHERE email_sent = false AND send_after IS NOT NULL;
+-- One premium trial per phone number
+CREATE UNIQUE INDEX idx_approval_codes_phone_unique ON public.approval_codes(phone) WHERE phone IS NOT NULL;

@@ -18,21 +18,36 @@ export type Database = {
         Row: {
           code: string
           created_at: string | null
+          domain: string | null
+          email: string | null
+          email_sent: boolean | null
+          expires_at: string | null
           id: string
+          send_after: string | null
           used_at: string | null
           used_by_org_id: string | null
         }
         Insert: {
           code: string
           created_at?: string | null
+          domain?: string | null
+          email?: string | null
+          email_sent?: boolean | null
+          expires_at?: string | null
           id?: string
+          send_after?: string | null
           used_at?: string | null
           used_by_org_id?: string | null
         }
         Update: {
           code?: string
           created_at?: string | null
+          domain?: string | null
+          email?: string | null
+          email_sent?: boolean | null
+          expires_at?: string | null
           id?: string
+          send_after?: string | null
           used_at?: string | null
           used_by_org_id?: string | null
         }
@@ -2070,9 +2085,10 @@ export type Database = {
       }
       get_employee_stats: {
         Args: {
-          p_date?: string
+          p_end_date?: string
           p_location_id: string
           p_staff_user_id?: string
+          p_start_date?: string
         }
         Returns: Json
       }
@@ -2241,6 +2257,7 @@ export type Database = {
         Returns: Json
       }
       request_demo_otp: { Args: { p_email: string }; Returns: Json }
+      request_premium_code: { Args: { p_email: string }; Returns: Json }
       requesting_org_id: { Args: never; Returns: string }
       reset_monthly_credits: { Args: { p_org_id: string }; Returns: Json }
       reset_staff_password: {
