@@ -29,6 +29,12 @@ export default function Navbar() {
 
           <div className="hidden sm:flex items-center gap-3">
             <Link
+              href="/"
+              className="px-4 py-2.5 text-sm font-medium text-slate transition-colors hover:text-ink"
+            >
+              Home
+            </Link>
+            <Link
               href="/blog"
               className="px-4 py-2.5 text-sm font-medium text-slate transition-colors hover:text-ink"
             >
@@ -67,6 +73,12 @@ export default function Navbar() {
 
         {mobileOpen && (
           <div className="sm:hidden border-t border-gray-100 bg-white px-6 pb-4 pt-2 space-y-3">
+            <Link
+              href="/"
+              className="block w-full rounded-xl px-5 py-3 text-center text-sm font-medium text-slate"
+            >
+              Home
+            </Link>
             <Link
               href="/blog"
               className="block w-full rounded-xl px-5 py-3 text-center text-sm font-medium text-slate"

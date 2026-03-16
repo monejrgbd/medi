@@ -47,6 +47,15 @@ export default function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <a
+        href="/"
+        className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors"
+      >
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+        Back
+      </a>
       <h1 className="text-2xl font-bold text-ink">Log in</h1>
       <p className="text-sm text-slate">
         Owners: use your email. Staff: use your username.

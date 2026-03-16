@@ -107,6 +107,15 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
   return (
     <div className="min-h-screen bg-snow flex items-start justify-center pt-20 px-4">
       <div className="w-full max-w-md">
+        <a
+          href="/"
+          className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors mb-6"
+        >
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+          </svg>
+          Back
+        </a>
         {/* Header */}
         <div className="text-center mb-8">
           <p className="text-2xl font-bold text-hilt-blue mb-2">Hilt Health</p>
