@@ -73,12 +73,14 @@ BEGIN
     GROUP BY COALESCE(r.specialty, 'unspecified')
   ) sub;
 
-  -- Top sending clinics (for referrals received by this org)
+  -- Top sending clinics (for referrals received by this org) with arrived/pending breakdown
   SELECT COALESCE(jsonb_agg(row_data), '[]'::jsonb) INTO v_top_sending_clinics
   FROM (
     SELECT jsonb_build_object(
       'org_name', o.name,
-      'count', count(*)
+      'count', count(*),
+      'arrived', count(*) FILTER (WHERE r.status IN ('patient_arrived', 'completed')),
+      'pending', count(*) FILTER (WHERE r.status IN ('sent', 'viewed'))
     ) AS row_data
     FROM public.referrals r
     JOIN public.organizations o ON o.id = r.from_org_id

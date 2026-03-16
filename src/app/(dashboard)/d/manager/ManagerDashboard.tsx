@@ -9,6 +9,7 @@ import {
   fetchPatientReturnRate,
   fetchFollowUpCompliance,
 } from "@/app/(dashboard)/d/_actions/analytics";
+import { fetchReferralAnalytics } from "@/app/(dashboard)/d/_actions/referral";
 import DateRangePicker from "@/components/analytics/DateRangePicker";
 import EmployeeStatsTable from "@/components/analytics/EmployeeStatsTable";
 import PatientStatsCards from "@/components/analytics/PatientStatsCards";
@@ -16,10 +17,11 @@ import PatientTrendChart from "@/components/analytics/PatientTrendChart";
 import WaitTimeHeatmap from "@/components/analytics/WaitTimeHeatmap";
 import ReturnRateChart from "@/components/analytics/ReturnRateChart";
 import FollowUpComplianceFunnel from "@/components/analytics/FollowUpComplianceFunnel";
+import ReferralAnalyticsChart from "@/components/analytics/ReferralAnalyticsChart";
 import PatientSearch from "@/components/dashboard/PatientSearch";
 import { TableSkeleton, CardSkeleton, ChartSkeleton } from "@/components/ui/Skeleton";
 
-type Tab = "employees" | "patients" | "waittimes" | "returns" | "followups";
+type Tab = "employees" | "patients" | "waittimes" | "returns" | "followups" | "referrals";
 
 interface Props {
   locations: { id: string; name: string }[];
@@ -130,6 +132,12 @@ export default function ManagerDashboard({
         case "followups":
           result = await fetchFollowUpCompliance(selectedLocation, dateRange.start, dateRange.end);
           break;
+        case "referrals":
+          result = await fetchReferralAnalytics(dateRange.start, dateRange.end);
+          if (result?.success && result.analytics) {
+            result = result.analytics;
+          }
+          break;
       }
       if (result?.success === false) {
         setError(result.error || "Failed to load data");
@@ -155,6 +163,7 @@ export default function ManagerDashboard({
     { key: "waittimes", label: "Wait Times" },
     { key: "returns", label: "Returns" },
     { key: "followups", label: "Follow-ups", hidden: !followupAddonEnabled },
+    { key: "referrals", label: "Referrals", ownerOnly: true },
   ];
 
   const visibleTabs = tabs.filter(
@@ -187,7 +196,7 @@ export default function ManagerDashboard({
       </div>
 
       {/* Location selector */}
-      {locations.length > 1 && activeTab !== "returns" && (
+      {locations.length > 1 && activeTab !== "returns" && activeTab !== "referrals" && (
         <div className="mb-4">
           <select
             value={selectedLocation}
@@ -268,7 +277,7 @@ export default function ManagerDashboard({
               <CardSkeleton />
             </div>
           )}
-          {(activeTab === "waittimes" || activeTab === "returns" || activeTab === "followups") && (
+          {(activeTab === "waittimes" || activeTab === "returns" || activeTab === "followups" || activeTab === "referrals") && (
             <ChartSkeleton />
           )}
         </>
@@ -306,6 +315,9 @@ export default function ManagerDashboard({
           )}
           {activeTab === "followups" && (
             <FollowUpComplianceFunnel data={data} />
+          )}
+          {activeTab === "referrals" && (
+            <ReferralAnalyticsChart data={data} />
           )}
         </>
       )}

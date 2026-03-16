@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS public.follow_ups (
   status          text NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'completed', 'expired')),
   reminders_sent  int DEFAULT 0,
+  sms_charged     boolean DEFAULT false,
   created_at      timestamptz DEFAULT now()
 );
 

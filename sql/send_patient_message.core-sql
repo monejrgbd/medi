@@ -38,8 +38,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Session expired');
   END IF;
 
-  -- Rate limit: max 30 patient messages per visit
-  IF (SELECT count(*) FROM public.visit_messages WHERE visit_id = p_visit_id AND role = 'patient') >= 30 THEN
+  -- Rate limit: max 50 patient messages per visit
+  IF (SELECT count(*) FROM public.visit_messages WHERE visit_id = p_visit_id AND role = 'patient') >= 50 THEN
     RETURN jsonb_build_object('success', false, 'error', 'message_limit_reached');
   END IF;
 

@@ -11,6 +11,7 @@ import DemoFAQ from "@/components/demo/DemoFAQ";
 import CheckinFlow from "@/app/checkin/[locationId]/CheckinFlow";
 import ReceptionistDashboard from "@/app/(dashboard)/d/receptionist/ReceptionistDashboard";
 import DoctorDashboard from "@/app/(dashboard)/d/doctor/DoctorDashboard";
+import ReviewHub from "@/components/reviews/ReviewHub";
 
 interface DemoShellProps {
   locationId: string;
@@ -156,6 +157,9 @@ export default function DemoShell({
     } else if (tab === "doctor") {
       setGuideMessage("Doctor View");
       setGuideHint("Claim patients, review AI summaries, and complete visits.");
+    } else if (tab === "reviews") {
+      setGuideMessage("Reviews Dashboard");
+      setGuideHint("This dashboard is accessible by staff with the reviews role. All patients are asked to review via SMS after their visit. You can configure which external platform they are directed to, and re request a review on a different platform if needed.");
     } else if (tab === "faq") {
       setGuideMessage(null);
       setGuideHint(null);
@@ -266,6 +270,16 @@ export default function DemoShell({
             initialHasMoreLeft={doctorInitial.hasMoreLeft}
             demoMode={true}
           />
+        </div>
+
+        <div style={{ display: activeTab === "reviews" ? "block" : "none" }}>
+          <div className="mx-auto max-w-6xl">
+            <ReviewHub
+              locations={[{ id: locationId, name: locationName }]}
+              isOwnerOrManager={true}
+              demoMode={true}
+            />
+          </div>
         </div>
 
         <div style={{ display: activeTab === "faq" ? "block" : "none" }}>

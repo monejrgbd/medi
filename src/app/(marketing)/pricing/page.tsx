@@ -10,6 +10,8 @@ type AIModel = "standard" | "advanced";
 const FEATURES = [
   "AI pre-screening (Standard + Advanced)",
   "Doctor summary + full transcript",
+  "Review system (0.1 credits per patient)",
+  "Follow-up system (0.1 credits per patient)",
   "Analytics dashboard",
   "Overuse at $1/credit",
 ];
@@ -172,7 +174,7 @@ function PricingCards({ model, onContactCustom }: { model: AIModel; onContactCus
                 <span className="text-4xl font-bold text-ink">${plan.price.toLocaleString()}</span>
                 <span className="text-slate">/mo</span>
               </div>
-              <p className="mb-5 text-sm font-medium text-green-600">{plan.savings} off pay-as-you-go</p>
+              <p className="mb-5 text-sm font-medium text-green-600">Save {plan.savings}</p>
 
               {/* Patient capacity */}
               <div className="mb-6 rounded-xl bg-snow p-4 space-y-3">
@@ -337,6 +339,8 @@ function ComparisonTable({ model }: { model: AIModel }) {
               {[
                 "Standard + Advanced AI",
                 "Doctor summary + transcript",
+                "Review system",
+                "Follow-up system",
                 "Analytics dashboard",
               ].map((feature) => (
                 <tr key={feature}>
@@ -405,6 +409,10 @@ function FAQ() {
       a: "200 credits, no time limit. Use Standard or Advanced AI, access all features, and see how Hilt Health fits your clinic. No credit card required to start.",
     },
 {
+      q: "How does SMS pricing work?",
+      a: "Review requests and follow-up reminders use 0.1 credits per SMS, drawn from your plan\u2019s credit pool. Enable them per-location in your dashboard. No separate add-on subscription needed.",
+    },
+    {
       q: "Do unused credits roll over?",
       a: "Credits reset each billing cycle and don\u2019t roll over. This keeps pricing simple and predictable.",
     },

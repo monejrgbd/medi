@@ -21,7 +21,7 @@ DECLARE
   v_per_doctor jsonb;
 BEGIN
   -- Get org info for location
-  SELECT l.org_id, o.owner_id, o.followup_sms_addon
+  SELECT l.org_id, o.owner_id, l.followup_sms_enabled
   INTO v_org_id, v_owner_id, v_addon_enabled
   FROM public.locations l
   JOIN public.organizations o ON o.id = l.org_id

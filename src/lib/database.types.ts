@@ -262,6 +262,33 @@ export type Database = {
           },
         ]
       }
+      demo_access: {
+        Row: {
+          access_count: number
+          created_at: string
+          email: string
+          id: string
+          otp_expires_at: string | null
+          otp_hash: string | null
+        }
+        Insert: {
+          access_count?: number
+          created_at?: string
+          email: string
+          id?: string
+          otp_expires_at?: string | null
+          otp_hash?: string | null
+        }
+        Update: {
+          access_count?: number
+          created_at?: string
+          email?: string
+          id?: string
+          otp_expires_at?: string | null
+          otp_hash?: string | null
+        }
+        Relationships: []
+      }
       doctor_note_preferences: {
         Row: {
           default_private: boolean | null
@@ -345,6 +372,7 @@ export type Database = {
           org_id: string
           patient_id: string
           reminders_sent: number | null
+          sms_charged: boolean | null
           status: string
           timeframe_days: number
           visit_id: string
@@ -359,6 +387,7 @@ export type Database = {
           org_id: string
           patient_id: string
           reminders_sent?: number | null
+          sms_charged?: boolean | null
           status?: string
           timeframe_days: number
           visit_id: string
@@ -373,6 +402,7 @@ export type Database = {
           org_id?: string
           patient_id?: string
           reminders_sent?: number | null
+          sms_charged?: boolean | null
           status?: string
           timeframe_days?: number
           visit_id?: string
@@ -457,6 +487,7 @@ export type Database = {
           created_at: string | null
           display_format: string | null
           estimated_wait_minutes: number | null
+          followup_sms_enabled: boolean | null
           id: string
           logo_url: string | null
           name: string
@@ -464,6 +495,7 @@ export type Database = {
           org_id: string
           qr_code_url: string | null
           referral_email: string | null
+          review_sms_enabled: boolean | null
           specialty: string | null
           tablet_count: number | null
           timezone: string | null
@@ -474,6 +506,7 @@ export type Database = {
           created_at?: string | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
+          followup_sms_enabled?: boolean | null
           id?: string
           logo_url?: string | null
           name: string
@@ -481,6 +514,7 @@ export type Database = {
           org_id: string
           qr_code_url?: string | null
           referral_email?: string | null
+          review_sms_enabled?: boolean | null
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
@@ -491,6 +525,7 @@ export type Database = {
           created_at?: string | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
+          followup_sms_enabled?: boolean | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -498,6 +533,7 @@ export type Database = {
           org_id?: string
           qr_code_url?: string | null
           referral_email?: string | null
+          review_sms_enabled?: boolean | null
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
@@ -542,6 +578,7 @@ export type Database = {
       organizations: {
         Row: {
           billing_cycle_start: string | null
+          cancel_at_period_end: string | null
           cancelled_at: string | null
           created_at: string | null
           credits_total: number | null
@@ -565,6 +602,7 @@ export type Database = {
         }
         Insert: {
           billing_cycle_start?: string | null
+          cancel_at_period_end?: string | null
           cancelled_at?: string | null
           created_at?: string | null
           credits_total?: number | null
@@ -588,6 +626,7 @@ export type Database = {
         }
         Update: {
           billing_cycle_start?: string | null
+          cancel_at_period_end?: string | null
           cancelled_at?: string | null
           created_at?: string | null
           credits_total?: number | null
@@ -1150,6 +1189,7 @@ export type Database = {
           last_rotated_at: string | null
           location_id: string
           org_id: string
+          redirect_min_rating: number | null
         }
         Insert: {
           created_at?: string | null
@@ -1159,6 +1199,7 @@ export type Database = {
           last_rotated_at?: string | null
           location_id: string
           org_id: string
+          redirect_min_rating?: number | null
         }
         Update: {
           created_at?: string | null
@@ -1168,6 +1209,7 @@ export type Database = {
           last_rotated_at?: string | null
           location_id?: string
           org_id?: string
+          redirect_min_rating?: number | null
         }
         Relationships: [
           {
@@ -1355,7 +1397,6 @@ export type Database = {
           id: string
           location_id: string
           role: string
-          shift_duration: string | null
           staff_user_id: string
         }
         Insert: {
@@ -1364,7 +1405,6 @@ export type Database = {
           id?: string
           location_id: string
           role: string
-          shift_duration?: string | null
           staff_user_id: string
         }
         Update: {
@@ -1373,7 +1413,6 @@ export type Database = {
           id?: string
           location_id?: string
           role?: string
-          shift_duration?: string | null
           staff_user_id?: string
         }
         Relationships: [
@@ -1864,17 +1903,15 @@ export type Database = {
         Args: { p_content: string; p_is_private?: boolean; p_visit_id: string }
         Returns: Json
       }
-      approve_patient:
-        | { Args: { p_visit_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_follow_up_id?: string
-              p_follow_up_of_visit_id?: string
-              p_is_follow_up?: boolean
-              p_visit_id: string
-            }
-            Returns: Json
-          }
+      approve_patient: {
+        Args: {
+          p_follow_up_id?: string
+          p_follow_up_of_visit_id?: string
+          p_is_follow_up?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
       approve_summary: {
         Args: { p_session_token: string; p_visit_id: string }
         Returns: Json
@@ -1908,22 +1945,17 @@ export type Database = {
         Returns: Json
       }
       claim_patient: { Args: { p_visit_id: string }; Returns: Json }
+      cleanup_demo_data: { Args: never; Returns: undefined }
       collect_phone_post_ai: {
         Args: { p_phone: string; p_session_token: string; p_visit_id: string }
         Returns: Json
       }
       complete_onboarding: { Args: never; Returns: Json }
       complete_referral: { Args: { p_referral_id: string }; Returns: Json }
-      complete_visit:
-        | { Args: { p_diagnosis: string; p_visit_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_diagnosis: string
-              p_follow_up?: Json
-              p_visit_id: string
-            }
-            Returns: Json
-          }
+      complete_visit: {
+        Args: { p_diagnosis: string; p_follow_up?: Json; p_visit_id: string }
+        Returns: Json
+      }
       configure_review_platforms: {
         Args: { p_location_id: string; p_platforms: Json }
         Returns: Json
@@ -1977,6 +2009,7 @@ export type Database = {
         }
         Returns: Json
       }
+      deactivate_account: { Args: never; Returns: Json }
       deactivate_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       decline_phone_verification: {
         Args: { p_session_token: string; p_visit_id: string }
@@ -2016,18 +2049,16 @@ export type Database = {
       get_checked_in_doctors: { Args: { p_location_id: string }; Returns: Json }
       get_claimed_patients: { Args: { p_location_id: string }; Returns: Json }
       get_collision_state: { Args: { p_visit_id: string }; Returns: Json }
-      get_completed_and_left_visits:
-        | { Args: { p_date?: string; p_location_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_cursor_completed?: string
-              p_cursor_left?: string
-              p_date?: string
-              p_location_id: string
-              p_page_size?: number
-            }
-            Returns: Json
-          }
+      get_completed_and_left_visits: {
+        Args: {
+          p_cursor_completed?: string
+          p_cursor_left?: string
+          p_date?: string
+          p_location_id: string
+          p_page_size?: number
+        }
+        Returns: Json
+      }
       get_conversation: {
         Args: { p_session_token?: string; p_visit_id: string }
         Returns: Json
@@ -2057,6 +2088,7 @@ export type Database = {
       get_locations: { Args: never; Returns: Json }
       get_my_org: { Args: never; Returns: Json }
       get_my_roles: { Args: never; Returns: Json }
+      get_my_staff_user: { Args: never; Returns: Json }
       get_notes_for_patient: {
         Args: { p_cursor?: string; p_limit?: number; p_patient_id: string }
         Returns: Json
@@ -2208,6 +2240,7 @@ export type Database = {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
         Returns: Json
       }
+      request_demo_otp: { Args: { p_email: string }; Returns: Json }
       requesting_org_id: { Args: never; Returns: string }
       reset_monthly_credits: { Args: { p_org_id: string }; Returns: Json }
       reset_staff_password: {
@@ -2215,28 +2248,17 @@ export type Database = {
         Returns: Json
       }
       rotate_review_platforms: { Args: never; Returns: undefined }
-      save_followup_sms_config:
-        | {
-            Args: {
-              p_first_reminder_days: number
-              p_location_id: string
-              p_max_reminders: number
-              p_org_id: string
-              p_second_reminder_days: number
-              p_template?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_first_reminder_days: number
-              p_max_reminders: number
-              p_org_id: string
-              p_second_reminder_days: number
-              p_template?: string
-            }
-            Returns: Json
-          }
+      save_followup_sms_config: {
+        Args: {
+          p_first_reminder_days: number
+          p_location_id: string
+          p_max_reminders: number
+          p_org_id: string
+          p_second_reminder_days: number
+          p_template?: string
+        }
+        Returns: Json
+      }
       save_summary: {
         Args: {
           p_diagnostic?: string
@@ -2267,42 +2289,43 @@ export type Database = {
         }
         Returns: Json
       }
-      set_review_cycle: {
-        Args: { p_cycle_days: number; p_location_id: string }
-        Returns: Json
-      }
+      set_review_cycle:
+        | {
+            Args: { p_cycle_days: number; p_location_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_cycle_days: number
+              p_location_id: string
+              p_redirect_min_rating?: number
+            }
+            Returns: Json
+          }
       set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
       setup_onboarding_demo: { Args: { p_location_id: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       staff_check_in: {
-        Args: {
-          p_location_id: string
-          p_role: string
-          p_shift_duration?: string
-        }
+        Args: { p_location_id: string; p_role: string }
         Returns: Json
       }
-      staff_check_out:
-        | { Args: { p_staff_user_id?: string }; Returns: Json }
-        | {
-            Args: { p_force?: boolean; p_staff_user_id?: string }
-            Returns: Json
-          }
+      staff_check_out: {
+        Args: { p_force?: boolean; p_staff_user_id?: string }
+        Returns: Json
+      }
       start_ai_conversation: {
         Args: { p_session_token: string; p_visit_id: string }
         Returns: Json
       }
-      store_ai_message:
-        | { Args: { p_content: string; p_visit_id: string }; Returns: Json }
-        | {
-            Args: {
-              p_content: string
-              p_content_original?: string
-              p_visit_id: string
-            }
-            Returns: Json
-          }
+      store_ai_message: {
+        Args: {
+          p_content: string
+          p_content_original?: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
       submit_contact: {
         Args: {
           p_city?: string
@@ -2337,6 +2360,14 @@ export type Database = {
         Returns: Json
       }
       toggle_gave_tablet: { Args: { p_visit_id: string }; Returns: Json }
+      toggle_location_addon: {
+        Args: {
+          p_addon_type: string
+          p_enabled: boolean
+          p_location_id: string
+        }
+        Returns: Json
+      }
       trigger_review_sms: { Args: { p_visit_id: string }; Returns: Json }
       trigger_visit_summary_sms: { Args: { p_visit_id: string }; Returns: Json }
       update_allergies: {
@@ -2347,38 +2378,22 @@ export type Database = {
         Args: { p_conditions: string[]; p_patient_id: string }
         Returns: Json
       }
-      update_location:
-        | {
-            Args: {
-              p_address?: string
-              p_ai_model?: string
-              p_display_format?: string
-              p_location_id: string
-              p_name?: string
-              p_operating_hours?: Json
-              p_referral_email?: string
-              p_specialty?: string
-              p_tablet_count?: number
-              p_timezone?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_address?: string
-              p_ai_model?: string
-              p_display_format?: string
-              p_location_id: string
-              p_logo_url?: string
-              p_name?: string
-              p_operating_hours?: Json
-              p_referral_email?: string
-              p_specialty?: string
-              p_tablet_count?: number
-              p_timezone?: string
-            }
-            Returns: Json
-          }
+      update_location: {
+        Args: {
+          p_address?: string
+          p_ai_model?: string
+          p_display_format?: string
+          p_location_id: string
+          p_logo_url?: string
+          p_name?: string
+          p_operating_hours?: Json
+          p_referral_email?: string
+          p_specialty?: string
+          p_tablet_count?: number
+          p_timezone?: string
+        }
+        Returns: Json
+      }
       update_medications: {
         Args: { p_medications: string[]; p_patient_id: string }
         Returns: Json
@@ -2409,6 +2424,10 @@ export type Database = {
           p_mime_type: string
           p_visit_id: string
         }
+        Returns: Json
+      }
+      verify_demo_otp: {
+        Args: { p_code: string; p_email: string }
         Returns: Json
       }
       verify_phone_and_link: {

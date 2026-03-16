@@ -105,18 +105,20 @@ export async function saveReviewPlatforms(
   return data;
 }
 
-export async function saveReviewCycle(locationId: string, cycleDays: number) {
+export async function saveReviewCycle(locationId: string, cycleDays: number, redirectMinRating: number = 5) {
   await requireAuth();
   if (!UUID_RE.test(locationId)) {
     return { success: false, error: "Invalid location ID" };
   }
 
   const clamped = Math.max(1, Math.min(cycleDays, 90));
+  const clampedRating = Math.max(1, Math.min(Math.round(redirectMinRating), 5));
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("set_review_cycle", {
     p_location_id: locationId,
     p_cycle_days: clamped,
+    p_redirect_min_rating: clampedRating,
   });
 
   if (error) return { success: false, error: error.message };

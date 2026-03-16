@@ -36,7 +36,8 @@ BEGIN
     JOIN public.locations l ON l.id = v.location_id
     LEFT JOIN public.followup_sms_config fsc ON fsc.org_id = o.id
     WHERE f.status = 'active'
-      AND (o.followup_sms_addon = true OR o.subscription_plan IN ('standard_trial', 'premium_trial'))
+      AND f.sms_charged = true
+      AND l.followup_sms_enabled = true
       AND o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
       AND p.phone IS NOT NULL
       AND f.reminders_sent < COALESCE(fsc.max_reminders, 2)

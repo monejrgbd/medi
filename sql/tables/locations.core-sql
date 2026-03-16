@@ -15,6 +15,8 @@ CREATE TABLE public.locations (
   tablet_count          int DEFAULT 0,
   timezone              text DEFAULT 'America/Toronto',
   estimated_wait_minutes numeric DEFAULT NULL,
+  review_sms_enabled    boolean DEFAULT false,
+  followup_sms_enabled  boolean DEFAULT false,
   created_at            timestamptz DEFAULT now()
 );
 

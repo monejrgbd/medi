@@ -7,7 +7,7 @@ const faqs = [
   },
   {
     q: "Does one staff member have access to all roles?",
-    a: "Staff are assigned specific roles (receptionist, doctor, manager) per location by the clinic owner. They only see dashboards for their assigned roles. Owners can see everything.",
+    a: "Staff can be assigned one or multiple roles (receptionist, doctor, manager) per location by the clinic owner. They see dashboards for all their assigned roles. Owners can see everything.",
   },
   {
     q: "Is the AI conversation real?",
@@ -21,11 +21,7 @@ const faqs = [
     q: "What languages are supported?",
     a: "Over 130 languages. The patient picks their language and the entire conversation happens in that language. The doctor always sees the summary in English.",
   },
-  {
-    q: "What happens to the data I enter?",
-    a: "This is a demo environment. All data is automatically cleaned up. Do not enter real medical information.",
-  },
-  {
+{
     q: "How does the doctor get notified?",
     a: "In production, doctors get browser notifications and audio chimes when a patient is ready. They see the AI generated summary before walking into the room.",
   },
@@ -33,11 +29,7 @@ const faqs = [
     q: "Can this work on a tablet or kiosk?",
     a: "Yes, there is a kiosk mode designed for shared tablets in waiting rooms. It auto resets between patients and locks the device to the check in screen.",
   },
-  {
-    q: "How accurate is the AI summary?",
-    a: "The AI summarizes what the patient said, it does not diagnose. Patients review and approve the summary before it reaches the doctor, ensuring accuracy.",
-  },
-  {
+{
     q: "Do these tabs show in the actual system?",
     a: "No, the tabs are only for this demo so you can experience all three roles. In the real system, each user logs into their own dashboard and only sees their role.",
   },

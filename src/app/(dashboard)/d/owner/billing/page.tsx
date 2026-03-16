@@ -11,10 +11,17 @@ import PaymentHistory from "@/components/billing/PaymentHistory";
 import CancelSubscription from "@/components/billing/CancelSubscription";
 import FollowUpSmsConfig from "@/components/billing/FollowUpSmsConfig";
 
+interface LocationWithAddons {
+  id: string;
+  name: string;
+  review_sms_enabled: boolean;
+  followup_sms_enabled: boolean;
+}
+
 export default function BillingPage() {
   const { org, isOwner } = useRole();
   const [dashData, setDashData] = useState<Record<string, unknown> | null>(null);
-  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [locations, setLocations] = useState<LocationWithAddons[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadData = useCallback(async () => {
@@ -24,26 +31,31 @@ export default function BillingPage() {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData, refreshKey]);
-
-  useEffect(() => {
-    // Load locations for follow-up SMS config
+  const loadLocations = useCallback(() => {
     import("@/lib/supabase/client").then(({ createClient }) => {
       const supabase = createClient();
       supabase.rpc("get_locations").then(({ data }) => {
         if (data) {
           setLocations(
-            data.map((l: { id: string; name: string }) => ({
+            data.map((l: LocationWithAddons) => ({
               id: l.id,
               name: l.name,
+              review_sms_enabled: l.review_sms_enabled ?? false,
+              followup_sms_enabled: l.followup_sms_enabled ?? false,
             }))
           );
         }
       });
     });
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData, refreshKey]);
+
+  useEffect(() => {
+    loadLocations();
+  }, [loadLocations, refreshKey]);
 
   if (!isOwner) {
     return (
@@ -59,6 +71,8 @@ export default function BillingPage() {
     setRefreshKey((k) => k + 1);
   }
 
+  const hasFollowupSms = locations.some((l) => l.followup_sms_enabled);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <CreditDashboard key={refreshKey} />
@@ -70,14 +84,12 @@ export default function BillingPage() {
       />
 
       <AddOnToggles
-        reviewSmsAddon={org.review_sms_addon}
-        followupSmsAddon={org.followup_sms_addon}
-        locationCount={locations.length || 1}
+        locations={locations}
         subscriptionPlan={org.subscription_plan}
         onChanged={handleRefresh}
       />
 
-      {org.followup_sms_addon && (
+      {hasFollowupSms && (
         <FollowUpSmsConfig orgId={org.id} />
       )}
 

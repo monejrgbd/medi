@@ -14,7 +14,7 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $function$
 BEGIN
-  IF p_clinic_name IS NULL OR length(trim(p_clinic_name)) = 0 THEN
+  IF p_interest != 'meet' AND (p_clinic_name IS NULL OR length(trim(p_clinic_name)) = 0) THEN
     RAISE EXCEPTION 'Clinic name is required';
   END IF;
   IF p_contact_name IS NULL OR length(trim(p_contact_name)) = 0 THEN
@@ -32,7 +32,7 @@ BEGIN
     lower(trim(p_email)),
     CASE WHEN p_phone IS NOT NULL AND length(trim(p_phone)) > 0 THEN trim(p_phone) ELSE NULL END,
     trim(p_city),
-    CASE WHEN p_interest IN ('free_trial', 'demo', 'custom_plan') THEN p_interest ELSE 'free_trial' END,
+    CASE WHEN p_interest IN ('free_trial', 'demo', 'meet', 'custom_plan') THEN p_interest ELSE 'free_trial' END,
     CASE WHEN p_notes IS NOT NULL AND length(trim(p_notes)) > 0 THEN trim(p_notes) ELSE NULL END,
     now()
   );

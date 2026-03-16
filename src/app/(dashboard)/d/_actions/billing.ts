@@ -40,17 +40,21 @@ export async function purchaseOverageCredits(amount: number) {
   return data;
 }
 
-export async function toggleAddon(
+export async function toggleLocationAddon(
+  locationId: string,
   addonType: string,
   enabled: boolean
 ) {
   await requireAuth();
 
+  if (!UUID_RE.test(locationId))
+    return { success: false, error: "Invalid location ID" };
   if (!VALID_ADDONS.includes(addonType))
     return { success: false, error: "Invalid addon type" };
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("toggle_addon", {
+  const { data, error } = await supabase.rpc("toggle_location_addon", {
+    p_location_id: locationId,
     p_addon_type: addonType,
     p_enabled: enabled,
   });

@@ -30,9 +30,10 @@ interface Stats {
 interface ReviewHubProps {
   locations: Location[];
   isOwnerOrManager: boolean;
+  demoMode?: boolean;
 }
 
-export default function ReviewHub({ locations, isOwnerOrManager }: ReviewHubProps) {
+export default function ReviewHub({ locations, isOwnerOrManager, demoMode = false }: ReviewHubProps) {
   const [selectedLocation, setSelectedLocation] = useState(locations[0]?.id || "");
   const [reviews, setReviews] = useState<Review[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -126,7 +127,7 @@ export default function ReviewHub({ locations, isOwnerOrManager }: ReviewHubProp
 
       {tab === "config" && isOwnerOrManager ? (
         selectedLocation ? (
-          <ReviewPlatformConfig locationId={selectedLocation} />
+          <ReviewPlatformConfig locationId={selectedLocation} demoMode={demoMode} />
         ) : (
           <p className="text-sm text-slate text-center py-8">Select a location to configure platforms.</p>
         )

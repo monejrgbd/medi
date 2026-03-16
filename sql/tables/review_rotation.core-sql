@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.review_rotation (
   org_id              uuid NOT NULL REFERENCES public.organizations(id),
   cycle_days          int DEFAULT 7 CHECK (cycle_days BETWEEN 1 AND 90),
   current_platform_id uuid REFERENCES public.review_platforms(id),
+  redirect_min_rating smallint DEFAULT 5 CHECK (redirect_min_rating BETWEEN 1 AND 5),
   last_rotated_at     timestamptz DEFAULT now(),
   created_at          timestamptz DEFAULT now()
 );

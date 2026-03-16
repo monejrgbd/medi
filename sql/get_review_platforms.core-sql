@@ -35,7 +35,8 @@ BEGIN
   SELECT jsonb_build_object(
     'cycle_days', rr.cycle_days,
     'current_platform_id', rr.current_platform_id,
-    'last_rotated_at', rr.last_rotated_at
+    'last_rotated_at', rr.last_rotated_at,
+    'redirect_min_rating', COALESCE(rr.redirect_min_rating, 5)
   )
   INTO v_rotation
   FROM public.review_rotation rr

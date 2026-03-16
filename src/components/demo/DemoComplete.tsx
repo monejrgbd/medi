@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { CheckCircle, ArrowLeft } from "lucide-react";
 import { signOutDemoUser } from "@/app/demo/_actions/demo";
 import { useRouter } from "next/navigation";
@@ -55,12 +54,15 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
 
         {/* CTAs */}
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
-          <Link
-            href="/signup"
+          <button
+            onClick={async () => {
+              await signOutDemoUser();
+              router.push("/signup");
+            }}
             className="inline-flex items-center justify-center px-6 py-2.5 bg-hilt-blue text-white font-medium rounded-lg hover:bg-hilt-blue/90 transition-colors"
           >
             Sign Up
-          </Link>
+          </button>
           <button
             onClick={onRestart}
             className="inline-flex items-center justify-center px-6 py-2.5 bg-white border border-gray-200 text-ink font-medium rounded-lg hover:bg-gray-50 transition-colors"

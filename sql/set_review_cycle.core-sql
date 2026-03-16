@@ -2,7 +2,8 @@
 CREATE OR REPLACE FUNCTION private.set_review_cycle(
   p_caller_auth_uid uuid,
   p_location_id uuid,
-  p_cycle_days int
+  p_cycle_days int,
+  p_redirect_min_rating smallint DEFAULT 5
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -17,9 +18,11 @@ DECLARE
   v_is_owner boolean := false;
   v_is_manager boolean := false;
   v_clamped int;
+  v_clamped_rating smallint;
 BEGIN
   -- Clamp cycle_days to 1-90
   v_clamped := GREATEST(1, LEAST(p_cycle_days, 90));
+  v_clamped_rating := GREATEST(1, LEAST(p_redirect_min_rating, 5));
 
   -- Get location
   SELECT l.id, l.org_id INTO v_location
@@ -57,23 +60,25 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
   END IF;
 
-  -- Update rotation cycle days
+  -- Update rotation cycle days + redirect threshold
   UPDATE public.review_rotation
-  SET cycle_days = v_clamped
+  SET cycle_days = v_clamped,
+      redirect_min_rating = v_clamped_rating
   WHERE location_id = p_location_id;
 
   IF NOT FOUND THEN
     RETURN jsonb_build_object('success', false, 'error', 'No review rotation configured. Add platforms first.');
   END IF;
 
-  RETURN jsonb_build_object('success', true, 'cycle_days', v_clamped);
+  RETURN jsonb_build_object('success', true, 'cycle_days', v_clamped, 'redirect_min_rating', v_clamped_rating);
 END;
 $$;
 
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.set_review_cycle(
   p_location_id uuid,
-  p_cycle_days int
+  p_cycle_days int,
+  p_redirect_min_rating smallint DEFAULT 5
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -87,9 +92,6 @@ BEGIN
   IF v_auth_uid IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
   END IF;
-  RETURN private.set_review_cycle(v_auth_uid, p_location_id, p_cycle_days);
+  RETURN private.set_review_cycle(v_auth_uid, p_location_id, p_cycle_days, p_redirect_min_rating);
 END;
 $$;
-
-REVOKE ALL ON FUNCTION public.set_review_cycle(uuid, int) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.set_review_cycle(uuid, int) TO authenticated;

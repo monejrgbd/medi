@@ -21,6 +21,10 @@ DECLARE
   v_due_date date;
   v_clean_instructions text;
   v_follow_up_id uuid;
+  v_location_followup_enabled boolean;
+  v_org record;
+  v_remaining numeric;
+  v_sms_charged boolean := false;
 BEGIN
   -- Validate timeframe_days
   IF p_timeframe_days IS NULL OR p_timeframe_days NOT BETWEEN 1 AND 365 THEN
@@ -76,13 +80,41 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'not authorized');
   END IF;
 
+  -- Check if location has followup SMS enabled
+  SELECT followup_sms_enabled INTO v_location_followup_enabled
+  FROM public.locations
+  WHERE id = v_visit.location_id;
+
+  -- If location has followup SMS enabled, try to deduct 0.1 credits
+  IF v_location_followup_enabled THEN
+    SELECT o.credits_total, o.credits_used, o.subscription_plan
+    INTO v_org
+    FROM public.organizations o
+    WHERE o.id = v_visit.org_id
+    FOR UPDATE;
+
+    IF v_org.subscription_plan NOT IN ('expired', 'suspended', 'read_only') THEN
+      v_remaining := v_org.credits_total - v_org.credits_used;
+      IF v_remaining >= 0.1 THEN
+        UPDATE public.organizations
+        SET credits_used = credits_used + 0.1
+        WHERE id = v_visit.org_id;
+
+        INSERT INTO public.credits_log (org_id, credits_amount, description)
+        VALUES (v_visit.org_id, -0.1, 'Follow-up SMS — visit ' || p_visit_id::text);
+
+        v_sms_charged := true;
+      END IF;
+    END IF;
+  END IF;
+
   -- Compute due date
   v_due_date := v_visit.completed_at::date + p_timeframe_days;
 
   -- Insert follow-up
   INSERT INTO public.follow_ups (
     visit_id, patient_id, doctor_id, org_id, location_id,
-    timeframe_days, due_date, ai_instructions
+    timeframe_days, due_date, ai_instructions, sms_charged
   ) VALUES (
     p_visit_id,
     v_visit.patient_id,
@@ -91,7 +123,8 @@ BEGIN
     v_visit.location_id,
     p_timeframe_days,
     v_due_date,
-    v_clean_instructions
+    v_clean_instructions,
+    v_sms_charged
   )
   RETURNING id INTO v_follow_up_id;
 
@@ -108,11 +141,12 @@ BEGIN
     jsonb_build_object(
       'visit_id', p_visit_id,
       'timeframe_days', p_timeframe_days,
-      'due_date', v_due_date
+      'due_date', v_due_date,
+      'sms_charged', v_sms_charged
     )
   );
 
-  RETURN jsonb_build_object('success', true, 'follow_up_id', v_follow_up_id);
+  RETURN jsonb_build_object('success', true, 'follow_up_id', v_follow_up_id, 'sms_charged', v_sms_charged);
 END;
 $$;
 

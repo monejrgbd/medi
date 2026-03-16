@@ -131,8 +131,6 @@ export default function CheckinFlow({
   hasPreviousVisitsRef.current = hasPreviousVisits;
   const consentGivenRef = useRef(consentGiven);
   consentGivenRef.current = consentGiven;
-  const sessionTokenRef = useRef(sessionToken);
-  sessionTokenRef.current = sessionToken;
   const demoModeRef = useRef(demoMode);
 
   // Kiosk/demo mode: clear localStorage on mount to prevent session recovery
@@ -249,7 +247,7 @@ export default function CheckinFlow({
           if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
           if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
           // Check if phone collection needed
-          if (!demoMode && !data.patient_phone_verified && !data.patient_has_phone) {
+          if (!data.patient_phone_verified && !data.patient_has_phone) {
             setState("phone_collection");
           } else {
             setState(data.timeout_flagged ? "timeout" : "queued");
@@ -497,7 +495,7 @@ export default function CheckinFlow({
             if (session.queue_position !== undefined) setQueuePosition(session.queue_position);
             if (session.estimated_wait_minutes !== undefined) setEstimatedWait(session.estimated_wait_minutes);
             // Check if phone collection needed
-            if (!demoMode && !session.patient_phone_verified && !session.patient_has_phone) {
+            if (!session.patient_phone_verified && !session.patient_has_phone) {
               setState("phone_collection");
             } else {
               setState(session.timeout_flagged ? "timeout" : "queued");
@@ -663,7 +661,7 @@ export default function CheckinFlow({
       if (data?.success) {
         if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
         if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
-        if (!demoMode && !data.patient_phone_verified && !data.patient_has_phone) {
+        if (!data.patient_phone_verified && !data.patient_has_phone) {
           setState("phone_collection");
           return;
         }
@@ -904,7 +902,7 @@ export default function CheckinFlow({
                   } else if (status === "waiting_doctor_claim") {
                     if (data.queue_position !== undefined) setQueuePosition(data.queue_position as number);
                     if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes as number | null);
-                    if (!demoMode && !(data.patient_phone_verified as boolean) && !(data.patient_has_phone as boolean)) {
+                    if (!(data.patient_phone_verified as boolean) && !(data.patient_has_phone as boolean)) {
                       setState("phone_collection");
                     } else {
                       setState((data.timeout_flagged as boolean) ? "timeout" : "queued");
@@ -1071,13 +1069,20 @@ export default function CheckinFlow({
 
     case "phone_collection":
       return (
-        <PhoneInput
-          mode="collection"
-          onSubmit={handlePhoneSubmit}
-          loading={phoneLoading}
-          error={phoneError}
-          onSkip={handlePhoneSkip}
-        />
+        <>
+          {demoMode && (
+            <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-3 text-center max-w-md">
+              This will be important for the coming demo features like review requests and visit summary SMS.
+            </p>
+          )}
+          <PhoneInput
+            mode="collection"
+            onSubmit={handlePhoneSubmit}
+            loading={phoneLoading}
+            error={phoneError}
+            onSkip={handlePhoneSkip}
+          />
+        </>
       );
 
     case "no_phone_notice":

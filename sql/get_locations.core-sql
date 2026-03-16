@@ -53,7 +53,9 @@ BEGIN
       'specialty', l.specialty,
       'logo_url', l.logo_url,
       'staff_count', agg.staff_count,
-      'checked_in_count', agg.checked_in_count
+      'checked_in_count', agg.checked_in_count,
+      'review_sms_enabled', l.review_sms_enabled,
+      'followup_sms_enabled', l.followup_sms_enabled
     ) AS loc_row
   ) lr
   WHERE l.org_id = v_org_id;

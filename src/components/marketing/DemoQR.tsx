@@ -10,7 +10,7 @@ const CHECKIN_URL =
 const LOGO_URL =
   `https://sdzeoeturtpkqlagobwj.supabase.co/storage/v1/object/public/logos/${DEMO_ORG_ID}/${DEMO_LOCATION_ID}/logo`;
 
-export default function DemoQR() {
+export default function DemoQR({ size = 100 }: { size?: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export default function DemoQR() {
     <canvas
       ref={canvasRef}
       className="rounded-lg"
-      style={{ width: 100, height: 100 }}
+      style={{ width: size, height: size }}
     />
   );
 }

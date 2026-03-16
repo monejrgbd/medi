@@ -15,13 +15,16 @@ interface Platform {
 
 interface ReviewPlatformConfigProps {
   locationId: string;
+  demoMode?: boolean;
 }
 
 export default function ReviewPlatformConfig({
   locationId,
+  demoMode = false,
 }: ReviewPlatformConfigProps) {
   const [platforms, setPlatforms] = useState<Platform[]>([]);
   const [cycleDays, setCycleDays] = useState(7);
+  const [redirectMinRating, setRedirectMinRating] = useState(5);
   const [currentPlatformId, setCurrentPlatformId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,6 +48,7 @@ export default function ReviewPlatformConfig({
 
         if (result.rotation) {
           setCycleDays(result.rotation.cycle_days || 7);
+          setRedirectMinRating(result.rotation.redirect_min_rating ?? 5);
           setCurrentPlatformId(result.rotation.current_platform_id || null);
         }
       }
@@ -69,6 +73,10 @@ export default function ReviewPlatformConfig({
   }
 
   async function handleSave() {
+    if (demoMode) {
+      setError("Configuration changes are not available in the demo.");
+      return;
+    }
     setError("");
     setSuccess("");
 
@@ -95,8 +103,8 @@ export default function ReviewPlatformConfig({
       return;
     }
 
-    // Save cycle days
-    const cycleResult = await saveReviewCycle(locationId, cycleDays);
+    // Save cycle days + redirect threshold
+    const cycleResult = await saveReviewCycle(locationId, cycleDays, redirectMinRating);
     setSaving(false);
 
     if (!cycleResult?.success && cycleResult?.error !== "No review rotation configured. Add platforms first.") {
@@ -116,6 +124,7 @@ export default function ReviewPlatformConfig({
       setPlatforms(existingPlatforms);
       if (refreshed.rotation) {
         setCycleDays(refreshed.rotation.cycle_days || 7);
+        setRedirectMinRating(refreshed.rotation.redirect_min_rating ?? 5);
         setCurrentPlatformId(refreshed.rotation.current_platform_id || null);
       }
     }
@@ -141,8 +150,7 @@ export default function ReviewPlatformConfig({
         Review Platforms
       </h3>
       <p className="text-sm text-gray-500 mb-4">
-        Configure where 5-star reviewers are directed. Platforms rotate
-        automatically.
+        Configure where reviewers are directed. Platforms rotate automatically.
       </p>
 
       <div className="space-y-3 mb-4">
@@ -194,13 +202,38 @@ export default function ReviewPlatformConfig({
         + Add platform
       </button>
 
+      {/* Redirect threshold */}
+      <div className="border-t border-gray-100 pt-4 mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Redirect to external platform when rating is
+        </label>
+        <p className="text-xs text-gray-500 mb-2">
+          Only reviews at or above this rating will be asked to leave a review on your external platforms.
+        </p>
+        <div className="flex gap-1.5">
+          {[5, 4, 3, 2, 1].map((r) => (
+            <button
+              key={r}
+              onClick={() => setRedirectMinRating(r)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                redirectMinRating === r
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              {r}+ stars
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Rotation cycle */}
       <div className="border-t border-gray-100 pt-4 mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Rotation cycle (days)
         </label>
         <p className="text-xs text-gray-500 mb-2">
-          How often to rotate which platform gets the 5-star redirect.
+          How often to rotate which platform gets the redirect.
         </p>
         <input
           type="number"

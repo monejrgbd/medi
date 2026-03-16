@@ -162,9 +162,12 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
                   Enter verification code
                 </p>
               </div>
-              <p className="text-sm text-slate mb-4">
+              <p className="text-sm text-slate mb-1">
                 We sent a 6-digit code to{" "}
                 <span className="font-medium text-ink">{email}</span>
+              </p>
+              <p className="text-xs text-gray-400 mb-4">
+                It may take up to a minute to arrive.
               </p>
 
               <div
@@ -200,17 +203,36 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
                 </p>
               )}
 
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("email");
-                  setOtp(["", "", "", "", "", ""]);
-                  setError("");
-                }}
-                className="w-full text-sm text-slate hover:text-ink transition-colors text-center"
-              >
-                Back
-              </button>
+              <div className="flex items-center justify-center gap-3 text-sm">
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={async () => {
+                    setError("");
+                    setOtp(["", "", "", "", "", ""]);
+                    const result = await requestDemoOtp(email);
+                    if (!result.success) {
+                      setError(result.error ?? "Failed to resend.");
+                    }
+                    inputRefs.current[0]?.focus();
+                  }}
+                  className="text-hilt-blue hover:text-hilt-blue-dark transition-colors disabled:opacity-50"
+                >
+                  Resend code
+                </button>
+                <span className="text-gray-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("email");
+                    setOtp(["", "", "", "", "", ""]);
+                    setError("");
+                  }}
+                  className="text-slate hover:text-ink transition-colors"
+                >
+                  Change email
+                </button>
+              </div>
             </div>
           )}
 

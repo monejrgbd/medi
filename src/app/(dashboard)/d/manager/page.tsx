@@ -13,30 +13,33 @@ export default async function ManagerPage() {
   const orgId = staffUser?.org_id || (ownerCheck ? (org as { id?: string })?.id : null);
   if (!orgId) redirect("/d/select-role");
 
-  let locations: { id: string; name: string }[];
+  let locations: { id: string; name: string; followup_sms_enabled?: boolean }[];
 
   if (ownerCheck) {
     // Owner sees all org locations
     const supabase = await createClient();
     const { data } = await supabase
       .from("locations")
-      .select("id, name")
+      .select("id, name, followup_sms_enabled")
       .eq("org_id", orgId)
       .order("name");
     locations = data ?? [];
   } else {
-    // Manager sees only assigned locations
+    // Manager sees only assigned locations — need to fetch addon flags
     const managerRoles = roles.filter((r: { role: string }) => r.role === "manager");
-    const locationMap = new Map<string, string>();
-    for (const r of managerRoles) {
-      locationMap.set(r.location_id, r.location_name);
-    }
-    locations = Array.from(locationMap.entries()).map(([id, name]) => ({ id, name }));
+    const locationIds = managerRoles.map((r: { location_id: string }) => r.location_id);
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("locations")
+      .select("id, name, followup_sms_enabled")
+      .in("id", locationIds)
+      .order("name");
+    locations = data ?? [];
   }
 
   if (locations.length === 0) redirect("/d/owner");
 
-  const followupAddonEnabled = !!(org as { followup_sms_addon?: boolean })?.followup_sms_addon;
+  const followupAddonEnabled = locations.some((l) => l.followup_sms_enabled);
 
   return (
     <ManagerDashboard

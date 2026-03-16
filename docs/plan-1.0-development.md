@@ -70,7 +70,7 @@ Two strategies based on auth context:
 | Stale session cleanup | Daily 6 AM | Expire `waiting_doctor_claim` visits from previous day, notify receptionist |
 | 30-minute AI timeout | Every minute | Move `still_answering_ai` visits older than 30 min to queue with `timeout_flagged = true`. Sets audit context (`actor_type=system`, `action=ai_timeout`) before UPDATE. Guards against NULL `ai_started_at`. Uses `idx_visits_ai_timeout` partial index (tiny — only active AI sessions). |
 | Follow-up expiry | Daily midnight | Expire follow-ups 90+ days overdue |
-| Follow-up SMS reminders | Daily 10 AM | Send reminders for overdue follow-ups (if add-on enabled). Process in batches of 20 with small delays between batches to respect Twilio rate limits. `LIMIT` batch size and track cursor for next run. |
+| Follow-up SMS reminders | Daily 10 AM | Send reminders for overdue follow-ups (if `locations.followup_sms_enabled` AND `follow_ups.sms_charged`). Process in batches of 20 with small delays between batches to respect Twilio rate limits. `LIMIT` batch size and track cursor for next run. |
 | Review platform rotation | Daily midnight | Rotate review platforms per location's cycle_days |
 | Credit monthly reset | On billing cycle | Reset credits to plan allocation (no rollover) |
 
@@ -585,8 +585,8 @@ organizations (
   trial_end_date        timestamptz,
   billing_cycle_start   timestamptz,
   paypal_subscription_id text,
-  review_sms_addon      boolean DEFAULT false,
-  followup_sms_addon    boolean DEFAULT false,
+  review_sms_addon      boolean DEFAULT false,  -- DEPRECATED: replaced by per-location flags
+  followup_sms_addon    boolean DEFAULT false,  -- DEPRECATED: replaced by per-location flags
   created_at            timestamptz DEFAULT now()
 )
 
@@ -604,6 +604,8 @@ locations (
   referral_email        text,        -- email for receiving Hilt-to-Hilt referrals
   tablet_count          int DEFAULT 0,
   timezone              text DEFAULT 'America/Toronto',  -- for operating hours, cron, analytics
+  review_sms_enabled    boolean DEFAULT false,   -- per-location toggle, 0.1 credits/SMS
+  followup_sms_enabled  boolean DEFAULT false,   -- per-location toggle, 0.1 credits/SMS
   created_at            timestamptz DEFAULT now()
 )
 
@@ -1010,7 +1012,7 @@ CREATE INDEX idx_phone_verifications_lookup ON phone_verifications(phone, expire
 - All indexes for staff/org tables (note: UNIQUE constraints auto-create indexes — do not duplicate)
 
 **SQL Functions (.core-sql):**
-- `create_organization(name, owner_auth_uid, approval_code?)` — creates org + staff_user for owner. Sets `raw_app_meta_data.org_id` on the auth user for JWT-based RLS. Standard trial: 20 credits, 14 days. If valid approval_code: premium trial, 200 credits, 30 days. Marks code as used. Both trial tiers auto-enable `review_sms_addon = true` and `followup_sms_addon = true` (included free during trial).
+- `create_organization(name, owner_auth_uid, approval_code?)` — creates org + staff_user for owner. Sets `raw_app_meta_data.org_id` on the auth user for JWT-based RLS. Standard trial: 20 credits, 14 days. If valid approval_code: premium trial, 200 credits, 30 days. Marks code as used. SMS features are enabled per-location (not org-level) via `toggle_location_addon`.
 - `create_location(org_id, name, address?, specialty?, operating_hours?)` — creates location, auto-generates QR code URL (`/checkin/{location_id}`)
 - `update_location(location_id, ...)` — update settings (name, address, hours, specialty, ai_model, display_format, referral_email, tablet_count)
 - `create_staff_user(org_id, full_name, username, password, location_id, roles[])` — creates auth user + staff_user row + assigns roles. Auth user created directly in `auth.users` by the SECURITY DEFINER function (no admin client needed). Fully transactional — rollback is automatic. Sets `raw_app_meta_data.org_id` on the new auth user for JWT-based RLS. Validates: manager can only create at their location, owner can create anywhere.
@@ -1838,8 +1840,8 @@ After approval, the patient flow continues:
 - `configure_review_platforms(location_id, platforms[])` — add/edit/remove platform links
 - `set_review_cycle(location_id, cycle_days)` — set rotation period
 - `get_current_review_platform(location_id)` — which platform to suggest for 5-star
-- `trigger_review_sms(visit_id)` — only if review SMS add-on enabled. **Fire-and-forget** via `pg_net` (same pattern as `trigger_visit_summary_sms`). Creates review record with token.
-- Extend `complete_visit` to also call `trigger_review_sms` after `trigger_visit_summary_sms`, if review SMS add-on is enabled
+- `trigger_review_sms(visit_id)` — only if `locations.review_sms_enabled` for the visit's location. Deducts 0.1 credits (skips if insufficient). **Fire-and-forget** via `pg_net`. Creates review record with token.
+- Extend `complete_visit` to also call `trigger_review_sms` after `trigger_visit_summary_sms`, if location has review SMS enabled
 
 **Pages:**
 - `/review/[token]` — public review page:
@@ -1881,7 +1883,7 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 
 **Review SMS Flow:**
 - Visit completes → visit summary SMS sent first
-- If review SMS add-on enabled (org-level, per-location pricing):
+- If review SMS enabled on location (per-location toggle, 0.1 credits/SMS):
   - Review SMS sent after summary: "How was your visit at [Clinic]? Rate your experience: [link]"
   - Add-on included free during trial (both tiers) to demonstrate value
 - Platform rotation: every N days (configurable cycle_time), switches which platform 5-star reviewers are directed to
@@ -1899,7 +1901,7 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 - [ ] Rate below 5 → "Thank you" only, no external redirect, feedback stored internally
 - [ ] Review hub shows all ratings, filterable by doctor/date/rating
 - [ ] Platform rotation works (switches every N days)
-- [ ] Review SMS only sent if add-on enabled (free during trial)
+- [ ] Review SMS only sent if location has `review_sms_enabled` and credits available
 - [ ] Non-English patient: type in Spanish → translated to English for AI → AI response translated back to Spanish
 - [ ] English patient: no translation API calls
 - [ ] Summary shown to patient in their language, stored in English
@@ -1938,7 +1940,7 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
   - Return rate per doctor
   - First-time vs repeat ratio over time (by week/month)
 - `get_followup_compliance(location_id, date_range)`:
-  - Only if follow-up SMS add-on enabled
+  - Only if `locations.followup_sms_enabled` for the location
   - Funnel: tagged for follow-up → returned (receptionist picked follow-up) → overdue → reminded via SMS → returned after reminder
   - Per-doctor compliance rates
   - Follow-ups expired after 90 days overdue
@@ -1949,7 +1951,7 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
   - **Patients** tab — daily patient stats + trend charts
   - **Wait Times** tab — heatmap showing avg wait by day × hour
   - **Returns** tab — return rate charts + per-doctor breakdown
-  - **Follow-ups** tab (if add-on enabled) — compliance funnel + per-doctor rates
+  - **Follow-ups** tab (if any location has `followup_sms_enabled`) — compliance funnel + per-doctor rates
 
 **Components:**
 - `EmployeeStatsTable` — sortable table: name, hours, utilization, patients, throughput, handling time, idle time
@@ -1999,18 +2001,18 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 - `reset_monthly_credits(org_id)` — on billing cycle: set credits_used = 0, credits_total = plan allocation. No rollover.
 - `handle_payment_failure(org_id, attempt_number)` — tracks retries. After 3 over 7 days → `read_only`. After 30 days → `suspended`. Owner notified at each stage.
 - `change_subscription_plan(org_id, new_plan)` — updates credits_total + plan. **v2: make service_role only (called via webhook after PayPal subscription update) — current design allows owner to call directly without payment proof.**
-- `toggle_addon(org_id, addon_type, enabled)` — review_sms_addon or followup_sms_addon
+- `toggle_location_addon(location_id, addon_type, enabled)` — per-location toggle for `review_sms` or `followup_sms`. Owner or manager at location. 0.1 credits per SMS drawn from plan credit pool.
 - `cancel_subscription(org_id)` — data retained 90 days, then deleted. Owner can request immediate deletion.
 - `search_patients(org_id, query, birthday?, p_limit int DEFAULT 25)` — search by name and/or birthday across entire org, `LIMIT 25`. **Requires `pg_trgm` GIN index** (`idx_patients_name_trgm`) for acceptable performance — without it, `ILIKE '%query%'` does a seq scan on all patients. Returns: name, birthday, last visit date, visit count.
 - `get_patient_full_profile(patient_id)` — complete profile: all visits, notes, meds, allergies, chronic, referrals. For patient search results.
-- `send_followup_reminders()` — cron target: finds overdue follow-ups where `followup_sms_addon = true` and `reminders_sent < max_reminders`, respects timing config. Processes in batches of 20 via `pg_net` calls to `send-sms`. Increments `reminders_sent`.
+- `send_followup_reminders()` — cron target: finds overdue follow-ups where `locations.followup_sms_enabled = true` AND `follow_ups.sms_charged = true` and `reminders_sent < max_reminders`, respects timing config. Processes in batches of 20 via `pg_net` calls to `send-sms`. Increments `reminders_sent`. Credit deduction happens at follow-up creation (0.1 credits), not at reminder send time.
 
 **Pages:**
 - `/d/owner/billing` — billing dashboard:
   - Current plan + pricing
   - Credit dashboard (gauge: used/total, projected run-out, daily trend chart)
   - Upgrade/downgrade buttons → PayPal checkout
-  - Add-on toggles (Review SMS, Follow-up SMS) with per-location pricing
+  - Per-location SMS toggles (Review SMS, Follow-up SMS) — 0.1 credits each from plan pool
   - Overage purchase ("Buy X credits at $1 each")
   - Payment history
   - Cancel subscription button (with data retention notice + immediate deletion option)
@@ -2018,7 +2020,7 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 **Components:**
 - `CreditDashboard` — circular gauge (used/total), projected run-out date, daily usage sparkline
 - `SubscriptionManager` — current plan card + upgrade/downgrade options + PayPal checkout integration
-- `AddOnToggles` — Review SMS + Follow-up SMS toggles with pricing ($49/mo/location)
+- `AddOnToggles` — per-location Review SMS + Follow-up SMS toggles (0.1 credits per SMS, no separate subscription)
 - `OveragePurchase` — quantity input + purchase button
 - `PaymentHistory` — table of past payments
 - `CancelSubscription` — confirmation dialog with data retention info + immediate deletion option
@@ -2156,13 +2158,13 @@ After all phases, verify the complete journey:
 11. Doctor adds notes, uploads attachment
 12. Doctor enters diagnosis → tags follow-up → completes
 13. Visit summary SMS sent → patient opens persistent link
-14. Review SMS sent (if add-on) → patient rates → 5-star → external platform
+14. Review SMS sent (if location enabled + credits available) → patient rates → 5-star → external platform
 15. Patient returns → receptionist picks follow-up → AI enters follow-up mode
 16. Doctor refers patient → receiving clinic inbox → patient arrives → auto-matched
 17. Collision: two patients same name+birthday → phone verification → records distinguished
 18. Session recovery: close browser → rescan QR → resume
 19. Manager views analytics: employee stats, wait time heatmap, return rates
-20. Owner views credits, upgrades plan, manages add-ons
+20. Owner views credits, upgrades plan, manages per-location SMS toggles
 
 **Edge cases:**
 - [ ] Concurrent session guard (scan at Location B while active at A)

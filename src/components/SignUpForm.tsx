@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,12 +29,18 @@ function Spinner() {
   );
 }
 
+const fieldVariants = {
+  hidden: { opacity: 0, height: 0, marginTop: 0, overflow: "hidden" as const },
+  visible: { opacity: 1, height: "auto", marginTop: 16, overflow: "visible" as const },
+};
+
 export default function SignUpForm() {
+  const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
-  const [interest, setInterest] = useState<"free_trial" | "demo">("free_trial");
+  const [interest, setInterest] = useState<"free_trial" | "meet">("free_trial");
 
   useEffect(() => {
     if (!supabase) return;
@@ -42,11 +49,12 @@ export default function SignUpForm() {
     });
   }, []);
 
-  // Auto-select "demo" when arriving via ?interest=demo
+  // Auto-select "meet" when arriving via ?interest=demo or ?interest=meet
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("interest") === "demo") {
-      setInterest("demo");
+    const val = params.get("interest");
+    if (val === "demo" || val === "meet") {
+      setInterest("meet");
     }
   }, []);
 
@@ -72,12 +80,12 @@ export default function SignUpForm() {
     }
 
     const { error: dbError } = await supabase.rpc("submit_contact", {
-      p_clinic_name: data.get("clinic_name") as string,
+      p_clinic_name: (data.get("clinic_name") as string) || null,
       p_contact_name: data.get("contact_name") as string,
       p_email: data.get("email") as string,
       p_phone: (data.get("phone") as string) || null,
-      p_city: data.get("city") as string,
-      p_interest: data.get("interest") as string,
+      p_city: interest === "free_trial" ? (data.get("city") as string) : null,
+      p_interest: interest,
       p_notes: (data.get("notes") as string) || null,
     });
 
@@ -97,6 +105,11 @@ export default function SignUpForm() {
       return;
     }
 
+    if (interest === "meet") {
+      router.push("/book");
+      return;
+    }
+
     setSubmitted(true);
   }
 
@@ -104,18 +117,28 @@ export default function SignUpForm() {
     <>
       {!submitted && (
         <div className="mb-10">
-          <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
-            {interest === "demo" ? "Request a demo" : "Start your free trial"}
-          </h2>
-          <p className="text-lg text-slate">
-            {interest === "demo"
-              ? "See how Hilt Health works for your clinic. We\u2019ll walk you through a 15-minute live demo."
-              : "Get 200 credits free. No credit card, no commitment. Tell us about your clinic and we\u2019ll get you set up."}
-          </p>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={interest}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.2 }}
+            >
+              <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
+                {interest === "meet" ? "Meet with us" : "Apply for Premium Trial"}
+              </h2>
+              <p className="text-lg text-slate">
+                {interest === "meet"
+                  ? "Let\u2019s find a time to chat about how Hilt Health can work for your clinic."
+                  : <>Start with 200 free credits. No card required. <Link href="/start-trial" className="text-hilt-blue hover:underline font-medium">See trial details</Link>.</>}
+              </p>
+            </motion.div>
+          </AnimatePresence>
         </div>
       )}
 
-      {waitlistCount !== null && !submitted && (
+      {waitlistCount !== null && !submitted && interest === "free_trial" && (
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -166,7 +189,7 @@ export default function SignUpForm() {
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
             onSubmit={handleSubmit}
-            className="mx-auto max-w-lg space-y-4"
+            className="mx-auto max-w-lg"
           >
             {/* Honeypot — hidden from real users, bots fill it */}
             <div className="absolute -left-[9999px]" aria-hidden="true">
@@ -174,21 +197,63 @@ export default function SignUpForm() {
             </div>
 
             <div>
-              <label htmlFor="clinic_name" className="mb-1 block text-sm font-medium text-ink text-left">
-                Clinic name <span className="text-red-400">*</span>
+              <label htmlFor="interest" className="mb-1 block text-sm font-medium text-ink text-left">
+                I&apos;m interested in <span className="text-red-400">*</span>
               </label>
-              <input
-                type="text"
-                id="clinic_name"
-                name="clinic_name"
-                required
-                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
-                placeholder="Niagara Family Health Clinic"
-                suppressHydrationWarning
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setInterest("free_trial")}
+                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                    interest === "free_trial"
+                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
+                      : "border-gray-300 text-slate hover:border-gray-400"
+                  }`}
+                >
+                  Premium Free Trial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInterest("meet")}
+                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
+                    interest === "meet"
+                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
+                      : "border-gray-300 text-slate hover:border-gray-400"
+                  }`}
+                >
+                  Meet with Us
+                </button>
+              </div>
+              <input type="hidden" name="interest" value={interest} />
             </div>
 
-            <div>
+            <AnimatePresence initial={false}>
+              {interest === "free_trial" && (
+                <motion.div
+                  key="clinic_name"
+                  variants={fieldVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
+                >
+                  <label htmlFor="clinic_name" className="mb-1 block text-sm font-medium text-ink text-left">
+                    Clinic name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    id="clinic_name"
+                    name="clinic_name"
+                    required
+                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
+                    placeholder="Niagara Family Health Clinic"
+                    suppressHydrationWarning
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="mt-4">
               <label htmlFor="contact_name" className="mb-1 block text-sm font-medium text-ink text-left">
                 Your name <span className="text-red-400">*</span>
               </label>
@@ -203,7 +268,7 @@ export default function SignUpForm() {
               />
             </div>
 
-            <div>
+            <div className="mt-4">
               <label htmlFor="email" className="mb-1 block text-sm font-medium text-ink text-left">
                 Email <span className="text-red-400">*</span>
               </label>
@@ -218,7 +283,7 @@ export default function SignUpForm() {
               />
             </div>
 
-            <div>
+            <div className="mt-4">
               <label htmlFor="phone" className="mb-1 block text-sm font-medium text-ink text-left">
                 Phone <span className="text-ash font-normal">(optional)</span>
               </label>
@@ -232,109 +297,94 @@ export default function SignUpForm() {
               />
             </div>
 
-            <div className="relative">
-              <label htmlFor="interest" className="mb-1 block text-sm font-medium text-ink text-left">
-                I&apos;m interested in <span className="text-red-400">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setInterest("free_trial")}
-                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
-                    interest === "free_trial"
-                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
-                      : "border-gray-300 text-slate hover:border-gray-400"
-                  }`}
+            <AnimatePresence initial={false}>
+              {interest === "free_trial" && (
+                <motion.div
+                  key="city"
+                  variants={fieldVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  transition={{ duration: 0.25, ease: "easeInOut" }}
                 >
-                  Free Trial
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInterest("demo")}
-                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
-                    interest === "demo"
-                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
-                      : "border-gray-300 text-slate hover:border-gray-400"
-                  }`}
-                >
-                  Live Demo
-                </button>
-              </div>
-              <input type="hidden" name="interest" value={interest} />
-            </div>
+                  <label htmlFor="city" className="mb-1 block text-sm font-medium text-ink text-left">
+                    City <span className="text-red-400">*</span>
+                  </label>
+                  <div className="relative">
+                    <select
+                      id="city"
+                      name="city"
+                      required
+                      defaultValue=""
+                      className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-10 text-ink focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors appearance-none bg-white"
+                      suppressHydrationWarning
+                    >
+                      <option value="" disabled>
+                        Select your city
+                      </option>
+                      {CITIES.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))}
+                    </select>
+                    <svg
+                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ash"
+                      width="20"
+                      height="20"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                    </svg>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            <div className="relative">
-              <label htmlFor="city" className="mb-1 block text-sm font-medium text-ink text-left">
-                City <span className="text-red-400">*</span>
-              </label>
-              <div className="relative">
-                <select
-                  id="city"
-                  name="city"
-                  required
-                  defaultValue=""
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-10 text-ink focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors appearance-none bg-white"
-                  suppressHydrationWarning
-                >
-                  <option value="" disabled>
-                    Select your city
-                  </option>
-                  {CITIES.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ash"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
-              </div>
-            </div>
-
-            <div>
+            <div className="mt-4">
               <label htmlFor="notes" className="mb-1 block text-sm font-medium text-ink text-left">
-                Notes <span className="text-ash font-normal">(optional)</span>
+                {interest === "meet" ? (
+                  <>What would you like to discuss? <span className="text-red-400">*</span></>
+                ) : (
+                  <>Notes <span className="text-ash font-normal">(optional)</span></>
+                )}
               </label>
               <textarea
                 id="notes"
                 name="notes"
                 rows={3}
+                required={interest === "meet"}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors resize-none"
-                placeholder="Anything you'd like us to know"
+                placeholder={interest === "meet" ? "e.g. I'd like to learn about AI pre-screening for my walk-in clinic" : "Anything you'd like us to know"}
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600">{error}</p>
+              <p className="mt-4 text-sm text-red-600">{error}</p>
             )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-hilt-blue py-4 text-lg font-semibold text-white transition-all hover:bg-hilt-blue-dark disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="mt-4 w-full rounded-xl bg-hilt-blue py-4 text-lg font-semibold text-white transition-all hover:bg-hilt-blue-dark disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
                   <Spinner />
                   Submitting...
                 </>
-              ) : interest === "demo" ? (
-                "Request Demo"
+              ) : interest === "meet" ? (
+                "Book a Meeting"
               ) : (
-                "Request Free Trial"
+                "Apply for Premium Trial"
               )}
             </button>
 
             {/* CASL consent + privacy link */}
-            <p className="text-xs text-ash text-center leading-relaxed">
+            <p className="mt-4 text-xs text-ash text-center leading-relaxed">
               By submitting, you consent to Hilt Health contacting you by email about
               our services. You can unsubscribe at any time. See our{" "}
               <Link href="/privacy" className="text-hilt-blue hover:underline">

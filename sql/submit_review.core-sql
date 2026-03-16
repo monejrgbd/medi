@@ -14,6 +14,7 @@ DECLARE
   v_review record;
   v_clean_feedback text;
   v_platform jsonb;
+  v_min_rating smallint;
 BEGIN
   -- Validate rating
   IF p_rating IS NULL OR p_rating < 1 OR p_rating > 5 THEN
@@ -46,8 +47,15 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Already submitted');
   END IF;
 
-  -- If 5-star: check for external platform redirect
-  IF p_rating = 5 THEN
+  -- Check configurable redirect threshold (default 5)
+  SELECT COALESCE(rr.redirect_min_rating, 5) INTO v_min_rating
+  FROM public.review_rotation rr
+  WHERE rr.location_id = v_review.location_id;
+
+  IF v_min_rating IS NULL THEN v_min_rating := 5; END IF;
+
+  -- If rating meets threshold: check for external platform redirect
+  IF p_rating >= v_min_rating THEN
     v_platform := public.get_current_review_platform(v_review.location_id);
 
     IF v_platform IS NOT NULL THEN
@@ -67,7 +75,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- Store review (no external redirect for < 5 stars or no platform configured)
+  -- Store review (no external redirect for below-threshold or no platform configured)
   UPDATE public.reviews
   SET rating = p_rating,
       feedback_text = v_clean_feedback,
