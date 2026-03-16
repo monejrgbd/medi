@@ -346,6 +346,7 @@ const tabContent: Record<Tab, () => React.ReactElement> = {
 
 export default function DashboardMockup() {
   const [active, setActive] = useState<Tab>("Wait Times");
+  const [clicked, setClicked] = useState(false);
   const Content = tabContent[active];
 
   return (
@@ -355,7 +356,7 @@ export default function DashboardMockup() {
         {tabs.map(tab => (
           <button
             key={tab}
-            onClick={() => setActive(tab)}
+            onClick={() => { setActive(tab); setClicked(true); }}
             className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               active === tab
                 ? "border-hilt-blue text-hilt-blue"
@@ -367,7 +368,7 @@ export default function DashboardMockup() {
         ))}
       </div>
 
-      <p className="animate-pulse text-center text-sm text-hilt-blue font-medium py-2 bg-blue-50/80">Click the tabs to explore</p>
+      {!clicked && <p className="animate-pulse text-center text-sm text-hilt-blue font-medium py-2 bg-blue-50/80">Click the tabs to explore</p>}
 
       <div className="p-4 sm:p-6">
         {/* Date picker mock */}

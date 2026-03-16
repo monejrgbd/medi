@@ -19,7 +19,7 @@ function ChatMockup() {
   return (
     <div className="space-y-3">
       {/* Chat card */}
-      <div className="w-[300px] sm:w-[210px] md:w-[260px] lg:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
+      <div className="w-[300px] sm:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
         {/* Header — matches prod: logo + name left, language switcher right */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-2">
@@ -62,29 +62,21 @@ function ChatMockup() {
         </div>
 
         {/* Input area — matches prod: textarea + mic + send */}
-        <div className="flex items-end gap-1.5 border-t border-gray-100 bg-white px-3 py-2.5">
-          <div className="flex-1 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-            <p className="text-[11px] text-ash">Send a message</p>
+        <div className="flex items-center gap-1 border-t border-gray-100 bg-white px-2 py-2">
+          <div className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5">
+            <p className="text-[10px] text-ash">Send a message</p>
           </div>
           {/* Mic button */}
-          <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-xl bg-gray-100">
-            <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-gray-100">
+            <svg className="h-3 w-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
             </svg>
           </div>
           {/* Send button */}
-          <div className="flex h-[34px] shrink-0 items-center justify-center rounded-xl bg-hilt-blue px-3">
-            <span className="text-[11px] font-medium text-white">Send</span>
+          <div className="flex h-[26px] shrink-0 items-center justify-center rounded-lg bg-hilt-blue px-2.5">
+            <span className="text-[10px] font-medium text-white">Send</span>
           </div>
         </div>
-      </div>
-
-      {/* 10 more messages label */}
-      <div
-        className="hero-msg flex items-center justify-center text-[10px] text-ash"
-        style={{ "--delay": "6.3s" } as React.CSSProperties}
-      >
-        10 more messages
       </div>
 
       {/* Arrow: chat → summary */}
@@ -97,8 +89,8 @@ function ChatMockup() {
       </div>
 
       {/* Summary confirmation card */}
-      <div className="hero-msg" style={{ "--delay": "7.3s" } as React.CSSProperties}>
-        <div className="w-[300px] sm:w-[210px] md:w-[260px] lg:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5">
+      <div>
+        <div className="w-[300px] sm:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5">
           <p className="text-[10px] font-semibold text-green-700 mb-2">Summary for your approval</p>
           <p className="text-sm leading-relaxed text-green-900 mb-3">
             Returning patient with worsening knee pain, new morning stiffness in hands lasting about 1 hour, and knuckle swelling. Ibuprofen provides partial relief. Fatigue reported. Family history of rheumatoid arthritis.
@@ -122,10 +114,10 @@ function ChatMockup() {
             </div>
           </div>
           <div className="flex gap-2">
-            <div className="flex-1 rounded-lg border border-green-300 bg-white py-2 text-center text-xs font-medium text-green-700">
+            <div className="flex-1 rounded-lg border border-green-300 bg-white py-2 text-center text-[10px] font-medium text-green-700">
               Something is not right
             </div>
-            <div className="flex-1 rounded-lg bg-green-600 py-2 text-center text-xs font-semibold text-white">
+            <div className="flex-1 rounded-lg bg-green-600 py-2 text-center text-[10px] font-semibold text-white">
               This is accurate ✓
             </div>
           </div>
@@ -141,10 +133,10 @@ function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-24 pb-20 lg:pt-32 lg:pb-24">
       <div className="mx-auto max-w-[1200px] px-6">
-        <div className="grid items-start gap-4 sm:grid-cols-5 md:gap-6 lg:grid-cols-2 lg:gap-16 sm:pt-8">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-4 md:gap-6 lg:gap-16 sm:pt-8">
           {/* Left column */}
-          <div className="sm:col-span-3 lg:col-span-1">
-            <h1 className="mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-ink lg:text-5xl xl:text-6xl">
+          <div className="sm:flex-1 sm:min-w-0">
+            <h1 className="mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
               Patients describe
               <br />
               symptoms to AI.
@@ -155,13 +147,13 @@ function HeroSection() {
               <br />
               the summary.</span>
             </h1>
-            <p className="mb-8 text-lg text-slate sm:text-xl">
+            <p className="mb-8 text-lg text-slate sm:text-sm md:text-base lg:text-xl">
               Doctors walk in prepared.
             </p>
             {/* Start Trial CTA */}
             <Link
               href="/start-trial"
-              className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base sm:text-xs sm:px-4 sm:py-2.5 md:text-sm md:px-5 md:py-3 lg:text-base lg:px-6 lg:py-3.5 font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5 sm:text-xs sm:px-3 sm:py-2 md:text-sm md:px-4 md:py-2.5 lg:text-base lg:px-6 lg:py-3.5"
             >
               Start Trial, Up to $200 in Free Credits
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -171,9 +163,9 @@ function HeroSection() {
             <p className="mt-2 text-xs text-slate">No credit card required</p>
 
             {/* Live Demo Card */}
-            <div className="mt-6 sm:mt-8 max-w-md rounded-xl md:rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-3 md:px-3 md:py-4 shadow-lg">
-              {/* Mobile layout */}
-              <div className="flex items-center gap-3 md:hidden">
+            <div className="mt-6 sm:mt-4 md:mt-8 max-w-md rounded-xl sm:rounded-xl md:rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-3 sm:px-2 sm:py-2.5 md:px-3 md:py-4 shadow-lg">
+              {/* Mobile layout — horizontal QR + text */}
+              <div className="flex items-center gap-3 sm:hidden">
                 <div className="shrink-0 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-900/5">
                   <DemoQR size={50} />
                 </div>
@@ -190,16 +182,19 @@ function HeroSection() {
                   </Link>
                 </div>
               </div>
-              {/* Desktop layout */}
-              <div className="hidden md:flex flex-col items-center text-center">
-                <div className="rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-gray-900/5 mb-2">
-                  <DemoQR size={72} />
+              {/* Desktop layout — vertical stack */}
+              <div className="hidden sm:flex flex-col items-center text-center">
+                <div className="md:hidden rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-900/5 mb-1.5">
+                  <DemoQR size={20} />
                 </div>
-                <p className="text-xs font-bold text-ink mb-0.5">See it in action</p>
-                <p className="text-[11px] text-slate mb-2">Experience the full patient-to-doctor flow.</p>
+                <div className="hidden md:block rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-gray-900/5 mb-2">
+                  <DemoQR size={70} />
+                </div>
+                <p className="text-[10px] md:text-xs font-bold text-ink mb-0.5">See it in action</p>
+                <p className="text-[9px] md:text-[11px] text-slate mb-1.5 md:mb-2">Experience the full patient-to-doctor flow.</p>
                 <Link
                   href="/demo"
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-green-600/20 transition-all hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-1 md:gap-1.5 rounded-lg bg-green-600 px-2 py-1 md:px-3 md:py-1.5 text-[9px] md:text-[11px] font-semibold text-white shadow-md shadow-green-600/20 transition-all hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
                 >
                   <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
@@ -211,7 +206,7 @@ function HeroSection() {
           </div>
 
           {/* Patient flow: chat → summary (phone-sized, right column) */}
-          <div className="sm:col-span-2 lg:col-span-1 flex flex-col items-center gap-3 mt-8 mb-8 sm:mt-0 sm:mb-0">
+          <div className="sm:shrink-0 sm:w-[340px] lg:w-auto lg:flex-1 flex flex-col items-center gap-3 mt-8 mb-8 sm:mt-0 sm:mb-0">
             {/* Glow behind everything */}
             <div className="relative">
               <div className="absolute -inset-8 rounded-3xl bg-hilt-blue/5 blur-3xl" />
@@ -462,17 +457,36 @@ function HowItWorksSection() {
     {
       num: "01",
       title: "Patient scans QR",
-      desc: "Tablet or their own phone. AI asks what a doctor needs to know, symptoms, medications, allergies. 3 to 5 minutes. No forms. 130+ languages supported.",
+      desc: "Tablet or their own phone. AI asks what a doctor needs to know — symptoms, medications, allergies. 3 to 5 minutes. No forms. 130+ languages supported.",
+      icon: (
+        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625v2.625m0 3v.375m0-3h2.625m-2.625 0H15m3.75 0v.375m0-3v.375m0 0h.375m-3.375 0H15" />
+        </svg>
+      ),
+      accent: "bg-blue-50 text-hilt-blue ring-blue-100",
     },
     {
       num: "02",
       title: "AI builds the summary",
       desc: "The patient reviews and approves the summary before it reaches the doctor. Nothing is hidden.",
+      icon: (
+        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+        </svg>
+      ),
+      accent: "bg-violet-50 text-violet-600 ring-violet-100",
     },
     {
       num: "03",
       title: "Doctor walks in ready",
-      desc: "Full transcript, AI summary, and diagnostic opinion, all before the doctor enters the room.",
+      desc: "Full transcript, AI summary, and diagnostic opinion — all before the doctor enters the room.",
+      icon: (
+        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75" />
+        </svg>
+      ),
+      accent: "bg-green-50 text-green-600 ring-green-100",
     },
   ];
 
@@ -480,16 +494,33 @@ function HowItWorksSection() {
     <section className="bg-snow pt-32 pb-24 lg:pt-40 lg:pb-32">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <h2 className="mb-16 text-center text-3xl font-bold text-ink sm:text-4xl">
+          <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+            How it works
+          </p>
+          <h2 className="mb-6 text-center text-3xl font-bold text-ink sm:text-4xl">
             Three steps. No training needed.
           </h2>
+          <p className="mx-auto mb-16 max-w-lg text-center text-lg text-slate">
+            Your staff keeps doing what they do. Hilt handles the rest.
+          </p>
         </FadeIn>
-        <div className="grid gap-12 sm:grid-cols-3 sm:gap-8">
+        <div className="relative grid gap-8 sm:grid-cols-3 sm:gap-6 lg:gap-10">
+          {/* Connecting line — desktop only */}
+          <div className="pointer-events-none absolute top-16 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] hidden sm:block">
+            <div className="h-px w-full bg-gradient-to-r from-blue-200 via-violet-200 to-green-200" />
+          </div>
           {steps.map((s, i) => (
             <FadeIn key={s.num} delay={i * 0.15}>
-              <div>
-                <p className="mb-4 text-6xl font-bold text-hilt-blue/15">{s.num}</p>
-                <h3 className="mb-3 text-xl font-semibold text-ink">{s.title}</h3>
+              <div className="relative rounded-2xl border border-gray-100 bg-white p-8 shadow-sm transition-shadow hover:shadow-md">
+                {/* Icon circle */}
+                <div className={`mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl ring-1 ${s.accent}`}>
+                  {s.icon}
+                </div>
+                {/* Step number + title */}
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="text-xs font-bold tracking-wider text-ash">{s.num}</span>
+                  <h3 className="text-xl font-semibold text-ink">{s.title}</h3>
+                </div>
                 <p className="leading-relaxed text-slate">{s.desc}</p>
               </div>
             </FadeIn>
@@ -632,7 +663,7 @@ function BeyondTheVisitSection() {
               </div>
               <h3 className="mb-2 text-lg font-semibold text-ink">Zero lost referrals</h3>
               <p className="text-sm leading-relaxed text-slate mb-5">
-                Refer a patient with one click. The receiving clinic gets the full package &mdash; AI summary, doctor notes, visit history. You see when they arrive. No fax, no wondering.
+                Refer a patient with one click. The receiving clinic gets the full package: AI summary, doctor notes, visit history. You see when they arrive. No fax, no wondering.
               </p>
               {/* Mini referral tracker */}
               <div className="rounded-xl bg-white/80 p-4 ring-1 ring-purple-200/60">

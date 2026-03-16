@@ -22,34 +22,12 @@ export default function DemoQR({ size = 100 }: { size?: number }) {
     if (!canvas) return;
 
     await QRCode.toCanvas(canvas, CHECKIN_URL, {
-      width: 256,
+      width: size * 2,
       margin: 2,
       errorCorrectionLevel: "H",
       color: { dark: "#111827", light: "#ffffff" },
     });
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = "high";
-
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const size = 56;
-      const x = (canvas.width - size) / 2;
-      const y = (canvas.height - size) / 2;
-
-      const side = Math.min(img.naturalWidth, img.naturalHeight);
-      const sx = (img.naturalWidth - side) / 2;
-      const sy = (img.naturalHeight - side) / 2;
-
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(x - 4, y - 4, size + 8, size + 8);
-      ctx.drawImage(img, sx, sy, side, side, x, y, size, size);
-    };
-    img.src = LOGO_URL;
   }
 
   return (

@@ -77,12 +77,12 @@ export default function StartTrialPage() {
             </li>
           </ul>
 
-          <a
-            href="#contact"
+          <Link
+            href="/#contact"
             className="mt-6 block rounded-lg border-2 border-hilt-blue py-3 text-center text-sm font-semibold text-hilt-blue transition-all hover:bg-hilt-blue hover:text-white"
           >
             Apply for Premium Trial
-          </a>
+          </Link>
         </div>
       </div>
 
