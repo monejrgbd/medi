@@ -456,8 +456,8 @@ function HowItWorksSection() {
   const steps = [
     {
       num: "01",
-      title: "Patient scans QR",
-      desc: "Tablet or their own phone. AI asks what a doctor needs to know — symptoms, medications, allergies. 3 to 5 minutes. No forms. 130+ languages supported.",
+      title: "Patient scans a QR code in your waiting room.",
+      desc: "You get a unique QR code for each location when you sign up. Patients scan it with their own phone or a clinic tablet, enter their name and date of birth, and they are checked in. About 10 seconds.",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
@@ -468,22 +468,34 @@ function HowItWorksSection() {
     },
     {
       num: "02",
-      title: "AI builds the summary",
-      desc: "The patient reviews and approves the summary before it reaches the doctor. Nothing is hidden.",
+      title: "Receptionist approves with one click.",
+      desc: "Patient appears in the front desk queue. Receptionist verifies, taps approve, and the AI conversation begins.",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      ),
+      accent: "bg-amber-50 text-amber-600 ring-amber-100",
+    },
+    {
+      num: "03",
+      title: "Patient talks to the AI while they wait.",
+      desc: "AI asks about symptoms, medications, and allergies through a conversation. 130+ languages, voice and text. The patient reviews and approves the summary before it reaches the doctor.",
+      tag: "Phone number verified here if not already on file",
+      icon: (
+        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
         </svg>
       ),
       accent: "bg-violet-50 text-violet-600 ring-violet-100",
     },
     {
-      num: "03",
-      title: "Doctor walks in ready",
-      desc: "Full transcript, AI summary, and diagnostic opinion — all before the doctor enters the room.",
+      num: "04",
+      title: "Doctor walks in already briefed.",
+      desc: "Summary, suggested differentials, medications, allergies, and full visit history. A 30 second read replaces 5 minutes of intake questions.",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15a2.25 2.25 0 0 1 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
         </svg>
       ),
       accent: "bg-green-50 text-green-600 ring-green-100",
@@ -498,30 +510,35 @@ function HowItWorksSection() {
             How it works
           </p>
           <h2 className="mb-6 text-center text-3xl font-bold text-ink sm:text-4xl">
-            Three steps. No training needed.
+            Four steps. No training needed.
           </h2>
           <p className="mx-auto mb-16 max-w-lg text-center text-lg text-slate">
-            Your staff keeps doing what they do. Hilt handles the rest.
+            Set it up in five minutes. Results start with the first patient.
           </p>
         </FadeIn>
-        <div className="relative grid gap-8 sm:grid-cols-3 sm:gap-6 lg:gap-10">
+        <div className="relative grid gap-8 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 lg:gap-8">
           {/* Connecting line — desktop only */}
-          <div className="pointer-events-none absolute top-16 left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] hidden sm:block">
-            <div className="h-px w-full bg-gradient-to-r from-blue-200 via-violet-200 to-green-200" />
+          <div className="pointer-events-none absolute top-16 left-[calc(12.5%+24px)] right-[calc(12.5%+24px)] hidden lg:block">
+            <div className="h-px w-full bg-gradient-to-r from-blue-200 via-violet-200 via-amber-200 to-green-200" />
           </div>
           {steps.map((s, i) => (
-            <FadeIn key={s.num} delay={i * 0.15}>
-              <div className="relative rounded-2xl border border-gray-100 bg-white p-8 shadow-sm transition-shadow hover:shadow-md">
-                {/* Icon circle */}
-                <div className={`mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl ring-1 ${s.accent}`}>
+            <FadeIn key={s.num} delay={i * 0.12}>
+              <div className="relative rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md h-full">
+                {/* Icon */}
+                <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${s.accent}`}>
                   {s.icon}
                 </div>
                 {/* Step number + title */}
-                <div className="mb-3 flex items-center gap-3">
+                <div className="mb-3 flex items-baseline gap-2.5">
                   <span className="text-xs font-bold tracking-wider text-ash">{s.num}</span>
-                  <h3 className="text-xl font-semibold text-ink">{s.title}</h3>
+                  <h3 className="text-base font-semibold text-ink leading-snug">{s.title}</h3>
                 </div>
-                <p className="leading-relaxed text-slate">{s.desc}</p>
+                <p className="text-sm leading-relaxed text-slate">{s.desc}</p>
+                {s.tag && (
+                  <span className="mt-3 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-green-200">
+                    {s.tag}
+                  </span>
+                )}
               </div>
             </FadeIn>
           ))}
@@ -909,8 +926,8 @@ export default async function Home() {
     <>
       <main>
         <HeroSection />
-        <BeforeAfterSection />
         <HowItWorksSection />
+        <BeforeAfterSection />
         <BeyondTheVisitSection />
         <TrustAndControlSection />
         <PricingAndContactSection />
