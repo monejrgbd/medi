@@ -19,7 +19,7 @@ function ChatMockup() {
   return (
     <div className="space-y-3">
       {/* Chat card */}
-      <div className="w-[300px] sm:w-[340px] md:w-[260px] lg:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
+      <div className="w-[300px] sm:w-[210px] md:w-[260px] lg:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
         {/* Header — matches prod: logo + name left, language switcher right */}
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
           <div className="flex items-center gap-2">
@@ -59,12 +59,6 @@ function ChatMockup() {
             <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-hilt-blue" />
             <span className="text-[11px] text-ash">Hilt Health is typing...</span>
           </div>
-          <div
-            className="hero-msg flex items-center justify-center pt-2 text-[10px] text-ash"
-            style={{ "--delay": "6.3s" } as React.CSSProperties}
-          >
-            10 more messages
-          </div>
         </div>
 
         {/* Input area — matches prod: textarea + mic + send */}
@@ -85,6 +79,14 @@ function ChatMockup() {
         </div>
       </div>
 
+      {/* 10 more messages label */}
+      <div
+        className="hero-msg flex items-center justify-center text-[10px] text-ash"
+        style={{ "--delay": "6.3s" } as React.CSSProperties}
+      >
+        10 more messages
+      </div>
+
       {/* Arrow: chat → summary */}
       <div className="hero-msg flex justify-center" style={{ "--delay": "7s" } as React.CSSProperties}>
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
@@ -96,7 +98,7 @@ function ChatMockup() {
 
       {/* Summary confirmation card */}
       <div className="hero-msg" style={{ "--delay": "7.3s" } as React.CSSProperties}>
-        <div className="w-[300px] sm:w-[340px] md:w-[260px] lg:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5">
+        <div className="w-[300px] sm:w-[210px] md:w-[260px] lg:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5">
           <p className="text-[10px] font-semibold text-green-700 mb-2">Summary for your approval</p>
           <p className="text-sm leading-relaxed text-green-900 mb-3">
             Returning patient with worsening knee pain, new morning stiffness in hands lasting about 1 hour, and knuckle swelling. Ibuprofen provides partial relief. Fatigue reported. Family history of rheumatoid arthritis.
@@ -139,10 +141,10 @@ function HeroSection() {
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-24 pb-20 lg:pt-32 lg:pb-24">
       <div className="mx-auto max-w-[1200px] px-6">
-        <div className="grid items-start gap-8 md:grid-cols-[3fr,2fr] lg:grid-cols-2 lg:gap-16 md:pt-8">
+        <div className="grid items-start gap-4 sm:grid-cols-5 md:gap-6 lg:grid-cols-2 lg:gap-16 sm:pt-8">
           {/* Left column */}
-          <div>
-            <h1 className="mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-5xl md:text-4xl lg:text-5xl xl:text-6xl">
+          <div className="sm:col-span-3 lg:col-span-1">
+            <h1 className="mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-ink lg:text-5xl xl:text-6xl">
               Patients describe
               <br />
               symptoms to AI.
@@ -159,7 +161,7 @@ function HeroSection() {
             {/* Start Trial CTA */}
             <Link
               href="/start-trial"
-              className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base md:text-sm md:px-5 md:py-3 lg:text-base lg:px-6 lg:py-3.5 font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base sm:text-xs sm:px-4 sm:py-2.5 md:text-sm md:px-5 md:py-3 lg:text-base lg:px-6 lg:py-3.5 font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
             >
               Start Trial, Up to $200 in Free Credits
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
@@ -169,9 +171,9 @@ function HeroSection() {
             <p className="mt-2 text-xs text-slate">No credit card required</p>
 
             {/* Live Demo Card */}
-            <div className="mt-6 sm:mt-8 max-w-md rounded-xl sm:rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-3 sm:p-5 shadow-lg">
+            <div className="mt-6 sm:mt-8 max-w-md rounded-xl md:rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-3 md:px-3 md:py-4 shadow-lg">
               {/* Mobile layout */}
-              <div className="flex items-center gap-3 sm:hidden">
+              <div className="flex items-center gap-3 md:hidden">
                 <div className="shrink-0 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-900/5">
                   <DemoQR size={50} />
                 </div>
@@ -189,29 +191,27 @@ function HeroSection() {
                 </div>
               </div>
               {/* Desktop layout */}
-              <div className="hidden sm:flex items-center gap-4">
-                <div className="shrink-0 rounded-xl bg-white p-2 shadow-sm ring-1 ring-gray-900/5">
-                  <DemoQR />
+              <div className="hidden md:flex flex-col items-center text-center">
+                <div className="rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-gray-900/5 mb-2">
+                  <DemoQR size={72} />
                 </div>
-                <div>
-                  <p className="text-xs font-bold text-ink mb-0.5">See it in action</p>
-                  <p className="text-[11px] text-slate mb-2">Experience the full patient-to-doctor flow.</p>
-                  <Link
-                    href="/demo"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-green-600/20 transition-all hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
-                  >
-                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-                    </svg>
-                    Try Live Demo
-                  </Link>
-                </div>
+                <p className="text-xs font-bold text-ink mb-0.5">See it in action</p>
+                <p className="text-[11px] text-slate mb-2">Experience the full patient-to-doctor flow.</p>
+                <Link
+                  href="/demo"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-green-600/20 transition-all hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
+                >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                  </svg>
+                  Try Live Demo
+                </Link>
               </div>
             </div>
           </div>
 
           {/* Patient flow: chat → summary (phone-sized, right column) */}
-          <div className="flex flex-col items-center gap-3 mt-8 mb-8 md:mt-0 md:mb-0">
+          <div className="sm:col-span-2 lg:col-span-1 flex flex-col items-center gap-3 mt-8 mb-8 sm:mt-0 sm:mb-0">
             {/* Glow behind everything */}
             <div className="relative">
               <div className="absolute -inset-8 rounded-3xl bg-hilt-blue/5 blur-3xl" />

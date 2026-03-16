@@ -105,7 +105,33 @@ export default function EmployeeStatsTable({ data }: Props) {
     { key: "idle_hours", label: "Idle Time", doctorOnly: true, hideOnMobile: true },
   ];
 
+  const avgUtil = data.employees.filter(e => e.utilization != null);
+  const avgUtilization = avgUtil.length > 0
+    ? avgUtil.reduce((s, e) => s + e.utilization!, 0) / avgUtil.length
+    : null;
+
   return (
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Active staff</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{data.employees.length}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Avg utilization</p>
+          <p className="mt-1 text-2xl font-bold text-blue-600">{avgUtilization !== null ? `${avgUtilization.toFixed(0)}%` : "N/A"}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Total hours</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{totalHours.toFixed(1)}<span className="text-sm text-slate ml-0.5">hrs</span></p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Total patients</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{totalPatients}</p>
+        </div>
+      </div>
+
     <div className="rounded-lg border border-gray-200 bg-white overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
@@ -196,6 +222,7 @@ export default function EmployeeStatsTable({ data }: Props) {
           </tr>
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

@@ -99,7 +99,6 @@ export default function ManagerDashboard({
 }: Props) {
   const [selectedLocation, setSelectedLocation] = useState(locations[0]?.id || "");
   const [activeTab, setActiveTab] = useState<Tab>("employees");
-  const [selectedDate, setSelectedDate] = useState(formatDate(new Date()));
   const [dateRange, setDateRange] = useState({
     start: formatDate(daysAgo(6)),
     end: formatDate(new Date()),
@@ -118,7 +117,7 @@ export default function ManagerDashboard({
       let result: any;
       switch (activeTab) {
         case "employees":
-          result = await fetchEmployeeStats(selectedLocation, selectedDate);
+          result = await fetchEmployeeStats(selectedLocation, dateRange.start, dateRange.end);
           break;
         case "patients":
           result = await fetchPatientStats(selectedLocation, dateRange.start, dateRange.end);
@@ -151,7 +150,7 @@ export default function ManagerDashboard({
     } finally {
       setLoading(false);
     }
-  }, [activeTab, selectedLocation, selectedDate, dateRange, orgId]);
+  }, [activeTab, selectedLocation, dateRange, orgId]);
 
   useEffect(() => {
     if (selectedLocation) loadData();
@@ -224,7 +223,7 @@ export default function ManagerDashboard({
                 // Reset date range to tab-specific default
                 if (tab.key === "patients") {
                   setDateRange({ start: formatDate(daysAgo(6)), end: formatDate(new Date()) });
-                } else if (tab.key !== "employees") {
+                } else {
                   setDateRange({ start: formatDate(daysAgo(29)), end: formatDate(new Date()) });
                 }
               }}
@@ -242,20 +241,12 @@ export default function ManagerDashboard({
 
       {/* Date picker */}
       <div className="mb-6">
-        {activeTab === "employees" ? (
-          <DateRangePicker
-            mode="single"
-            date={selectedDate}
-            onDateChange={setSelectedDate}
-          />
-        ) : (
-          <DateRangePicker
-            mode="range"
-            startDate={dateRange.start}
-            endDate={dateRange.end}
-            onApply={(start, end) => setDateRange({ start, end })}
-          />
-        )}
+        <DateRangePicker
+          mode="range"
+          startDate={dateRange.start}
+          endDate={dateRange.end}
+          onApply={(start, end) => setDateRange({ start, end })}
+        />
       </div>
 
       {/* Error */}

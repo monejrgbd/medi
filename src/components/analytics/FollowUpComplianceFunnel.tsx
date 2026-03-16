@@ -58,6 +58,8 @@ export default function FollowUpComplianceFunnel({ data }: Props) {
 
   const { funnel } = data;
   const total = funnel.tagged;
+  const totalReturned = funnel.returned + funnel.returned_after_reminder;
+  const complianceRate = total > 0 ? (totalReturned / total) * 100 : 0;
 
   const bars = [
     { label: "Tagged for Follow-up", value: funnel.tagged, color: "#3b82f6" },
@@ -93,6 +95,26 @@ export default function FollowUpComplianceFunnel({ data }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Compliance rate</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{complianceRate.toFixed(0)}%</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Tagged</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{funnel.tagged}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Returned</p>
+          <p className="mt-1 text-2xl font-bold text-blue-600">{totalReturned}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Overdue</p>
+          <p className="mt-1 text-2xl font-bold text-amber-600">{funnel.overdue}</p>
+        </div>
+      </div>
+
       {/* Funnel */}
       <div className="rounded-lg border border-gray-200 bg-white p-4">
         <h3 className="text-sm font-semibold text-ink mb-4">

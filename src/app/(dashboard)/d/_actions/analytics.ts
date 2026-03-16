@@ -27,7 +27,8 @@ function validateDateRange(start: string, end: string): string | null {
 
 export async function fetchEmployeeStats(
   locationId: string,
-  date?: string,
+  startDate: string,
+  endDate: string,
   staffUserId?: string
 ) {
   await requireAuth();
@@ -36,13 +37,14 @@ export async function fetchEmployeeStats(
   if (staffUserId && !UUID_RE.test(staffUserId))
     return { success: false, error: "Invalid staff user ID" };
 
-  const d = date || new Date().toISOString().split("T")[0];
-  if (!validateDate(d)) return { success: false, error: "Invalid date" };
+  const rangeErr = validateDateRange(startDate, endDate);
+  if (rangeErr) return { success: false, error: rangeErr };
 
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("get_employee_stats", {
     p_location_id: locationId,
-    p_date: d,
+    p_start_date: startDate,
+    p_end_date: endDate,
     p_staff_user_id: staffUserId || null,
   });
 

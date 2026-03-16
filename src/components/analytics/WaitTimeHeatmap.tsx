@@ -17,7 +17,8 @@ interface Props {
 }
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-const HOURS = Array.from({ length: 13 }, (_, i) => i + 8); // 8AM-8PM
+const BASE_START = 8;
+const BASE_END = 20; // 8PM
 
 function getColor(minutes: number, max: number): string {
   if (max === 0) return "rgb(220, 252, 231)";
@@ -60,12 +61,62 @@ export default function WaitTimeHeatmap({ data }: Props) {
 
   const cellMap = new Map<string, HeatmapCell>();
   let maxWait = 0;
+  let minHour = BASE_START;
+  let maxHour = BASE_END;
   for (const cell of data.heatmap) {
     cellMap.set(`${cell.day_of_week}-${cell.hour}`, cell);
     if (cell.avg_wait_minutes > maxWait) maxWait = cell.avg_wait_minutes;
+    if (cell.hour < minHour) minHour = cell.hour;
+    if (cell.hour > maxHour) maxHour = cell.hour;
+  }
+  const HOURS = Array.from({ length: maxHour - minHour + 1 }, (_, i) => i + minHour);
+
+  // Stat card computations
+  const avgWait = data.heatmap.length > 0
+    ? data.heatmap.reduce((s, c) => s + c.avg_wait_minutes, 0) / data.heatmap.length
+    : 0;
+  const peakWait = maxWait;
+
+  // Busiest hour: sum sample_count per hour
+  const hourCounts = new Map<number, number>();
+  const dayCounts = new Map<number, number>();
+  for (const c of data.heatmap) {
+    hourCounts.set(c.hour, (hourCounts.get(c.hour) || 0) + c.sample_count);
+    dayCounts.set(c.day_of_week, (dayCounts.get(c.day_of_week) || 0) + c.sample_count);
+  }
+  let busiestHour = 8;
+  let busiestHourCount = 0;
+  for (const [h, count] of hourCounts) {
+    if (count > busiestHourCount) { busiestHour = h; busiestHourCount = count; }
+  }
+  let busiestDay = 1;
+  let busiestDayCount = 0;
+  for (const [d, count] of dayCounts) {
+    if (count > busiestDayCount) { busiestDay = d; busiestDayCount = count; }
   }
 
   return (
+    <div className="space-y-6">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Avg wait</p>
+          <p className="mt-1 text-2xl font-bold text-green-600">{avgWait.toFixed(1)}<span className="text-sm text-slate ml-0.5">min</span></p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Peak wait</p>
+          <p className="mt-1 text-2xl font-bold text-red-500">{peakWait}<span className="text-sm text-slate ml-0.5">min</span></p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Busiest hour</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{fmtHour(busiestHour)}</p>
+        </div>
+        <div className="rounded-lg border border-gray-200 bg-white p-4">
+          <p className="text-xs font-medium text-slate uppercase">Busiest day</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{DAYS[busiestDay]}</p>
+        </div>
+      </div>
+
     <div className="rounded-lg border border-gray-200 bg-white p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-ink">
@@ -156,6 +207,7 @@ export default function WaitTimeHeatmap({ data }: Props) {
         />
         <span className="text-xs text-slate">High</span>
       </div>
+    </div>
     </div>
   );
 }

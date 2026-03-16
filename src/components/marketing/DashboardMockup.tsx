@@ -16,36 +16,44 @@ function StatCard({ label, value, unit, color }: { label: string; value: string;
 
 function EmployeesTab() {
   const staff = [
-    { name: "Dr. Chen", role: "Doctor", util: 87, patients: 18, throughput: "3.2/hr" },
-    { name: "Dr. Patel", role: "Doctor", util: 74, patients: 14, throughput: "2.8/hr" },
-    { name: "Amy R.", role: "Receptionist", util: 92, patients: 32, throughput: "5.1/hr" },
-    { name: "Mark S.", role: "Receptionist", util: 88, patients: 29, throughput: "4.6/hr" },
+    { name: "Dr. Chen", role: "Doctor", hours: 7.5, util: 87, patients: 18, throughput: "3.2/hr", avgHandling: "14m", idle: "1.0h" },
+    { name: "Dr. Patel", role: "Doctor", hours: 6.8, util: 74, patients: 14, throughput: "2.8/hr", avgHandling: "16m", idle: "1.8h" },
+    { name: "Amy R.", role: "Receptionist", hours: 8.0, util: 92, patients: 32, throughput: "5.1/hr", avgHandling: null, idle: null },
+    { name: "Mark S.", role: "Receptionist", hours: 7.2, util: 88, patients: 29, throughput: "4.6/hr", avgHandling: null, idle: null },
   ];
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
         <StatCard label="Active staff" value="4" />
         <StatCard label="Avg utilization" value="85" unit="%" color="text-blue-600" />
-        <StatCard label="Avg patients/hr" value="3.9" />
-        <StatCard label="Avg shift" value="7.2" unit="hrs" />
+        <StatCard label="Total hours" value="29.5" unit="hrs" />
+        <StatCard label="Total patients" value="93" />
       </div>
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase">Staff</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase">Role</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Hours</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Util.</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Patients</th>
               <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Rate</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Avg Handling</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Idle</th>
             </tr>
           </thead>
           <tbody>
             {staff.map(s => (
               <tr key={s.name} className="border-b border-gray-50">
-                <td className="px-4 py-3 font-medium text-ink">{s.name} <span className="text-slate font-normal">{s.role}</span></td>
+                <td className="px-4 py-3 font-medium text-ink">{s.name}</td>
+                <td className="px-4 py-3 text-slate capitalize">{s.role}</td>
+                <td className="px-4 py-3 text-right text-slate">{s.hours}h</td>
                 <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.util}%</td>
                 <td className="px-4 py-3 text-right text-slate">{s.patients}</td>
                 <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.throughput}</td>
+                <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.avgHandling || "—"}</td>
+                <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.idle || "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -98,13 +106,15 @@ function PatientsTab() {
 
 function WaitTimesTab() {
   const heatmap = [
-    { day: "Mon", values: [3, 5, 8, 11, 6, 4, 7, 5] },
-    { day: "Tue", values: [2, 4, 7, 9, 8, 5, 6, 3] },
-    { day: "Wed", values: [4, 6, 9, 11, 7, 6, 8, 4] },
-    { day: "Thu", values: [3, 5, 10, 13, 9, 5, 7, 6] },
-    { day: "Fri", values: [5, 7, 11, 14, 8, 6, 5, 3] },
+    { day: "Sun", values: [2, 3, 4, 5, 6, 4, 3, 2, 2, 1, 1, 1, 1] },
+    { day: "Mon", values: [3, 5, 7, 9, 12, 14, 11, 8, 6, 5, 4, 3, 2] },
+    { day: "Tue", values: [2, 4, 6, 8, 10, 12, 9, 7, 5, 4, 3, 2, 2] },
+    { day: "Wed", values: [3, 5, 8, 10, 13, 15, 12, 9, 7, 5, 4, 3, 2] },
+    { day: "Thu", values: [4, 6, 9, 11, 14, 16, 13, 10, 8, 6, 5, 3, 2] },
+    { day: "Fri", values: [3, 5, 8, 10, 12, 14, 11, 9, 7, 5, 4, 3, 2] },
+    { day: "Sat", values: [2, 3, 5, 7, 8, 9, 7, 5, 4, 3, 2, 2, 1] },
   ];
-  const hours = ["9am", "10", "11", "12pm", "1", "2", "3", "4"];
+  const hours = ["8am", "9", "10", "11", "12pm", "1", "2", "3", "4", "5", "6", "7", "8pm"];
 
   function heatColor(v: number) {
     if (v <= 4) return "bg-green-400";
@@ -116,9 +126,9 @@ function WaitTimesTab() {
   return (
     <>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-        <StatCard label="Avg wait" value="4.2" unit="min" color="text-green-600" />
-        <StatCard label="Peak wait" value="14" unit="min" color="text-red-500" />
-        <StatCard label="Busiest hour" value="12pm" />
+        <StatCard label="Avg wait" value="6.1" unit="min" color="text-amber-600" />
+        <StatCard label="Peak wait" value="16" unit="min" color="text-red-500" />
+        <StatCard label="Busiest hour" value="1pm" />
         <StatCard label="Busiest day" value="Thu" />
       </div>
       <div className="rounded-lg border border-gray-200 bg-white p-4">
@@ -127,23 +137,22 @@ function WaitTimesTab() {
           <p className="text-xs text-slate">minutes</p>
         </div>
         {/* Hour headers */}
-        <div style={{ display: "grid", gridTemplateColumns: "40px repeat(8, 1fr)", gap: "4px" }} className="mb-1">
+        <div style={{ display: "grid", gridTemplateColumns: "36px repeat(13, 1fr)", gap: "3px" }} className="mb-0.5">
           <div />
           {hours.map(h => (
-            <p key={h} className="text-center text-[10px] sm:text-xs font-medium text-slate">{h}</p>
+            <p key={h} className="text-center text-[8px] sm:text-[10px] font-medium text-slate">{h}</p>
           ))}
         </div>
         {/* Heatmap rows */}
         {heatmap.map(row => (
-          <div key={row.day} style={{ display: "grid", gridTemplateColumns: "40px repeat(8, 1fr)", gap: "4px" }} className="mb-1">
-            <p className="text-[10px] sm:text-xs text-slate flex items-center justify-end pr-1">{row.day}</p>
+          <div key={row.day} style={{ display: "grid", gridTemplateColumns: "36px repeat(13, 1fr)", gap: "3px" }} className="mb-0.5">
+            <p className="text-[9px] sm:text-[10px] text-slate flex items-center justify-end pr-1">{row.day}</p>
             {row.values.map((v, i) => (
               <div
                 key={i}
-                className={`rounded flex items-center justify-center ${heatColor(v)} text-white`}
-                style={{ aspectRatio: "2/1" }}
+                className={`aspect-[2/1] rounded flex items-center justify-center ${heatColor(v)} text-white`}
               >
-                <span className="text-[10px] sm:text-xs font-medium">{v}</span>
+                <span className="text-[8px] sm:text-[10px] font-medium">{v}</span>
               </div>
             ))}
           </div>
@@ -361,6 +370,19 @@ export default function DashboardMockup() {
       <p className="animate-pulse text-center text-sm text-hilt-blue font-medium py-2 bg-blue-50/80">Click the tabs to explore</p>
 
       <div className="p-4 sm:p-6">
+        {/* Date picker mock */}
+        <div className="flex items-center gap-2 mb-4">
+          <div className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-slate">Feb 14</div>
+          <span className="text-xs text-ash">to</span>
+          <div className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-slate">Mar 16</div>
+          <div className="flex items-center gap-1 ml-auto">
+            <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate">Today</div>
+            <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate">7d</div>
+            <div className="rounded-lg border border-hilt-blue bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-hilt-blue">30d</div>
+            <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate">90d</div>
+          </div>
+        </div>
+
         <Content />
 
       </div>

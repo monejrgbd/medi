@@ -61,14 +61,23 @@ export default function DateRangePicker(props: Props) {
         >
           &rarr;
         </button>
-        {props.date !== today && (
+        <div className="flex gap-1">
           <button
             onClick={() => props.onDateChange(today)}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-hilt-blue hover:bg-blue-50"
+            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-slate hover:bg-gray-50"
           >
             Today
           </button>
-        )}
+          {[7, 30, 90].map((d) => (
+            <button
+              key={d}
+              onClick={() => props.onDateChange(addDays(today, -(d - 1)))}
+              className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-slate hover:bg-gray-50"
+            >
+              {d}d ago
+            </button>
+          ))}
+        </div>
       </div>
     );
   }
@@ -141,6 +150,12 @@ function RangePicker({
         Apply
       </button>
       <div className="flex gap-1">
+        <button
+          onClick={() => { setStart(today); setEnd(today); apply(today, today); }}
+          className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-slate hover:bg-gray-50"
+        >
+          Today
+        </button>
         {[7, 30, 90].map((d) => (
           <button
             key={d}
