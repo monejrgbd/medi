@@ -52,12 +52,12 @@ export default function Navbar() {
             >
               Sign In
             </Link>
-            <Link
-              href="/signup"
+            <a
+              href="/start-trial"
               className="rounded-xl bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
             >
               Start Free Trial
-            </Link>
+            </a>
           </div>
 
           <button
@@ -97,12 +97,12 @@ export default function Navbar() {
             >
               Sign In
             </Link>
-            <Link
-              href="/signup"
+            <a
+              href="/start-trial"
               className="block w-full rounded-xl bg-hilt-blue px-5 py-3 text-center text-sm font-semibold text-white"
             >
               Start Free Trial
-            </Link>
+            </a>
           </div>
         )}
       </nav>

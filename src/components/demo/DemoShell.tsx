@@ -219,7 +219,7 @@ export default function DemoShell({
       {/* Content area — all 3 mounted, toggled via display */}
       <div className="flex-1 overflow-hidden relative">
         <div className="absolute inset-0 bg-snow" style={{ display: activeTab === "patient" ? "flex" : "none" }}>
-          <div className="h-full w-full flex flex-col items-center px-4 pt-6">
+          <div className="h-full w-full flex flex-col items-center px-4 pt-6 overflow-y-auto">
             <div className="flex-1 w-full max-w-[40rem] min-h-0 flex flex-col items-center mx-auto">
               <CheckinFlow
                 locationId={locationId}

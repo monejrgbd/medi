@@ -15,45 +15,23 @@ export default function FirstTimerExplainer({
 
   return (
     <div className="w-full max-w-md">
-      <h2 className="text-xl font-bold text-ink mb-4 text-center">
+      <h2 className="text-lg font-bold text-ink mb-3 text-center">
         {t("firstTimer.title")}
       </h2>
 
-      <div className="space-y-4 mb-6">
-        <div className="flex gap-3 rounded-lg border border-gray-100 bg-white p-4">
-          <span className="text-xl flex-shrink-0">1.</span>
-          <div>
-            <p className="text-sm font-medium text-ink mb-0.5">{t("firstTimer.step1Title")}</p>
-            <p className="text-sm text-slate">{t("firstTimer.step1")}</p>
+      <div className="rounded-lg border border-gray-100 bg-white divide-y divide-gray-100 mb-4">
+        {([1, 2, 3, 4] as const).map((n) => (
+          <div key={n} className="flex gap-3 px-4 py-2.5">
+            <span className="text-sm font-semibold text-hilt-blue flex-shrink-0 w-5">{n}.</span>
+            <div>
+              <p className="text-sm font-medium text-ink">{t(`firstTimer.step${n}Title`)}</p>
+              <p className="text-xs text-slate">{t(`firstTimer.step${n}`)}</p>
+            </div>
           </div>
-        </div>
-
-        <div className="flex gap-3 rounded-lg border border-gray-100 bg-white p-4">
-          <span className="text-xl flex-shrink-0">2.</span>
-          <div>
-            <p className="text-sm font-medium text-ink mb-0.5">{t("firstTimer.step2Title")}</p>
-            <p className="text-sm text-slate">{t("firstTimer.step2")}</p>
-          </div>
-        </div>
-
-        <div className="flex gap-3 rounded-lg border border-gray-100 bg-white p-4">
-          <span className="text-xl flex-shrink-0">3.</span>
-          <div>
-            <p className="text-sm font-medium text-ink mb-0.5">{t("firstTimer.step3Title")}</p>
-            <p className="text-sm text-slate">{t("firstTimer.step3")}</p>
-          </div>
-        </div>
-
-        <div className="flex gap-3 rounded-lg border border-gray-100 bg-white p-4">
-          <span className="text-xl flex-shrink-0">4.</span>
-          <div>
-            <p className="text-sm font-medium text-ink mb-0.5">{t("firstTimer.step4Title")}</p>
-            <p className="text-sm text-slate">{t("firstTimer.step4")}</p>
-          </div>
-        </div>
+        ))}
       </div>
 
-      <label className="flex items-start gap-3 mb-6 cursor-pointer">
+      <label className="flex items-start gap-3 mb-4 cursor-pointer">
         <input
           type="checkbox"
           checked={consented}
