@@ -279,7 +279,7 @@ function HeroSection() {
                   </div>
                   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-900/5">
                     <p className="text-sm text-slate leading-relaxed">
-                      Hi Sarah, Dr. Chen recommended a follow-up visit. It&apos;s been 2 weeks &mdash; ready to book your next appointment?
+                      Hi Sarah, Dr. Chen recommended a follow-up visit. It has been 2 weeks, ready to book your next appointment?
                     </p>
                     <div className="mt-3 rounded-lg bg-green-600 py-2 text-center text-xs font-semibold text-white">
                       Book appointment
@@ -310,13 +310,13 @@ function HeroSection() {
                           <div className="h-3 w-3 rounded border border-hilt-blue bg-hilt-blue flex items-center justify-center">
                             <svg className="h-2 w-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                           </div>
-                          <span className="text-ink">Today &mdash; Knee pain, hand stiffness</span>
+                          <span className="text-ink">Today, Knee pain, hand stiffness</span>
                         </div>
                         <div className="flex items-center gap-1.5 text-[10px]">
                           <div className="h-3 w-3 rounded border border-hilt-blue bg-hilt-blue flex items-center justify-center">
                             <svg className="h-2 w-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                           </div>
-                          <span className="text-ink">Mar 1 &mdash; Initial knee assessment</span>
+                          <span className="text-ink">Mar 1, Initial knee assessment</span>
                         </div>
                       </div>
                     </div>
@@ -382,7 +382,7 @@ function BeforeAfterSection() {
     },
     {
       without: { title: "Follow-ups fall through the cracks", desc: "No system to remind patients to come back" },
-      with: { title: "Automated follow-up reminders", desc: "Patients get a text when it's time to return, no staff effort needed" },
+      with: { title: "Automated follow-up reminders", desc: "Patients get a text when it is time to return, no staff effort needed" },
     },
     {
       without: { title: "No feedback loop", desc: "Patients leave and you never hear what they thought" },
@@ -458,6 +458,7 @@ function HowItWorksSection() {
       num: "01",
       title: "Patient scans a QR code in your waiting room.",
       desc: "You get a unique QR code for each location when you sign up. Patients scan it with their own phone or a clinic tablet, enter their name and date of birth, and they are checked in. About 10 seconds.",
+      tag: "Clinic tablet kiosk mode for patients without phones",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
@@ -469,7 +470,8 @@ function HowItWorksSection() {
     {
       num: "02",
       title: "Receptionist approves with one click.",
-      desc: "Patient appears in the front desk queue. Receptionist verifies, taps approve, and the AI conversation begins.",
+      desc: "Patient appears in the front desk queue. Receptionist verifies ID, taps approve, and the AI conversation begins.",
+      tag: "Returning patients identified by full name, birthday, and sometimes phone",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
@@ -481,7 +483,7 @@ function HowItWorksSection() {
       num: "03",
       title: "Patient talks to the AI while they wait.",
       desc: "AI asks about symptoms, medications, and allergies through a conversation. 130+ languages, voice and text. The patient reviews and approves the summary before it reaches the doctor.",
-      tag: "Phone number verified here if not already on file",
+      tag: "Phone number collected here if not already on file",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
