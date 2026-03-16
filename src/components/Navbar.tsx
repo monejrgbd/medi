@@ -19,7 +19,7 @@ export default function Navbar() {
     <>
       <nav
         className={`sticky top-0 z-40 transition-all duration-200 ${
-          scrolled ? "bg-white/95 backdrop-blur shadow-sm" : "bg-transparent"
+          scrolled ? "bg-white/98 shadow-sm" : "bg-transparent"
         }`}
       >
         <div className="mx-auto flex max-w-[1200px] items-center justify-between px-6 py-4">

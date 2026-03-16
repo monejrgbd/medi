@@ -1,10 +1,18 @@
 import Link from "next/link";
-import SignUpForm from "@/components/SignUpForm";
+import dynamic from "next/dynamic";
 import FadeIn from "@/components/FadeIn";
 import DoctorMockup from "@/components/marketing/DoctorMockup";
 import { getAllPosts } from "@/lib/blog";
-import DemoQR from "@/components/marketing/DemoQR";
-import DashboardMockup from "@/components/marketing/DashboardMockup";
+
+const SignUpForm = dynamic(() => import("@/components/SignUpForm"), {
+  loading: () => <div className="h-[400px]" />,
+});
+const DemoQR = dynamic(() => import("@/components/marketing/DemoQR"), {
+  loading: () => <div className="rounded-lg bg-gray-100" />,
+});
+const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMockup"), {
+  loading: () => <div className="h-[300px] rounded-2xl border border-gray-200 bg-gray-50" />,
+});
 
 /* ── Hero ─────────────────────────────────────────────── */
 
@@ -209,7 +217,7 @@ function HeroSection() {
           <div className="sm:shrink-0 sm:w-[340px] lg:w-auto lg:flex-1 flex flex-col items-center gap-3 mt-8 mb-8 sm:mt-0 sm:mb-0">
             {/* Glow behind everything */}
             <div className="relative">
-              <div className="absolute -inset-8 rounded-3xl bg-hilt-blue/5 blur-3xl" />
+              <div className="absolute -inset-12 rounded-[40px]" style={{ background: "radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 70%)" }} />
               <div className="relative z-10">
                 <ChatMockup />
               </div>
