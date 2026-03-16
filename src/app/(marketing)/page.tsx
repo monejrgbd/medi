@@ -580,7 +580,7 @@ function HowItWorksSection() {
           </div>
           {steps.map((s, i) => (
             <FadeIn key={s.num} delay={i * 0.12}>
-              <div className="relative rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md h-full">
+              <div className="relative flex flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md h-full">
                 {/* Icon */}
                 <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${s.accent}`}>
                   {s.icon}
@@ -592,7 +592,7 @@ function HowItWorksSection() {
                 </div>
                 <p className="text-sm leading-relaxed text-slate">{s.desc}</p>
                 {s.tag && (
-                  <span className="mt-3 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-green-200">
+                  <span className="mt-auto pt-3 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-green-200 self-start">
                     {s.tag}
                   </span>
                 )}
@@ -639,10 +639,10 @@ function BeyondTheVisitSection() {
           </p>
         </FadeIn>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-3 items-start">
           {/* Reviews */}
           <FadeIn delay={0}>
-            <div className="h-full rounded-2xl border border-amber-200 bg-amber-50/50 p-7">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-7">
               <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
                 <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
@@ -706,7 +706,7 @@ function BeyondTheVisitSection() {
 
           {/* Follow-ups */}
           <FadeIn delay={0.12}>
-            <div className="h-full rounded-2xl border border-green-200 bg-green-50/50 p-7">
+            <div className="rounded-2xl border border-green-200 bg-green-50/50 p-7">
               <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-green-100">
                 <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
@@ -759,7 +759,7 @@ function BeyondTheVisitSection() {
 
           {/* Referrals */}
           <FadeIn delay={0.24}>
-            <div className="h-full rounded-2xl border border-purple-200 bg-purple-50/50 p-7">
+            <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-7">
               <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-purple-100">
                 <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />

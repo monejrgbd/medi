@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 
 const tabs = ["Employees", "Patients", "Wait Times", "Returns", "Follow-ups", "Referrals"] as const;
 type Tab = (typeof tabs)[number];
@@ -347,16 +347,42 @@ const tabContent: Record<Tab, () => React.ReactElement> = {
 export default function DashboardMockup() {
   const [active, setActive] = useState<Tab>("Wait Times");
   const [clicked, setClicked] = useState(false);
-  const Content = tabContent[active];
+  const containerRef = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval>>(null);
+
+  useEffect(() => {
+    if (clicked || !containerRef.current) return;
+    const el = containerRef.current;
+
+    function start() {
+      if (intervalRef.current) return;
+      intervalRef.current = setInterval(() => {
+        setActive(prev => tabs[(tabs.indexOf(prev) + 1) % tabs.length]);
+      }, 3000);
+    }
+    function stop() {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+    }
+
+    const io = new IntersectionObserver(([entry]) => { entry.isIntersecting ? start() : stop(); }, { threshold: 0.3 });
+    io.observe(el);
+    return () => { io.disconnect(); stop(); };
+  }, [clicked]);
+
+  const handleTabClick = useCallback((t: Tab) => {
+    setActive(t);
+    setClicked(true);
+    if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+  }, []);
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-gray-50 shadow-xl ring-1 ring-gray-900/5 overflow-hidden">
+    <div ref={containerRef} data-no-fade-observe className="rounded-2xl border border-gray-200 bg-gray-50 shadow-xl ring-1 ring-gray-900/5 overflow-hidden">
       {/* Tab bar */}
       <div className="flex items-center border-b border-gray-200 bg-white overflow-x-auto">
         {tabs.map(tab => (
           <button
             key={tab}
-            onClick={() => { setActive(tab); setClicked(true); }}
+            onClick={() => handleTabClick(tab)}
             className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               active === tab
                 ? "border-hilt-blue text-hilt-blue"
@@ -384,7 +410,17 @@ export default function DashboardMockup() {
           </div>
         </div>
 
-        <Content />
+        {/* All tabs render in same grid cell — tallest sets height, no layout shift */}
+        <div className="grid">
+          {tabs.map(t => {
+            const TabComponent = tabContent[t];
+            return (
+              <div key={t} className={`col-start-1 row-start-1 ${active === t ? "visible" : "invisible"}`}>
+                <TabComponent />
+              </div>
+            );
+          })}
+        </div>
 
       </div>
     </div>

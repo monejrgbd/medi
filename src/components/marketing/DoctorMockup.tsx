@@ -174,10 +174,7 @@ export default function DoctorMockup() {
           {TABS.map((t) => (
             <button
               key={t.key}
-              onClick={() => {
-                setTab(t.key);
-                setHasInteracted(true);
-              }}
+              onClick={() => { setTab(t.key); setHasInteracted(true); }}
               className={`pb-1.5 font-medium transition-colors cursor-pointer ${
                 tab === t.key
                   ? "border-b-2 border-hilt-blue text-hilt-blue"

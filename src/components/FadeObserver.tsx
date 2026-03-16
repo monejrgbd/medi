@@ -24,6 +24,7 @@ export default function FadeObserver() {
 
     const mo = new MutationObserver((mutations) => {
       for (const m of mutations) {
+        if (m.target instanceof HTMLElement && m.target.closest("[data-no-fade-observe]")) continue;
         for (const node of m.addedNodes) {
           if (node instanceof HTMLElement) {
             if (node.classList.contains("fade-in-view") && !node.classList.contains("visible")) {
