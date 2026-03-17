@@ -433,8 +433,8 @@ function BeforeAfterSection() {
             </p>
             <div className="space-y-3">
               <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Two hours back.</span>{" "}
-                AI handles intake in 130+ languages while the patient waits. Doctor reads the summary before they open the door.
+                <span className="text-blue-300 font-medium">Two hours back, and better intake.</span>{" "}
+                AI handles intake in 130+ languages while the patient waits. Patients get as much time as they need, and the AI asks follow ups until nothing essential is missed. Doctor reads the full summary before they open the door.
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">No repeat questions.</span>{" "}
