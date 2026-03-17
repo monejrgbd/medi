@@ -21,26 +21,10 @@ export default function FadeObserver() {
     }
 
     observeNew(document);
-
-    const mo = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        if (m.target instanceof HTMLElement && m.target.closest("[data-no-fade-observe]")) continue;
-        for (const node of m.addedNodes) {
-          if (node instanceof HTMLElement) {
-            if (node.classList.contains("fade-in-view") && !node.classList.contains("visible")) {
-              io.observe(node);
-            }
-            observeNew(node);
-          }
-        }
-      }
-    });
-
-    mo.observe(document.body, { childList: true, subtree: true });
+    requestAnimationFrame(() => observeNew(document));
 
     return () => {
       io.disconnect();
-      mo.disconnect();
     };
   }, []);
 

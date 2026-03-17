@@ -1,7 +1,9 @@
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import FadeIn from "@/components/FadeIn";
-import DoctorMockup from "@/components/marketing/DoctorMockup";
+const DoctorMockup = dynamic(() => import("@/components/marketing/DoctorMockup"), {
+  loading: () => <div className="h-[500px] rounded-2xl border border-gray-200 bg-white" />,
+});
 import ContactLink from "@/components/marketing/ContactLink";
 import { getAllPosts } from "@/lib/blog";
 
@@ -519,7 +521,7 @@ function HowItWorksSection() {
   ];
 
   return (
-    <section className="bg-snow pt-32 pb-24 lg:pt-40 lg:pb-32">
+    <section className="cv-auto bg-snow pt-32 pb-24 lg:pt-40 lg:pb-32">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
@@ -568,7 +570,7 @@ function HowItWorksSection() {
 
 function BuiltForYourClinicSection() {
   return (
-    <section className="bg-snow pt-32 pb-0 lg:pt-40 lg:pb-0">
+    <section className="cv-auto bg-snow pt-32 pb-0 lg:pt-40 lg:pb-0">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <div className="rounded-2xl border border-sky-200 bg-sky-50/50 p-7 lg:flex lg:items-center lg:gap-10">
@@ -672,7 +674,7 @@ function HowToSetUpSection() {
   ];
 
   return (
-    <section className="bg-snow py-20 lg:py-24">
+    <section className="cv-auto bg-snow py-20 lg:py-24">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
@@ -725,7 +727,7 @@ function BeyondTheVisitSection() {
   ];
 
   return (
-    <section className="bg-white py-24 lg:py-32">
+    <section className="cv-auto bg-white py-24 lg:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
@@ -933,7 +935,7 @@ function TrustAndControlSection() {
   ];
 
   return (
-    <section className="bg-white pt-32 pb-24 lg:pt-40 lg:pb-32 border-y border-gray-100">
+    <section className="cv-auto bg-white pt-32 pb-24 lg:pt-40 lg:pb-32 border-y border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <h2 className="mb-3 text-center text-3xl font-bold text-ink sm:text-4xl">
@@ -986,7 +988,7 @@ function TrustAndControlSection() {
 
 function PricingAndContactSection() {
   return (
-    <section id="contact" className="bg-snow py-24 lg:py-32">
+    <section id="contact" className="cv-auto bg-snow py-24 lg:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
         {/* Pricing hint */}
         <FadeIn>
@@ -1027,7 +1029,7 @@ function BlogSection() {
   const posts = getAllPosts().slice(0, 3);
 
   return (
-    <section className="bg-white py-24 lg:py-32">
+    <section className="cv-auto bg-white py-24 lg:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <div className="mb-12 flex items-end justify-between">
@@ -1082,7 +1084,7 @@ function BlogSection() {
 
 function Footer() {
   return (
-    <footer className="bg-white py-12 border-t border-gray-100">
+    <footer className="cv-auto bg-white py-12 border-t border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6 text-center">
         <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">Hilt Health</p>
         <p className="mb-4 text-slate">Built in Canada.</p>

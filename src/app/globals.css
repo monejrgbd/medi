@@ -57,14 +57,15 @@
   transform: translateY(0);
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
 body {
   font-family: var(--font-sans);
   color: var(--color-ink);
   background: #ffffff;
+}
+
+.cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
 }
 
 /* Blog prose styles */
