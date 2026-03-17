@@ -386,38 +386,14 @@ function BeforeAfterSection() {
         <div className="mt-10 space-y-6">
           <FadeIn delay={0.08}>
             <p className="text-lg leading-relaxed text-gray-300">
-              Five minutes per patient on intake. Thirty patients a day.{" "}
-              <span className="text-white font-semibold">Over two hours of doctor time, gone.</span>
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.16}>
-            <p className="text-lg leading-relaxed text-gray-300">
-              Returning patients answer the same questions every visit.{" "}
-              <span className="text-white font-semibold">Medications, allergies, history. Again.</span>
+              Five minutes per patient on the same intake questions, even for returning patients. Fifty patients a day.{" "}
+              <span className="text-white font-semibold">Over four hours of doctor time, gone.</span>
             </p>
           </FadeIn>
           <FadeIn delay={0.24}>
             <p className="text-lg leading-relaxed text-gray-300">
-              Non English speakers get half the intake.{" "}
-              <span className="text-white font-semibold">No translator, no context, no time.</span>
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.32}>
-            <p className="text-lg leading-relaxed text-gray-300">
-              A chest pain patient sits in the same queue as a routine checkup.{" "}
-              <span className="text-white font-semibold">Nobody knows until the doctor walks in.</span>
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.40}>
-            <p className="text-lg leading-relaxed text-gray-300">
-              Doctor says come back in two weeks.{" "}
-              <span className="text-white font-semibold">Nobody follows up. The patient never returns.</span>
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.48}>
-            <p className="text-lg leading-relaxed text-gray-300">
-              Happy patients walk out without leaving a review. Unhappy ones go straight to Google.{" "}
-              <span className="text-white font-semibold">You find out from a one star rating.</span>
+              After the visit, nothing happens. Patients told to come back never do, no one asks for a review, no record sent to the patient.{" "}
+              <span className="text-white font-semibold">They do not return, and the next thing you hear is a one star rating on Google.</span>
             </p>
           </FadeIn>
           <FadeIn delay={0.56}>
@@ -435,24 +411,12 @@ function BeforeAfterSection() {
             </p>
             <div className="space-y-3">
               <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Two hours back, and better intake.</span>{" "}
-                AI handles intake in 130+ languages while the patient waits. Patients get as much time as they need, and the AI asks follow ups until nothing essential is missed. Doctor reads the full summary before they open the door.
+                <span className="text-blue-300 font-medium">Four hours back, and better intake.</span>{" "}
+                AI handles intake while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Doctor reads the full summary before they open the door.
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">No repeat questions.</span>{" "}
-                AI picks up where the last visit left off. Medications, allergies, history already on file.
-              </p>
-              <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Urgent cases seen first.</span>{" "}
-                AI detects severity during the conversation and flags high priority patients automatically.
-              </p>
-              <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Follow ups sent automatically.</span>{" "}
-                Patient gets a text when it is time to come back. No sticky notes, no forgotten callbacks.
-              </p>
-              <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Reviews routed to the right place.</span>{" "}
-                Happy patients guided to Google. Low ratings come to you privately first.
+                <span className="text-blue-300 font-medium">After the visit, everything is handled.</span>{" "}
+                Follow up reminders sent automatically. Happy patients guided to leave a review. Low ratings come to you privately first.
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">Real time analytics.</span>{" "}
