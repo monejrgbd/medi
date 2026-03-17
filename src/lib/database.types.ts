@@ -23,6 +23,7 @@ export type Database = {
           email_sent: boolean | null
           expires_at: string | null
           id: string
+          phone: string | null
           send_after: string | null
           used_at: string | null
           used_by_org_id: string | null
@@ -35,6 +36,7 @@ export type Database = {
           email_sent?: boolean | null
           expires_at?: string | null
           id?: string
+          phone?: string | null
           send_after?: string | null
           used_at?: string | null
           used_by_org_id?: string | null
@@ -47,6 +49,7 @@ export type Database = {
           email_sent?: boolean | null
           expires_at?: string | null
           id?: string
+          phone?: string | null
           send_after?: string | null
           used_at?: string | null
           used_by_org_id?: string | null
@@ -2257,7 +2260,15 @@ export type Database = {
         Returns: Json
       }
       request_demo_otp: { Args: { p_email: string }; Returns: Json }
-      request_premium_code: { Args: { p_email: string }; Returns: Json }
+      request_premium_code: {
+        Args: {
+          p_domain?: string
+          p_email?: string
+          p_phone?: string
+          p_send_email?: boolean
+        }
+        Returns: Json
+      }
       requesting_org_id: { Args: never; Returns: string }
       reset_monthly_credits: { Args: { p_org_id: string }; Returns: Json }
       reset_staff_password: {

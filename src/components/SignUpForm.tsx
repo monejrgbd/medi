@@ -57,11 +57,11 @@ export default function SignUpForm() {
     });
   }, []);
 
-  // Auto-select "meet" when arriving via ?interest=demo or ?interest=meet
+  // Auto-select "meet" when signalled via sessionStorage
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const val = params.get("interest");
-    if (val === "demo" || val === "meet") {
+    const val = sessionStorage.getItem("preselectInterest");
+    if (val === "meet") {
+      sessionStorage.removeItem("preselectInterest");
       setInterest("meet");
     }
   }, []);
@@ -145,9 +145,9 @@ export default function SignUpForm() {
       return;
     }
 
-    // Meet path — unchanged
+    // Meet path
     const { error: dbError } = await supabase.rpc("submit_contact", {
-      p_clinic_name: null,
+      p_clinic_name: data.get("clinic_name") as string,
       p_contact_name: data.get("contact_name") as string,
       p_email: emailValue,
       p_phone: (data.get("phone") as string) || null,
@@ -287,31 +287,20 @@ export default function SignUpForm() {
               <input type="hidden" name="interest" value={interest} />
             </div>
 
-            <AnimatePresence initial={false}>
-              {interest === "free_trial" && (
-                <motion.div
-                  key="clinic_name"
-                  variants={fieldVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="hidden"
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
-                >
-                  <label htmlFor="clinic_name" className="mb-1 block text-sm font-medium text-ink text-left">
-                    Clinic name <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    id="clinic_name"
-                    name="clinic_name"
-                    required
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
-                    placeholder="Niagara Family Health Clinic"
-                    suppressHydrationWarning
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <div className="mt-4">
+              <label htmlFor="clinic_name" className="mb-1 block text-sm font-medium text-ink text-left">
+                Clinic name <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                id="clinic_name"
+                name="clinic_name"
+                required
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
+                placeholder="Niagara Family Health Clinic"
+                suppressHydrationWarning
+              />
+            </div>
 
             <div className="mt-4">
               <label htmlFor="contact_name" className="mb-1 block text-sm font-medium text-ink text-left">

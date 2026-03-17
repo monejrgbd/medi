@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
+import ContactLink from "@/components/marketing/ContactLink";
 import CustomPlanModal from "@/components/CustomPlanModal";
 
 type AIModel = "standard" | "advanced";
@@ -201,8 +202,7 @@ function PricingCards({ model, onContactCustom }: { model: AIModel; onContactCus
                 ))}
               </ul>
 
-              <a
-                href="/#contact"
+              <ContactLink
                 className={`block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                   plan.highlight
                     ? "bg-hilt-blue text-white hover:bg-hilt-blue-dark"
@@ -210,7 +210,7 @@ function PricingCards({ model, onContactCustom }: { model: AIModel; onContactCus
                 }`}
               >
                 {plan.name === "Enterprise" ? "Contact Sales" : "Get Started"}
-              </a>
+              </ContactLink>
             </div>
           </FadeIn>
         );
@@ -273,12 +273,11 @@ function FreeTrial() {
           for ~130 patients on Standard AI or ~50 on Advanced. No credit card required.
           No time limit. Just see if it works for your clinic.
         </p>
-        <a
-          href="/#contact"
+        <ContactLink
           className="inline-block rounded-xl bg-hilt-blue px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
         >
           Request Free Trial
-        </a>
+        </ContactLink>
       </div>
     </FadeIn>
   );

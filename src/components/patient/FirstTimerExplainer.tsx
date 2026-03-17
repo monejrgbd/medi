@@ -15,23 +15,20 @@ export default function FirstTimerExplainer({
 
   return (
     <div className="w-full max-w-md">
-      <h2 className="text-lg font-bold text-ink mb-3 text-center">
+      <h2 className="text-base font-bold text-ink mb-2 text-center">
         {t("firstTimer.title")}
       </h2>
 
-      <div className="rounded-lg border border-gray-100 bg-white divide-y divide-gray-100 mb-4">
+      <div className="rounded-lg border border-gray-100 bg-white divide-y divide-gray-100 mb-3">
         {([1, 2, 3, 4] as const).map((n) => (
-          <div key={n} className="flex gap-3 px-4 py-2.5">
-            <span className="text-sm font-semibold text-hilt-blue flex-shrink-0 w-5">{n}.</span>
-            <div>
-              <p className="text-sm font-medium text-ink">{t(`firstTimer.step${n}Title`)}</p>
-              <p className="text-xs text-slate">{t(`firstTimer.step${n}`)}</p>
-            </div>
+          <div key={n} className="flex items-center gap-2.5 px-3 py-2">
+            <span className="text-xs font-semibold text-hilt-blue flex-shrink-0">{n}.</span>
+            <p className="text-sm text-ink">{t(`firstTimer.step${n}`)}</p>
           </div>
         ))}
       </div>
 
-      <label className="flex items-start gap-3 mb-4 cursor-pointer">
+      <label className="flex items-start gap-3 mb-3 cursor-pointer">
         <input
           type="checkbox"
           checked={consented}

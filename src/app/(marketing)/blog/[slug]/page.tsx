@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAllPosts, getPostBySlug } from "@/lib/blog";
+import ContactLink from "@/components/marketing/ContactLink";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -77,12 +78,11 @@ export default async function BlogPostPage({ params }: Props) {
               Hilt Health uses AI to pre-screen patients before they see the doctor.
               Start with 200 free credits.
             </p>
-            <a
-              href="/#contact"
+            <ContactLink
               className="inline-block rounded-xl bg-hilt-blue px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
             >
               Request Free Trial
-            </a>
+            </ContactLink>
           </div>
         </section>
       </main>

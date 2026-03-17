@@ -12,12 +12,14 @@ import {
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Users, Tablet, Star, CreditCard, ArrowRight } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight } from "lucide-react";
 import StepIndicator from "./StepIndicator";
+import AddStaffStep from "./AddStaffStep";
 
 interface OrgInfo {
   id: string;
   name: string;
+  slug: string;
   credits_total: number;
   credits_used: number;
   trial_end_date: string;
@@ -52,7 +54,7 @@ export default function OnboardingWizard({
     existingLocations[0]?.name ?? ""
   );
 
-  // Step 2 (Try It) state
+  // Step 3 (Try It) state
   const [demoReady, setDemoReady] = useState(false);
   const [demoError, setDemoError] = useState("");
   type TryItPhase = "ready" | "detected" | "success";
@@ -66,7 +68,7 @@ export default function OnboardingWizard({
 
   // Set up demo (create owner staff account + check in as receptionist)
   useEffect(() => {
-    if (step !== 2 || !locationId || demoReady) return;
+    if (step !== 3 || !locationId || demoReady) return;
 
     let cancelled = false;
     setupOnboardingDemo(locationId).then((result) => {
@@ -83,7 +85,7 @@ export default function OnboardingWizard({
 
   // QR rendering
   useEffect(() => {
-    if (step === 2 && locationId && demoReady && canvasRef.current) {
+    if (step === 3 && locationId && demoReady && canvasRef.current) {
       QRCode.toCanvas(
         canvasRef.current,
         `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
@@ -92,9 +94,9 @@ export default function OnboardingWizard({
     }
   }, [step, locationId, demoReady, tryPhase]);
 
-  // Realtime subscription — starts immediately when step 2 is ready
+  // Realtime subscription — starts immediately when step 3 is ready
   useEffect(() => {
-    if (step !== 2 || !locationId || !demoReady || tryPhase !== "ready") return;
+    if (step !== 3 || !locationId || !demoReady || tryPhase !== "ready") return;
 
     const supabase = createClient();
     const channel = supabase
@@ -339,8 +341,19 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 2: Try the Check-in */}
-      {step === 2 && (
+      {/* Step 2: Add Staff */}
+      {step === 2 && locationId && (
+        <AddStaffStep
+          orgId={org.id}
+          orgSlug={org.slug}
+          locationId={locationId}
+          locationName={createdLocationName}
+          onContinue={() => setStep(3)}
+        />
+      )}
+
+      {/* Step 3: Try the Check-in */}
+      {step === 3 && (
         <div className="max-w-md mx-auto text-center">
           <h2 className="text-xl font-bold text-ink mb-1">
             Try the Check in
@@ -428,7 +441,7 @@ export default function OnboardingWizard({
           <div className="mt-6 space-y-3">
             {demoReady && (
               <button
-                onClick={() => setStep(3)}
+                onClick={() => setStep(4)}
                 className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white ${
                   tryPhase === "success"
                     ? "bg-hilt-blue hover:bg-hilt-blue-dark"
@@ -442,8 +455,8 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 3: All Set */}
-      {step === 3 && (
+      {/* Step 4: All Set */}
+      {step === 4 && (
         <div className="max-w-lg mx-auto text-center">
           <div className="mb-3 flex justify-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
@@ -467,16 +480,6 @@ export default function OnboardingWizard({
           </p>
 
           <div className="grid gap-3 sm:grid-cols-2 mb-4">
-            <button
-              onClick={async () => { await completeOnboarding(); router.push("/d/owner/staff"); }}
-              className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
-            >
-              <Users className="h-5 w-5 text-hilt-blue mb-1" />
-              <h3 className="text-sm font-semibold text-ink">Add your staff</h3>
-              <p className="text-xs text-slate mt-1">
-                Create accounts for doctors and receptionists
-              </p>
-            </button>
             <button
               onClick={async () => { await completeOnboarding(); router.push("/d/owner/kiosk"); }}
               className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"

@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import FadeObserver from "@/components/FadeObserver";
+import ScrollTo from "@/components/marketing/ScrollTo";
 
 export default function MarketingLayout({
   children,
@@ -9,6 +10,7 @@ export default function MarketingLayout({
   return (
     <>
       <FadeObserver />
+      <ScrollTo />
       <Navbar />
       {children}
     </>

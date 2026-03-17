@@ -9,6 +9,7 @@ AS $$
 DECLARE
   v_edge_url text;
   v_secret text;
+  v_anon_key text;
 BEGIN
   SELECT decrypted_secret INTO v_edge_url
   FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
@@ -16,11 +17,15 @@ BEGIN
   SELECT decrypted_secret INTO v_secret
   FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
 
+  SELECT decrypted_secret INTO v_anon_key
+  FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
   -- Fire-and-forget HTTP POST via pg_net (non-blocking)
   PERFORM net.http_post(
     url := v_edge_url || '/process-email-queue',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || v_anon_key,
       'x-internal-secret', v_secret
     ),
     body := '{}'::jsonb

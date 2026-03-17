@@ -2,7 +2,7 @@
 
 import { Check } from "lucide-react";
 
-const STEPS = ["Welcome", "Location", "Try it", "Done"];
+const STEPS = ["Welcome", "Location", "Staff", "Try it", "Done"];
 
 export default function StepIndicator({ currentStep }: { currentStep: number }) {
   return (

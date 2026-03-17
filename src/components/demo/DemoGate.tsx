@@ -16,6 +16,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -25,6 +26,15 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
       inputRefs.current[0]?.focus();
     }
   }, [step]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((c) => (c <= 1 ? 0 : c - 1));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +46,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
 
     if (result.success) {
       setStep("otp");
+      setResendCooldown(60);
     } else {
       setError(result.error ?? "Failed to send code.");
     }
@@ -215,19 +226,22 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
               <div className="flex items-center justify-center gap-3 text-sm">
                 <button
                   type="button"
-                  disabled={loading}
+                  disabled={loading || resendCooldown > 0}
                   onClick={async () => {
+                    if (resendCooldown > 0) return;
                     setError("");
                     setOtp(["", "", "", "", "", ""]);
                     const result = await requestDemoOtp(email);
                     if (!result.success) {
                       setError(result.error ?? "Failed to resend.");
+                    } else {
+                      setResendCooldown(60);
                     }
                     inputRefs.current[0]?.focus();
                   }}
-                  className="text-hilt-blue hover:text-hilt-blue-dark transition-colors disabled:opacity-50"
+                  className="text-hilt-blue hover:text-hilt-blue-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Resend code
+                  {resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : "Resend code"}
                 </button>
                 <span className="text-gray-300">|</span>
                 <button

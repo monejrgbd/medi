@@ -2,6 +2,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import FadeIn from "@/components/FadeIn";
 import DoctorMockup from "@/components/marketing/DoctorMockup";
+import ContactLink from "@/components/marketing/ContactLink";
 import { getAllPosts } from "@/lib/blog";
 
 const SignUpForm = dynamic(() => import("@/components/SignUpForm"), {
@@ -156,7 +157,7 @@ function HeroSection() {
               the summary.</span>
             </h1>
             <p className="mb-8 text-lg text-slate sm:text-sm md:text-base lg:text-xl">
-              Doctors walk in prepared.
+              Doctors save 5 minutes per patient, patients feel heard from the start.
             </p>
             {/* Start Trial CTA */}
             <Link
@@ -257,13 +258,13 @@ function HeroSection() {
                     <span className="text-xs font-semibold text-amber-700">Internal review request</span>
                     <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-700">via SMS</span>
                   </div>
-                  <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-900/5">
-                    <p className="text-sm text-slate leading-relaxed mb-3">
+                  <div className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-gray-900/5">
+                    <p className="text-xs text-slate leading-relaxed mb-2">
                       Hi Sarah, thank you for visiting Dr. Chen today! How was your experience?
                     </p>
-                    <div className="flex justify-center gap-1 mb-1">
+                    <div className="flex justify-center gap-0.5 mb-0.5">
                       {[1,2,3,4,5].map(n => (
-                        <svg key={n} className="h-7 w-7 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                        <svg key={n} className="h-6 w-6 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                           <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                         </svg>
                       ))}
@@ -299,30 +300,30 @@ function HeroSection() {
 
               {/* Refer patient */}
               <FadeIn delay={0.3}>
-                <div className="h-full rounded-2xl border border-purple-200 bg-gradient-to-b from-purple-50/80 to-white p-5 shadow-xl ring-1 ring-purple-900/5">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-purple-500" />
-                    <span className="text-xs font-semibold text-purple-700">Send referral</span>
+                <div className="h-full rounded-2xl border border-purple-200 bg-gradient-to-b from-purple-50/80 to-white p-3.5 shadow-xl ring-1 ring-purple-900/5">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-purple-500" />
+                    <span className="text-[10px] font-semibold text-purple-700">Send referral</span>
                   </div>
-                  <div className="rounded-xl bg-white p-3.5 shadow-sm ring-1 ring-gray-900/5 space-y-2.5">
+                  <div className="rounded-lg bg-white p-2.5 shadow-sm ring-1 ring-gray-900/5 space-y-1.5">
                     {/* Specialty */}
                     <div>
-                      <p className="text-[9px] font-medium text-slate mb-1">Specialty</p>
-                      <div className="rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-[11px] text-ink">Rheumatology</div>
+                      <p className="text-[8px] font-medium text-slate mb-0.5">Specialty</p>
+                      <div className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[9px] text-ink">Rheumatology</div>
                     </div>
                     {/* Visits included */}
                     <div>
-                      <p className="text-[9px] font-medium text-slate mb-1">Include visit chats</p>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px]">
-                          <div className="h-3 w-3 rounded border border-hilt-blue bg-hilt-blue flex items-center justify-center">
-                            <svg className="h-2 w-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                      <p className="text-[8px] font-medium text-slate mb-0.5">Include visit chats</p>
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1 text-[8px]">
+                          <div className="h-2.5 w-2.5 rounded-sm border border-hilt-blue bg-hilt-blue flex items-center justify-center">
+                            <svg className="h-1.5 w-1.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                           </div>
                           <span className="text-ink">Today, Knee pain, hand stiffness</span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px]">
-                          <div className="h-3 w-3 rounded border border-hilt-blue bg-hilt-blue flex items-center justify-center">
-                            <svg className="h-2 w-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                        <div className="flex items-center gap-1 text-[8px]">
+                          <div className="h-2.5 w-2.5 rounded-sm border border-hilt-blue bg-hilt-blue flex items-center justify-center">
+                            <svg className="h-1.5 w-1.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                           </div>
                           <span className="text-ink">Mar 1, Initial knee assessment</span>
                         </div>
@@ -330,18 +331,18 @@ function HeroSection() {
                     </div>
                     {/* Destination */}
                     <div>
-                      <p className="text-[9px] font-medium text-slate mb-1">Destination</p>
-                      <div className="rounded-lg border border-hilt-blue bg-blue-50/50 px-2.5 py-1.5">
-                        <p className="text-[10px] font-medium text-ink">City Rheum Clinic</p>
-                        <p className="text-[9px] text-ash">Dr. Patel &middot; 123 Health St</p>
+                      <p className="text-[8px] font-medium text-slate mb-0.5">Destination</p>
+                      <div className="rounded border border-hilt-blue bg-blue-50/50 px-2 py-1">
+                        <p className="text-[8px] font-medium text-ink">City Rheum Clinic</p>
+                        <p className="text-[7px] text-ash">Dr. Patel &middot; 123 Health St</p>
                       </div>
                     </div>
                     {/* Send button */}
-                    <div className="rounded-lg bg-purple-600 py-1.5 text-center text-[11px] font-semibold text-white">
+                    <div className="rounded bg-purple-600 py-1 text-center text-[9px] font-semibold text-white">
                       Send Referral
                     </div>
                   </div>
-                  <p className="mt-3 text-[9px] text-ash">Transcript, summary, and notes sent digitally</p>
+                  <p className="mt-2 text-[8px] text-ash">Transcript, summary, and notes sent digitally</p>
                 </div>
               </FadeIn>
 
@@ -371,88 +372,93 @@ function HeroSection() {
 /* ── Before / After ───────────────────────────────────── */
 
 function BeforeAfterSection() {
-  const rows = [
-    {
-      without: { title: "Clipboard forms", desc: "Patients rush through paperwork they barely understand" },
-      with: { title: "AI conversation", desc: "Patients share at their own pace and feel heard from the moment they sit down" },
-    },
-    {
-      without: { title: "Doctor starts from scratch", desc: "First 5 minutes wasted repeating intake questions" },
-      with: { title: "Doctor reads summary first", desc: "Full context before they enter the room" },
-    },
-    {
-      without: { title: "Same questions, every visit", desc: '"What medications are you on?" for the third time' },
-      with: { title: "AI remembers returning patients", desc: '"Still taking ibuprofen?" with full visit history' },
-    },
-    {
-      without: { title: "English only forms", desc: "Non English speakers struggle or need a translator" },
-      with: { title: "130+ languages built in", desc: "Patients speak in their language, doctors read in English" },
-    },
-    {
-      without: { title: "Follow-ups fall through the cracks", desc: "No system to remind patients to come back" },
-      with: { title: "Automated follow-up reminders", desc: "Patients get a text when it is time to return, no staff effort needed" },
-    },
-    {
-      without: { title: "No feedback loop", desc: "Patients leave and you never hear what they thought" },
-      with: { title: "Automatic review collection", desc: "Happy patients guided to Google and Yelp, concerns come to you first" },
-    },
-    {
-      without: { title: "Paper referrals get lost", desc: "Fax a summary, hope the other clinic gets it" },
-      with: { title: "Referral tracking built in", desc: "Send the full package digitally, track when they arrive" },
-    },
-    {
-      without: { title: "Patients forget their visit details", desc: "No record of what was discussed or diagnosed" },
-      with: { title: "Visit summary sent by text", desc: "Patients get a link to their summary they can show any doctor, anytime" },
-    },
-  ];
-
   return (
-    <section className="bg-white py-24 lg:py-40">
-      <div className="mx-auto max-w-[1200px] px-6">
+    <section className="bg-ink py-20 lg:py-28">
+      <div className="mx-auto max-w-[680px] px-6">
         <FadeIn>
-          <h2 className="mb-4 text-center text-3xl font-bold text-ink sm:text-4xl">
-            Better for your clinic. Better for your patients.
+          <h2 className="text-3xl font-bold text-white sm:text-4xl leading-tight">
+            Your clinic is losing more than you think.
           </h2>
-          <p className="mb-12 text-center text-lg text-slate lg:mb-16">
-            Patients feel heard from the first moment. Doctors walk in prepared. Everyone wins.
-          </p>
         </FadeIn>
 
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-0">
-          {/* Without */}
-          <div className="rounded-2xl border border-gray-200 bg-gray-50 p-8 lg:rounded-r-none lg:border-r-0">
-            <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-ash">
-              Without Hilt Health
+        <div className="mt-10 space-y-6">
+          <FadeIn delay={0.08}>
+            <p className="text-lg leading-relaxed text-gray-300">
+              Five minutes per patient on intake. Thirty patients a day.{" "}
+              <span className="text-white font-semibold">Over two hours of doctor time, gone.</span>
             </p>
-            <div className="space-y-6">
-              {rows.map((row, i) => (
-                <FadeIn key={i} delay={i * 0.1}>
-                  <div>
-                    <p className="font-semibold text-slate">{row.without.title}</p>
-                    <p className="mt-0.5 text-sm text-ash">{row.without.desc}</p>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
-
-          {/* With */}
-          <div className="rounded-2xl border border-blue-200 bg-blue-50/30 p-8 lg:rounded-l-none lg:border-l-0">
-            <p className="mb-6 text-sm font-semibold uppercase tracking-wider text-hilt-blue">
-              With Hilt Health
+          </FadeIn>
+          <FadeIn delay={0.16}>
+            <p className="text-lg leading-relaxed text-gray-300">
+              Returning patients answer the same questions every visit.{" "}
+              <span className="text-white font-semibold">Medications, allergies, history. Again.</span>
             </p>
-            <div className="space-y-6">
-              {rows.map((row, i) => (
-                <FadeIn key={i} delay={i * 0.1 + 0.15}>
-                  <div>
-                    <p className="font-semibold text-ink">{row.with.title}</p>
-                    <p className="mt-0.5 text-sm text-slate">{row.with.desc}</p>
-                  </div>
-                </FadeIn>
-              ))}
-            </div>
-          </div>
+          </FadeIn>
+          <FadeIn delay={0.24}>
+            <p className="text-lg leading-relaxed text-gray-300">
+              Non English speakers get half the intake.{" "}
+              <span className="text-white font-semibold">No translator, no context, no time.</span>
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.32}>
+            <p className="text-lg leading-relaxed text-gray-300">
+              A chest pain patient sits in the same queue as a routine checkup.{" "}
+              <span className="text-white font-semibold">Nobody knows until the doctor walks in.</span>
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.40}>
+            <p className="text-lg leading-relaxed text-gray-300">
+              Doctor says come back in two weeks.{" "}
+              <span className="text-white font-semibold">Nobody follows up. The patient never returns.</span>
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.48}>
+            <p className="text-lg leading-relaxed text-gray-300">
+              Happy patients walk out without leaving a review. Unhappy ones go straight to Google.{" "}
+              <span className="text-white font-semibold">You find out from a one star rating.</span>
+            </p>
+          </FadeIn>
+          <FadeIn delay={0.56}>
+            <p className="text-lg leading-relaxed text-gray-300">
+              Which doctor sees the most patients? How long are people really waiting? Who referred who?{" "}
+              <span className="text-white font-semibold">You have no idea.</span>
+            </p>
+          </FadeIn>
         </div>
+
+        <FadeIn delay={0.75}>
+          <div className="mt-12 border-t border-gray-700 pt-10">
+            <p className="text-xl font-semibold text-blue-300 mb-6">
+              Hilt Health fixes every one of these.
+            </p>
+            <div className="space-y-3">
+              <p className="text-lg leading-relaxed text-gray-400">
+                <span className="text-blue-300 font-medium">Two hours back.</span>{" "}
+                AI handles intake in 130+ languages while the patient waits. Doctor reads the summary before they open the door.
+              </p>
+              <p className="text-lg leading-relaxed text-gray-400">
+                <span className="text-blue-300 font-medium">No repeat questions.</span>{" "}
+                AI picks up where the last visit left off. Medications, allergies, history already on file.
+              </p>
+              <p className="text-lg leading-relaxed text-gray-400">
+                <span className="text-blue-300 font-medium">Urgent cases seen first.</span>{" "}
+                AI detects severity during the conversation and flags high priority patients automatically.
+              </p>
+              <p className="text-lg leading-relaxed text-gray-400">
+                <span className="text-blue-300 font-medium">Follow ups sent automatically.</span>{" "}
+                Patient gets a text when it is time to come back. No sticky notes, no forgotten callbacks.
+              </p>
+              <p className="text-lg leading-relaxed text-gray-400">
+                <span className="text-blue-300 font-medium">Reviews routed to the right place.</span>{" "}
+                Happy patients guided to Google. Low ratings come to you privately first.
+              </p>
+              <p className="text-lg leading-relaxed text-gray-400">
+                <span className="text-blue-300 font-medium">Real time analytics.</span>{" "}
+                Wait times, throughput, patient volume, and referral tracking per doctor, per location, per day.
+              </p>
+            </div>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );
@@ -465,7 +471,7 @@ function HowItWorksSection() {
     {
       num: "01",
       title: "Patient scans a QR code in your waiting room.",
-      desc: "You get a unique QR code for each location when you sign up. Patients scan it with their own phone or a clinic tablet, enter their name and date of birth, and they are checked in. About 10 seconds.",
+      desc: "Patients scan it with their own phone or a clinic tablet, enter their name and date of birth, and they are checked in. About 10 seconds.",
       tag: "Clinic tablet kiosk mode for patients without phones",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -515,53 +521,6 @@ function HowItWorksSection() {
   return (
     <section className="bg-snow pt-32 pb-24 lg:pt-40 lg:pb-32">
       <div className="mx-auto max-w-[1200px] px-6">
-        {/* Per-clinic features */}
-        <FadeIn>
-          <div className="mb-16 rounded-2xl border border-sky-200 bg-sky-50/50 p-7 lg:flex lg:items-center lg:gap-10">
-            <div className="lg:flex-1 mb-6 lg:mb-0">
-              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100">
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#0284C7" strokeWidth="1.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                </svg>
-              </div>
-              <h3 className="mb-2 text-lg font-semibold text-ink">Built around how your clinic works</h3>
-              <p className="text-sm leading-relaxed text-slate mb-4">
-                Every clinic is different. Features are enabled per location, and we build custom workflows for clients who need them.
-              </p>
-              <a href="?interest=meet#contact" className="inline-flex items-center gap-1.5 text-sm font-medium text-hilt-blue hover:underline">
-                Meet with us
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-                </svg>
-              </a>
-            </div>
-            {/* Mini settings panel mockup */}
-            <div className="lg:w-[280px] shrink-0 rounded-xl bg-white/80 p-4 ring-1 ring-sky-200/60">
-              <p className="text-[10px] font-semibold text-sky-800 mb-3">Clinic features</p>
-              <div className="space-y-2.5">
-                {[
-                  { label: "Nurse triage", desc: "Nurses screen before doctor", on: true },
-                  { label: "Weight tracking", desc: "Per patient over time", on: true },
-                  { label: "Height tracking", desc: "Per patient over time", on: false },
-                  { label: "Follow up SMS", desc: "Automated return reminders", on: false },
-                  { label: "Review collection", desc: "Post visit feedback routing", on: true },
-                ].map(f => (
-                  <div key={f.label} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] font-medium text-ink">{f.label}</p>
-                      <p className="text-[9px] text-ash">{f.desc}</p>
-                    </div>
-                    <div className={`h-5 w-9 rounded-full p-0.5 transition-colors ${f.on ? "bg-sky-500" : "bg-gray-200"}`}>
-                      <div className={`h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${f.on ? "translate-x-4" : "translate-x-0"}`} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </FadeIn>
-
         <FadeIn>
           <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
             How it works
@@ -605,6 +564,149 @@ function HowItWorksSection() {
   );
 }
 
+/* ── Built For Your Clinic ────────────────────────────── */
+
+function BuiltForYourClinicSection() {
+  return (
+    <section className="bg-snow pt-32 pb-0 lg:pt-40 lg:pb-0">
+      <div className="mx-auto max-w-[1200px] px-6">
+        <FadeIn>
+          <div className="rounded-2xl border border-sky-200 bg-sky-50/50 p-7 lg:flex lg:items-center lg:gap-10">
+            <div className="lg:flex-1 mb-6 lg:mb-0">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-sky-100">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#0284C7" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                </svg>
+              </div>
+              <h3 className="mb-2 text-lg font-semibold text-ink">Built around how your clinic works</h3>
+              <p className="text-sm leading-relaxed text-slate mb-4">
+                Every clinic is different. Features are enabled per location, and we build custom workflows for clients who need them.
+              </p>
+              <ContactLink preselect="meet" className="inline-flex items-center gap-1.5 text-sm font-medium text-hilt-blue hover:underline">
+                Meet with us
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+                </svg>
+              </ContactLink>
+            </div>
+            {/* Mini settings panel mockup */}
+            <div className="lg:w-[280px] shrink-0 rounded-xl bg-white/80 p-4 ring-1 ring-sky-200/60">
+              <p className="text-[10px] font-semibold text-sky-800 mb-3">Clinic features</p>
+              <div className="space-y-2.5">
+                {[
+                  { label: "Nurse triage", desc: "Nurses screen before doctor", on: true },
+                  { label: "Weight tracking", desc: "Per patient over time", on: true },
+                  { label: "Height tracking", desc: "Per patient over time", on: false },
+                  { label: "Follow up SMS", desc: "Automated return reminders", on: false },
+                  { label: "Review collection", desc: "Post visit feedback routing", on: true },
+                ].map(f => (
+                  <div key={f.label} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-medium text-ink">{f.label}</p>
+                      <p className="text-[9px] text-ash">{f.desc}</p>
+                    </div>
+                    <div className={`h-5 w-9 rounded-full p-0.5 transition-colors ${f.on ? "bg-sky-500" : "bg-gray-200"}`}>
+                      <div className={`h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${f.on ? "translate-x-4" : "translate-x-0"}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+/* ── How to Set Up ────────────────────────────────────── */
+
+function HowToSetUpSection() {
+  const setupSteps = [
+    {
+      num: "01",
+      title: "Create your account",
+      desc: "Sign up with your email and organization name. You get $200 worth of free credits to start, no card required.",
+      icon: (
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+        </svg>
+      ),
+      accent: "bg-blue-50 text-blue-600 ring-blue-200/60",
+    },
+    {
+      num: "02",
+      title: "Add your locations",
+      desc: "Add each clinic location and get a unique QR code for each one. Add your logo if you want them branded.",
+      icon: (
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
+        </svg>
+      ),
+      accent: "bg-violet-50 text-violet-600 ring-violet-200/60",
+    },
+    {
+      num: "03",
+      title: "Add your staff",
+      desc: "Create logins for your doctors and receptionists. Assign roles per location. Takes about 30 seconds each.",
+      icon: (
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+        </svg>
+      ),
+      accent: "bg-amber-50 text-amber-600 ring-amber-200/60",
+    },
+    {
+      num: "04",
+      title: "Print the QR and go",
+      desc: "Download the QR code as a PDF, put it in your waiting room. Patients start scanning and the system is live.",
+      icon: (
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m0 0a48.108 48.108 0 0 1 10.5 0m-10.5 0V6.75a2 2 0 0 1 2-2h6.5a2 2 0 0 1 2 2v.878" />
+        </svg>
+      ),
+      accent: "bg-green-50 text-green-600 ring-green-200/60",
+    },
+  ];
+
+  return (
+    <section className="bg-snow py-20 lg:py-24">
+      <div className="mx-auto max-w-[1200px] px-6">
+        <FadeIn>
+          <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+            How to set up
+          </p>
+          <h2 className="mb-4 text-center text-3xl font-bold text-ink sm:text-4xl">
+            Ready before your next patient.
+          </h2>
+          <p className="mx-auto mb-12 max-w-lg text-center text-lg text-slate">
+            No onboarding calls, no IT department, no training sessions.
+          </p>
+        </FadeIn>
+
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {setupSteps.map((s, i) => (
+            <FadeIn key={s.num} delay={i * 0.08}>
+              <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm h-full">
+                <div className={`mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${s.accent}`}>
+                  {s.icon}
+                </div>
+                <div className="mb-2 flex items-baseline gap-2">
+                  <span className="text-xs font-bold tracking-wider text-ash">{s.num}</span>
+                  <h3 className="text-sm font-semibold text-ink">{s.title}</h3>
+                </div>
+                <p className="text-sm leading-relaxed text-slate">{s.desc}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ── Beyond the Visit ─────────────────────────────────── */
 
 function BeyondTheVisitSection() {
@@ -639,63 +741,60 @@ function BeyondTheVisitSection() {
           </p>
         </FadeIn>
 
-        <div className="grid gap-8 lg:grid-cols-3 items-start">
+        <div className="grid gap-8 lg:grid-cols-3 items-stretch">
           {/* Reviews */}
-          <FadeIn delay={0}>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/50 p-7">
-              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100">
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="1.5">
+          <FadeIn delay={0} className="h-full">
+            <div className="h-full rounded-2xl border border-amber-200 bg-amber-50/50 p-5 flex flex-col">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                 </svg>
               </div>
-              <h3 className="mb-2 text-lg font-semibold text-ink">Your online ratings go up</h3>
-              <p className="text-sm leading-relaxed text-slate mb-5">
+              <h3 className="mb-1.5 text-base font-semibold text-ink">Your online ratings go up</h3>
+              <p className="text-xs leading-relaxed text-slate mb-4">
                 Happy patients get guided to leave a public review on Google, Yelp, or wherever you need them. Lower ratings come to you privately so you can fix problems before they go online.
               </p>
-              {/* Mini star distribution */}
-              <div className="rounded-xl bg-white/80 p-4 ring-1 ring-amber-200/60">
-                <p className="text-[10px] font-semibold text-amber-800 mb-2.5">This month</p>
-                <div className="space-y-1.5">
+              {/* Mini star distribution — single row */}
+              <div className="mt-auto rounded-lg bg-white/80 p-3 ring-1 ring-amber-200/60">
+                <p className="text-[9px] font-semibold text-amber-800 mb-2">This month</p>
+                <div className="flex items-center gap-3">
                   {starDistribution.map(row => (
-                    <div key={row.stars} className="flex items-center gap-2 text-[10px]">
-                      <span className="w-2.5 text-right font-medium text-ash">{row.stars}</span>
-                      <svg className="h-3 w-3 shrink-0 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                    <div key={row.stars} className="flex items-center gap-1 text-[9px]">
+                      <span className="font-medium text-ash">{row.stars}</span>
+                      <svg className="h-2.5 w-2.5 shrink-0 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                       </svg>
-                      <div className="h-1.5 flex-1 rounded-full bg-amber-100">
-                        <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${row.pct}%` }} />
-                      </div>
-                      <span className="w-7 text-right tabular-nums text-ash">{row.pct}%</span>
+                      <span className="tabular-nums text-ash">{row.pct}%</span>
                     </div>
                   ))}
                 </div>
-                <p className="mt-2.5 text-[10px] text-amber-700 font-medium">48 reviews collected &middot; 37 sent to Google</p>
+                <p className="mt-2 text-[9px] text-amber-700 font-medium">48 reviews collected &middot; 37 sent to Google</p>
               </div>
               {/* Intercepted private feedback */}
-              <div className="mt-3 rounded-xl bg-white/80 p-4 ring-1 ring-amber-200/60">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <svg className="h-3 w-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <div className="mt-2 rounded-lg bg-white/80 p-3 ring-1 ring-amber-200/60">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <svg className="h-2.5 w-2.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126Z" />
                   </svg>
-                  <p className="text-[10px] font-semibold text-amber-800">Caught privately</p>
+                  <p className="text-[9px] font-semibold text-amber-800">Caught privately</p>
                 </div>
                 <div className="flex items-start gap-2">
                   <div className="flex gap-0.5 shrink-0 mt-0.5">
                     {[1, 2].map(n => (
-                      <svg key={n} className="h-2.5 w-2.5 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                      <svg key={n} className="h-2 w-2 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                       </svg>
                     ))}
                     {[3, 4, 5].map(n => (
-                      <svg key={n} className="h-2.5 w-2.5 text-gray-200" fill="currentColor" viewBox="0 0 24 24">
+                      <svg key={n} className="h-2 w-2 text-gray-200" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
                       </svg>
                     ))}
                   </div>
-                  <p className="text-[9px] leading-relaxed text-slate italic">&ldquo;Waited 40 minutes and no one told me about the delay.&rdquo;</p>
+                  <p className="text-[8px] leading-relaxed text-slate italic">&ldquo;Waited 40 minutes and no one told me about the delay.&rdquo;</p>
                 </div>
-                <div className="mt-2 flex items-center gap-1 text-[9px] text-green-700 font-medium">
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <div className="mt-1.5 flex items-center gap-1 text-[8px] text-green-700 font-medium">
+                  <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
                   Sent to your dashboard, not Google
@@ -705,19 +804,19 @@ function BeyondTheVisitSection() {
           </FadeIn>
 
           {/* Follow-ups */}
-          <FadeIn delay={0.12}>
-            <div className="rounded-2xl border border-green-200 bg-green-50/50 p-7">
-              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-green-100">
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.5">
+          <FadeIn delay={0.12} className="h-full">
+            <div className="h-full rounded-2xl border border-green-200 bg-green-50/50 p-5 flex flex-col">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-green-100">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#059669" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
                 </svg>
               </div>
-              <h3 className="mb-2 text-lg font-semibold text-ink">Patients return on schedule</h3>
-              <p className="text-sm leading-relaxed text-slate mb-5">
+              <h3 className="mb-1.5 text-base font-semibold text-ink">Patients return on schedule</h3>
+              <p className="text-xs leading-relaxed text-slate mb-4">
                 When a doctor says &ldquo;come back in two weeks,&rdquo; the patient gets an SMS reminder automatically. No sticky notes, no forgotten callbacks, no staff effort.
               </p>
               {/* Mini follow-up timeline */}
-              <div className="rounded-xl bg-white/80 p-4 ring-1 ring-green-200/60">
+              <div className="mt-auto rounded-xl bg-white/80 p-4 ring-1 ring-green-200/60">
                 <p className="text-[10px] font-semibold text-green-800 mb-3">Patient timeline</p>
                 <div className="flex items-center gap-0">
                   {/* Step 1: Visit */}
@@ -758,19 +857,19 @@ function BeyondTheVisitSection() {
           </FadeIn>
 
           {/* Referrals */}
-          <FadeIn delay={0.24}>
-            <div className="rounded-2xl border border-purple-200 bg-purple-50/50 p-7">
-              <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-purple-100">
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="1.5">
+          <FadeIn delay={0.24} className="h-full">
+            <div className="h-full rounded-2xl border border-purple-200 bg-purple-50/50 p-5 flex flex-col">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-purple-100">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="1.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                 </svg>
               </div>
-              <h3 className="mb-2 text-lg font-semibold text-ink">Zero lost referrals</h3>
-              <p className="text-sm leading-relaxed text-slate mb-5">
+              <h3 className="mb-1.5 text-base font-semibold text-ink">Zero lost referrals</h3>
+              <p className="text-xs leading-relaxed text-slate mb-4">
                 Refer a patient with one click. The receiving clinic gets the full package: AI summary, doctor notes, visit history. You see when they arrive. No fax, no wondering.
               </p>
               {/* Mini referral tracker */}
-              <div className="rounded-xl bg-white/80 p-4 ring-1 ring-purple-200/60">
+              <div className="mt-auto rounded-xl bg-white/80 p-4 ring-1 ring-purple-200/60">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-[10px] font-semibold text-purple-800">Referral #1042</p>
                   <span className="rounded-full bg-green-100 px-2 py-0.5 text-[9px] font-semibold text-green-700">Complete</span>
@@ -811,8 +910,8 @@ function TrustAndControlSection() {
   const badges = [
     { label: "PHIPA & PIPEDA compliant", icon: "M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" },
     { label: "End to end encrypted", icon: "M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" },
-    { label: "130+ languages", icon: "M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5a17.92 17.92 0 0 1-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" },
-    { label: "Built in Canada", icon: "m2.25 12 8.954-8.955a1.126 1.126 0 0 1 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" },
+{ label: "Role based access controls", icon: "M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" },
+    { label: "Full audit trail", icon: "M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" },
   ];
 
   const controls = [
@@ -863,17 +962,17 @@ function TrustAndControlSection() {
         </FadeIn>
 
         {/* Control points */}
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-3 items-stretch">
           {controls.map((c, i) => (
-            <FadeIn key={i} delay={i * 0.1}>
-              <div className="rounded-xl border border-gray-100 bg-white p-6 text-center">
+            <FadeIn key={i} delay={i * 0.1} className="h-full">
+              <div className="h-full rounded-xl border border-gray-100 bg-white p-6 text-center flex flex-col">
                 <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-hilt-blue/10">
                   <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d={c.icon} />
                   </svg>
                 </div>
                 <h3 className="mb-2 font-semibold text-ink">{c.title}</h3>
-                <p className="text-sm leading-relaxed text-slate">{c.desc}</p>
+                <p className="mt-auto text-sm leading-relaxed text-slate">{c.desc}</p>
               </div>
             </FadeIn>
           ))}
@@ -916,6 +1015,7 @@ function PricingAndContactSection() {
             <SignUpForm />
           </FadeIn>
         </div>
+
       </div>
     </section>
   );
@@ -1013,10 +1113,12 @@ export default async function Home() {
     <>
       <main>
         <HeroSection />
+        <BeforeAfterSection />
+        <BuiltForYourClinicSection />
+        <HowToSetUpSection />
         <HowItWorksSection />
         <BeyondTheVisitSection />
         <TrustAndControlSection />
-        <BeforeAfterSection />
         <PricingAndContactSection />
         <BlogSection />
       </main>

@@ -133,12 +133,12 @@ export default function CheckinFlow({
   consentGivenRef.current = consentGiven;
   const demoModeRef = useRef(demoMode);
 
-  // Kiosk/demo mode: clear localStorage on mount to prevent session recovery
+  // Kiosk mode: clear localStorage on mount to prevent session recovery
   useEffect(() => {
-    if (!kiosk && !demoMode) return;
+    if (!kiosk) return;
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(PHONE_STORAGE_KEY);
-  }, [kiosk, demoMode]);
+  }, [kiosk]);
 
   // Summary generation: 45s slow warning + 60s timeout
   const [summaryWarning, setSummaryWarning] = useState(false);
@@ -1136,8 +1136,8 @@ export default function CheckinFlow({
 
   return (
     <LanguageProvider language={patientLanguage}>
-      <div dir={patientLanguage === "ar" ? "rtl" : "ltr"} className={needsFullHeight ? "flex-1 w-full min-h-0 flex flex-col" : "flex items-center justify-center flex-1"}>
-        <div key={state} className={`animate-fade-in ${needsFullHeight ? "flex-1 min-h-0 w-full flex flex-col items-center" : ""}`}>
+      <div dir={patientLanguage === "ar" ? "rtl" : "ltr"} className={needsFullHeight ? "flex-1 w-full min-h-0 flex flex-col" : demoMode ? "flex-1 w-full min-h-0 overflow-y-auto" : "flex items-center justify-center flex-1"}>
+        <div key={state} className={needsFullHeight ? "flex-1 min-h-0 w-full flex flex-col items-center animate-fade-in" : demoMode ? "min-h-full flex items-center justify-center animate-fade-in py-4" : "animate-fade-in"}>
           {content}
         </div>
         {kiosk && (

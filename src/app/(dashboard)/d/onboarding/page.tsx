@@ -28,6 +28,7 @@ export default async function OnboardingPage() {
       org={{
         id: org.id,
         name: org.name,
+        slug: org.slug,
         credits_total: org.credits_total,
         credits_used: org.credits_used,
         trial_end_date: org.trial_end_date,

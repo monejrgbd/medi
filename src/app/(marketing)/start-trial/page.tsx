@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
+import ContactLink from "@/components/marketing/ContactLink";
 
 export const metadata = {
   title: "Start Your Free Trial — Hilt Health",
@@ -77,12 +78,11 @@ export default function StartTrialPage() {
             </li>
           </ul>
 
-          <Link
-            href="/#contact"
+          <ContactLink
             className="mt-6 block rounded-lg border-2 border-hilt-blue py-3 text-center text-sm font-semibold text-hilt-blue transition-all hover:bg-hilt-blue hover:text-white"
           >
             Apply for Premium Trial
-          </Link>
+          </ContactLink>
         </div>
       </div>
 
