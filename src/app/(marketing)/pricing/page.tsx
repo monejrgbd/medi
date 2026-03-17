@@ -11,29 +11,10 @@ type AIModel = "standard" | "advanced";
 
 const CREDIT_COSTS = [
   {
-    action: "AI pre-screening (Standard)",
-    credits: 1.5,
-    desc: "Routine visits, walk ins, general intake",
-    icon: (
-      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
-      </svg>
-    ),
-  },
-  {
-    action: "AI pre-screening (Advanced)",
-    credits: 4,
-    desc: "Complex cases, deeper symptom analysis, suggested diagnostic to doctor",
-    icon: (
-      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
-      </svg>
-    ),
-  },
-  {
     action: "Review request SMS",
     credits: 0.1,
     desc: "Post visit review collection",
+    tag: "Enable or disable per location",
     icon: (
       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
@@ -44,6 +25,7 @@ const CREDIT_COSTS = [
     action: "Follow up reminder SMS",
     credits: 0.1,
     desc: "Automated return visit reminders",
+    tag: "Enable or disable per location",
     icon: (
       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
@@ -73,6 +55,16 @@ const INCLUDED_FEATURES = [
     icon: "M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z",
   },
   {
+    title: "Returning patient recognition",
+    desc: "AI picks up where the last visit left off. Medications, allergies, and history already on file. No repeat questions.",
+    icon: "M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Zm6-10.125a1.875 1.875 0 1 1-3.75 0 1.875 1.875 0 0 1 3.75 0Zm1.294 6.336a6.721 6.721 0 0 1-3.17.789 6.721 6.721 0 0 1-3.168-.789 3.376 3.376 0 0 1 6.338 0Z",
+  },
+  {
+    title: "Urgency detection",
+    desc: "AI detects severity during the conversation and flags high priority patients automatically. Urgent cases get seen first.",
+    icon: "M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z",
+  },
+  {
     title: "Referral system",
     desc: "Refer patients with one click. The receiving clinic gets the AI summary, doctor notes, and full visit history.",
     icon: "M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5",
@@ -83,14 +75,14 @@ const INCLUDED_FEATURES = [
     icon: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z",
   },
   {
-    title: "Review collection",
-    desc: "Route happy patients to Google or Yelp. Catch low ratings privately before they go online.",
-    icon: "M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z",
-  },
-  {
     title: "Multi location support",
     desc: "Add locations, assign staff per site, and get a unique branded QR code for each waiting room.",
     icon: "M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z",
+  },
+  {
+    title: "Kiosk and tablet mode",
+    desc: "Patients without phones use a clinic tablet. Full screen kiosk mode with auto clear between patients.",
+    icon: "M10.5 19.5h3m-6.75 2.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-15a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 4.5v15a2.25 2.25 0 0 0 2.25 2.25Z",
   },
 ];
 
@@ -177,6 +169,46 @@ function CreditCostsSection() {
       <div className="mx-auto mt-16 max-w-2xl">
         <h2 className="mb-6 text-center text-2xl font-bold text-ink">What uses credits</h2>
         <div className="space-y-3">
+          {/* AI pre-screening — single card with both tiers */}
+          <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-hilt-blue/10">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456Z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-medium text-ink">AI pre-screening</p>
+                <span className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200">
+                  Select per location
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="flex items-center justify-between rounded-lg bg-snow p-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">Standard</p>
+                  <p className="text-xs text-ash">Routine visits, walk ins, general intake</p>
+                </div>
+                <div className="shrink-0 text-right ml-3">
+                  <span className="text-xl font-bold text-ink">1.5</span>
+                  <p className="text-xs text-ash">credits</p>
+                </div>
+              </div>
+              <div className="flex items-center justify-between rounded-lg bg-snow p-3">
+                <div>
+                  <p className="text-sm font-semibold text-ink">Advanced</p>
+                  <p className="text-xs text-ash">Complex cases, suggested diagnostic to doctor</p>
+                </div>
+                <div className="shrink-0 text-right ml-3">
+                  <span className="text-xl font-bold text-ink">4</span>
+                  <p className="text-xs text-ash">credits</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* SMS items */}
           {CREDIT_COSTS.map((item) => (
             <div
               key={item.action}
@@ -188,6 +220,9 @@ function CreditCostsSection() {
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-ink">{item.action}</p>
                 <p className="text-sm text-ash">{item.desc}</p>
+                <span className="mt-1 inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700 ring-1 ring-green-200">
+                  {item.tag}
+                </span>
               </div>
               <div className="shrink-0 text-right">
                 <span className="text-xl font-bold text-ink">{item.credits}</span>
@@ -197,7 +232,7 @@ function CreditCostsSection() {
           ))}
         </div>
         <p className="mt-4 text-center text-sm text-ash">
-          All other features, including summaries, analytics, referrals, and multi language support, are included free with every plan.
+          Credits only cover AI conversations and SMS. The rest of the platform, including summaries, analytics, referrals, review management, 130+ languages, and multi location support, is yours from day one.
         </p>
       </div>
     </FadeIn>
@@ -315,7 +350,7 @@ function IncludedSection() {
         <p className="mb-8 text-center text-slate">No add ons, no hidden fees. You get the full platform from day one.</p>
       </FadeIn>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
         {INCLUDED_FEATURES.map((feat, i) => (
           <FadeIn key={feat.title} delay={i * 0.06}>
             <div className="flex h-full flex-col rounded-xl border border-gray-100 bg-white p-5 shadow-sm">

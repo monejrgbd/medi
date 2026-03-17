@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 export default function FadeObserver() {
+  const pathname = usePathname();
+
   useEffect(() => {
     const io = new IntersectionObserver(
       (entries) => {
@@ -26,7 +29,7 @@ export default function FadeObserver() {
     return () => {
       io.disconnect();
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }
