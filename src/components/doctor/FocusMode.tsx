@@ -87,6 +87,7 @@ interface FocusModeProps {
   initialQueue: QueueVisit[];
   soundEnabled: boolean;
   onExit: () => void;
+  demoVisitId?: string | null;
 }
 
 export default function FocusMode({
@@ -96,6 +97,7 @@ export default function FocusMode({
   initialQueue,
   soundEnabled,
   onExit,
+  demoVisitId,
 }: FocusModeProps) {
   const router = useRouter();
   const [currentVisit, setCurrentVisit] = useState<ClaimedVisit | null>(
@@ -207,14 +209,18 @@ export default function FocusMode({
     router.refresh();
     fetchQueue(locationId).then((result) => {
       if (result.success) {
-        const newQueue = result.queue || [];
+        let newQueue = result.queue || [];
+        // In demo mode, only show the current session's visit
+        if (demoVisitId) {
+          newQueue = newQueue.filter((q: QueueVisit) => q.visit_id === demoVisitId);
+        }
         setQueue(newQueue);
         if (!currentVisitRef.current && newQueue.length > 0 && !autoClaimingRef.current) {
           doClaimNext(newQueue);
         }
       }
     });
-  }, [router, locationId]);
+  }, [router, locationId, demoVisitId]);
 
   useDoctorRealtime(locationId, handleVisitChange, { soundEnabled });
 

@@ -19,6 +19,7 @@ DECLARE
   v_meds jsonb;
   v_allergies jsonb;
   v_chronic jsonb;
+  v_pets jsonb;
   v_referrals jsonb;
   v_follow_ups jsonb;
 BEGIN
@@ -46,7 +47,7 @@ BEGIN
   END IF;
 
   -- Load patient with cross-org guard
-  SELECT p.id, p.first_name, p.last_name, p.birthday, p.phone, p.phone_verified,
+  SELECT p.id, p.first_name, p.last_name, p.birthday, p.sex, p.phone, p.phone_verified,
          p.language, p.created_at,
          EXISTS(SELECT 1 FROM public.visits v WHERE v.patient_id = p.id AND v.status = 'completed') AS has_previous_visits
   INTO v_patient
@@ -104,6 +105,12 @@ BEGIN
   FROM public.patient_chronic_conditions pc
   WHERE pc.patient_id = p_patient_id;
 
+  -- Pets
+  SELECT COALESCE(jsonb_agg(jsonb_build_object('name', pp.name, 'active', pp.active)), '[]'::jsonb)
+  INTO v_pets
+  FROM public.patient_pets pp
+  WHERE pp.patient_id = p_patient_id;
+
   -- Referrals
   SELECT COALESCE(jsonb_agg(row_to_json(ref.*) ORDER BY ref.created_at DESC), '[]'::jsonb)
   INTO v_referrals
@@ -140,6 +147,7 @@ BEGIN
       'first_name', v_patient.first_name,
       'last_name', v_patient.last_name,
       'birthday', v_patient.birthday,
+      'sex', v_patient.sex,
       'phone', v_patient.phone,
       'phone_verified', v_patient.phone_verified,
       'language', v_patient.language,
@@ -151,6 +159,7 @@ BEGIN
     'medications', v_meds,
     'allergies', v_allergies,
     'chronic_conditions', v_chronic,
+    'pets', v_pets,
     'referrals', v_referrals,
     'follow_ups', v_follow_ups
   );

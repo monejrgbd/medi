@@ -33,6 +33,8 @@
   "summary.approve": "内容准确",
   "summary.disclaimer": "AI生成的摘要已由患者批准。请参阅完整记录以确保准确性。",
   "summary.submitting": "提交中...",
+  "summary.read_first": "请阅读摘要并再次确认，因为这是您的医生将看到的内容",
+  "summary.wait_seconds": "剩余{seconds}秒",
   "queue.title": "您已在排队中",
   "queue.next": "下一个就是您！",
   "queue.ahead": "您前面有 {count} {people}。",
@@ -70,6 +72,7 @@
   "phone.sending": "发送中...",
   "phone.skip": "暂时跳过",
   "phone.noPhone": "我没有电话",
+  "phone.terms": "我同意接收短信，包括验证码、就诊摘要和后续提醒。可能会收取短信和数据费用。",
   "verify.title": "输入验证码",
   "verify.subtitle": "我们已向 {phone} 发送了6位数验证码",
   "verify.button": "验证",
@@ -111,6 +114,9 @@
   "checkin.verifyBirthday": "确认您的身份",
   "checkin.verifyBirthdayDesc": "请输入您的出生日期以恢复您的会话。",
   "checkin.birthdayMismatch": "出生日期不匹配。请重试或开始新的登记。",
+  "checkin.sex": "生理性别",
+  "checkin.male": "男",
+  "checkin.female": "女",
   "checkin.startOver": "重新开始",
   "checkin.confirm": "确认"
 }

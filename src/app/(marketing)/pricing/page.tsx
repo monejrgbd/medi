@@ -96,7 +96,7 @@ const TRUST_BADGES = [
 const FAQS = [
   {
     q: "What happens if I run out of credits?",
-    a: "You can set an overuse budget in your dashboard. Overuse credits are billed at $1 each. If you do not set a budget, screening pauses until your next billing cycle or you upgrade.",
+    a: "You can set a recharge limit in your dashboard. When your credits run out, screening continues at $1 per credit up to your limit. If you do not set a limit, screening pauses until your next cycle or you purchase more credits.",
   },
   {
     q: "What is included in the free trial?",

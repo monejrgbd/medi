@@ -33,6 +33,8 @@
   "summary.approve": "यह सही है",
   "summary.disclaimer": "AI द्वारा बनाया गया और रोगी द्वारा स्वीकृत सारांश। सटीकता के लिए पूर्ण प्रतिलेख देखें।",
   "summary.submitting": "जमा हो रहा है...",
+  "summary.read_first": "कृपया सारांश पढ़ें और फिर से पुष्टि करें, क्योंकि यही आपके डॉक्टर देखेंगे",
+  "summary.wait_seconds": "{seconds} सेकंड शेष",
   "queue.title": "आप कतार में हैं",
   "queue.next": "आपकी बारी अगली है!",
   "queue.ahead": "आपसे आगे {count} {people} हैं।",
@@ -70,6 +72,7 @@
   "phone.sending": "भेज रहा है...",
   "phone.skip": "अभी छोड़ें",
   "phone.noPhone": "मेरे पास फोन नहीं है",
+  "phone.terms": "मैं सत्यापन कोड, विजिट सारांश और अनुवर्ती अनुस्मारक सहित टेक्स्ट संदेश प्राप्त करने के लिए सहमत हूं। संदेश और डेटा शुल्क लागू हो सकते हैं।",
   "verify.title": "सत्यापन कोड दर्ज करें",
   "verify.subtitle": "हमने {phone} पर 6 अंकों का कोड भेजा है",
   "verify.button": "सत्यापित करें",
@@ -111,6 +114,9 @@
   "checkin.verifyBirthday": "अपनी पहचान की पुष्टि करें",
   "checkin.verifyBirthdayDesc": "अपने सत्र को फिर से शुरू करने के लिए कृपया अपनी जन्म तिथि दर्ज करें।",
   "checkin.birthdayMismatch": "जन्म तिथि मेल नहीं खाती। कृपया पुनः प्रयास करें या नया चेक इन शुरू करें।",
+  "checkin.sex": "जैविक लिंग",
+  "checkin.male": "पुरुष",
+  "checkin.female": "महिला",
   "checkin.startOver": "फिर से शुरू करें",
   "checkin.confirm": "पुष्टि करें"
 }

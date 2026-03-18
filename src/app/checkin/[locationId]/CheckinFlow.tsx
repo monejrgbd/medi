@@ -64,12 +64,14 @@ interface CheckinFlowProps {
   embed?: boolean;
   kiosk?: boolean;
   demoMode?: boolean;
+  onVisitCreated?: (visitId: string) => void;
 }
 
 interface MedicalInfo {
   medications: { name: string }[];
   allergies: { name: string }[];
   chronic_conditions: { name: string }[];
+  pets: { name: string }[];
 }
 
 interface SummaryData {
@@ -89,6 +91,7 @@ export default function CheckinFlow({
   embed = false,
   kiosk = false,
   demoMode = false,
+  onVisitCreated,
 }: CheckinFlowProps) {
   const [state, setState] = useState<FlowState>(
     locationData.active ? "form" : "inactive"
@@ -339,10 +342,16 @@ export default function CheckinFlow({
       }
 
       if (status === "waiting_doctor_claim") {
-        // Skip if summary_review — handleSummaryApprove will handle
-        // the transition with proper phone collection check
+        // Skip if summary_review, generating_summary, or any phone state —
+        // handleSummaryApprove will handle the transition with proper phone collection check
         const current = stateRef.current;
-        if (current === "summary_review" || current === "generating_summary") {
+        if (
+          current === "summary_review" ||
+          current === "generating_summary" ||
+          current === "phone_collection" ||
+          current === "phone_input" ||
+          current === "phone_verification"
+        ) {
           return;
         }
         fetchQueuePosition();
@@ -422,7 +431,8 @@ export default function CheckinFlow({
   async function handleCheckin(
     firstName: string,
     lastName: string,
-    birthday: string
+    birthday: string,
+    sex: string
   ) {
     setState("submitting");
     setLoading(true);
@@ -434,6 +444,7 @@ export default function CheckinFlow({
       p_first_name: firstName,
       p_last_name: lastName,
       p_birthday: birthday,
+      p_sex: sex,
     });
 
     setLoading(false);
@@ -453,6 +464,7 @@ export default function CheckinFlow({
         setSessionToken(data.session_token);
         setVisitId(data.visit_id);
         localStorage.setItem(STORAGE_KEY, data.session_token);
+        if (onVisitCreated && data.visit_id) onVisitCreated(data.visit_id);
         setState("waiting");
         break;
       case "active_session": {
@@ -610,6 +622,7 @@ export default function CheckinFlow({
         medications: (data.medications || []) as { name: string }[],
         allergies: (data.allergies || []) as { name: string }[],
         chronic_conditions: (data.chronic_conditions || []) as { name: string }[],
+        pets: (data.pets || []) as { name: string }[],
       });
     }
   }
@@ -835,7 +848,7 @@ export default function CheckinFlow({
             const y = 1985 + Math.floor(Math.random() * 20);
             const m = String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
             const d = String(1 + Math.floor(Math.random() * 28)).padStart(2, "0");
-            return { firstName: firsts[Math.floor(Math.random() * firsts.length)], lastName: lasts[Math.floor(Math.random() * lasts.length)], birthday: `${y}-${m}-${d}` };
+            return { firstName: firsts[Math.floor(Math.random() * firsts.length)], lastName: lasts[Math.floor(Math.random() * lasts.length)], birthday: `${y}-${m}-${d}`, sex: Math.random() > 0.5 ? "male" : "female" };
           })() : undefined}
         />
       );

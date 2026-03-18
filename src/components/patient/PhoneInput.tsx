@@ -56,6 +56,7 @@ export default function PhoneInput({
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [localError, setLocalError] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const { t } = useLanguage();
 
   function handleSubmit(e: React.FormEvent) {
@@ -135,9 +136,21 @@ export default function PhoneInput({
           </div>
         )}
 
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+          <span className="text-sm text-slate">
+            {t("phone.terms")}
+          </span>
+        </label>
+
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !termsAccepted}
           className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
         >
           {loading ? t("phone.sending") : t("phone.send")}

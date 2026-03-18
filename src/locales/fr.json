@@ -33,6 +33,8 @@
   "summary.approve": "C'est exact",
   "summary.disclaimer": "Résumé généré par l'IA approuvé par le patient. Consultez la transcription complète pour plus de précision.",
   "summary.submitting": "Envoi en cours...",
+  "summary.read_first": "Veuillez lire le résumé et confirmer à nouveau, car votre médecin verra ce résumé",
+  "summary.wait_seconds": "{seconds}s restantes",
   "queue.title": "Vous êtes dans la file d'attente",
   "queue.next": "Vous êtes le prochain !",
   "queue.ahead": "{count} {people} devant vous.",
@@ -70,6 +72,7 @@
   "phone.sending": "Envoi en cours...",
   "phone.skip": "Passer pour l'instant",
   "phone.noPhone": "Je n'ai pas de téléphone",
+  "phone.terms": "J'accepte de recevoir des SMS incluant des codes de vérification, des résumés de visite et des rappels de suivi. Des frais de messagerie et de données peuvent s'appliquer.",
   "verify.title": "Entrez le code de vérification",
   "verify.subtitle": "Nous avons envoyé un code à 6 chiffres au {phone}",
   "verify.button": "Vérifier",
@@ -111,6 +114,9 @@
   "checkin.verifyBirthday": "Confirmez votre identité",
   "checkin.verifyBirthdayDesc": "Veuillez entrer votre date de naissance pour reprendre votre session.",
   "checkin.birthdayMismatch": "La date de naissance ne correspond pas. Veuillez réessayer ou commencer un nouvel enregistrement.",
+  "checkin.sex": "Sexe biologique",
+  "checkin.male": "Homme",
+  "checkin.female": "Femme",
   "checkin.startOver": "Recommencer",
   "checkin.confirm": "Confirmer"
 }

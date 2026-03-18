@@ -80,6 +80,7 @@ export default async function SummaryPage({ params }: PageProps) {
   const allergies: { name: string }[] = summary.allergies ?? [];
   const chronicConditions: { name: string }[] =
     summary.chronic_conditions ?? [];
+  const pets: { name: string }[] = summary.pets ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -148,7 +149,8 @@ export default async function SummaryPage({ params }: PageProps) {
         {/* Medical info */}
         {(medications.length > 0 ||
           allergies.length > 0 ||
-          chronicConditions.length > 0) && (
+          chronicConditions.length > 0 ||
+          pets.length > 0) && (
           <div className="rounded-xl border border-gray-200 bg-white p-6 mb-4">
             <h3 className="text-sm font-semibold text-gray-900 mb-3">
               Medical Information
@@ -191,7 +193,7 @@ export default async function SummaryPage({ params }: PageProps) {
             )}
 
             {chronicConditions.length > 0 && (
-              <div>
+              <div className="mb-3">
                 <p className="text-xs font-medium text-gray-500 uppercase mb-1">
                   Chronic Conditions
                 </p>
@@ -202,6 +204,24 @@ export default async function SummaryPage({ params }: PageProps) {
                       className="inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700"
                     >
                       {c.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {pets.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase mb-1">
+                  Pets at Home
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {pets.map((p, i) => (
+                    <span
+                      key={i}
+                      className="inline-block rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700"
+                    >
+                      {p.name}
                     </span>
                   ))}
                 </div>

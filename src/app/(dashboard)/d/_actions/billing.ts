@@ -15,7 +15,7 @@ const VALID_PLANS = [
 ];
 const PAYPAL_API_BASE =
   process.env.PAYPAL_API_BASE || "https://api-m.paypal.com";
-const VALID_ADDONS = ["review_sms", "followup_sms"];
+const VALID_ADDONS = ["review_sms", "followup_sms", "diagnostic"];
 
 export async function fetchCreditDashboard() {
   await requireAuth();
@@ -123,6 +123,21 @@ export async function cancelSubscription(orgId: string) {
   }
 
   const { data, error } = await supabase.rpc("cancel_subscription");
+  if (error) return { success: false, error: error.message };
+  return data;
+}
+
+export async function setRechargeLimit(limit: number | null) {
+  await requireAuth();
+
+  if (limit !== null && (!Number.isInteger(limit) || limit < 0 || limit > 10000)) {
+    return { success: false, error: "Limit must be an integer between 1 and 10000" };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_recharge_limit", {
+    p_limit: limit === 0 ? null : limit,
+  });
   if (error) return { success: false, error: error.message };
   return data;
 }

@@ -33,6 +33,8 @@
   "summary.approve": "정확합니다",
   "summary.disclaimer": "AI가 생성하고 환자가 승인한 요약입니다. 정확성을 위해 전체 기록을 참조하세요.",
   "summary.submitting": "제출 중...",
+  "summary.read_first": "요약을 읽고 다시 확인해 주세요. 이것이 의사가 보게 될 내용입니다",
+  "summary.wait_seconds": "{seconds}초 남음",
   "queue.title": "대기열에 있습니다",
   "queue.next": "다음 차례입니다!",
   "queue.ahead": "앞에 {count}{people} 있습니다.",
@@ -70,6 +72,7 @@
   "phone.sending": "전송 중...",
   "phone.skip": "나중에",
   "phone.noPhone": "전화가 없습니다",
+  "phone.terms": "인증 코드, 진료 요약 및 후속 알림을 포함한 문자 메시지 수신에 동의합니다. 메시지 및 데이터 요금이 부과될 수 있습니다.",
   "verify.title": "인증 코드 입력",
   "verify.subtitle": "{phone}로 6자리 코드를 보냈습니다",
   "verify.button": "인증",
@@ -111,6 +114,9 @@
   "checkin.verifyBirthday": "본인 확인",
   "checkin.verifyBirthdayDesc": "세션을 재개하려면 생년월일을 입력해 주세요.",
   "checkin.birthdayMismatch": "생년월일이 일치하지 않습니다. 다시 시도하거나 새 접수를 시작해 주세요.",
+  "checkin.sex": "생물학적 성별",
+  "checkin.male": "남성",
+  "checkin.female": "여성",
   "checkin.startOver": "처음부터 다시",
   "checkin.confirm": "확인"
 }

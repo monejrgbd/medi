@@ -5,10 +5,12 @@ interface PatientProfileCardProps {
     first_name: string;
     last_name: string;
     birthday: string;
+    sex?: string;
     phone_masked: string | null;
     medications: { name: string }[];
     allergies: { name: string }[];
     chronic_conditions: { name: string }[];
+    pets?: { name: string }[];
     visit_count: number;
     last_visit_date: string | null;
     last_visit_summary: string | null;
@@ -22,6 +24,8 @@ export default function PatientProfileCard({
     (Date.now() - new Date(patient.birthday).getTime()) / 31557600000
   );
 
+  const pets = patient.pets || [];
+
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-4">
       <div className="flex items-start justify-between">
@@ -30,7 +34,7 @@ export default function PatientProfileCard({
             {patient.first_name} {patient.last_name}
           </h2>
           <p className="text-sm text-slate">
-            {age} years old
+            {age} year old {patient.sex || ""}
           </p>
         </div>
         {patient.visit_count > 0 && (
@@ -40,7 +44,7 @@ export default function PatientProfileCard({
         )}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
         {/* Medications */}
         <div>
           <h4 className="flex items-center gap-1 text-xs font-medium text-slate mb-1">
@@ -93,6 +97,24 @@ export default function PatientProfileCard({
               {patient.chronic_conditions.map((c, i) => (
                 <li key={i} className="text-xs text-ink">
                   {c.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* Pets at home */}
+        <div>
+          <h4 className="flex items-center gap-1 text-xs font-medium text-slate mb-1">
+            Pets ({pets.length})
+          </h4>
+          {pets.length === 0 ? (
+            <p className="text-xs text-ash">None reported</p>
+          ) : (
+            <ul className="space-y-0.5">
+              {pets.map((p, i) => (
+                <li key={i} className="text-xs text-ink">
+                  {p.name}
                 </li>
               ))}
             </ul>

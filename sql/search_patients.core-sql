@@ -53,6 +53,7 @@ BEGIN
       p.first_name,
       p.last_name,
       p.birthday,
+      p.sex,
       CASE WHEN p.phone IS NOT NULL
         THEN '***' || right(p.phone, 4)
         ELSE NULL

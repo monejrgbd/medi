@@ -11,8 +11,11 @@ AS $$
 DECLARE
   v_total numeric;
   v_used numeric;
+  v_recharge_limit int;
+  v_recharge_used numeric;
 BEGIN
-  SELECT credits_total, credits_used INTO v_total, v_used
+  SELECT credits_total, credits_used, recharge_limit, recharge_used
+  INTO v_total, v_used, v_recharge_limit, v_recharge_used
   FROM public.organizations
   WHERE id = p_org_id;
 
@@ -20,7 +23,8 @@ BEGIN
     RETURN 0;
   END IF;
 
-  RETURN GREATEST(v_total - v_used, 0);
+  RETURN GREATEST(v_total - v_used, 0)
+       + GREATEST(COALESCE(v_recharge_limit - v_recharge_used, 0), 0);
 END;
 $$;
 

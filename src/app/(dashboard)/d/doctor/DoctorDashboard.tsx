@@ -79,6 +79,7 @@ interface DoctorDashboardProps {
   initialLeft: CompletedVisit[];
   initialDoctors: Doctor[];
   demoMode?: boolean;
+  demoVisitId?: string | null;
   initialHasMoreCompleted?: boolean;
   initialHasMoreLeft?: boolean;
 }
@@ -102,6 +103,7 @@ export default function DoctorDashboard({
   initialHasMoreCompleted = false,
   initialHasMoreLeft = false,
   demoMode = false,
+  demoVisitId,
 }: DoctorDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("pending");
@@ -148,14 +150,22 @@ export default function DoctorDashboard({
 
   // Sync state when server component re-renders with new props (via router.refresh())
   useEffect(() => {
-    setQueue(initialQueue);
-    setClaimed(initialClaimed);
-    setCompleted(initialCompleted);
-    setLeft(initialLeft);
+    if (demoMode && demoVisitId) {
+      // In demo mode, only show the current session's visit
+      setQueue(initialQueue.filter((q) => q.visit_id === demoVisitId));
+      setClaimed(initialClaimed.filter((c) => c.visit_id === demoVisitId));
+      setCompleted(initialCompleted.filter((c) => c.visit_id === demoVisitId));
+      setLeft(initialLeft.filter((c) => c.visit_id === demoVisitId));
+    } else {
+      setQueue(initialQueue);
+      setClaimed(initialClaimed);
+      setCompleted(initialCompleted);
+      setLeft(initialLeft);
+    }
     setDoctors(initialDoctors);
     setHasMoreCompleted(initialHasMoreCompleted);
     setHasMoreLeft(initialHasMoreLeft);
-  }, [initialQueue, initialClaimed, initialCompleted, initialLeft, initialDoctors, initialHasMoreCompleted, initialHasMoreLeft]);
+  }, [initialQueue, initialClaimed, initialCompleted, initialLeft, initialDoctors, initialHasMoreCompleted, initialHasMoreLeft, demoMode, demoVisitId]);
 
   useEffect(() => {
     return () => {
@@ -338,6 +348,7 @@ export default function DoctorDashboard({
         initialQueue={queue}
         soundEnabled={soundEnabled}
         onExit={() => setFocusMode(false)}
+        demoVisitId={demoVisitId}
       />
     );
   }

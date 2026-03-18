@@ -29,6 +29,7 @@ export default function PatientFullProfile({
   const medications = (data.medications || []) as Record<string, unknown>[];
   const allergies = (data.allergies || []) as Record<string, unknown>[];
   const chronicConditions = (data.chronic_conditions || []) as Record<string, unknown>[];
+  const pets = (data.pets || []) as Record<string, unknown>[];
   const referrals = (data.referrals || []) as Record<string, unknown>[];
   const followUps = (data.follow_ups || []) as Record<string, unknown>[];
 
@@ -49,7 +50,7 @@ export default function PatientFullProfile({
               {patient.first_name as string} {patient.last_name as string}
             </h2>
             <p className="text-xs text-slate">
-              DOB: {String(patient.birthday)}
+              DOB: {String(patient.birthday)}{patient.sex ? ` | ${String(patient.sex)}` : ""}
               {patient.phone ? ` | ${String(patient.phone)}` : null}
               {patient.language && patient.language !== "en" ? ` | Language: ${String(patient.language)}` : null}
             </p>
@@ -86,10 +87,11 @@ export default function PatientFullProfile({
         <div className="flex-1 overflow-y-auto p-4">
           {tab === "overview" && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                 <InfoSection title="Medications" items={medications} />
                 <InfoSection title="Allergies" items={allergies} />
                 <InfoSection title="Chronic Conditions" items={chronicConditions} />
+                <InfoSection title="Pets at Home" items={pets} />
               </div>
 
               {followUps.length > 0 && (

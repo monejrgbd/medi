@@ -43,6 +43,7 @@ BEGIN
     DELETE FROM public.patient_allergies WHERE patient_id = ANY(v_patient_ids);
     DELETE FROM public.patient_medications WHERE patient_id = ANY(v_patient_ids);
     DELETE FROM public.patient_chronic_conditions WHERE patient_id = ANY(v_patient_ids);
+    DELETE FROM public.patient_pets WHERE patient_id = ANY(v_patient_ids);
     DELETE FROM public.doctor_note_preferences WHERE patient_id = ANY(v_patient_ids);
     DELETE FROM public.phone_verifications WHERE patient_id = ANY(v_patient_ids);
 

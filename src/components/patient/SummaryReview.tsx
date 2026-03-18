@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import StructuredCard from "./StructuredCard";
@@ -9,6 +9,7 @@ interface MedicalInfo {
   medications: { name: string }[];
   allergies: { name: string }[];
   chronic_conditions: { name: string }[];
+  pets: { name: string }[];
 }
 
 interface SummaryReviewProps {
@@ -32,9 +33,49 @@ export default function SummaryReview({
 }: SummaryReviewProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [hasAttemptedEarly, setHasAttemptedEarly] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(15);
+  const [timerDone, setTimerDone] = useState(false);
   const { t } = useLanguage();
+  const mountTime = useRef(Date.now());
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startCountdown = useCallback(() => {
+    const elapsed = Math.floor((Date.now() - mountTime.current) / 1000);
+    const remaining = Math.max(0, 15 - elapsed);
+    setSecondsLeft(remaining);
+    if (remaining === 0) {
+      setTimerDone(true);
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      const now = Math.floor((Date.now() - mountTime.current) / 1000);
+      const left = Math.max(0, 15 - now);
+      setSecondsLeft(left);
+      if (left === 0) {
+        setTimerDone(true);
+        if (intervalRef.current) clearInterval(intervalRef.current);
+      }
+    }, 1000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, []);
 
   async function handleApprove() {
+    // If timer hasn't elapsed and this is the first attempt, show warning + countdown
+    const elapsed = Math.floor((Date.now() - mountTime.current) / 1000);
+    if (elapsed < 15 && !hasAttemptedEarly) {
+      setHasAttemptedEarly(true);
+      startCountdown();
+      return;
+    }
+    // If countdown is still running after early attempt, block
+    if (hasAttemptedEarly && !timerDone) return;
+
     setLoading(true);
     setError("");
 
@@ -102,10 +143,10 @@ export default function SummaryReview({
       )}
 
       {/* Medical info confirmation */}
-      {medicalInfo && (medicalInfo.medications.length > 0 || medicalInfo.allergies.length > 0 || medicalInfo.chronic_conditions.length > 0) && (
+      {medicalInfo && (medicalInfo.medications.length > 0 || medicalInfo.allergies.length > 0 || medicalInfo.chronic_conditions.length > 0 || medicalInfo.pets.length > 0) && (
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 mb-4">
           <p className="text-xs font-semibold text-ink mb-3">Your medical information on file</p>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-4">
             <div>
               <p className="text-[11px] font-medium text-slate mb-1">Medications</p>
               {medicalInfo.medications.length === 0 ? (
@@ -142,6 +183,18 @@ export default function SummaryReview({
                 </ul>
               )}
             </div>
+            <div>
+              <p className="text-[11px] font-medium text-slate mb-1">Pets at home</p>
+              {medicalInfo.pets.length === 0 ? (
+                <p className="text-xs text-ash">None</p>
+              ) : (
+                <ul className="space-y-0.5">
+                  {medicalInfo.pets.map((p, i) => (
+                    <li key={i} className="text-xs text-ink">{p.name}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -149,6 +202,15 @@ export default function SummaryReview({
       <p className="text-[11px] text-ash italic mb-4">
         {t("summary.disclaimer")}
       </p>
+
+      {hasAttemptedEarly && !timerDone && (
+        <div className="mb-3 text-center">
+          <p className="text-sm text-amber-700">{t("summary.read_first")}</p>
+          <p className="text-xs text-ash mt-1">
+            {t("summary.wait_seconds").replace("{seconds}", String(secondsLeft))}
+          </p>
+        </div>
+      )}
 
       {error && (
         <p className="text-sm text-red-600 mb-3 text-center">{error}</p>
@@ -164,7 +226,7 @@ export default function SummaryReview({
         </button>
         <button
           onClick={handleApprove}
-          disabled={loading}
+          disabled={loading || (hasAttemptedEarly && !timerDone)}
           className="flex-1 rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
         >
           {loading ? t("summary.submitting") : t("summary.approve")}

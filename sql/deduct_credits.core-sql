@@ -16,6 +16,9 @@ DECLARE
   v_amount numeric;
   v_remaining numeric;
   v_rows_inserted int;
+  v_from_regular numeric := 0;
+  v_from_recharge numeric := 0;
+  v_recharge_remaining numeric;
 BEGIN
   -- Determine credit amount
   IF p_ai_model = 'advanced' THEN
@@ -25,7 +28,7 @@ BEGIN
   END IF;
 
   -- Lock org row FIRST to prevent race conditions
-  SELECT credits_total, credits_used
+  SELECT credits_total, credits_used, recharge_limit, recharge_used
   INTO v_org
   FROM public.organizations
   WHERE id = p_org_id
@@ -42,7 +45,19 @@ BEGIN
 
   v_remaining := v_org.credits_total - v_org.credits_used;
 
-  IF v_remaining < v_amount THEN
+  IF v_remaining >= v_amount THEN
+    -- Normal path: all from regular credits
+    v_from_regular := v_amount;
+  ELSIF v_org.recharge_limit IS NOT NULL THEN
+    -- Split: exhaust regular remainder, overflow to recharge
+    v_from_regular := GREATEST(v_remaining, 0);
+    v_from_recharge := v_amount - v_from_regular;
+    v_recharge_remaining := v_org.recharge_limit - v_org.recharge_used;
+
+    IF v_from_recharge > v_recharge_remaining THEN
+      RETURN jsonb_build_object('success', false, 'error', 'no_credits');
+    END IF;
+  ELSE
     RETURN jsonb_build_object('success', false, 'error', 'no_credits');
   END IF;
 
@@ -56,9 +71,10 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'already_deducted', true);
   END IF;
 
-  -- Deduct credits
+  -- Deduct credits (single UPDATE handles both paths; v_from_recharge is 0 on normal path)
   UPDATE public.organizations
-  SET credits_used = credits_used + v_amount
+  SET credits_used = credits_used + v_from_regular,
+      recharge_used = recharge_used + v_from_recharge
   WHERE id = p_org_id;
 
   -- Update visit with credit info
@@ -71,6 +87,10 @@ BEGIN
   DECLARE
     v_updated_used numeric;
     v_credits_total numeric;
+    v_recharge_used_now numeric;
+    v_recharge_limit_now int;
+    v_effective_total numeric;
+    v_effective_used numeric;
     v_usage_pct numeric;
     v_owner_email text;
     v_org_name text;
@@ -79,11 +99,17 @@ BEGIN
     v_unsub_token text;
     v_edge_url text;
   BEGIN
-    SELECT credits_used, credits_total, name, last_credit_alert_at, billing_cycle_start
-    INTO v_updated_used, v_credits_total, v_org_name, v_last_alert, v_billing_start
+    SELECT credits_used, credits_total, recharge_used, recharge_limit,
+           name, last_credit_alert_at, billing_cycle_start
+    INTO v_updated_used, v_credits_total, v_recharge_used_now, v_recharge_limit_now,
+         v_org_name, v_last_alert, v_billing_start
     FROM public.organizations WHERE id = p_org_id;
 
-    v_usage_pct := v_updated_used / NULLIF(v_credits_total, 0);
+    -- Use effective capacity (regular + recharge) for alert calculation
+    -- This ensures PAyG orgs (credits_total=0) still get alerts
+    v_effective_total := v_credits_total + COALESCE(v_recharge_limit_now, 0);
+    v_effective_used := v_updated_used + v_recharge_used_now;
+    v_usage_pct := v_effective_used / NULLIF(v_effective_total, 0);
 
     IF v_usage_pct >= 0.80 THEN
       -- Only alert once per billing cycle
@@ -100,10 +126,10 @@ BEGIN
           INSERT INTO public.pending_emails (to_email, subject, html_body, priority, metadata)
           VALUES (
             v_owner_email,
-            'Credits Running Low — ' || v_org_name,
+            'Credits Running Low, ' || v_org_name,
             '<h2>Credits Alert</h2><p>Your organization <strong>' || replace(replace(v_org_name, '&', '&amp;'), '<', '&lt;') ||
-              '</strong> has used ' || round(v_usage_pct * 100) || '% of its credits this billing cycle.</p>' ||
-              '<p>Please top up to ensure uninterrupted AI pre-screening.</p>' ||
+              '</strong> has used ' || round(v_usage_pct * 100) || '% of its available credits this cycle.</p>' ||
+              '<p>Please review your usage in the billing dashboard to ensure uninterrupted AI pre-screening.</p>' ||
               CASE WHEN v_unsub_token IS NOT NULL AND v_edge_url IS NOT NULL
                 THEN '<p style="color:#94a3b8;font-size:12px;margin-top:24px;"><a href="' || v_edge_url || '/unsubscribe?pref=' || v_unsub_token || '" style="color:#94a3b8;">Unsubscribe from credit alerts</a></p>'
                 ELSE ''
@@ -122,7 +148,8 @@ BEGIN
     NULL;
   END;
 
-  RETURN jsonb_build_object('success', true, 'credits_deducted', v_amount);
+  RETURN jsonb_build_object('success', true, 'credits_deducted', v_amount,
+    'recharge_charged', v_from_recharge);
 END;
 $$;
 

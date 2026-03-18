@@ -222,7 +222,7 @@ Deno.serve(async (req) => {
     }
 
     // Medications / Allergies / Chronic conditions
-    if (referral.medications?.length || referral.allergies?.length || referral.chronic_conditions?.length) {
+    if (referral.medications?.length || referral.allergies?.length || referral.chronic_conditions?.length || referral.pets?.length) {
       ensureSpace(30);
       drawText("Medical Information", 12, fontBold);
 
@@ -234,6 +234,9 @@ Deno.serve(async (req) => {
       }
       if (referral.chronic_conditions?.length) {
         drawText(`Chronic Conditions: ${referral.chronic_conditions.map((c: { name: string }) => c.name).join(", ")}`, 10);
+      }
+      if (referral.pets?.length) {
+        drawText(`Pets at Home: ${referral.pets.map((p: { name: string }) => p.name).join(", ")}`, 10);
       }
     }
 

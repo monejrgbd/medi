@@ -21,6 +21,9 @@ interface DashboardData {
   payment_failure_count: number;
   daily_usage: { date: string; credits: number }[];
   projected_runout_date: string | null;
+  recharge_limit: number | null;
+  recharge_used: number;
+  recharge_remaining: number;
 }
 
 export default function CreditDashboard() {
@@ -113,6 +116,23 @@ export default function CreditDashboard() {
                 Cycle started{" "}
                 {new Date(data.billing_cycle_start).toLocaleDateString()}
               </p>
+            )}
+            {data.recharge_limit != null && data.recharge_limit > 0 && (
+              <div className="mt-2 w-full max-w-[160px]">
+                <div className="flex justify-between text-xs mb-0.5">
+                  <span className={data.recharge_used > 0 ? "text-amber-600 font-medium" : "text-slate"}>
+                    Recharge: ${Math.round(data.recharge_used)} / ${data.recharge_limit}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-amber-500 transition-all"
+                    style={{
+                      width: `${Math.min((data.recharge_used / data.recharge_limit) * 100, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>

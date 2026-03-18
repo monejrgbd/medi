@@ -7,6 +7,7 @@ CREATE TABLE public.patients (
   phone                 text,
   phone_verified        boolean DEFAULT false,
   language              text DEFAULT 'en',
+  sex                   text CHECK (sex IN ('male', 'female')),
   consent_given         boolean DEFAULT false,
   consent_given_at      timestamptz,
   collision_flag         boolean DEFAULT false,

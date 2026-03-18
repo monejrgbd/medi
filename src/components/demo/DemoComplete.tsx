@@ -1,8 +1,11 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { CheckCircle, ArrowLeft } from "lucide-react";
 import { signOutDemoUser } from "@/app/demo/_actions/demo";
 import { useRouter } from "next/navigation";
+
+const AUTO_SIGNOUT_MS = 3 * 60 * 1000; // 3 minutes
 
 interface DemoCompleteProps {
   onRestart: () => void;
@@ -10,8 +13,22 @@ interface DemoCompleteProps {
 
 export default function DemoComplete({ onRestart }: DemoCompleteProps) {
   const router = useRouter();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Auto sign-out after 3 minutes of inactivity on completion screen
+  useEffect(() => {
+    timerRef.current = setTimeout(async () => {
+      await signOutDemoUser();
+      router.push("/");
+    }, AUTO_SIGNOUT_MS);
+
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, [router]);
 
   async function handleSignOut() {
+    if (timerRef.current) clearTimeout(timerRef.current);
     await signOutDemoUser();
     router.push("/");
   }

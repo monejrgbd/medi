@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { signOutDemoUser } from "@/app/demo/_actions/demo";
 import { ArrowLeft } from "lucide-react";
 import DemoTabBar, { type Tab } from "@/components/demo/DemoTabBar";
 import DemoGuide from "@/components/demo/DemoGuide";
@@ -64,6 +65,15 @@ export default function DemoShell({
     "This is what your patients see when they scan the QR code. You are given one after you sign up."
   );
   const [demoComplete, setDemoComplete] = useState(false);
+  const [demoVisitId, setDemoVisitId] = useState<string | null>(null);
+  const [demoKey, setDemoKey] = useState(0);
+
+  // Sign out on unmount (best-effort, fire-and-forget)
+  useEffect(() => {
+    return () => {
+      signOutDemoUser();
+    };
+  }, []);
 
   // Realtime auto-switching
   useEffect(() => {
@@ -80,6 +90,9 @@ export default function DemoShell({
         },
         (payload) => {
           if (payload.new.status === "pending_approval") {
+            // Capture visit ID as backup (onVisitCreated is primary)
+            const visitId = (payload.new as { id?: string }).id;
+            if (visitId) setDemoVisitId((prev) => prev ?? visitId);
             setPulsingTab("receptionist");
             setGuideMessage("A new patient just checked in!");
             setGuideHint(
@@ -171,13 +184,25 @@ export default function DemoShell({
     setGuideHint(null);
   }
 
+  const handleVisitCreated = useCallback((visitId: string) => {
+    setDemoVisitId(visitId);
+  }, []);
+
   function handleRestart() {
+    // Clear patient session from localStorage so CheckinFlow starts fresh
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("hilt_session_token");
+      localStorage.removeItem("hilt_session_phone");
+    }
+    setDemoVisitId(null);
     setDemoComplete(false);
     setActiveTab("patient");
     setGuideMessage("Welcome! Fill in the check in form to start the demo.");
     setGuideHint(
       "This is what your patients see when they scan the QR code. You are given one after you sign up."
     );
+    // Force CheckinFlow remount with fresh state
+    setDemoKey((prev) => prev + 1);
   }
 
   if (demoComplete) {
@@ -222,9 +247,11 @@ export default function DemoShell({
           <div className="h-full w-full flex flex-col items-center px-4 pt-6">
             <div className="flex-1 w-full max-w-[40rem] min-h-0 flex flex-col items-center mx-auto">
               <CheckinFlow
+                key={demoKey}
                 locationId={locationId}
                 locationData={locationData}
                 demoMode={true}
+                onVisitCreated={handleVisitCreated}
               />
             </div>
           </div>
@@ -261,14 +288,15 @@ export default function DemoShell({
             orgId={orgId}
             locationId={locationId}
             locationName={locationName}
-            initialQueue={doctorInitial.queue}
-            initialClaimed={doctorInitial.claimed}
-            initialCompleted={doctorInitial.completed}
-            initialLeft={doctorInitial.left}
+            initialQueue={[]}
+            initialClaimed={[]}
+            initialCompleted={[]}
+            initialLeft={[]}
             initialDoctors={doctorInitial.doctors}
-            initialHasMoreCompleted={doctorInitial.hasMoreCompleted}
-            initialHasMoreLeft={doctorInitial.hasMoreLeft}
+            initialHasMoreCompleted={false}
+            initialHasMoreLeft={false}
             demoMode={true}
+            demoVisitId={demoVisitId}
           />
         </div>
 

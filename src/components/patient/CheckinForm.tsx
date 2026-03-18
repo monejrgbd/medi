@@ -8,10 +8,10 @@ interface CheckinFormProps {
   locationName: string;
   address: string;
   logoUrl: string | null;
-  onSubmit: (firstName: string, lastName: string, birthday: string) => void;
+  onSubmit: (firstName: string, lastName: string, birthday: string, sex: string) => void;
   loading: boolean;
   error: string;
-  demoDefaults?: { firstName: string; lastName: string; birthday: string };
+  demoDefaults?: { firstName: string; lastName: string; birthday: string; sex: string };
 }
 
 export default function CheckinForm({
@@ -26,6 +26,7 @@ export default function CheckinForm({
   const [firstName, setFirstName] = useState(demoDefaults?.firstName ?? "");
   const [lastName, setLastName] = useState(demoDefaults?.lastName ?? "");
   const [birthday, setBirthday] = useState(demoDefaults?.birthday ?? "");
+  const [sex, setSex] = useState(demoDefaults?.sex ?? "");
   const [validationError, setValidationError] = useState("");
   const { t } = useLanguage();
 
@@ -46,6 +47,11 @@ export default function CheckinForm({
       return;
     }
 
+    if (!sex) {
+      setValidationError("Please select biological sex.");
+      return;
+    }
+
     const bday = new Date(birthday);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -54,7 +60,7 @@ export default function CheckinForm({
       return;
     }
 
-    onSubmit(cleanFirst, cleanLast, birthday);
+    onSubmit(cleanFirst, cleanLast, birthday, sex);
   }
 
   const displayError = error || validationError;
@@ -114,6 +120,36 @@ export default function CheckinForm({
             required
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-ink mb-1">
+            {t("checkin.sex")}
+          </label>
+          <div className="flex gap-3">
+            <label className={`flex-1 flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm cursor-pointer transition-colors ${sex === "male" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-200 text-ink hover:bg-gray-50"}`}>
+              <input
+                type="radio"
+                name="sex"
+                value="male"
+                checked={sex === "male"}
+                onChange={(e) => setSex(e.target.value)}
+                className="sr-only"
+              />
+              {t("checkin.male")}
+            </label>
+            <label className={`flex-1 flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm cursor-pointer transition-colors ${sex === "female" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-200 text-ink hover:bg-gray-50"}`}>
+              <input
+                type="radio"
+                name="sex"
+                value="female"
+                checked={sex === "female"}
+                onChange={(e) => setSex(e.target.value)}
+                className="sr-only"
+              />
+              {t("checkin.female")}
+            </label>
+          </div>
         </div>
 
         {displayError && (

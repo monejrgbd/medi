@@ -45,7 +45,8 @@ BEGIN
       data_retention_until = NULL,
       payment_failure_count = 0,
       payment_first_failed_at = NULL,
-      cancel_at_period_end = NULL
+      cancel_at_period_end = NULL,
+      recharge_used = 0
   WHERE id = p_org_id;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)

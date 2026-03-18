@@ -15,12 +15,15 @@ CREATE TABLE public.organizations (
   paypal_subscription_id text,
   review_sms_addon      boolean DEFAULT false,
   followup_sms_addon    boolean DEFAULT false,
+  diagnostic_addon      boolean DEFAULT false,
   last_credit_alert_at  timestamptz,
   trial_alert_sent      boolean DEFAULT false,
   payment_failure_count int DEFAULT 0,
   payment_first_failed_at timestamptz,
   cancelled_at          timestamptz,
   data_retention_until  timestamptz,
+  recharge_limit        int DEFAULT NULL CHECK (recharge_limit IS NULL OR recharge_limit BETWEEN 1 AND 10000),
+  recharge_used         numeric DEFAULT 0,
   created_at            timestamptz DEFAULT now()
 );
 

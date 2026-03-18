@@ -17,7 +17,9 @@ DECLARE
   v_meds jsonb;
   v_allergies jsonb;
   v_chronic jsonb;
+  v_pets jsonb;
   v_past_summaries jsonb;
+  v_patient_age int;
   v_system_prompt text;
   v_greeting text;
   v_existing_messages int;
@@ -56,7 +58,7 @@ BEGIN
   END IF;
 
   -- Load patient info
-  SELECT p.first_name, p.language, p.id, p.consent_given
+  SELECT p.first_name, p.language, p.id, p.consent_given, p.sex, p.birthday
   INTO v_patient
   FROM public.patients p
   WHERE p.id = v_visit.patient_id;
@@ -135,17 +137,24 @@ BEGIN
     FROM public.patient_chronic_conditions pc
     WHERE pc.patient_id = v_visit.patient_id AND pc.active = true;
 
+    SELECT COALESCE(jsonb_agg(jsonb_build_object('name', pp.name)), '[]'::jsonb)
+    INTO v_pets
+    FROM public.patient_pets pp
+    WHERE pp.patient_id = v_visit.patient_id AND pp.active = true;
+
     v_past_summaries := private.get_past_visit_summaries(v_visit.patient_id, 10);
 
     -- Build returning patient section
-    IF jsonb_array_length(v_meds) > 0 OR jsonb_array_length(v_allergies) > 0 OR jsonb_array_length(v_chronic) > 0 THEN
+    IF jsonb_array_length(v_meds) > 0 OR jsonb_array_length(v_allergies) > 0 OR jsonb_array_length(v_chronic) > 0 OR jsonb_array_length(v_pets) > 0 THEN
       v_returning_section := E'\n\nCONFIRM STORED RECORDS:\n"Last time you mentioned you take '
         || COALESCE(array_to_string(ARRAY(SELECT e->>'name' FROM jsonb_array_elements(v_meds) e), ', '), 'no medications listed')
         || ', are allergic to '
         || COALESCE(array_to_string(ARRAY(SELECT e->>'name' FROM jsonb_array_elements(v_allergies) e), ', '), 'nothing listed')
         || ', and have '
         || COALESCE(array_to_string(ARRAY(SELECT e->>'name' FROM jsonb_array_elements(v_chronic) e), ', '), 'no conditions listed')
-        || '. Is this still accurate?"'
+        || ', and have '
+        || COALESCE(array_to_string(ARRAY(SELECT e->>'name' FROM jsonb_array_elements(v_pets) e), ', '), 'no pets listed')
+        || ' at home. Is this still accurate?"'
         || E'\nUpdate any changes.';
     END IF;
 
@@ -162,6 +171,7 @@ BEGIN
     v_meds := '[]'::jsonb;
     v_allergies := '[]'::jsonb;
     v_chronic := '[]'::jsonb;
+    v_pets := '[]'::jsonb;
     v_past_summaries := '[]'::jsonb;
   END IF;
 
@@ -207,9 +217,27 @@ BEGIN
     || E'\n10. Current medications — EVERY visit, no exceptions'
     || E'\n11. Known allergies — EVERY visit, no exceptions'
     || E'\n12. Chronic conditions — diabetes, hypertension, asthma, etc. EVERY visit.'
+    || E'\n13. Pets at home — dogs, cats, birds, reptiles, etc. EVERY visit.'
     || v_returning_section
     || v_past_section
-    || v_follow_up_section
+    || v_follow_up_section;
+
+  -- Calculate patient age and add patient context
+  v_patient_age := EXTRACT(YEAR FROM age(current_date, v_patient.birthday))::int;
+  v_system_prompt := v_system_prompt
+    || E'\n\nPATIENT CONTEXT:'
+    || E'\n- Biological sex: ' || COALESCE(v_patient.sex, 'not provided')
+    || E'\n- Age: ' || v_patient_age;
+
+  -- Pregnancy screening for females 16+
+  IF v_patient.sex = 'female' AND v_patient_age >= 16 THEN
+    v_system_prompt := v_system_prompt
+      || E'\n\nPREGNANCY SCREENING:'
+      || E'\nYou MUST ask: "Are you currently pregnant or is there a chance you might be pregnant?"'
+      || E'\nThis is mandatory. Do not skip regardless of the chief complaint.';
+  END IF;
+
+  v_system_prompt := v_system_prompt
     || E'\n\nURGENCY DETECTION — set priority during conversation:'
     || E'\n- HIGH (red-flag): chest pain, difficulty breathing, severe bleeding, stroke symptoms, loss of consciousness, suicidal ideation'
     || E'\n- MEDIUM (concerning): high fever (>103F/39.4C), significant pain (7+/10), possible infection, persistent vomiting, head injury'
@@ -228,6 +256,7 @@ BEGIN
     || E'\n\nSTYLE:'
     || E'\n- Conversational but efficient — short follow-ups, not chatty'
     || E'\n- Ask ONE question at a time. Wait for the answer before moving on. Never combine multiple questions in a single message.'
+    || E'\n- When using medical terms the patient may not know (e.g., throbbing, radiating, acute, chronic), briefly offer: "Let me know if you would like me to explain any of these terms."'
     || E'\n- When you have a complete picture, ask: "Is there anything else we might be missing?"'
     || E'\n- If they say no, end your final message with the marker [CONVERSATION_COMPLETE]';
 

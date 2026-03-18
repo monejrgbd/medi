@@ -27,6 +27,7 @@ BEGIN
     WHEN 'standard' THEN v_allocation := 500;
     WHEN 'plus' THEN v_allocation := 1500;
     WHEN 'enterprise' THEN v_allocation := 5000;
+    WHEN 'pay_as_you_go' THEN v_allocation := 0;
     ELSE
       -- Non-resettable plans (pay_as_you_go, trial, etc.) — log and skip
       INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
@@ -40,7 +41,8 @@ BEGIN
       credits_total = v_allocation,
       billing_cycle_start = now(),
       payment_failure_count = 0,
-      payment_first_failed_at = NULL
+      payment_first_failed_at = NULL,
+      recharge_used = 0
   WHERE id = p_org_id;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)

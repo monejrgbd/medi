@@ -18,7 +18,7 @@ DECLARE
   v_is_manager boolean := false;
 BEGIN
   -- Validate addon type
-  IF p_addon_type NOT IN ('review_sms', 'followup_sms') THEN
+  IF p_addon_type NOT IN ('review_sms', 'followup_sms', 'diagnostic') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid addon type');
   END IF;
 
@@ -83,6 +83,8 @@ BEGIN
       VALUES (v_org_id, 2, 3, 7)
       ON CONFLICT (org_id) DO NOTHING;
     END IF;
+  ELSIF p_addon_type = 'diagnostic' THEN
+    UPDATE public.locations SET diagnostic_enabled = p_enabled WHERE id = p_location_id;
   END IF;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)

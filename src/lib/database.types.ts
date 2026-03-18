@@ -239,6 +239,7 @@ export type Database = {
         Row: {
           ai_model: string | null
           created_at: string | null
+          credit_type: string | null
           credits_amount: number
           description: string | null
           id: string
@@ -248,6 +249,7 @@ export type Database = {
         Insert: {
           ai_model?: string | null
           created_at?: string | null
+          credit_type?: string | null
           credits_amount: number
           description?: string | null
           id?: string
@@ -257,6 +259,7 @@ export type Database = {
         Update: {
           ai_model?: string | null
           created_at?: string | null
+          credit_type?: string | null
           credits_amount?: number
           description?: string | null
           id?: string
@@ -503,6 +506,7 @@ export type Database = {
           address: string | null
           ai_model: string | null
           created_at: string | null
+          diagnostic_enabled: boolean | null
           display_format: string | null
           estimated_wait_minutes: number | null
           followup_sms_enabled: boolean | null
@@ -522,6 +526,7 @@ export type Database = {
           address?: string | null
           ai_model?: string | null
           created_at?: string | null
+          diagnostic_enabled?: boolean | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
           followup_sms_enabled?: boolean | null
@@ -541,6 +546,7 @@ export type Database = {
           address?: string | null
           ai_model?: string | null
           created_at?: string | null
+          diagnostic_enabled?: boolean | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
           followup_sms_enabled?: boolean | null
@@ -602,6 +608,7 @@ export type Database = {
           credits_total: number | null
           credits_used: number | null
           data_retention_until: string | null
+          diagnostic_addon: boolean | null
           followup_sms_addon: boolean | null
           id: string
           last_credit_alert_at: string | null
@@ -612,6 +619,8 @@ export type Database = {
           payment_first_failed_at: string | null
           paypal_subscription_id: string | null
           purged: boolean | null
+          recharge_limit: number | null
+          recharge_used: number | null
           review_sms_addon: boolean | null
           slug: string
           subscription_plan: string | null
@@ -626,6 +635,7 @@ export type Database = {
           credits_total?: number | null
           credits_used?: number | null
           data_retention_until?: string | null
+          diagnostic_addon?: boolean | null
           followup_sms_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
@@ -636,6 +646,8 @@ export type Database = {
           payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
           purged?: boolean | null
+          recharge_limit?: number | null
+          recharge_used?: number | null
           review_sms_addon?: boolean | null
           slug: string
           subscription_plan?: string | null
@@ -650,6 +662,7 @@ export type Database = {
           credits_total?: number | null
           credits_used?: number | null
           data_retention_until?: string | null
+          diagnostic_addon?: boolean | null
           followup_sms_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
@@ -660,6 +673,8 @@ export type Database = {
           payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
           purged?: boolean | null
+          recharge_limit?: number | null
+          recharge_used?: number | null
           review_sms_addon?: boolean | null
           slug?: string
           subscription_plan?: string | null
@@ -825,6 +840,41 @@ export type Database = {
           },
         ]
       }
+      patient_pets: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          id: string
+          name: string
+          patient_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name: string
+          patient_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          patient_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_pets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           birthday: string
@@ -840,6 +890,7 @@ export type Database = {
           org_id: string
           phone: string | null
           phone_verified: boolean | null
+          sex: string | null
           updated_at: string | null
         }
         Insert: {
@@ -856,6 +907,7 @@ export type Database = {
           org_id: string
           phone?: string | null
           phone_verified?: boolean | null
+          sex?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -872,6 +924,7 @@ export type Database = {
           org_id?: string
           phone?: string | null
           phone_verified?: boolean | null
+          sex?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1952,16 +2005,28 @@ export type Database = {
         Returns: Json
       }
       check_location_active: { Args: { p_location_id: string }; Returns: Json }
-      checkin_patient: {
-        Args: {
-          p_birthday: string
-          p_first_name: string
-          p_last_name: string
-          p_location_id: string
-          p_phone?: string
-        }
-        Returns: Json
-      }
+      checkin_patient:
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+              p_sex?: string
+            }
+            Returns: Json
+          }
       claim_patient: { Args: { p_visit_id: string }; Returns: Json }
       cleanup_demo_data: { Args: never; Returns: undefined }
       collect_phone_post_ai: {
@@ -2035,6 +2100,10 @@ export type Database = {
       }
       deduct_credits: {
         Args: { p_ai_model: string; p_org_id: string; p_visit_id: string }
+        Returns: Json
+      }
+      deduct_diagnostic_credits: {
+        Args: { p_org_id: string; p_visit_id: string }
         Returns: Json
       }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
@@ -2317,6 +2386,7 @@ export type Database = {
         }
         Returns: Json
       }
+      set_recharge_limit: { Args: { p_limit: number }; Returns: Json }
       set_review_cycle:
         | {
             Args: { p_cycle_days: number; p_location_id: string }
@@ -2431,6 +2501,10 @@ export type Database = {
         Returns: Json
       }
       update_organization: { Args: { p_name: string }; Returns: Json }
+      update_pets: {
+        Args: { p_patient_id: string; p_pets: string[] }
+        Returns: Json
+      }
       update_visit_priority: {
         Args: { p_priority: number; p_visit_id: string }
         Returns: Json

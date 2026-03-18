@@ -386,7 +386,7 @@ function BeforeAfterSection() {
         <div className="mt-10 space-y-6">
           <FadeIn delay={0.08}>
             <p className="text-lg leading-relaxed text-gray-300">
-              Five minutes per patient on the same intake questions, even for returning patients. Fifty patients a day.{" "}
+              Five minutes per patient on the same intake questions, even for returning patients. Non English speakers take twice as long or get half the detail. Fifty patients a day.{" "}
               <span className="text-white font-semibold">Over four hours of doctor time, gone.</span>
             </p>
           </FadeIn>
@@ -412,7 +412,7 @@ function BeforeAfterSection() {
             <div className="space-y-3">
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">Four hours back, and better intake.</span>{" "}
-                AI handles intake while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Doctor reads the full summary before they open the door.
+                AI handles intake in 130+ languages while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Every doctor reads the summary in their preferred language before they open the door.
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">After the visit, everything is handled.</span>{" "}

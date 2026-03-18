@@ -201,6 +201,12 @@ BEGIN
         FROM public.patient_chronic_conditions pc
         WHERE pc.patient_id = v_referral.patient_id
           AND pc.active = true
+      ), '[]'::jsonb),
+      'pets', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object('name', pp.name))
+        FROM public.patient_pets pp
+        WHERE pp.patient_id = v_referral.patient_id
+          AND pp.active = true
       ), '[]'::jsonb)
     ),
     'visits', COALESCE(vc.visits, '[]'::jsonb),

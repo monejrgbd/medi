@@ -1,0 +1,90 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.set_recharge_limit(
+  p_caller_auth_uid uuid,
+  p_limit int
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+BEGIN
+  -- Validate limit
+  IF p_limit IS NOT NULL AND (p_limit < 1 OR p_limit > 10000) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Limit must be between 1 and 10000');
+  END IF;
+
+  -- Lock org and verify ownership
+  SELECT id, subscription_plan, recharge_limit, billing_cycle_start
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Guard: reject plans that cannot use recharge
+  IF v_org.subscription_plan IN ('expired', 'suspended', 'read_only', 'standard_trial', 'premium_trial') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Recharge is not available on your current plan');
+  END IF;
+
+  -- Update recharge limit
+  UPDATE public.organizations
+  SET recharge_limit = p_limit
+  WHERE id = v_org.id;
+
+  -- PAyG lifecycle: manage billing_cycle_start and recharge_used
+  IF v_org.subscription_plan = 'pay_as_you_go' THEN
+    IF p_limit IS NOT NULL THEN
+      -- Enabling: always start a fresh 30-day cycle
+      -- (ALWAYS set, not just when NULL — previous subscription may leave stale value)
+      UPDATE public.organizations
+      SET billing_cycle_start = now(),
+          recharge_used = 0
+      WHERE id = v_org.id;
+    ELSE
+      -- Disabling: clear cycle to exclude from cron, preserve manual credits
+      UPDATE public.organizations
+      SET billing_cycle_start = NULL
+      WHERE id = v_org.id;
+    END IF;
+  END IF;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'set_recharge_limit', 'organization', v_org.id,
+    jsonb_build_object('old_limit', v_org.recharge_limit, 'new_limit', p_limit));
+
+  RETURN jsonb_build_object('success', true, 'recharge_limit', p_limit);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.set_recharge_limit(
+  p_limit int
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.set_recharge_limit(v_uid, p_limit);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.set_recharge_limit(int) FROM anon;
+GRANT EXECUTE ON FUNCTION public.set_recharge_limit(int) TO authenticated;

@@ -47,8 +47,19 @@ BEGIN
   -- Prevents credit gaming via plan cycling.
   UPDATE public.organizations
   SET subscription_plan = p_new_plan,
-      credits_total = v_allocation
+      credits_total = v_allocation,
+      recharge_used = 0
   WHERE id = v_org.id;
+
+  -- If switching TO PAyG with existing recharge_limit, start a fresh cycle
+  IF p_new_plan = 'pay_as_you_go' THEN
+    UPDATE public.organizations
+    SET billing_cycle_start = CASE
+      WHEN recharge_limit IS NOT NULL THEN now()
+      ELSE NULL
+    END
+    WHERE id = v_org.id;
+  END IF;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
   VALUES (v_org.id, p_caller_auth_uid, 'owner', 'plan_changed', 'organization', v_org.id,

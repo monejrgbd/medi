@@ -9,6 +9,7 @@ interface Location {
   name: string;
   review_sms_enabled: boolean;
   followup_sms_enabled: boolean;
+  diagnostic_enabled: boolean;
 }
 
 interface AddOnTogglesProps {
@@ -31,7 +32,7 @@ export default function AddOnToggles({
 
   async function handleToggle(
     locationId: string,
-    addon: "review_sms" | "followup_sms",
+    addon: "review_sms" | "followup_sms" | "diagnostic",
     enabled: boolean
   ) {
     const key = `${locationId}-${addon}`;
@@ -47,12 +48,14 @@ export default function AddOnToggles({
                 ...l,
                 [addon === "review_sms"
                   ? "review_sms_enabled"
-                  : "followup_sms_enabled"]: enabled,
+                  : addon === "followup_sms"
+                    ? "followup_sms_enabled"
+                    : "diagnostic_enabled"]: enabled,
               }
             : l
         )
       );
-      const label = addon === "review_sms" ? "Review SMS" : "Follow-up SMS";
+      const label = addon === "review_sms" ? "Review SMS" : addon === "followup_sms" ? "Follow up SMS" : "AI Diagnostic";
       toast.success(`${label} ${enabled ? "enabled" : "disabled"}`);
       onChanged();
     } else {
@@ -60,7 +63,16 @@ export default function AddOnToggles({
     }
   }
 
-  const addons = [
+  const aiAddons = [
+    {
+      key: "diagnostic" as const,
+      label: "AI Diagnostic",
+      description: "AI powered clinical assessment for doctors",
+      field: "diagnostic_enabled" as const,
+    },
+  ];
+
+  const smsAddons = [
     {
       key: "review_sms" as const,
       label: "Review SMS",
@@ -69,75 +81,91 @@ export default function AddOnToggles({
     },
     {
       key: "followup_sms" as const,
-      label: "Follow-up SMS",
-      description: "Send follow-up appointment reminders",
+      label: "Follow up SMS",
+      description: "Send follow up appointment reminders",
       field: "followup_sms_enabled" as const,
     },
   ];
 
+  function renderToggle(location: Location, addon: { key: "review_sms" | "followup_sms" | "diagnostic"; label: string; description: string; field: "review_sms_enabled" | "followup_sms_enabled" | "diagnostic_enabled" }) {
+    const enabled = location[addon.field];
+    const toggleKey = `${location.id}-${addon.key}`;
+    return (
+      <div key={addon.key} className="flex items-center justify-between">
+        <div>
+          <span className="text-sm text-ink">{addon.label}</span>
+          <span className="text-xs text-slate ml-2">{addon.description}</span>
+        </div>
+        <button
+          onClick={() => handleToggle(location.id, addon.key, !enabled)}
+          disabled={isDisabled || toggling === toggleKey}
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+            enabled ? "bg-hilt-blue" : "bg-gray-200"
+          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          role="switch"
+          aria-checked={enabled}
+          aria-label={`Toggle ${addon.label} for ${location.name}`}
+        >
+          <span
+            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+              enabled ? "translate-x-5" : "translate-x-0"
+            }`}
+          />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-ink">SMS Features</h2>
-        <span className="text-xs text-slate bg-gray-50 px-2 py-1 rounded-full">
-          0.1 credits per SMS
-        </span>
-      </div>
+      <h2 className="text-lg font-semibold text-ink mb-4">Add-ons</h2>
 
       {isDisabled && (
         <p className="text-xs text-red-500 mb-4">
-          SMS features are unavailable while your plan is {subscriptionPlan}.
+          Add-ons are unavailable while your plan is {subscriptionPlan}.
         </p>
       )}
 
-      <div className="space-y-3">
-        {locations.map((location) => (
-          <div
-            key={location.id}
-            className="rounded-lg border border-gray-200 p-4"
-          >
-            <h3 className="font-medium text-ink text-sm mb-3">
-              {location.name}
-            </h3>
-            <div className="space-y-2">
-              {addons.map((addon) => {
-                const enabled = location[addon.field];
-                const toggleKey = `${location.id}-${addon.key}`;
-                return (
-                  <div
-                    key={addon.key}
-                    className="flex items-center justify-between"
-                  >
-                    <div>
-                      <span className="text-sm text-ink">{addon.label}</span>
-                      <span className="text-xs text-slate ml-2">
-                        {addon.description}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() =>
-                        handleToggle(location.id, addon.key, !enabled)
-                      }
-                      disabled={isDisabled || toggling === toggleKey}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
-                        enabled ? "bg-hilt-blue" : "bg-gray-200"
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
-                      role="switch"
-                      aria-checked={enabled}
-                      aria-label={`Toggle ${addon.label} for ${location.name}`}
-                    >
-                      <span
-                        className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
-                          enabled ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+      <div className="space-y-5">
+        {/* AI Features */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-ink">AI Features</h3>
+            <span className="text-xs text-slate bg-gray-50 px-2 py-1 rounded-full">
+              0.5 credits per visit
+            </span>
           </div>
-        ))}
+          <div className="space-y-3">
+            {locations.map((location) => (
+              <div key={location.id} className="rounded-lg border border-gray-200 p-4">
+                <h4 className="font-medium text-ink text-sm mb-3">{location.name}</h4>
+                <div className="space-y-2">
+                  {aiAddons.map((addon) => renderToggle(location, addon))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SMS Features */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-ink">SMS Features</h3>
+            <span className="text-xs text-slate bg-gray-50 px-2 py-1 rounded-full">
+              0.1 credits per SMS
+            </span>
+          </div>
+          <div className="space-y-3">
+            {locations.map((location) => (
+              <div key={location.id} className="rounded-lg border border-gray-200 p-4">
+                <h4 className="font-medium text-ink text-sm mb-3">{location.name}</h4>
+                <div className="space-y-2">
+                  {smsAddons.map((addon) => renderToggle(location, addon))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {locations.length === 0 && (

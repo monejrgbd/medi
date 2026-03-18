@@ -4,7 +4,8 @@ CREATE OR REPLACE FUNCTION private.checkin_patient(
   p_first_name text,
   p_last_name text,
   p_birthday date,
-  p_phone text DEFAULT NULL
+  p_phone text DEFAULT NULL,
+  p_sex text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -56,6 +57,11 @@ BEGIN
 
   IF p_birthday < '1900-01-01'::date THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid birthday');
+  END IF;
+
+  -- Sex validation if provided
+  IF p_sex IS NOT NULL AND p_sex NOT IN ('male', 'female') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid sex value');
   END IF;
 
   -- Phone validation if provided
@@ -169,8 +175,8 @@ BEGIN
 
         IF v_collision_patient IS NULL THEN
           -- Phone doesn't match any collision patient — create new patient + visit
-          INSERT INTO public.patients (org_id, first_name, last_name, birthday, phone, phone_verified)
-          VALUES (v_org_id, v_clean_first, v_clean_last, p_birthday, v_clean_phone, false)
+          INSERT INTO public.patients (org_id, first_name, last_name, birthday, phone, phone_verified, sex)
+          VALUES (v_org_id, v_clean_first, v_clean_last, p_birthday, v_clean_phone, false, p_sex)
           RETURNING id INTO v_new_patient_id;
 
           INSERT INTO public.visits (org_id, location_id, patient_id, has_previous_visits)
@@ -323,8 +329,8 @@ BEGIN
 
   -- No match: new patient
   BEGIN
-    INSERT INTO public.patients (org_id, first_name, last_name, birthday)
-    VALUES (v_org_id, v_clean_first, v_clean_last, p_birthday)
+    INSERT INTO public.patients (org_id, first_name, last_name, birthday, sex)
+    VALUES (v_org_id, v_clean_first, v_clean_last, p_birthday, p_sex)
     RETURNING id INTO v_new_patient_id;
   EXCEPTION WHEN unique_violation THEN
     -- Race condition: concurrent insert with same name+birthday
@@ -393,7 +399,8 @@ CREATE OR REPLACE FUNCTION public.checkin_patient(
   p_first_name text,
   p_last_name text,
   p_birthday date,
-  p_phone text DEFAULT NULL
+  p_phone text DEFAULT NULL,
+  p_sex text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -402,6 +409,6 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
-  RETURN private.checkin_patient(p_location_id, p_first_name, p_last_name, p_birthday, p_phone);
+  RETURN private.checkin_patient(p_location_id, p_first_name, p_last_name, p_birthday, p_phone, p_sex);
 END;
 $$;

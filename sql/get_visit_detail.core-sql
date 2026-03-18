@@ -122,6 +122,14 @@ BEGIN
     WHERE pc.patient_id = v_visit.patient_id
       AND pc.active = true
   ),
+  patient_pets AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'name', pp.name
+    )), '[]'::jsonb) AS pets
+    FROM public.patient_pets pp
+    WHERE pp.patient_id = v_visit.patient_id
+      AND pp.active = true
+  ),
   past_visits AS (
     SELECT
       count(*) AS visit_count,
@@ -196,10 +204,12 @@ BEGIN
       'first_name', p.first_name,
       'last_name', p.last_name,
       'birthday', p.birthday,
+      'sex', p.sex,
       'phone_masked', CASE WHEN p.phone IS NOT NULL THEN '***-***-' || right(p.phone, 4) ELSE NULL END,
       'medications', pm.meds,
       'allergies', pa.allergies,
       'chronic_conditions', pc.conditions,
+      'pets', pp.pets,
       'visit_count', pv.visit_count,
       'last_visit_date', pv.last_visit_date,
       'last_visit_summary', pv.last_visit_summary
@@ -216,6 +226,7 @@ BEGIN
   CROSS JOIN patient_meds pm
   CROSS JOIN patient_allergies pa
   CROSS JOIN patient_chronic pc
+  CROSS JOIN patient_pets pp
   CROSS JOIN past_visits pv
   CROSS JOIN visit_notes_cte vnc
   CROSS JOIN visit_attachments_cte vac

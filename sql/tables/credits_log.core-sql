@@ -4,6 +4,7 @@ CREATE TABLE public.credits_log (
   visit_id              uuid REFERENCES public.visits(id),
   credits_amount        numeric NOT NULL,
   ai_model              text,
+  credit_type           text DEFAULT 'conversation',
   description           text,
   created_at            timestamptz DEFAULT now()
 );
@@ -17,5 +18,5 @@ CREATE POLICY "owner_read_credits" ON public.credits_log FOR SELECT
 -- No INSERT/UPDATE/DELETE policies — mutations via SECURITY DEFINER only
 
 CREATE INDEX idx_credits_log_org ON public.credits_log (org_id, created_at DESC);
-CREATE UNIQUE INDEX idx_credits_log_visit_unique ON public.credits_log (visit_id) WHERE visit_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_credits_log_visit_type_unique ON public.credits_log (visit_id, credit_type) WHERE visit_id IS NOT NULL;
 CREATE INDEX idx_credits_log_visit ON public.credits_log (visit_id);

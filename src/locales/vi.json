@@ -33,6 +33,8 @@
   "summary.approve": "Chính xác",
   "summary.disclaimer": "Tóm tắt do AI tạo đã được bệnh nhân phê duyệt. Tham khảo bản ghi đầy đủ để đảm bảo chính xác.",
   "summary.submitting": "Đang gửi...",
+  "summary.read_first": "Vui lòng đọc bản tóm tắt và xác nhận lại, vì đây là những gì bác sĩ của bạn sẽ thấy",
+  "summary.wait_seconds": "Còn {seconds} giây",
   "queue.title": "Bạn đang trong hàng chờ",
   "queue.next": "Bạn là người tiếp theo!",
   "queue.ahead": "Có {count} {people} trước bạn.",
@@ -70,6 +72,7 @@
   "phone.sending": "Đang gửi...",
   "phone.skip": "Bỏ qua",
   "phone.noPhone": "Tôi không có điện thoại",
+  "phone.terms": "Tôi đồng ý nhận tin nhắn bao gồm mã xác minh, tóm tắt khám và nhắc nhở theo dõi. Có thể áp dụng phí tin nhắn và dữ liệu.",
   "verify.title": "Nhập mã xác minh",
   "verify.subtitle": "Chúng tôi đã gửi mã 6 chữ số đến {phone}",
   "verify.button": "Xác minh",
@@ -111,6 +114,9 @@
   "checkin.verifyBirthday": "Xác nhận danh tính",
   "checkin.verifyBirthdayDesc": "Vui lòng nhập ngày sinh để tiếp tục phiên của bạn.",
   "checkin.birthdayMismatch": "Ngày sinh không khớp. Vui lòng thử lại hoặc bắt đầu đăng ký mới.",
+  "checkin.sex": "Gioi tinh sinh hoc",
+  "checkin.male": "Nam",
+  "checkin.female": "Nu",
   "checkin.startOver": "Bắt đầu lại",
   "checkin.confirm": "Xác nhận"
 }

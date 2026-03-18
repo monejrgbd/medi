@@ -17,6 +17,7 @@ CREATE TABLE public.locations (
   estimated_wait_minutes numeric DEFAULT NULL,
   review_sms_enabled    boolean DEFAULT false,
   followup_sms_enabled  boolean DEFAULT false,
+  diagnostic_enabled    boolean DEFAULT false,
   created_at            timestamptz DEFAULT now()
 );
 

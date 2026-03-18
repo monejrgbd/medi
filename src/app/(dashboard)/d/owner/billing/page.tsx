@@ -7,6 +7,7 @@ import CreditDashboard from "@/components/billing/CreditDashboard";
 import SubscriptionManager from "@/components/billing/SubscriptionManager";
 import AddOnToggles from "@/components/billing/AddOnToggles";
 import OveragePurchase from "@/components/billing/OveragePurchase";
+import RechargeConfig from "@/components/billing/RechargeConfig";
 import PaymentHistory from "@/components/billing/PaymentHistory";
 import CancelSubscription from "@/components/billing/CancelSubscription";
 import FollowUpSmsConfig from "@/components/billing/FollowUpSmsConfig";
@@ -16,6 +17,7 @@ interface LocationWithAddons {
   name: string;
   review_sms_enabled: boolean;
   followup_sms_enabled: boolean;
+  diagnostic_enabled: boolean;
 }
 
 export default function BillingPage() {
@@ -42,6 +44,7 @@ export default function BillingPage() {
               name: l.name,
               review_sms_enabled: l.review_sms_enabled ?? false,
               followup_sms_enabled: l.followup_sms_enabled ?? false,
+              diagnostic_enabled: l.diagnostic_enabled ?? false,
             }))
           );
         }
@@ -76,6 +79,13 @@ export default function BillingPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <CreditDashboard key={refreshKey} />
+
+      <RechargeConfig
+        rechargeLimit={dashData?.recharge_limit as number | null ?? null}
+        rechargeUsed={(dashData?.recharge_used as number) ?? 0}
+        subscriptionPlan={org.subscription_plan}
+        onChanged={handleRefresh}
+      />
 
       <SubscriptionManager
         currentPlan={org.subscription_plan}

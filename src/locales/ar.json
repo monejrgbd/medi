@@ -33,6 +33,8 @@
   "summary.approve": "هذا دقيق",
   "summary.disclaimer": "ملخص تم إنشاؤه بالذكاء الاصطناعي ووافق عليه المريض. راجع النص الكامل للدقة.",
   "summary.submitting": "جارٍ الإرسال...",
+  "summary.read_first": "يرجى قراءة الملخص والتأكيد مرة أخرى، لأن هذا ما سيراه طبيبك",
+  "summary.wait_seconds": "{seconds} ثانية متبقية",
   "queue.title": "أنت في قائمة الانتظار",
   "queue.next": "أنت التالي!",
   "queue.ahead": "{count} {people} أمامك.",
@@ -70,6 +72,7 @@
   "phone.sending": "جارٍ الإرسال...",
   "phone.skip": "تخطي الآن",
   "phone.noPhone": "ليس لدي هاتف",
+  "phone.terms": "أوافق على تلقي رسائل نصية تشمل رموز التحقق وملخصات الزيارة وتذكيرات المتابعة. قد تُطبق رسوم الرسائل والبيانات.",
   "verify.title": "أدخل رمز التحقق",
   "verify.subtitle": "أرسلنا رمزاً من 6 أرقام إلى {phone}",
   "verify.button": "تحقق",
@@ -111,6 +114,9 @@
   "checkin.verifyBirthday": "تأكيد هويتك",
   "checkin.verifyBirthdayDesc": "يرجى إدخال تاريخ ميلادك لاستئناف جلستك.",
   "checkin.birthdayMismatch": "تاريخ الميلاد غير مطابق. يرجى المحاولة مرة أخرى أو بدء تسجيل وصول جديد.",
+  "checkin.sex": "الجنس البيولوجي",
+  "checkin.male": "ذكر",
+  "checkin.female": "أنثى",
   "checkin.startOver": "البدء من جديد",
   "checkin.confirm": "تأكيد"
 }

@@ -9,10 +9,15 @@ SELECT cron.schedule(
   BEGIN
     FOR v_org_id IN
       SELECT id FROM public.organizations
-      WHERE subscription_plan IN ('starter', 'standard', 'plus', 'enterprise')
-        AND billing_cycle_start IS NOT NULL
-        AND billing_cycle_start + interval '1 month' <= now()
+      WHERE billing_cycle_start IS NOT NULL
         AND cancel_at_period_end IS NULL
+        AND (
+          (subscription_plan IN ('starter', 'standard', 'plus', 'enterprise')
+           AND billing_cycle_start + interval '1 month' <= now())
+          OR
+          (subscription_plan = 'pay_as_you_go' AND recharge_limit IS NOT NULL
+           AND billing_cycle_start + interval '30 days' <= now())
+        )
     LOOP
       PERFORM private.reset_monthly_credits(v_org_id);
     END LOOP;
