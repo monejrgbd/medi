@@ -451,7 +451,11 @@ export default function DoctorDashboard({
               </div>
             ) : (
               claimed.map((v) => (
-                <ClaimedPatientCard key={v.visit_id} visit={v} />
+                <ClaimedPatientCard
+                  key={v.visit_id}
+                  visit={v}
+                  onClickOverride={demoMode ? () => setFocusMode(true) : undefined}
+                />
               ))
             )}
           </div>

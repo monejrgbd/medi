@@ -5,9 +5,10 @@ import type { ClaimedVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 
 interface ClaimedPatientCardProps {
   visit: ClaimedVisit;
+  onClickOverride?: () => void;
 }
 
-export default function ClaimedPatientCard({ visit }: ClaimedPatientCardProps) {
+export default function ClaimedPatientCard({ visit, onClickOverride }: ClaimedPatientCardProps) {
   const router = useRouter();
 
   const claimedAt = new Date(visit.claimed_at);
@@ -17,7 +18,7 @@ export default function ClaimedPatientCard({ visit }: ClaimedPatientCardProps) {
 
   return (
     <button
-      onClick={() => router.push(`/d/doctor/patient/${visit.visit_id}`)}
+      onClick={() => onClickOverride ? onClickOverride() : router.push(`/d/doctor/patient/${visit.visit_id}`)}
       className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:border-hilt-blue hover:shadow-sm"
     >
       <div className="flex items-center justify-between">
