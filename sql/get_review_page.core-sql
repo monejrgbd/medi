@@ -15,7 +15,8 @@ BEGIN
     'success', true,
     'clinic_name', o.name,
     'doctor_name', doc.full_name,
-    'already_submitted', (r.submitted_at IS NOT NULL)
+    'already_submitted', (r.submitted_at IS NOT NULL),
+    'is_demo', (o.id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'::uuid)
   )
   INTO v_result
   FROM public.reviews r

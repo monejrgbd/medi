@@ -7,9 +7,10 @@ import { Check } from "lucide-react";
 
 interface ReviewFormProps {
   token: string;
+  isDemo?: boolean;
 }
 
-export default function ReviewForm({ token }: ReviewFormProps) {
+export default function ReviewForm({ token, isDemo = false }: ReviewFormProps) {
   const [rating, setRating] = useState<number>(0);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
@@ -63,7 +64,24 @@ export default function ReviewForm({ token }: ReviewFormProps) {
           Thank you for your feedback!
         </h2>
 
-        {platformRedirect && (
+        {isDemo ? (
+          <div className="mt-6 rounded-xl border border-blue-200 bg-blue-50 p-4 text-left">
+            <p className="text-xs font-semibold text-blue-800 uppercase tracking-wide mb-2">
+              Demo: How This Works
+            </p>
+            {platformRedirect ? (
+              <p className="text-sm text-blue-700">
+                The patient rated {rating} stars, which meets the redirect threshold (set to 5 stars in this demo, adjustable per clinic). They would now be directed to{" "}
+                <span className="font-semibold capitalize">{platformRedirect.name}</span>{" "}
+                to leave a public review, boosting your online presence.
+              </p>
+            ) : (
+              <p className="text-sm text-blue-700">
+                The patient rated {rating} stars, which is below the redirect threshold (set to 5 stars in this demo, adjustable per clinic). This review is stored internally only. The patient would not be redirected to an external platform.
+              </p>
+            )}
+          </div>
+        ) : platformRedirect ? (
           <div className="mt-6">
             <p className="text-sm text-gray-600 mb-4">
               Would you also leave a review on{" "}
@@ -82,7 +100,7 @@ export default function ReviewForm({ token }: ReviewFormProps) {
               <span className="capitalize">{platformRedirect.name}</span>
             </a>
           </div>
-        )}
+        ) : null}
       </div>
     );
   }

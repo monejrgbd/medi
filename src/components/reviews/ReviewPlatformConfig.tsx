@@ -221,7 +221,7 @@ export default function ReviewPlatformConfig({
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
               }`}
             >
-              {r}+ stars
+              {r} {r === 1 ? "star" : "stars"}
             </button>
           ))}
         </div>
