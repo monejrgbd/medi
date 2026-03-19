@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { signOutDemoUser } from "@/app/demo/_actions/demo";
 import { ArrowLeft } from "lucide-react";
 import DemoTabBar, { type Tab } from "@/components/demo/DemoTabBar";
 import DemoGuide from "@/components/demo/DemoGuide";
@@ -67,13 +66,36 @@ export default function DemoShell({
   const [demoComplete, setDemoComplete] = useState(false);
   const [demoVisitId, setDemoVisitId] = useState<string | null>(null);
   const [demoKey, setDemoKey] = useState(0);
+  const [pendingApproval, setPendingApproval] = useState(false);
+  const [waitingForDoctor, setWaitingForDoctor] = useState(false);
+  const [phoneStepDone, setPhoneStepDone] = useState(false);
+  const [visitCompleted, setVisitCompleted] = useState(false);
+  const [visitClaimed, setVisitClaimed] = useState(false);
 
-  // Sign out on unmount (best-effort, fire-and-forget)
+  // Auto-switch to doctor tab once phone step is complete
   useEffect(() => {
-    return () => {
-      signOutDemoUser();
-    };
-  }, []);
+    if (waitingForDoctor && phoneStepDone) {
+      setPulsingTab("doctor");
+      setGuideMessage("The patient is ready for a doctor!");
+      setGuideHint("Switch to the Doctor view to claim the patient.");
+      setTimeout(() => {
+        setActiveTab("doctor");
+        setPulsingTab(null);
+      }, 3000);
+      setWaitingForDoctor(false);
+    }
+  }, [waitingForDoctor, phoneStepDone]);
+
+  // Auto-switch back to doctor tab if user leaves while visit is claimed
+  useEffect(() => {
+    if (!visitClaimed || activeTab === "doctor") return;
+    const timer = setTimeout(() => {
+      setActiveTab("doctor");
+      setGuideMessage("Complete the visit to continue the demo.");
+      setGuideHint("Enter a diagnosis and submit to finish the visit.");
+    }, 10_000);
+    return () => clearTimeout(timer);
+  }, [visitClaimed, activeTab]);
 
   // Realtime auto-switching
   useEffect(() => {
@@ -93,6 +115,7 @@ export default function DemoShell({
             // Capture visit ID as backup (onVisitCreated is primary)
             const visitId = (payload.new as { id?: string }).id;
             if (visitId) setDemoVisitId((prev) => prev ?? visitId);
+            setPendingApproval(true);
             setPulsingTab("receptionist");
             setGuideMessage("A new patient just checked in!");
             setGuideHint(
@@ -121,6 +144,7 @@ export default function DemoShell({
             status === "still_answering_ai" &&
             oldStatus === "pending_approval"
           ) {
+            setPendingApproval(false);
             setPulsingTab("patient");
             setGuideMessage("The AI conversation has started!");
             setGuideHint(
@@ -133,21 +157,31 @@ export default function DemoShell({
           }
 
           if (status === "waiting_doctor_claim") {
-            setPulsingTab("doctor");
-            setGuideMessage("The patient is ready for a doctor!");
-            setGuideHint(
-              "Switch to the Doctor view to claim the patient."
-            );
-            setTimeout(() => {
-              setActiveTab("doctor");
-              setPulsingTab(null);
-            }, 3000);
+            // Defer doctor tab switch until patient finishes phone step
+            setWaitingForDoctor(true);
+          }
+
+          if (status === "in_progress" && oldStatus === "waiting_doctor_claim") {
+            setVisitClaimed(true);
           }
 
           if (status === "completed") {
-            setDemoComplete(true);
-            setGuideMessage(null);
-            setGuideHint(null);
+            setVisitClaimed(false);
+            setVisitCompleted(true);
+            setPendingApproval(false);
+            setPulsingTab("reviews");
+            setGuideMessage("Visit complete! The patient receives an SMS with their visit summary and a review request.");
+            setGuideHint("Switch to the Reviews tab to see how the review system works.");
+            setTimeout(() => {
+              setActiveTab("reviews");
+              setPulsingTab(null);
+              setGuideMessage("Reviews Dashboard");
+              setGuideHint("Patients are asked to leave a review via SMS after each visit. You can configure which external platform they are directed to and track all reviews here.");
+            }, 4000);
+            // Auto-finish after 60s
+            setTimeout(() => {
+              setDemoComplete(true);
+            }, 60_000);
           }
         }
       )
@@ -161,6 +195,10 @@ export default function DemoShell({
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
     setPulsingTab(null);
+
+    // Keep the approval guide message until the receptionist approves
+    if (pendingApproval) return;
+
     if (tab === "patient") {
       setGuideMessage("Patient View");
       setGuideHint("This is what your patients see when they scan the QR code. You are given one after you sign up.");
@@ -179,13 +217,12 @@ export default function DemoShell({
     }
   }
 
-  function handleDismissGuide() {
-    setGuideMessage(null);
-    setGuideHint(null);
-  }
-
   const handleVisitCreated = useCallback((visitId: string) => {
     setDemoVisitId(visitId);
+  }, []);
+
+  const handlePhoneComplete = useCallback(() => {
+    setPhoneStepDone(true);
   }, []);
 
   function handleRestart() {
@@ -195,6 +232,11 @@ export default function DemoShell({
       localStorage.removeItem("hilt_session_phone");
     }
     setDemoVisitId(null);
+    setPendingApproval(false);
+    setWaitingForDoctor(false);
+    setPhoneStepDone(false);
+    setVisitCompleted(false);
+    setVisitClaimed(false);
     setDemoComplete(false);
     setActiveTab("patient");
     setGuideMessage("Welcome! Fill in the check in form to start the demo.");
@@ -223,7 +265,16 @@ export default function DemoShell({
         <span className="font-semibold text-hilt-blue text-sm">
           Hilt Health Demo
         </span>
-        <div className="w-[130px]" />
+        <div className="w-[130px] flex justify-end">
+          {visitCompleted && (
+            <button
+              onClick={() => setDemoComplete(true)}
+              className="rounded-lg bg-hilt-blue px-4 py-1.5 text-sm font-medium text-white hover:bg-hilt-blue/90 transition-colors"
+            >
+              Finish Demo
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tab bar */}
@@ -237,7 +288,6 @@ export default function DemoShell({
       <DemoGuide
         message={guideMessage}
         hint={guideHint}
-        onDismiss={handleDismissGuide}
       />
 
 
@@ -252,6 +302,7 @@ export default function DemoShell({
                 locationData={locationData}
                 demoMode={true}
                 onVisitCreated={handleVisitCreated}
+                onPhoneComplete={handlePhoneComplete}
               />
             </div>
           </div>
@@ -274,6 +325,8 @@ export default function DemoShell({
             initialActive={receptionistInitial.active}
             initialCompleted={receptionistInitial.completed}
             initialCounts={receptionistInitial.counts}
+            demoMode={true}
+            demoVisitId={demoVisitId}
           />
         </div>
 
@@ -288,13 +341,13 @@ export default function DemoShell({
             orgId={orgId}
             locationId={locationId}
             locationName={locationName}
-            initialQueue={[]}
-            initialClaimed={[]}
-            initialCompleted={[]}
-            initialLeft={[]}
+            initialQueue={doctorInitial.queue}
+            initialClaimed={doctorInitial.claimed}
+            initialCompleted={doctorInitial.completed}
+            initialLeft={doctorInitial.left}
             initialDoctors={doctorInitial.doctors}
-            initialHasMoreCompleted={false}
-            initialHasMoreLeft={false}
+            initialHasMoreCompleted={doctorInitial.hasMoreCompleted}
+            initialHasMoreLeft={doctorInitial.hasMoreLeft}
             demoMode={true}
             demoVisitId={demoVisitId}
           />

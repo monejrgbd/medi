@@ -138,7 +138,7 @@ export default function ActivePatientsList({
                       <PatientStatusBadge status={visit.status} />
                     </div>
                     <p className="text-xs text-ash">
-                      DOB: {visit.patients.birthday}
+                      DOB: {visit.patients.birthday}{(visit.patients as Record<string, unknown>).sex ? ` · ${(visit.patients as Record<string, unknown>).sex}` : ""}
                       {visit.claimed_doctor && (
                         <span className="ml-2">
                           — Dr. {visit.claimed_doctor.full_name}

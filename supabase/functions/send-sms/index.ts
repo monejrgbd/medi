@@ -1,9 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
-const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
-const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
-const TWILIO_PHONE_NUMBER = Deno.env.get("TWILIO_PHONE_NUMBER");
+const TELNYX_API_KEY = Deno.env.get("TELNYX_API_KEY");
+const TELNYX_MESSAGING_PROFILE_ID = Deno.env.get("TELNYX_MESSAGING_PROFILE_ID");
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://hilthealth.com";
 
 // SMS templates
@@ -61,39 +60,36 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
+    if (!TELNYX_API_KEY || !TELNYX_MESSAGING_PROFILE_ID) {
       return new Response(
-        JSON.stringify({ error: "Twilio not configured" }),
+        JSON.stringify({ error: "Telnyx not configured" }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Call Twilio REST API
-    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;
-    const authHeader = btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
-
-    const formData = new URLSearchParams();
-    formData.append("To", to);
-    formData.append("From", TWILIO_PHONE_NUMBER);
-    formData.append("Body", body);
-
-    const twilioRes = await fetch(twilioUrl, {
+    // Call Telnyx v2 Messages API (number selected from messaging profile pool)
+    const telnyxRes = await fetch("https://api.telnyx.com/v2/messages", {
       method: "POST",
       headers: {
-        Authorization: `Basic ${authHeader}`,
-        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Bearer ${TELNYX_API_KEY}`,
+        "Content-Type": "application/json",
       },
-      body: formData.toString(),
+      body: JSON.stringify({
+        messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID,
+        to,
+        text: body,
+      }),
     });
 
-    const twilioData = await twilioRes.json();
+    const telnyxData = await telnyxRes.json();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const logStatus = twilioRes.ok ? "sent" : "failed";
+    const logStatus = telnyxRes.ok ? "sent" : "failed";
+    const providerId = telnyxData?.data?.id || null;
 
     if (sms_log_id) {
       // Update existing sms_log row (pre-inserted by SQL function)
@@ -101,10 +97,10 @@ Deno.serve(async (req) => {
         .from("sms_log")
         .update({
           status: logStatus,
-          twilio_sid: twilioData.sid || null,
-          error_message: twilioRes.ok
+          provider_sid: providerId,
+          error_message: telnyxRes.ok
             ? null
-            : twilioData.message || "Unknown error",
+            : telnyxData?.errors?.[0]?.detail || "Unknown error",
         })
         .eq("id", sms_log_id);
     } else {
@@ -116,15 +112,15 @@ Deno.serve(async (req) => {
         patient_id: patient_id || null,
         phone: to,
         sms_type,
-        twilio_sid: twilioData.sid || null,
+        provider_sid: providerId,
         status: logStatus,
-        error_message: twilioRes.ok
+        error_message: telnyxRes.ok
           ? null
-          : twilioData.message || "Unknown error",
+          : telnyxData?.errors?.[0]?.detail || "Unknown error",
       });
     }
 
-    if (!twilioRes.ok) {
+    if (!telnyxRes.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to send SMS" }),
         { status: 502, headers: { "Content-Type": "application/json" } }
@@ -132,7 +128,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, twilio_sid: twilioData.sid }),
+      JSON.stringify({ success: true, provider_sid: providerId }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (_err) {

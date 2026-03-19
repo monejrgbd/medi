@@ -198,16 +198,6 @@ export default function SignUpForm() {
         </div>
       )}
 
-      {waitlistCount !== null && !submitted && interest === "free_trial" && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-6 text-sm font-medium text-hilt-blue"
-        >
-          {waitlistCount + 24} clinics already on the waitlist
-        </motion.p>
-      )}
-
       <AnimatePresence mode="wait">
         {submitted ? (
           <motion.div

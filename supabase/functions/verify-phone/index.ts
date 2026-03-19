@@ -1,3 +1,4 @@
+// Deploy with: --no-verify-jwt (called by unauthenticated patients, auth via session token)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 

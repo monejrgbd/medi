@@ -28,7 +28,7 @@ interface PendingVisit {
   active_follow_ups: {
     id: string;
     doctor_name: string;
-    due_date: string;
+    due_at: string;
     ai_instructions_preview: string | null;
     visit_id: string;
     visit_date: string;

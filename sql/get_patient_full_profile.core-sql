@@ -131,7 +131,7 @@ BEGIN
   SELECT COALESCE(jsonb_agg(row_to_json(fu.*) ORDER BY fu.created_at DESC), '[]'::jsonb)
   INTO v_follow_ups
   FROM (
-    SELECT f.id, f.status, f.due_date, f.ai_instructions, f.created_at,
+    SELECT f.id, f.status, f.due_at, f.ai_instructions, f.created_at,
            su.full_name AS doctor_name
     FROM public.follow_ups f
     LEFT JOIN public.staff_users su ON su.id = f.doctor_id

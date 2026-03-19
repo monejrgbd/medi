@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { completeVisit } from "@/app/(dashboard)/d/_actions/doctor";
 import FollowUpForm from "./FollowUpForm";
 
@@ -8,20 +8,37 @@ interface DiagnosisFormProps {
   visitId: string;
   onClose: () => void;
   onComplete: () => void;
+  demoMode?: boolean;
 }
 
 export default function DiagnosisForm({
   visitId,
   onClose,
   onComplete,
+  demoMode = false,
 }: DiagnosisFormProps) {
-  const [diagnosis, setDiagnosis] = useState("");
+  const [diagnosis, setDiagnosis] = useState(demoMode ? "Demo visit, patient assessed." : "");
+  const autoSubmitRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const [followUpEnabled, setFollowUpEnabled] = useState(false);
-  const [followUpDays, setFollowUpDays] = useState(14);
-  const [followUpInstructions, setFollowUpInstructions] = useState("");
+  const [followUpEnabled, setFollowUpEnabled] = useState(demoMode);
+  const [followUpDays, setFollowUpDays] = useState(demoMode ? 7 : 14);
+  const [followUpInstructions, setFollowUpInstructions] = useState(
+    demoMode ? "Hello, please do not forget to book on the agreed time." : ""
+  );
+
+  // Demo: auto-submit after 20s
+  useEffect(() => {
+    if (!demoMode) return;
+    const timer = setTimeout(() => {
+      if (!autoSubmitRef.current) {
+        autoSubmitRef.current = true;
+        handleSubmit();
+      }
+    }, 20_000);
+    return () => clearTimeout(timer);
+  }, [demoMode]);
 
   function handleSubmit() {
     const trimmed = diagnosis.trim();

@@ -11,6 +11,17 @@ type AIModel = "standard" | "advanced";
 
 const CREDIT_COSTS = [
   {
+    action: "AI Diagnostic",
+    credits: 0.5,
+    desc: "AI powered clinical assessment for doctors (only to be used as a suggestion)",
+    tag: "Enable or disable per location",
+    icon: (
+      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+      </svg>
+    ),
+  },
+  {
     action: "Review request SMS",
     credits: 0.1,
     desc: "Post visit review collection",
@@ -120,7 +131,7 @@ const FAQS = [
   },
   {
     q: "What is the difference between Standard and Advanced AI?",
-    a: "Standard AI (1.5 credits) handles routine visits, walk ins, and general intake quickly. Advanced AI (4 credits) provides deeper reasoning for complex cases with more thorough follow up questions and detailed symptom analysis. You can use both within any plan.",
+    a: "Standard AI (1.5 credits) handles routine visits, walk ins, and general intake quickly. Advanced AI (4 credits) provides deeper reasoning for complex cases with more thorough follow up questions and detailed symptom analysis. You can use both within any plan. The AI Diagnostic add on (0.5 credits) is separate and generates a clinical assessment with differential diagnoses for the doctor.",
   },
 ];
 
@@ -198,7 +209,7 @@ function CreditCostsSection() {
               <div className="flex items-center justify-between rounded-lg bg-snow p-3">
                 <div>
                   <p className="text-sm font-semibold text-ink">Advanced</p>
-                  <p className="text-xs text-ash">Complex cases, suggested diagnostic to doctor</p>
+                  <p className="text-xs text-ash">Complex cases, deeper reasoning, thorough follow ups</p>
                 </div>
                 <div className="shrink-0 text-right ml-3">
                   <span className="text-xl font-bold text-ink">4</span>
@@ -232,7 +243,7 @@ function CreditCostsSection() {
           ))}
         </div>
         <p className="mt-4 text-center text-sm text-ash">
-          Credits only cover AI conversations and SMS. The rest of the platform, including summaries, analytics, referrals, review management, 130+ languages, and multi location support, is yours from day one.
+          Credits only cover AI conversations, diagnostics, and SMS. The rest of the platform, including summaries, analytics, referrals, review management, 130+ languages, and multi location support, is yours from day one.
         </p>
       </div>
     </FadeIn>
@@ -309,12 +320,14 @@ function PlanCards({ onContactSales }: { onContactSales: () => void }) {
                     Start Free Trial
                   </Link>
                   {isEnterprise && (
-                    <button
-                      onClick={onContactSales}
+                    <a
+                      href="https://calendar.app.google/1Lmd2eT35zScoj4K8"
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="block w-full rounded-xl border border-gray-300 py-2.5 text-center text-sm font-medium text-slate transition-colors hover:border-ink hover:text-ink"
                     >
                       Talk to Sales
-                    </button>
+                    </a>
                   )}
                 </div>
               </div>
@@ -327,12 +340,14 @@ function PlanCards({ onContactSales }: { onContactSales: () => void }) {
       <FadeIn>
         <div className="mt-8 text-center">
           <p className="text-slate">
-            <button
-              onClick={onContactSales}
+            <a
+              href="https://calendar.app.google/1Lmd2eT35zScoj4K8"
+              target="_blank"
+              rel="noopener noreferrer"
               className="font-medium text-hilt-blue hover:underline"
             >
               Need custom volumes? Contact us.
-            </button>
+            </a>
             <span className="mx-2 text-ash">or</span>
             Pay as you go at <span className="font-semibold text-ink">$1 per credit</span>, no commitment.
           </p>

@@ -109,7 +109,7 @@ export default function PatientFullProfile({
                           </span>
                         </div>
                         <p className="text-xs text-slate mt-1">
-                          Due: {new Date(fu.due_date as string).toLocaleDateString()}
+                          Due: {new Date(fu.due_at as string).toLocaleDateString()}
                           {fu.doctor_name ? ` | By: ${String(fu.doctor_name)}` : null}
                         </p>
                       </div>

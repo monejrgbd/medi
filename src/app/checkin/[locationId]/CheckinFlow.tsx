@@ -65,6 +65,7 @@ interface CheckinFlowProps {
   kiosk?: boolean;
   demoMode?: boolean;
   onVisitCreated?: (visitId: string) => void;
+  onPhoneComplete?: () => void;
 }
 
 interface MedicalInfo {
@@ -92,6 +93,7 @@ export default function CheckinFlow({
   kiosk = false,
   demoMode = false,
   onVisitCreated,
+  onPhoneComplete,
 }: CheckinFlowProps) {
   const [state, setState] = useState<FlowState>(
     locationData.active ? "form" : "inactive"
@@ -135,6 +137,16 @@ export default function CheckinFlow({
   const consentGivenRef = useRef(consentGiven);
   consentGivenRef.current = consentGiven;
   const demoModeRef = useRef(demoMode);
+
+  // Stable demo defaults — computed once per mount so they don't change on re-render
+  const demoDefaultsRef = useRef(demoMode ? (() => {
+    const firsts = ["Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Sam", "Jamie", "Avery", "Quinn"];
+    const lasts = ["Smith", "Johnson", "Lee", "Garcia", "Chen", "Patel", "Kim", "Brown", "Wilson", "Davis"];
+    const y = 1985 + Math.floor(Math.random() * 20);
+    const m = String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
+    const d = String(1 + Math.floor(Math.random() * 28)).padStart(2, "0");
+    return { firstName: firsts[Math.floor(Math.random() * firsts.length)], lastName: lasts[Math.floor(Math.random() * lasts.length)], birthday: `${y}-${m}-${d}`, sex: Math.random() > 0.5 ? "male" : "female" };
+  })() : undefined);
 
   // Kiosk mode: clear localStorage on mount to prevent session recovery
   useEffect(() => {
@@ -216,6 +228,7 @@ export default function CheckinFlow({
       setHasPreviousVisits(data.has_previous_visits);
       setConsentGiven(data.consent_given);
       setVisitId(data.visit_id);
+      if (onVisitCreated && data.visit_id) onVisitCreated(data.visit_id);
       if (data.language) setPatientLanguage(data.language);
 
       // Recover stored phone
@@ -240,7 +253,7 @@ export default function CheckinFlow({
             setState("summary_review");
           } else if (data.ai_completed_at) {
             setState("generating_summary");
-          } else if (demoMode || (!data.has_previous_visits && !data.consent_given)) {
+          } else if (!data.consent_given) {
             setState("first_timer");
           } else {
             setState("chatting");
@@ -333,7 +346,7 @@ export default function CheckinFlow({
         if (current === "chatting" || current === "generating_summary" || current === "summary_review") {
           return;
         }
-        if (demoModeRef.current || (!hasPreviousVisitsRef.current && !consentGivenRef.current)) {
+        if (!consentGivenRef.current) {
           setState("first_timer");
         } else {
           setState("chatting");
@@ -360,6 +373,14 @@ export default function CheckinFlow({
       }
 
       if (status === "claimed_by_doctor") {
+        const current = stateRef.current;
+        if (
+          current === "phone_collection" ||
+          current === "phone_input" ||
+          current === "phone_verification"
+        ) {
+          return;
+        }
         setState("claimed");
         // Sound + vibration — works even when tab is active
         try {
@@ -477,6 +498,7 @@ export default function CheckinFlow({
         if (session?.success) {
           setConsentGiven(session.consent_given);
           setVisitId(session.visit_id);
+          if (onVisitCreated && session.visit_id) onVisitCreated(session.visit_id);
 
           // Show cross-location notice
           if (data.active_at_other_location) {
@@ -498,7 +520,7 @@ export default function CheckinFlow({
               setState("summary_review");
             } else if (session.ai_completed_at) {
               setState("generating_summary");
-            } else if (demoMode || (!session.has_previous_visits && !session.consent_given)) {
+            } else if (!session.consent_given) {
               setState("first_timer");
             } else {
               setState("chatting");
@@ -680,6 +702,8 @@ export default function CheckinFlow({
         }
       }
     }
+    // No phone step needed — notify demo shell
+    if (onPhoneComplete) onPhoneComplete();
     setState("queued");
   }
 
@@ -759,6 +783,7 @@ export default function CheckinFlow({
     } else {
       // Post-AI collection: fetch queue position then go to queue
       await fetchQueuePosition();
+      if (onPhoneComplete) onPhoneComplete();
       setState("queued");
     }
   }
@@ -770,6 +795,7 @@ export default function CheckinFlow({
 
   async function handlePhoneSkip() {
     await fetchQueuePosition();
+    if (onPhoneComplete) onPhoneComplete();
     setState("queued");
   }
 
@@ -842,14 +868,7 @@ export default function CheckinFlow({
           onSubmit={handleCheckin}
           loading={loading}
           error={error}
-          demoDefaults={demoMode ? (() => {
-            const firsts = ["Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Sam", "Jamie", "Avery", "Quinn"];
-            const lasts = ["Smith", "Johnson", "Lee", "Garcia", "Chen", "Patel", "Kim", "Brown", "Wilson", "Davis"];
-            const y = 1985 + Math.floor(Math.random() * 20);
-            const m = String(1 + Math.floor(Math.random() * 12)).padStart(2, "0");
-            const d = String(1 + Math.floor(Math.random() * 28)).padStart(2, "0");
-            return { firstName: firsts[Math.floor(Math.random() * firsts.length)], lastName: lasts[Math.floor(Math.random() * lasts.length)], birthday: `${y}-${m}-${d}`, sex: Math.random() > 0.5 ? "male" : "female" };
-          })() : undefined}
+          demoDefaults={demoDefaultsRef.current}
         />
       );
 
@@ -907,7 +926,7 @@ export default function CheckinFlow({
                       setState("summary_review");
                     } else if (data.ai_completed_at) {
                       setState("generating_summary");
-                    } else if (demoMode || (!(data.has_previous_visits as boolean) && !(data.consent_given as boolean))) {
+                    } else if (!(data.consent_given as boolean)) {
                       setState("first_timer");
                     } else {
                       setState("chatting");
@@ -1007,22 +1026,31 @@ export default function CheckinFlow({
 
     case "summary_review":
       return visitId && sessionToken && summaryData ? (
-        <SummaryReview
-          visitId={visitId}
-          sessionToken={sessionToken}
-          summary={summaryData.summary}
-          structuredCard={summaryData.structured_card}
-          medicalInfo={medicalInfo}
-          onApprove={handleSummaryApprove}
-          onReject={handleSummaryReject}
-        />
+        <div className="flex flex-col items-center w-full">
+          {demoMode && (
+            <div className="w-full max-w-md text-center mb-4">
+              <p className="text-sm font-medium text-blue-700 bg-blue-50 rounded-lg px-4 py-3">
+                Allergies, chronic conditions, pets, and medications are saved per patient. Returning patients are simply asked to confirm they are still accurate rather than entering them again.
+              </p>
+            </div>
+          )}
+          <SummaryReview
+            visitId={visitId}
+            sessionToken={sessionToken}
+            summary={summaryData.summary}
+            structuredCard={summaryData.structured_card}
+            medicalInfo={medicalInfo}
+            onApprove={handleSummaryApprove}
+            onReject={handleSummaryReject}
+          />
+        </div>
       ) : null;
 
     case "queued":
       return visitId && sessionToken ? (
         <PatientQueueView
-          queuePosition={queuePosition}
-          estimatedWait={estimatedWait}
+          queuePosition={demoMode ? 1 : queuePosition}
+          estimatedWait={demoMode ? 1 : estimatedWait}
           visitId={visitId}
           sessionToken={sessionToken}
         />
@@ -1082,20 +1110,24 @@ export default function CheckinFlow({
 
     case "phone_collection":
       return (
-        <>
+        <div className="flex flex-col items-center">
           {demoMode && (
-            <p className="text-xs text-blue-600 bg-blue-50 rounded-lg px-3 py-2 mb-3 text-center max-w-md">
-              This will be important for the coming demo features like review requests and visit summary SMS.
-            </p>
+            <div className="w-full max-w-md text-center mb-4">
+              <p className="text-sm font-medium text-blue-700 bg-blue-50 rounded-lg px-4 py-3">
+                Add your phone number to see review requests and visit summary SMS in the demo.
+              </p>
+            </div>
           )}
           <PhoneInput
             mode="collection"
             onSubmit={handlePhoneSubmit}
             loading={phoneLoading}
             error={phoneError}
-            onSkip={handlePhoneSkip}
+            onSkip={demoMode ? undefined : handlePhoneSkip}
+            skipDelay={demoMode ? undefined : 10_000}
+            autoSkipAfter={demoMode ? undefined : 60_000}
           />
-        </>
+        </div>
       );
 
     case "no_phone_notice":

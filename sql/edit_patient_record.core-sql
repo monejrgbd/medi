@@ -4,7 +4,8 @@ CREATE OR REPLACE FUNCTION private.edit_patient_record(
   p_patient_id uuid,
   p_first_name text DEFAULT NULL,
   p_last_name text DEFAULT NULL,
-  p_birthday date DEFAULT NULL
+  p_birthday date DEFAULT NULL,
+  p_sex text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -92,6 +93,10 @@ BEGIN
     END IF;
   END IF;
 
+  IF p_sex IS NOT NULL AND p_sex NOT IN ('male', 'female') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid sex value');
+  END IF;
+
   -- Uniqueness check before update
   SELECT p.id INTO v_duplicate_check
   FROM public.patients p
@@ -117,6 +122,9 @@ BEGIN
   IF p_birthday IS NOT NULL AND p_birthday <> v_patient.birthday THEN
     v_changed_fields := v_changed_fields || 'birthday';
   END IF;
+  IF p_sex IS NOT NULL THEN
+    v_changed_fields := v_changed_fields || 'sex';
+  END IF;
 
   IF array_length(v_changed_fields, 1) IS NULL THEN
     RETURN jsonb_build_object('success', true, 'message', 'No changes detected');
@@ -127,6 +135,7 @@ BEGIN
   SET first_name = COALESCE(v_clean_first, first_name),
       last_name = COALESCE(v_clean_last, last_name),
       birthday = COALESCE(p_birthday, birthday),
+      sex = COALESCE(p_sex, sex),
       updated_at = now()
   WHERE id = p_patient_id;
 
@@ -177,7 +186,8 @@ CREATE OR REPLACE FUNCTION public.edit_patient_record(
   p_patient_id uuid,
   p_first_name text DEFAULT NULL,
   p_last_name text DEFAULT NULL,
-  p_birthday date DEFAULT NULL
+  p_birthday date DEFAULT NULL,
+  p_sex text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -188,9 +198,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.edit_patient_record(v_auth_uid, p_patient_id, p_first_name, p_last_name, p_birthday);
+  RETURN private.edit_patient_record(v_auth_uid, p_patient_id, p_first_name, p_last_name, p_birthday, p_sex);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date) FROM anon;
-GRANT EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date, text) TO authenticated;

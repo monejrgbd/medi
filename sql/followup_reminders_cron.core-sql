@@ -1,6 +1,6 @@
--- Cron job: daily 10 AM — send follow-up SMS reminders
+-- Cron job: every 5 minutes — send follow-up SMS reminders
 SELECT cron.schedule(
   'followup_reminders',
-  '0 10 * * *',
+  '*/5 * * * *',
   $$SELECT private.send_followup_reminders()$$
 );

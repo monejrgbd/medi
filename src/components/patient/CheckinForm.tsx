@@ -26,7 +26,7 @@ export default function CheckinForm({
   const [firstName, setFirstName] = useState(demoDefaults?.firstName ?? "");
   const [lastName, setLastName] = useState(demoDefaults?.lastName ?? "");
   const [birthday, setBirthday] = useState(demoDefaults?.birthday ?? "");
-  const [sex, setSex] = useState(demoDefaults?.sex ?? "");
+  const [sex, setSex] = useState(demoDefaults?.sex ?? "male");
   const [validationError, setValidationError] = useState("");
   const { t } = useLanguage();
 

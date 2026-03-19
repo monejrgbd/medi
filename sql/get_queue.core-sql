@@ -59,6 +59,7 @@ BEGIN
       v.id AS visit_id,
       p.first_name,
       p.last_name,
+      p.sex,
       v.priority,
       COALESCE(extract(epoch FROM now() - v.entered_queue_at)::int, 0) AS wait_seconds,
       v.is_sensitive,

@@ -30,8 +30,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
   END IF;
 
-  -- Must be in queue
-  IF v_visit.status <> 'waiting_doctor_claim' THEN
+  -- Must be in queue or already claimed (phone collection can happen after doctor claims)
+  IF v_visit.status NOT IN ('waiting_doctor_claim', 'claimed_by_doctor') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Visit is not in queue');
   END IF;
 

@@ -70,7 +70,7 @@ BEGIN
   SELECT jsonb_build_object(
     'tagged', count(*),
     'returned', count(*) FILTER (WHERE f.status = 'completed'),
-    'overdue', count(*) FILTER (WHERE f.due_date < CURRENT_DATE AND f.status = 'active'),
+    'overdue', count(*) FILTER (WHERE f.due_at < now() AND f.status = 'active'),
     'reminded', count(*) FILTER (WHERE f.reminders_sent > 0),
     'returned_after_reminder', count(*) FILTER (WHERE f.status = 'completed' AND f.reminders_sent > 0),
     'expired', count(*) FILTER (WHERE f.status = 'expired')

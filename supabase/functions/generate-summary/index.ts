@@ -1,3 +1,4 @@
+// Deploy with: --no-verify-jwt (internal-only, auth via x-internal-secret)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
@@ -93,7 +94,7 @@ ${transcript}
 </transcript>
 
 Produce a JSON object with these fields:
-1. "summary" (string, REQUIRED): A concise plain-text paragraph summarizing the patient's chief complaint, symptoms, timeline, severity, medications, allergies, and chronic conditions discussed. Written for the treating physician.
+1. "summary" (string, REQUIRED): A concise plain-text paragraph summarizing the patient's chief complaint, symptoms, timeline, severity, and relevant history discussed. Do NOT include medications, allergies, chronic conditions, or pets in the summary — these are extracted separately and shown to the doctor in a dedicated panel. Written for the treating physician.
 
 2. "structured_card" (${includeStructuredCard ? "object, REQUIRED" : "null"}): ${includeStructuredCard ? `An object with these string fields (use null for any not discussed):
    - "chief_complaint": Main reason for visit

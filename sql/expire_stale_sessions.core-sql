@@ -21,7 +21,7 @@ BEGIN
   UPDATE public.follow_ups
   SET status = 'expired'
   WHERE status = 'active'
-    AND due_date < CURRENT_DATE - interval '90 days';
+    AND due_at < now() - interval '90 days';
 
   -- 3. Expire 30-day unfollowed referrals
   UPDATE public.referrals

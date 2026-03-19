@@ -27,6 +27,7 @@ export interface QueueVisit {
   visit_id: string;
   first_name: string;
   last_name: string;
+  sex?: string;
   priority: number;
   wait_seconds: number;
   is_sensitive: boolean;
@@ -39,6 +40,7 @@ export interface ClaimedVisit {
   visit_id: string;
   first_name: string;
   last_name: string;
+  sex?: string;
   claimed_at: string;
   priority: number;
   is_sensitive: boolean;
@@ -150,12 +152,20 @@ export default function DoctorDashboard({
 
   // Sync state when server component re-renders with new props (via router.refresh())
   useEffect(() => {
-    if (demoMode && demoVisitId) {
-      // In demo mode, only show the current session's visit
-      setQueue(initialQueue.filter((q) => q.visit_id === demoVisitId));
-      setClaimed(initialClaimed.filter((c) => c.visit_id === demoVisitId));
-      setCompleted(initialCompleted.filter((c) => c.visit_id === demoVisitId));
-      setLeft(initialLeft.filter((c) => c.visit_id === demoVisitId));
+    if (demoMode) {
+      if (demoVisitId) {
+        // Filter to only show the current demo session's visit
+        setQueue(initialQueue.filter((q) => q.visit_id === demoVisitId));
+        setClaimed(initialClaimed.filter((c) => c.visit_id === demoVisitId));
+        setCompleted(initialCompleted.filter((c) => c.visit_id === demoVisitId));
+        setLeft(initialLeft.filter((c) => c.visit_id === demoVisitId));
+      } else {
+        // No demo visit created yet — show nothing
+        setQueue([]);
+        setClaimed([]);
+        setCompleted([]);
+        setLeft([]);
+      }
     } else {
       setQueue(initialQueue);
       setClaimed(initialClaimed);
@@ -166,6 +176,13 @@ export default function DoctorDashboard({
     setHasMoreCompleted(initialHasMoreCompleted);
     setHasMoreLeft(initialHasMoreLeft);
   }, [initialQueue, initialClaimed, initialCompleted, initialLeft, initialDoctors, initialHasMoreCompleted, initialHasMoreLeft, demoMode, demoVisitId]);
+
+  // Ensure fresh data when demo visit is created
+  useEffect(() => {
+    if (demoMode && demoVisitId) {
+      router.refresh();
+    }
+  }, [demoMode, demoVisitId, router]);
 
   useEffect(() => {
     return () => {
@@ -349,6 +366,7 @@ export default function DoctorDashboard({
         soundEnabled={soundEnabled}
         onExit={() => setFocusMode(false)}
         demoVisitId={demoVisitId}
+        demoMode={demoMode}
       />
     );
   }
@@ -378,7 +396,7 @@ export default function DoctorDashboard({
       <div className="px-4 py-4 lg:px-6">
         <NotificationPermission />
 
-        {locationId && <StaleSessionAlert locationId={locationId} />}
+        {locationId && !demoMode && <StaleSessionAlert locationId={locationId} />}
 
         {urgentPatient && (
           <NotificationBanner

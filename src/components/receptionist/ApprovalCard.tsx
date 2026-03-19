@@ -7,7 +7,7 @@ import FollowUpIndicator from "./FollowUpIndicator";
 interface FollowUpInfo {
   id: string;
   doctor_name: string;
-  due_date: string;
+  due_at: string;
   ai_instructions_preview: string | null;
   visit_id: string;
   visit_date: string;
@@ -27,6 +27,7 @@ interface PendingVisit {
   first_name: string;
   last_name: string;
   birthday: string;
+  sex?: string;
   created_at: string;
   has_previous_visits: boolean;
   match_type: string;
@@ -268,7 +269,7 @@ export default function ApprovalCard({
                   </svg>
                 </button>
               </div>
-              <p className="text-sm text-slate">DOB: {displayBirthday}</p>
+              <p className="text-sm text-slate">DOB: {displayBirthday}{visit.sex ? ` · ${visit.sex}` : ""}</p>
               {visit.phone_masked && (
                 <p className="text-xs text-ash mt-0.5">Phone: {visit.phone_masked}</p>
               )}

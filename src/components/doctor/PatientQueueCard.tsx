@@ -56,6 +56,7 @@ export default function PatientQueueCard({
           </div>
 
           <div className="mt-1 flex items-center gap-3 text-xs text-slate">
+            {visit.sex && <span className="capitalize">{visit.sex}</span>}
             <span>Waiting {waitMinutes} min</span>
             {visit.is_sensitive && (
               <span className="text-amber-600" title="Sensitive content flagged">

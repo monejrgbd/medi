@@ -88,6 +88,7 @@ interface FocusModeProps {
   soundEnabled: boolean;
   onExit: () => void;
   demoVisitId?: string | null;
+  demoMode?: boolean;
 }
 
 export default function FocusMode({
@@ -98,6 +99,7 @@ export default function FocusMode({
   soundEnabled,
   onExit,
   demoVisitId,
+  demoMode = false,
 }: FocusModeProps) {
   const router = useRouter();
   const [currentVisit, setCurrentVisit] = useState<ClaimedVisit | null>(
@@ -118,6 +120,28 @@ export default function FocusMode({
 
   useEffect(() => { currentVisitRef.current = currentVisit; }, [currentVisit]);
   useEffect(() => { autoClaimingRef.current = autoClaiming; }, [autoClaiming]);
+
+  // In demo mode, clear any visit that doesn't belong to the current session
+  useEffect(() => {
+    if (!demoVisitId) {
+      setCurrentVisit(null);
+      setQueue([]);
+      return;
+    }
+    if (currentVisitRef.current && currentVisitRef.current.visit_id !== demoVisitId) {
+      setCurrentVisit(null);
+      setDetail(null);
+    }
+  }, [demoVisitId]);
+
+  // Demo: auto-open diagnosis form after 15s
+  useEffect(() => {
+    if (!demoMode || !detail || showDiagnosis) return;
+    const timer = setTimeout(() => {
+      if (!showDiagnosis) setShowDiagnosis(true);
+    }, 15_000);
+    return () => clearTimeout(timer);
+  }, [demoMode, detail, showDiagnosis]);
 
   // Keyboard shortcuts for focus mode speed
   useEffect(() => {
@@ -320,7 +344,7 @@ export default function FocusMode({
             </h2>
             <p className="text-xs text-slate">
               {locationName} | Focus Mode
-              {queue.length > 0 && ` | ${queue.length} more in queue`}
+              {!demoVisitId && queue.length > 0 && ` | ${queue.length} more in queue`}
             </p>
           </div>
           <button
@@ -461,7 +485,7 @@ export default function FocusMode({
             </button>
             <button
               onClick={() => setShowDiagnosis(true)}
-              className="flex-1 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+              className={`flex-1 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors ${demoMode ? "animate-pulse ring-2 ring-green-400 ring-offset-2" : ""}`}
             >
               Complete Visit & Claim Next
               <kbd className="ml-2 hidden sm:inline rounded bg-green-700/50 px-1.5 py-0.5 text-[10px] font-mono">
@@ -478,6 +502,7 @@ export default function FocusMode({
           visitId={detail.visit.id}
           onClose={() => setShowDiagnosis(false)}
           onComplete={handleVisitCompleted}
+          demoMode={demoMode}
         />
       )}
     </div>

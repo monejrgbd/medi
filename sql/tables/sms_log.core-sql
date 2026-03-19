@@ -6,7 +6,7 @@ CREATE TABLE public.sms_log (
   patient_id            uuid REFERENCES public.patients(id),
   phone                 text NOT NULL,
   sms_type              text NOT NULL CHECK (sms_type IN ('verification', 'summary', 'review', 'follow_up')),
-  twilio_sid            text,
+  provider_sid          text,
   status                text DEFAULT 'sent' CHECK (status IN ('pending', 'sent', 'delivered', 'failed', 'undelivered')),
   error_message         text,
   created_at            timestamptz DEFAULT now()

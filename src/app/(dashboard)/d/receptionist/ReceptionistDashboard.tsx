@@ -38,7 +38,7 @@ interface PendingVisit {
   active_follow_ups: {
     id: string;
     doctor_name: string;
-    due_date: string;
+    due_at: string;
     ai_instructions_preview: string | null;
     visit_id: string;
     visit_date: string;
@@ -112,6 +112,8 @@ interface ReceptionistDashboardProps {
   initialActive: ActiveVisit[];
   initialCompleted: CompletedVisit[];
   initialCounts: Counts | null;
+  demoMode?: boolean;
+  demoVisitId?: string | null;
 }
 
 const DEFAULT_COUNTS: Counts = {
@@ -136,6 +138,8 @@ export default function ReceptionistDashboard({
   initialActive,
   initialCompleted,
   initialCounts,
+  demoMode = false,
+  demoVisitId,
 }: ReceptionistDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
@@ -152,10 +156,61 @@ export default function ReceptionistDashboard({
   const [urgentPatient, setUrgentPatient] = useState<string | null>(null);
 
   // Sync state with server props after router.refresh()
-  useEffect(() => { setPending(initialPending); }, [initialPending]);
-  useEffect(() => { setActive(initialActive); }, [initialActive]);
-  useEffect(() => { setCompleted(initialCompleted); }, [initialCompleted]);
-  useEffect(() => { setCounts(initialCounts ?? DEFAULT_COUNTS); }, [initialCounts]);
+  useEffect(() => {
+    if (demoMode) {
+      if (demoVisitId) {
+        const demoPending = initialPending.filter((p) => p.visit_id === demoVisitId);
+        const demoActive = initialActive.filter((a) => a.id === demoVisitId);
+        const demoCompleted = initialCompleted.filter((c) => c.id === demoVisitId);
+        setPending(demoPending);
+        setActive(demoActive);
+        setCompleted(demoCompleted);
+        // Derive counts from the single demo visit's status
+        const visit = demoActive[0];
+        const status = visit?.status;
+        setCounts({
+          awaiting: demoPending.length,
+          with_ai: status === "still_answering_ai" ? 1 : 0,
+          in_queue: status === "waiting_doctor_claim" ? 1 : 0,
+          with_doctor: status === "claimed_by_doctor" ? 1 : 0,
+          tablets_out: 0,
+          doctors_checked_in: 1,
+        });
+      } else {
+        setPending([]);
+        setActive([]);
+        setCompleted([]);
+        setCounts({ ...DEFAULT_COUNTS, doctors_checked_in: 1 });
+      }
+    } else {
+      setPending(initialPending);
+      setActive(initialActive);
+      setCompleted(initialCompleted);
+      setCounts(initialCounts ?? DEFAULT_COUNTS);
+    }
+  }, [initialPending, initialActive, initialCompleted, initialCounts, demoMode, demoVisitId]);
+
+  // In demo mode, always derive counts from local state (not server counts)
+  useEffect(() => {
+    if (!demoMode) return;
+    const visit = active[0];
+    const status = visit?.status;
+    setCounts({
+      awaiting: pending.length,
+      with_ai: status === "still_answering_ai" ? 1 : 0,
+      in_queue: status === "waiting_doctor_claim" ? 1 : 0,
+      with_doctor: status === "claimed_by_doctor" ? 1 : 0,
+      tablets_out: 0,
+      doctors_checked_in: 1,
+    });
+  }, [demoMode, pending, active]);
+
+  // Ensure fresh data when demo visit is created
+  useEffect(() => {
+    if (demoMode && demoVisitId) {
+      router.refresh();
+    }
+  }, [demoMode, demoVisitId, router]);
 
   // Load notification preference + unlock audio
   useEffect(() => {
@@ -446,7 +501,7 @@ export default function ReceptionistDashboard({
       <div className="px-4 py-4 lg:px-6">
         <NotificationPermission />
 
-        {locationId && <StaleSessionAlert locationId={locationId} />}
+        {locationId && !demoMode && <StaleSessionAlert locationId={locationId} />}
 
         {locationId && (
           <NoDoctorsWarning

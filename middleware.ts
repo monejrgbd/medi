@@ -41,11 +41,6 @@ export async function middleware(request: NextRequest) {
 
   // Auth routes: redirect to dashboard if user exists
   if ((pathname === "/login" || pathname === "/signup") && user) {
-    // Demo user wants to register — sign them out and let them through
-    if (user.email === process.env.DEMO_STAFF_EMAIL) {
-      await supabase.auth.signOut();
-      return supabaseResponse;
-    }
     const url = request.nextUrl.clone();
     url.pathname = "/d/select-role";
     return NextResponse.redirect(url);

@@ -23,7 +23,7 @@ BEGIN
   END IF;
 
   FOR v_rec IN
-    SELECT f.id, f.patient_id, f.visit_id, f.due_date, f.reminders_sent,
+    SELECT f.id, f.patient_id, f.visit_id, f.due_at, f.reminders_sent,
            p.first_name, p.phone, p.org_id,
            o.name AS org_name,
            l.id AS location_id,
@@ -42,11 +42,11 @@ BEGIN
       AND p.phone IS NOT NULL
       AND f.reminders_sent < COALESCE(fsc.max_reminders, 2)
       AND (
-        (f.reminders_sent = 0 AND f.due_date + (COALESCE(fsc.first_reminder_days, 3) || ' days')::interval <= now())
-        OR (f.reminders_sent = 1 AND f.due_date + (COALESCE(fsc.second_reminder_days, 7) || ' days')::interval <= now())
-        OR (f.reminders_sent >= 2 AND f.due_date + ((COALESCE(fsc.second_reminder_days, 7) + (f.reminders_sent - 1) * 7) || ' days')::interval <= now())
+        (f.reminders_sent = 0 AND f.due_at + (COALESCE(fsc.first_reminder_days, 3) || ' days')::interval <= now())
+        OR (f.reminders_sent = 1 AND f.due_at + (COALESCE(fsc.second_reminder_days, 7) || ' days')::interval <= now())
+        OR (f.reminders_sent >= 2 AND f.due_at + ((COALESCE(fsc.second_reminder_days, 7) + (f.reminders_sent - 1) * 7) || ' days')::interval <= now())
       )
-    ORDER BY f.due_date ASC
+    ORDER BY f.due_at ASC
     LIMIT 20
   LOOP
     PERFORM net.http_post(
@@ -64,7 +64,11 @@ BEGIN
         'patient_id', v_rec.patient_id,
         'sms_type', 'follow_up',
         'template', 'follow_up',
-        'custom_body', v_rec.reminder_template,
+        'custom_body', CASE
+          WHEN v_rec.org_id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'::uuid THEN
+            COALESCE(v_rec.reminder_template, '') || E'\n\nThis would normally be sent 3 days after the due date. For demo purposes, we sent it now.'
+          ELSE v_rec.reminder_template
+        END,
         'template_params', jsonb_build_object(
           'first_name', v_rec.first_name,
           'org_name', v_rec.org_name,

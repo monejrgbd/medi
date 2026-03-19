@@ -5,7 +5,7 @@ import { useState } from "react";
 interface FollowUp {
   id: string;
   doctor_name: string;
-  due_date: string;
+  due_at: string;
   ai_instructions_preview: string | null;
   visit_id: string;
   visit_date: string;
@@ -29,7 +29,7 @@ export default function FollowUpIndicator({ followUps }: FollowUpIndicatorProps)
           Follow-up from Dr. {fu.doctor_name}
         </p>
         <p className="text-[10px] text-blue-600">
-          Due: {new Date(fu.due_date).toLocaleDateString()}
+          Due: {new Date(fu.due_at).toLocaleDateString()}
           {fu.ai_instructions_preview && ` \u2014 "${fu.ai_instructions_preview}"`}
         </p>
       </div>
@@ -52,7 +52,7 @@ export default function FollowUpIndicator({ followUps }: FollowUpIndicatorProps)
           {followUps.map((fu) => (
             <div key={fu.id} className="text-[10px] text-blue-700">
               <span className="font-medium">Dr. {fu.doctor_name}</span> &mdash; Due:{" "}
-              {new Date(fu.due_date).toLocaleDateString()}
+              {new Date(fu.due_at).toLocaleDateString()}
               {fu.ai_instructions_preview && (
                 <span className="text-blue-600"> &mdash; &quot;{fu.ai_instructions_preview}&quot;</span>
               )}

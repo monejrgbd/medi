@@ -61,6 +61,7 @@ BEGIN
         'first_name', p.first_name,
         'last_name', p.last_name,
         'birthday', p.birthday,
+        'sex', p.sex,
         'created_at', v.created_at,
         'has_previous_visits', v.has_previous_visits,
         'match_type', CASE
@@ -75,12 +76,12 @@ BEGIN
           SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id', fu.id,
             'doctor_name', su.full_name,
-            'due_date', fu.due_date,
+            'due_at', fu.due_at,
             'ai_instructions_preview', left(fu.ai_instructions, 100),
             'visit_id', fu.visit_id,
             'visit_date', fv.completed_at,
             'visit_summary_preview', left(fv.ai_summary, 100)
-          ) ORDER BY fu.due_date ASC), '[]'::jsonb)
+          ) ORDER BY fu.due_at ASC), '[]'::jsonb)
           FROM public.follow_ups fu
           JOIN public.staff_users su ON su.id = fu.doctor_id
           JOIN public.visits fv ON fv.id = fu.visit_id

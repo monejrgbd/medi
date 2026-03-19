@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.follow_ups (
   org_id          uuid NOT NULL REFERENCES public.organizations(id),
   location_id     uuid NOT NULL REFERENCES public.locations(id),
   timeframe_days  int NOT NULL CHECK (timeframe_days BETWEEN 1 AND 365),
-  due_date        date NOT NULL,
+  due_at          timestamptz NOT NULL,
   ai_instructions text CHECK (length(ai_instructions) <= 2000),
   status          text NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'completed', 'expired')),
@@ -21,5 +21,5 @@ CREATE POLICY "org_staff_read_follow_ups" ON public.follow_ups FOR SELECT
   USING (org_id = requesting_org_id());
 
 CREATE INDEX idx_follow_ups_patient ON public.follow_ups (patient_id, status);
-CREATE INDEX idx_follow_ups_due ON public.follow_ups (due_date, status) WHERE status = 'active';
+CREATE INDEX idx_follow_ups_due ON public.follow_ups (due_at, status) WHERE status = 'active';
 CREATE INDEX idx_follow_ups_visit ON public.follow_ups (visit_id);

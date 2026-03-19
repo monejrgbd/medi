@@ -9,6 +9,13 @@ export const metadata = {
 
 export default async function SelectRolePage() {
   const user = await requireAuth();
+
+  // Demo user should never reach the real dashboard — sign them out
+  if (user.email === process.env.DEMO_STAFF_EMAIL) {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+    redirect("/login");
+  }
   const ownerCheck = await isOwner(user.id);
 
   if (ownerCheck) {

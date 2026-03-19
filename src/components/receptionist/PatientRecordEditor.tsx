@@ -8,6 +8,7 @@ interface PatientRecordEditorProps {
   currentFirstName: string;
   currentLastName: string;
   currentBirthday: string;
+  currentSex?: string;
   onSaved: () => void;
   onCancel: () => void;
 }
@@ -17,12 +18,14 @@ export default function PatientRecordEditor({
   currentFirstName,
   currentLastName,
   currentBirthday,
+  currentSex,
   onSaved,
   onCancel,
 }: PatientRecordEditorProps) {
   const [firstName, setFirstName] = useState(currentFirstName);
   const [lastName, setLastName] = useState(currentLastName);
   const [birthday, setBirthday] = useState(currentBirthday);
+  const [sex, setSex] = useState(currentSex || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -61,10 +64,11 @@ export default function PatientRecordEditor({
     }
 
     // Only send changed fields
-    const params: { firstName?: string; lastName?: string; birthday?: string } = {};
+    const params: { firstName?: string; lastName?: string; birthday?: string; sex?: string } = {};
     if (cleanFirst !== currentFirstName) params.firstName = cleanFirst;
     if (cleanLast !== currentLastName) params.lastName = cleanLast;
     if (birthday !== currentBirthday) params.birthday = birthday;
+    if (sex !== (currentSex || "")) params.sex = sex || undefined;
 
     if (Object.keys(params).length === 0) {
       onCancel();
@@ -76,7 +80,8 @@ export default function PatientRecordEditor({
       patientId,
       params.firstName,
       params.lastName,
-      params.birthday
+      params.birthday,
+      params.sex
     );
     setLoading(false);
 
@@ -122,6 +127,26 @@ export default function PatientRecordEditor({
               max={new Date().toISOString().split("T")[0]}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-ink focus:border-hilt-blue focus:ring-1 focus:ring-hilt-blue"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate mb-1">Biological Sex</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setSex("male")}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${sex === "male" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-300 text-ink hover:bg-gray-50"}`}
+              >
+                Male
+              </button>
+              <button
+                type="button"
+                onClick={() => setSex("female")}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${sex === "female" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-300 text-ink hover:bg-gray-50"}`}
+              >
+                Female
+              </button>
+            </div>
           </div>
 
           {error && (

@@ -205,7 +205,8 @@ export async function editPatientRecord(
   patientId: string,
   firstName?: string,
   lastName?: string,
-  birthday?: string
+  birthday?: string,
+  sex?: string
 ) {
   await requireAuth();
   if (!patientId || !validUUID(patientId)) return { success: false, error: "Invalid patient ID" };
@@ -215,6 +216,7 @@ export async function editPatientRecord(
   if (firstName !== undefined) params.p_first_name = stripHtml(firstName).slice(0, 100);
   if (lastName !== undefined) params.p_last_name = stripHtml(lastName).slice(0, 100);
   if (birthday !== undefined) params.p_birthday = birthday;
+  if (sex !== undefined) params.p_sex = sex;
 
   const { data, error } = await supabase.rpc("edit_patient_record", params);
 

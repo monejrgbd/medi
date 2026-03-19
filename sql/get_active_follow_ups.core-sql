@@ -53,15 +53,15 @@ BEGIN
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
     'id', sub.id,
     'doctor_name', sub.full_name,
-    'due_date', sub.due_date,
+    'due_at', sub.due_at,
     'ai_instructions_preview', left(sub.ai_instructions, 100),
     'visit_id', sub.visit_id,
     'visit_date', sub.completed_at,
     'visit_summary_preview', left(sub.ai_summary, 100)
-  ) ORDER BY sub.due_date ASC), '[]'::jsonb)
+  ) ORDER BY sub.due_at ASC), '[]'::jsonb)
   INTO v_result
   FROM (
-    SELECT fu.id, su.full_name, fu.due_date, fu.ai_instructions,
+    SELECT fu.id, su.full_name, fu.due_at, fu.ai_instructions,
            fu.visit_id, fv.completed_at, fv.ai_summary
     FROM public.follow_ups fu
     JOIN public.staff_users su ON su.id = fu.doctor_id
@@ -69,7 +69,7 @@ BEGIN
     WHERE fu.patient_id = p_patient_id
       AND fu.org_id = v_org_id
       AND fu.status = 'active'
-    ORDER BY fu.due_date ASC
+    ORDER BY fu.due_at ASC
     LIMIT 100
   ) sub;
 

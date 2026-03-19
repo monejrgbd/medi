@@ -26,6 +26,7 @@ export default function ClaimedPatientCard({ visit }: ClaimedPatientCardProps) {
             {visit.first_name} {visit.last_name}
           </h3>
           <div className="mt-1 flex items-center gap-3 text-xs text-slate">
+            {visit.sex && <span className="capitalize">{visit.sex}</span>}
             <span>Claimed {minutesAgo} min ago</span>
             {visit.priority >= 2 && (
               <span

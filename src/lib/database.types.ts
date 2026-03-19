@@ -387,7 +387,7 @@ export type Database = {
           ai_instructions: string | null
           created_at: string | null
           doctor_id: string
-          due_date: string
+          due_at: string
           id: string
           location_id: string
           org_id: string
@@ -402,7 +402,7 @@ export type Database = {
           ai_instructions?: string | null
           created_at?: string | null
           doctor_id: string
-          due_date: string
+          due_at: string
           id?: string
           location_id: string
           org_id: string
@@ -417,7 +417,7 @@ export type Database = {
           ai_instructions?: string | null
           created_at?: string | null
           doctor_id?: string
-          due_date?: string
+          due_at?: string
           id?: string
           location_id?: string
           org_id?: string

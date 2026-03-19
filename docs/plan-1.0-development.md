@@ -2139,6 +2139,72 @@ Note: Between Phase 3 and Phase 9, the `LanguagePicker` and `LanguageSwitcher` U
 6. `src/components/dashboard/QRCodeManager.tsx` — kiosk URL toggle
 7. `src/components/dashboard/Sidebar.tsx` — add Kiosk nav item
 
+### Phase 13: Diagnostic Addon + Pets at Home + Gender/Pregnancy (completed)
+
+**Goal:** Decouple AI diagnostic from the advanced model, make it a toggleable per-location addon (0.5 credits, always Opus). Add pets at home as a new medical record category. Add biological sex to patient check-in with mandatory pregnancy screening for females 16+.
+
+**Database changes:**
+- `organizations`: +`diagnostic_addon` boolean DEFAULT false
+- `locations`: +`diagnostic_enabled` boolean DEFAULT false
+- `patients`: +`sex` text CHECK (sex IN ('male', 'female'))
+- `credits_log`: +`credit_type` text DEFAULT 'conversation', new composite unique (visit_id, credit_type)
+- New table: `patient_pets` (same schema as patient_medications)
+
+**New SQL functions (3):**
+- `update_pets.core-sql` — upsert patient pets (service_role only)
+- `deduct_diagnostic_credits.core-sql` — 0.5 credit deduction with idempotency
+
+**Modified SQL functions (21):**
+- `toggle_addon`, `toggle_location_addon` — +'diagnostic' addon type
+- `get_credit_dashboard` — +diagnostic_addon in return
+- `get_locations` — +diagnostic_enabled in return
+- `checkin_patient` — +p_sex parameter
+- `edit_patient_record` — +p_sex parameter (receptionist can edit sex)
+- `start_ai_conversation` — +pets in ALWAYS COVER (#13), +sex/age patient context, +pregnancy screening for females 16+, +pets in CONFIRM STORED RECORDS for returning patients
+- `get_patient_session` — +pets, +sex
+- `get_visit_detail` — +pets CTE, +sex in patient
+- `get_patient_full_profile` — +pets, +sex
+- `get_patient_profile` — +pets, +sex
+- `get_patient_medical_records` — +pets
+- `get_referral_detail` — +pets
+- `get_visit_summary_public` — +pets
+- `get_pending_approvals` — +sex
+- `get_queue` — +sex
+- `get_claimed_patients` — +sex
+- `search_patients` — +sex
+- `cleanup_demo_data` — +DELETE patient_pets before patient deletion
+- `purge_expired_orgs` — +DELETE patient_pets
+
+**Modified edge functions (2):**
+- `generate-summary` — diagnostic decoupled from summary prompt (always null in summary call), separate Opus diagnostic generation when addon enabled (loads full patient context: demographics, medical records, past visits, specialty), pets_at_home extraction, update_pets RPC call
+- `generate-referral-pdf` — +pets in Medical Information section
+
+**Modified components (12):**
+- `CheckinForm.tsx` — +sex radio buttons (Male/Female, required)
+- `CheckinFlow.tsx` — +sex param to handleCheckin/RPC, +pets in MedicalInfo, +sex in demoDefaults
+- `SummaryReview.tsx` — +pets column (4-col grid)
+- `PatientProfileCard.tsx` — +pets column, +sex in age display
+- `PatientFullProfile.tsx` — +pets, +sex in header
+- `ApprovalCard.tsx` — +sex in DOB line
+- `ActivePatientsList.tsx` — +sex in DOB line
+- `PatientQueueCard.tsx` — +sex in info line
+- `ClaimedPatientCard.tsx` — +sex in info line
+- `PatientRecordEditor.tsx` — +sex selector (receptionist edit modal)
+- `AddOnToggles.tsx` — split into AI Features (diagnostic, 0.5 credits) + SMS Features sections
+- `AIDiagnosticPanel.tsx` — open by default, chevron arrow toggle, updated disclaimer
+
+**Other changes:**
+- `billing/page.tsx` — +diagnostic_enabled in location types
+- `_actions/billing.ts` — +'diagnostic' in VALID_ADDONS
+- `_actions/receptionist.ts` — +sex param in editPatientRecord
+- `DoctorDashboard.tsx` — +sex in QueueVisit/ClaimedVisit interfaces
+- `pricing/page.tsx` — +AI Diagnostic addon (0.5 credits) in credit costs, updated Advanced AI description and FAQ
+- `DoctorMockup.tsx` — diagnostic section open by default with chevron arrow
+- `summary/[token]/page.tsx` — +pets in public visit summary
+- 10 locale files — +checkin.sex, checkin.male, checkin.female keys
+
+**Demo:** diagnostic_addon + diagnostic_enabled enabled on demo org/location.
+
 ---
 
 ## End-to-End Verification

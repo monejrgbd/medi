@@ -1,3 +1,4 @@
+// Deploy with: --no-verify-jwt (external webhook, auth via PayPal signature verification)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const PAYPAL_CLIENT_ID = Deno.env.get("PAYPAL_CLIENT_ID");
