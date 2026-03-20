@@ -44,7 +44,7 @@ export default function PatientProfileCard({
         )}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {/* Medications */}
         <div>
           <h4 className="flex items-center gap-1 text-xs font-medium text-slate mb-1">

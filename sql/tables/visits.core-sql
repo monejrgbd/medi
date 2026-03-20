@@ -21,6 +21,7 @@ CREATE TABLE public.visits (
   claimed_at            timestamptz,
   completed_at          timestamptz,
   ai_summary            text,
+  ai_summary_translated text,
   ai_structured_card    jsonb,
   ai_diagnostic         text,
   doctor_diagnosis      text,

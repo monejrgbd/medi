@@ -61,7 +61,7 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 DECLARE
-  v_org_id uuid := requesting_org_id();
+  v_org_id uuid := public.requesting_org_id();
 BEGIN
   IF v_org_id IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');

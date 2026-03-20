@@ -136,6 +136,13 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
           </p>
         </div>
 
+        {/* Intro note */}
+        <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 p-3">
+          <p className="text-xs text-blue-700">
+            Every clinic is different. Features are enabled per location, and we build custom workflows for clients who need them. What you will be doing is the default flow.
+          </p>
+        </div>
+
         {/* Card */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
           {existingSession && (

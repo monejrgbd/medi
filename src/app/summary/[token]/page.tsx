@@ -68,8 +68,16 @@ export default async function SummaryPage({ params }: PageProps) {
     );
   }
 
+  const langToLocale: Record<string, string> = {
+    en: "en-US", es: "es", fr: "fr", ar: "ar", zh: "zh",
+    ko: "ko", vi: "vi", pt: "pt", ru: "ru", hi: "hi",
+  };
+  const patientLang: string = summary.patient_language || "en";
+  const locale = langToLocale[patientLang] || "en-US";
+  const isRtl = patientLang === "ar";
+
   const visitDate = summary.visit_date
-    ? new Date(summary.visit_date).toLocaleDateString("en-US", {
+    ? new Date(summary.visit_date).toLocaleDateString(locale, {
         year: "numeric",
         month: "long",
         day: "numeric",
@@ -85,7 +93,7 @@ export default async function SummaryPage({ params }: PageProps) {
     summary.transcript ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50" dir={isRtl ? "rtl" : "ltr"}>
       <div className="mx-auto max-w-2xl px-4 py-8">
         {/* Clinic header */}
         <div className="flex items-center gap-3 mb-6">

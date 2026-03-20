@@ -68,7 +68,7 @@ export default function DemoTimeline({ currentStep }: DemoTimelineProps) {
                   )}
                 </div>
                 <span
-                  className={`mt-1.5 text-[10px] leading-tight text-center ${
+                  className={`mt-1.5 text-[10px] leading-tight text-center whitespace-nowrap ${
                     isActive
                       ? "font-bold text-hilt-blue"
                       : isDone

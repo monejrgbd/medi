@@ -73,6 +73,37 @@ export default function DemoShell({
   const [demoStep, setDemoStep] = useState(1);
   const [reviewToken, setReviewToken] = useState<string | null>(null);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+
+  // Demo reviews: only show 6 curated + current visitor's review
+  const DEMO_REVIEW_IDS = new Set([
+    "dcd0a06c-800d-4a71-810a-826b1b66d970",
+    "de99d4f9-b8f6-4a89-933e-fb5879c36f5f",
+    "c1bdf33f-8711-40cd-afbd-716892c9ef30",
+    "3959e210-e4f2-4a8b-b3e2-1ff5a5c5568b",
+    "288d696d-76e7-4e67-b1a4-adddc6396a12",
+    "1fbb3cf1-b443-4fd6-b172-012566090662",
+  ]);
+  const filteredInitialReviews = (reviewsInitial.reviews || []).filter(
+    (r: any) => DEMO_REVIEW_IDS.has(r.id)
+  );
+  const [demoReviews, setDemoReviews] = useState<any[]>(filteredInitialReviews);
+
+  // Compute stats from the curated list only
+  const demoStats = {
+    avg_rating: demoReviews.length > 0
+      ? Math.round((demoReviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / demoReviews.length) * 100) / 100
+      : 0,
+    total_count: demoReviews.length,
+    per_doctor: Object.values(
+      demoReviews.reduce((acc: Record<string, { doctor_name: string; total: number; count: number }>, r: any) => {
+        const name = r.doctor_name || "Unknown";
+        if (!acc[name]) acc[name] = { doctor_name: name, total: 0, count: 0 };
+        acc[name].total += r.rating || 0;
+        acc[name].count += 1;
+        return acc;
+      }, {})
+    ).map((d: any) => ({ doctor_name: d.doctor_name, avg_rating: Math.round((d.total / d.count) * 100) / 100, count: d.count })),
+  };
   const router = useRouter();
 
   const demoVisitIdRef = useRef(demoVisitId);
@@ -243,15 +274,30 @@ export default function DemoShell({
     const interval = setInterval(async () => {
       const { data } = await supabase
         .from("reviews")
-        .select("submitted_at")
+        .select("id, submitted_at, rating, feedback_text, doctor_id, patient_id, patients(first_name, last_name), staff_users!reviews_doctor_id_fkey(full_name)")
         .eq("visit_id", demoVisitId)
         .not("submitted_at", "is", null)
         .maybeSingle();
 
       if (data) {
+        // Add the new review to the curated list
+        const patient = data.patients as any;
+        const doctor = data.staff_users as any;
+        setDemoReviews((prev) => [
+          {
+            id: data.id,
+            submitted_at: data.submitted_at,
+            patient_name: `${patient?.first_name || "Guest"} ${(patient?.last_name || "").charAt(0)}.`,
+            doctor_name: doctor?.full_name || null,
+            rating: data.rating,
+            feedback_text: data.feedback_text,
+            sent_to_external: false,
+            external_platform: null,
+          },
+          ...prev,
+        ]);
         setReviewSubmitted(true);
         clearInterval(interval);
-        router.refresh(); // Refresh ReviewHub data
       }
     }, 5000);
 
@@ -446,11 +492,12 @@ export default function DemoShell({
             )}
 
             <ReviewHub
+              key={`demo-${demoReviews.length}`}
               locations={[{ id: locationId, name: locationName }]}
               isOwnerOrManager={true}
               demoMode={true}
-              initialReviews={reviewsInitial.reviews}
-              initialStats={reviewsInitial.stats}
+              initialReviews={demoReviews}
+              initialStats={demoStats}
             />
           </div>
         </div>

@@ -18,7 +18,9 @@ BEGIN
     'clinic_logo_url', l.logo_url,
     'visit_date', v.completed_at,
     'doctor_name', doc.full_name,
-    'summary', v.ai_summary,
+    'patient_language', COALESCE(pat.language, 'en'),
+    'summary', COALESCE(v.ai_summary_translated, v.ai_summary),
+    'summary_english', v.ai_summary,
     'diagnosis', CASE WHEN v.summary_show_diagnosis THEN v.doctor_diagnosis ELSE NULL END,
     'medications', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', pm.name))
@@ -54,6 +56,7 @@ BEGIN
   FROM public.visits v
   JOIN public.organizations o ON o.id = v.org_id
   JOIN public.locations l ON l.id = v.location_id
+  JOIN public.patients pat ON pat.id = v.patient_id
   LEFT JOIN public.staff_users doc ON doc.id = v.claimed_by
   WHERE v.summary_token = p_token
     AND v.status = 'completed'

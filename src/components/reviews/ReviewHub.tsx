@@ -72,11 +72,20 @@ export default function ReviewHub({ locations, isOwnerOrManager, demoMode = fals
     }
   }, [ratingFilter]);
 
+  // In demo mode: filter client-side from initialReviews, no server fetch
+  const demoFiltered = demoMode && initialReviews
+    ? (ratingFilter ? initialReviews.filter((r) => r.rating === ratingFilter) : initialReviews)
+    : null;
+
   useEffect(() => {
+    if (demoMode && initialReviews && initialReviews.length > 0) return;
     setCursorTs(null);
     setCursorId(null);
     loadReviews(selectedLocation);
-  }, [selectedLocation, ratingFilter, loadReviews]);
+  }, [selectedLocation, ratingFilter, loadReviews]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // In demo mode, use client-side filtered list
+  const displayReviews = demoFiltered ?? reviews;
 
   function handleLoadMore() {
     loadReviews(selectedLocation, true, cursorTs, cursorId);
@@ -190,17 +199,17 @@ export default function ReviewHub({ locations, isOwnerOrManager, demoMode = fals
           </div>
 
           {/* Reviews list */}
-          {loading && reviews.length === 0 ? (
+          {loading && displayReviews.length === 0 ? (
             <div className="text-center py-12">
               <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-blue-200 border-t-blue-600" />
             </div>
-          ) : reviews.length === 0 ? (
+          ) : displayReviews.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-sm text-gray-500">No reviews yet.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {reviews.map((review) => (
+              {displayReviews.map((review) => (
                 <div
                   key={review.id}
                   className="rounded-xl border border-gray-200 bg-white p-4"

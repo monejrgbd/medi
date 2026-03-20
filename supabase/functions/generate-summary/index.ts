@@ -460,6 +460,13 @@ Doctor reference only. Not shown to patients.`;
             }
           }
         }
+        // Persist translated summary only if translation actually produced a result
+        if (broadcastSummary !== summary) {
+          await supabase
+            .from("visits")
+            .update({ ai_summary_translated: broadcastSummary, updated_at: new Date().toISOString() })
+            .eq("id", visit_id);
+        }
       } catch (err) {
         console.error("Summary translation error:", err);
         // Fall through — broadcast English version

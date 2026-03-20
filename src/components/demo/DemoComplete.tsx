@@ -70,21 +70,15 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
         </p>
 
         {/* CTAs */}
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+        <div className="flex justify-center mb-6">
           <button
             onClick={async () => {
               await signOutDemoUser();
-              router.push("/signup");
+              router.push("/start-trial");
             }}
-            className="inline-flex items-center justify-center px-6 py-2.5 bg-hilt-blue text-white font-medium rounded-lg hover:bg-hilt-blue/90 transition-colors"
+            className="inline-flex items-center justify-center px-8 py-2.5 bg-hilt-blue text-white font-medium rounded-lg hover:bg-hilt-blue/90 transition-colors"
           >
-            Sign Up
-          </button>
-          <button
-            onClick={onRestart}
-            className="inline-flex items-center justify-center px-6 py-2.5 bg-white border border-gray-200 text-ink font-medium rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            Start Another Demo
+            Start Free Trial, Up to $200 in Credits
           </button>
         </div>
 
