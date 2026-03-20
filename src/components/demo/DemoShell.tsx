@@ -69,6 +69,9 @@ export default function DemoShell({
   const demoVisitIdRef = useRef(demoVisitId);
   useEffect(() => { demoVisitIdRef.current = demoVisitId; }, [demoVisitId]);
 
+  const demoStepRef = useRef(demoStep);
+  useEffect(() => { demoStepRef.current = demoStep; }, [demoStep]);
+
   // Persist visit ID to sessionStorage
   useEffect(() => {
     if (demoVisitId) {
@@ -174,13 +177,8 @@ export default function DemoShell({
           if (demoVisitIdRef.current && visitId !== demoVisitIdRef.current) return;
 
           const status = payload.new?.status;
-          const oldStatus = payload.old?.status;
 
-          if (
-            status === "still_answering_ai" &&
-            oldStatus === "pending_approval"
-          ) {
-
+          if (status === "still_answering_ai" && demoStepRef.current < 3) {
             setDemoStep(3);
             setPulsingTab("patient");
             setTimeout(() => {
@@ -190,19 +188,17 @@ export default function DemoShell({
           }
 
           if (status === "waiting_doctor_claim") {
-            // Defer doctor tab switch until patient finishes phone step
             setWaitingForDoctor(true);
           }
 
-          if (status === "claimed_by_doctor" && oldStatus === "waiting_doctor_claim") {
+          if (status === "claimed_by_doctor") {
             setVisitClaimed(true);
           }
 
-          if (status === "completed") {
+          if (status === "completed" && demoStepRef.current < 5) {
             setVisitClaimed(false);
             setVisitCompleted(true);
             setDemoStep(5);
-
             setPulsingTab("reviews");
             setTimeout(() => {
               setActiveTab("reviews");
@@ -229,16 +225,13 @@ export default function DemoShell({
 
   const handleVisitCreated = useCallback((visitId: string) => {
     setDemoVisitId(visitId);
-    // Only advance to step 2 if we're at step 1 (fresh check-in, not a restore)
-    setDemoStep((prev) => {
-      if (prev > 1) return prev;
-      setPulsingTab("receptionist");
-      setTimeout(() => {
-        setActiveTab("receptionist");
-        setPulsingTab(null);
-      }, 3000);
-      return 2;
-    });
+    if (demoStepRef.current > 1) return;
+    setDemoStep(2);
+    setPulsingTab("receptionist");
+    setTimeout(() => {
+      setActiveTab("receptionist");
+      setPulsingTab(null);
+    }, 3000);
   }, []);
 
   const handlePhoneComplete = useCallback(() => {

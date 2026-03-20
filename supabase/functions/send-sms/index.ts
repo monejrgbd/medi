@@ -1,3 +1,4 @@
+// Deployed with --no-verify-jwt (internal function, not called by browsers)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
