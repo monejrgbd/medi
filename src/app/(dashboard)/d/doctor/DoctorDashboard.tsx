@@ -160,21 +160,13 @@ export default function DoctorDashboard({
 
   // Sync state when server component re-renders with new props (via router.refresh())
   useEffect(() => {
-    if (demoMode) {
-      if (demoVisitId) {
-        // Filter to only show the current demo session's visit
-        setQueue(initialQueue.filter((q) => q.visit_id === demoVisitId));
-        setClaimed(initialClaimed.filter((c) => c.visit_id === demoVisitId));
-        setCompleted(initialCompleted.filter((c) => c.visit_id === demoVisitId));
-        setLeft(initialLeft.filter((c) => c.visit_id === demoVisitId));
-      } else {
-        // No demo visit created yet — show nothing
-        setQueue([]);
-        setClaimed([]);
-        setCompleted([]);
-        setLeft([]);
-      }
-    } else {
+    if (demoMode && demoVisitId) {
+      // Filter to only show the current demo session's visit
+      setQueue(initialQueue.filter((q) => q.visit_id === demoVisitId));
+      setClaimed(initialClaimed.filter((c) => c.visit_id === demoVisitId));
+      setCompleted(initialCompleted.filter((c) => c.visit_id === demoVisitId));
+      setLeft(initialLeft.filter((c) => c.visit_id === demoVisitId));
+    } else if (!demoMode) {
       setQueue(initialQueue);
       setClaimed(initialClaimed);
       setCompleted(initialCompleted);

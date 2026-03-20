@@ -122,18 +122,13 @@ export default function FocusMode({
   useEffect(() => { currentVisitRef.current = currentVisit; }, [currentVisit]);
   useEffect(() => { autoClaimingRef.current = autoClaiming; }, [autoClaiming]);
 
-  // In demo mode, clear any visit that doesn't belong to the current session
+  // In demo mode, sync currentVisit with the correct visit when demoVisitId arrives
   useEffect(() => {
-    if (!demoVisitId) {
-      setCurrentVisit(null);
-      setQueue([]);
-      return;
-    }
-    if (currentVisitRef.current && currentVisitRef.current.visit_id !== demoVisitId) {
-      setCurrentVisit(null);
-      setDetail(null);
-    }
-  }, [demoVisitId]);
+    if (!demoVisitId) return; // Still loading from sessionStorage, don't clear
+    if (currentVisitRef.current?.visit_id === demoVisitId) return; // Already correct
+    const match = initialClaimed.find(v => v.visit_id === demoVisitId);
+    if (match) setCurrentVisit(match);
+  }, [demoVisitId, initialClaimed]);
 
   // Keyboard shortcuts for focus mode speed
   useEffect(() => {

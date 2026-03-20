@@ -17,14 +17,14 @@ export default function DiagnosisForm({
   onComplete,
   demoMode = false,
 }: DiagnosisFormProps) {
-  const [diagnosis, setDiagnosis] = useState(demoMode ? "Acute pharyngitis, likely viral. Supportive care advised. Return if symptoms worsen or persist beyond 5 days." : "");
+  const [diagnosis, setDiagnosis] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [followUpEnabled, setFollowUpEnabled] = useState(demoMode);
   const [followUpDays, setFollowUpDays] = useState<number | null>(demoMode ? 7 : 14);
   const [followUpInstructions, setFollowUpInstructions] = useState(
-    demoMode ? "Ask if the sore throat has resolved and whether the patient developed any new symptoms such as fever or rash." : ""
+    ""
   );
 
 
@@ -67,7 +67,7 @@ export default function DiagnosisForm({
         <textarea
           value={diagnosis}
           onChange={(e) => setDiagnosis(e.target.value)}
-          placeholder="Enter your diagnosis and notes..."
+          placeholder="e.g. Acute pharyngitis, likely viral. Supportive care advised. Return if symptoms worsen or persist beyond 5 days."
           rows={8}
           maxLength={10000}
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-y"

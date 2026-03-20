@@ -41,12 +41,12 @@ export default function AIDiagnosticPanel({
       </summary>
       <div className="border-t border-gray-100 px-4 py-3">
         <p className="mb-3 rounded-lg bg-amber-50 p-2 text-xs text-amber-700">
-          AI generated suggestion only. Refer to full transcript for accuracy.
+          AI makes mistakes. Use your own clinical judgement.
         </p>
         {data ? (
           <div>
             <p className="text-lg font-bold text-ink">{data.diagnosis}</p>
-            <p className="mt-1 text-sm text-slate">{data.reasoning}</p>
+            <p className="mt-1 text-sm text-slate"><span className="font-medium text-ink">Explanation:</span> {data.reasoning}</p>
           </div>
         ) : (
           <div className="text-sm text-ink whitespace-pre-wrap">{diagnostic}</div>

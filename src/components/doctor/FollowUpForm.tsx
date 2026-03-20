@@ -105,7 +105,7 @@ export default function FollowUpForm({
             <textarea
               value={instructions}
               onChange={(e) => onInstructionsChange(e.target.value.slice(0, 2000))}
-              placeholder="e.g. Ask if the antibiotics helped and if the fever subsided"
+              placeholder="e.g. Check if symptoms improved since starting treatment, ask about any new concerns"
               rows={3}
               maxLength={2000}
               className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-y"

@@ -163,32 +163,25 @@ export default function ReceptionistDashboard({
 
   // Sync state with server props after router.refresh()
   useEffect(() => {
-    if (demoMode) {
-      if (demoVisitId) {
-        const demoPending = initialPending.filter((p) => p.visit_id === demoVisitId);
-        const demoActive = initialActive.filter((a) => a.id === demoVisitId);
-        const demoCompleted = initialCompleted.filter((c) => c.id === demoVisitId);
-        setPending(demoPending);
-        setActive(demoActive);
-        setCompleted(demoCompleted);
-        // Derive counts from the single demo visit's status
-        const visit = demoActive[0];
-        const status = visit?.status;
-        setCounts({
-          awaiting: demoPending.length,
-          with_ai: status === "still_answering_ai" ? 1 : 0,
-          in_queue: status === "waiting_doctor_claim" ? 1 : 0,
-          with_doctor: status === "claimed_by_doctor" ? 1 : 0,
-          tablets_out: 0,
-          doctors_checked_in: 1,
-        });
-      } else {
-        setPending([]);
-        setActive([]);
-        setCompleted([]);
-        setCounts({ ...DEFAULT_COUNTS, doctors_checked_in: 1 });
-      }
-    } else {
+    if (demoMode && demoVisitId) {
+      const demoPending = initialPending.filter((p) => p.visit_id === demoVisitId);
+      const demoActive = initialActive.filter((a) => a.id === demoVisitId);
+      const demoCompleted = initialCompleted.filter((c) => c.id === demoVisitId);
+      setPending(demoPending);
+      setActive(demoActive);
+      setCompleted(demoCompleted);
+      // Derive counts from the single demo visit's status
+      const visit = demoActive[0];
+      const status = visit?.status;
+      setCounts({
+        awaiting: demoPending.length,
+        with_ai: status === "still_answering_ai" ? 1 : 0,
+        in_queue: status === "waiting_doctor_claim" ? 1 : 0,
+        with_doctor: status === "claimed_by_doctor" ? 1 : 0,
+        tablets_out: 0,
+        doctors_checked_in: 1,
+      });
+    } else if (!demoMode) {
       setPending(initialPending);
       setActive(initialActive);
       setCompleted(initialCompleted);

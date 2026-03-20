@@ -58,38 +58,55 @@ export default function DemoShell({
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
   const [demoComplete, setDemoComplete] = useState(false);
-  const [demoVisitId, setDemoVisitId] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return sessionStorage.getItem("demo_visit_id");
-  });
+  const [demoVisitId, setDemoVisitId] = useState<string | null>(null);
   const [demoKey, setDemoKey] = useState(0);
   const [waitingForDoctor, setWaitingForDoctor] = useState(false);
   const [phoneStepDone, setPhoneStepDone] = useState(false);
-  const [visitCompleted, setVisitCompleted] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return sessionStorage.getItem("demo_step") === "5";
-  });
+  const [visitCompleted, setVisitCompleted] = useState(false);
   const [visitClaimed, setVisitClaimed] = useState(false);
-  const [demoStep, setDemoStep] = useState(() => {
-    if (typeof window === "undefined") return 1;
-    return parseInt(sessionStorage.getItem("demo_step") || "1", 10);
-  });
+  const [demoStep, setDemoStep] = useState(1);
 
   const demoVisitIdRef = useRef(demoVisitId);
   useEffect(() => { demoVisitIdRef.current = demoVisitId; }, [demoVisitId]);
 
-  // Persist demo state to sessionStorage
-  useEffect(() => {
-    sessionStorage.setItem("demo_step", String(demoStep));
-  }, [demoStep]);
-
+  // Persist visit ID to sessionStorage
   useEffect(() => {
     if (demoVisitId) {
       sessionStorage.setItem("demo_visit_id", demoVisitId);
-    } else {
-      sessionStorage.removeItem("demo_visit_id");
     }
   }, [demoVisitId]);
+
+  // On mount: restore visit ID from sessionStorage, then check status in DB
+  useEffect(() => {
+    const stored = sessionStorage.getItem("demo_visit_id");
+    if (!stored) return;
+    setDemoVisitId(stored);
+    const supabase = createClient();
+    supabase.rpc("get_visit_status", { p_visit_id: stored }).then(({ data, error }) => {
+      if (error || !data?.success) {
+        console.warn("[Demo] get_visit_status failed:", error?.message || data?.error);
+        // Visit not found or not authorized — reset
+        setDemoVisitId(null);
+        sessionStorage.removeItem("demo_visit_id");
+        return;
+      }
+      const statusToStep: Record<string, number> = {
+        pending_approval: 2,
+        still_answering_ai: 3,
+        waiting_doctor_claim: 3,
+        claimed_by_doctor: 4,
+        completed: 5,
+      };
+      const step = statusToStep[data.status];
+      if (step) {
+        setDemoStep(step);
+        if (step === 5) { setVisitCompleted(true); setActiveTab("reviews"); }
+        if (step === 4) { setVisitClaimed(true); setActiveTab("doctor"); }
+        if (step === 3) setActiveTab("patient");
+        if (step === 2) setActiveTab("receptionist");
+      }
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
 
   // Auto-switch to doctor tab once phone step is complete
   useEffect(() => {
@@ -177,7 +194,7 @@ export default function DemoShell({
             setWaitingForDoctor(true);
           }
 
-          if (status === "in_progress" && oldStatus === "waiting_doctor_claim") {
+          if (status === "claimed_by_doctor" && oldStatus === "waiting_doctor_claim") {
             setVisitClaimed(true);
           }
 
@@ -212,6 +229,16 @@ export default function DemoShell({
 
   const handleVisitCreated = useCallback((visitId: string) => {
     setDemoVisitId(visitId);
+    // Only advance to step 2 if we're at step 1 (fresh check-in, not a restore)
+    setDemoStep((prev) => {
+      if (prev > 1) return prev;
+      setPulsingTab("receptionist");
+      setTimeout(() => {
+        setActiveTab("receptionist");
+        setPulsingTab(null);
+      }, 3000);
+      return 2;
+    });
   }, []);
 
   const handlePhoneComplete = useCallback(() => {
@@ -223,7 +250,6 @@ export default function DemoShell({
     if (typeof window !== "undefined") {
       localStorage.removeItem("hilt_session_token");
       localStorage.removeItem("hilt_session_phone");
-      sessionStorage.removeItem("demo_step");
       sessionStorage.removeItem("demo_visit_id");
     }
     setDemoVisitId(null);
@@ -303,6 +329,7 @@ export default function DemoShell({
           }}
         >
           <ReceptionistDashboard
+            key={demoKey}
             mode="dashboard"
             locations={[]}
             staffUserId={staffUserId}
@@ -323,6 +350,7 @@ export default function DemoShell({
           style={{ display: activeTab === "doctor" ? "block" : "none" }}
         >
           <DoctorDashboard
+            key={demoKey}
             mode="dashboard"
             locations={[]}
             staffUserId={staffUserId}
