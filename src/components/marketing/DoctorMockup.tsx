@@ -118,7 +118,7 @@ export default function DoctorMockup() {
           </div>
           <span className="text-[10px] text-ash">3 visits</span>
         </div>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+        <div className="mt-3 grid grid-cols-4 gap-1.5 text-[9px]">
           <div>
             <p className="font-medium text-slate">Meds (1)</p>
             <p className="text-ink">Ibuprofen PRN</p>
@@ -130,6 +130,10 @@ export default function DoctorMockup() {
           <div>
             <p className="font-medium text-slate">Chronic (0)</p>
             <p className="text-ash">None</p>
+          </div>
+          <div>
+            <p className="font-medium text-slate">Pets (1)</p>
+            <p className="text-ink">Cat</p>
           </div>
         </div>
       </div>

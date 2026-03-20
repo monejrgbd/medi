@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useCallback } from "react";
 import { completeVisit } from "@/app/(dashboard)/d/_actions/doctor";
 import FollowUpForm from "./FollowUpForm";
 
@@ -21,6 +21,16 @@ export default function DiagnosisForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showDiagnosis, setShowDiagnosis] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResize = useCallback(() => {
+    const el = textareaRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = Math.min(el.scrollHeight, 320) + "px";
+    }
+  }, []);
 
   const [followUpEnabled, setFollowUpEnabled] = useState(demoMode);
   const [followUpDays, setFollowUpDays] = useState<number | null>(demoMode ? 7 : 14);
@@ -39,8 +49,13 @@ export default function DiagnosisForm({
       setError("Diagnosis exceeds 10,000 characters");
       return;
     }
-
     setError(null);
+    setShowConfirm(true);
+  }
+
+  function handleConfirm(allow: boolean) {
+    setShowDiagnosis(allow);
+    setShowConfirm(false);
     startTransition(async () => {
       const followUp = followUpEnabled
         ? {
@@ -49,7 +64,7 @@ export default function DiagnosisForm({
           }
         : undefined;
 
-      const result = await completeVisit(visitId, trimmed, followUp, showDiagnosis);
+      const result = await completeVisit(visitId, diagnosis.trim(), followUp, allow);
       if (result.success) {
         onComplete();
       } else {
@@ -66,12 +81,16 @@ export default function DiagnosisForm({
         </h2>
 
         <textarea
+          ref={textareaRef}
           value={diagnosis}
-          onChange={(e) => setDiagnosis(e.target.value)}
+          onChange={(e) => {
+            setDiagnosis(e.target.value);
+            autoResize();
+          }}
           placeholder="e.g. Acute pharyngitis, likely viral. Supportive care advised. Return if symptoms worsen or persist beyond 5 days."
-          rows={8}
+          rows={2}
           maxLength={10000}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-y"
+          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-none overflow-hidden"
         />
 
         <div className="mt-1 flex items-center justify-between">
@@ -90,42 +109,6 @@ export default function DiagnosisForm({
           onInstructionsChange={setFollowUpInstructions}
         />
 
-        {/* Diagnosis visibility toggle */}
-        <div className="mt-4 rounded-lg border border-gray-200 p-3">
-          <p className="text-sm font-medium text-ink mb-2">
-            Allow the patient to see this diagnosis?
-          </p>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setShowDiagnosis(true)}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                showDiagnosis
-                  ? "bg-hilt-blue text-white"
-                  : "border border-gray-200 text-slate hover:bg-gray-50"
-              }`}
-            >
-              Yes
-            </button>
-            <button
-              type="button"
-              onClick={() => setShowDiagnosis(false)}
-              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                !showDiagnosis
-                  ? "bg-red-600 text-white"
-                  : "border border-gray-200 text-slate hover:bg-gray-50"
-              }`}
-            >
-              No
-            </button>
-          </div>
-          <p className="text-xs text-slate mt-1.5">
-            {showDiagnosis
-              ? "The patient will see this diagnosis in their visit summary."
-              : "The patient will not see this diagnosis. Only staff can view it."}
-          </p>
-        </div>
-
         <div className="mt-4 flex gap-3">
           <button
             onClick={onClose}
@@ -143,6 +126,37 @@ export default function DiagnosisForm({
           </button>
         </div>
       </div>
+
+      {/* Confirmation dialog */}
+      {showConfirm && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-lg">
+            <h3 className="text-lg font-bold text-ink mb-2">
+              Allow the patient to see this diagnosis?
+            </h3>
+            <p className="text-sm text-slate mb-5">
+              The patient will receive a visit summary. Would you like the
+              diagnosis to be included?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleConfirm(false)}
+                disabled={isPending}
+                className="flex-1 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 disabled:opacity-50 transition-colors"
+              >
+                {isPending ? "Completing..." : "No, hide it"}
+              </button>
+              <button
+                onClick={() => handleConfirm(true)}
+                disabled={isPending}
+                className="flex-1 rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {isPending ? "Completing..." : "Yes, show it"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
