@@ -8,7 +8,7 @@ const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://hilthealth.com";
 // SMS templates
 const TEMPLATES: Record<string, (params: Record<string, string>) => string> = {
   summary: (p) =>
-    `Hi ${p.first_name}, your visit summary from ${p.org_name} is ready: ${APP_BASE_URL}/summary/${p.token}`,
+    `Hi ${p.first_name}, your visit summary from ${p.org_name} is ready: ${APP_BASE_URL}/summary/${p.token}. You can share this with any doctor to help explain your visit.`,
   review: (p) =>
     `Hi ${p.first_name}, ${p.org_name} would appreciate your feedback: ${APP_BASE_URL}/review/${p.token}`,
   follow_up: (p) =>

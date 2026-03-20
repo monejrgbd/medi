@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
@@ -65,6 +66,9 @@ export default function DemoShell({
   const [visitCompleted, setVisitCompleted] = useState(false);
   const [visitClaimed, setVisitClaimed] = useState(false);
   const [demoStep, setDemoStep] = useState(1);
+  const [reviewToken, setReviewToken] = useState<string | null>(null);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const router = useRouter();
 
   const demoVisitIdRef = useRef(demoVisitId);
   useEffect(() => { demoVisitIdRef.current = demoVisitId; }, [demoVisitId]);
@@ -204,10 +208,6 @@ export default function DemoShell({
               setActiveTab("reviews");
               setPulsingTab(null);
             }, 4000);
-            // Auto-finish after 60s
-            setTimeout(() => {
-              setDemoComplete(true);
-            }, 60_000);
           }
         }
       )
@@ -217,6 +217,40 @@ export default function DemoShell({
       supabase.removeChannel(channel);
     };
   }, [locationId]);
+
+  // After visit completes: fetch review token + poll for review submission
+  useEffect(() => {
+    if (!visitCompleted || !demoVisitId || reviewSubmitted) return;
+    const supabase = createClient();
+
+    // Fetch review token from the visit
+    supabase
+      .from("visits")
+      .select("review_token")
+      .eq("id", demoVisitId)
+      .single()
+      .then(({ data }) => {
+        if (data?.review_token) setReviewToken(data.review_token);
+      });
+
+    // Poll for review submission every 5s
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from("reviews")
+        .select("submitted_at")
+        .eq("visit_id", demoVisitId)
+        .not("submitted_at", "is", null)
+        .maybeSingle();
+
+      if (data) {
+        setReviewSubmitted(true);
+        clearInterval(interval);
+        router.refresh(); // Refresh ReviewHub data
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [visitCompleted, demoVisitId, reviewSubmitted, router]);
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
@@ -251,6 +285,8 @@ export default function DemoShell({
     setVisitCompleted(false);
     setVisitClaimed(false);
     setDemoStep(1);
+    setReviewToken(null);
+    setReviewSubmitted(false);
     setDemoComplete(false);
     setActiveTab("patient");
     // Force CheckinFlow remount with fresh state
@@ -365,6 +401,44 @@ export default function DemoShell({
 
         <div style={{ display: activeTab === "reviews" ? "block" : "none" }}>
           <div className="mx-auto max-w-6xl">
+            {/* Review submission guidance */}
+            {visitCompleted && !reviewSubmitted && reviewToken && (
+              <div className="mx-4 mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
+                <p className="text-sm font-medium text-blue-800 mb-2">
+                  Your patient just received an SMS with a review link
+                </p>
+                <p className="text-xs text-blue-600 mb-3">
+                  Try it yourself. This is exactly what your patients see after every visit. Open the link below or check the SMS on your phone.
+                </p>
+                <a
+                  href={`/review/${reviewToken}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block rounded-lg bg-hilt-blue px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                >
+                  Open Review Page
+                </a>
+              </div>
+            )}
+
+            {/* Success banner after review submitted */}
+            {reviewSubmitted && (
+              <div className="mx-4 mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
+                <p className="text-sm font-medium text-green-800 mb-1">
+                  Your review is in! See it below in the dashboard.
+                </p>
+                <p className="text-xs text-green-600 mb-3">
+                  This is what clinic owners and managers see when patients leave feedback.
+                </p>
+                <button
+                  onClick={() => setDemoComplete(true)}
+                  className="rounded-lg bg-green-600 px-5 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                >
+                  Finish Demo
+                </button>
+              </div>
+            )}
+
             <ReviewHub
               locations={[{ id: locationId, name: locationName }]}
               isOwnerOrManager={true}

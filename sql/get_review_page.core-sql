@@ -16,7 +16,29 @@ BEGIN
     'clinic_name', o.name,
     'doctor_name', doc.full_name,
     'already_submitted', (r.submitted_at IS NOT NULL),
-    'is_demo', (o.id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'::uuid)
+    'is_demo', (o.id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'::uuid),
+    'recent_reviews', CASE
+      WHEN o.id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'::uuid THEN COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'first_name', p2.first_name,
+          'rating', r2.rating,
+          'feedback_text', r2.feedback_text,
+          'submitted_at', r2.submitted_at
+        ) ORDER BY r2.submitted_at DESC)
+        FROM public.reviews r2
+        JOIN public.patients p2 ON p2.id = r2.patient_id
+        WHERE r2.id IN (
+          'dcd0a06c-800d-4a71-810a-826b1b66d970'::uuid,
+          'de99d4f9-b8f6-4a89-933e-fb5879c36f5f'::uuid,
+          'c1bdf33f-8711-40cd-afbd-716892c9ef30'::uuid,
+          '3959e210-e4f2-4a8b-b3e2-1ff5a5c5568b'::uuid,
+          '288d696d-76e7-4e67-b1a4-adddc6396a12'::uuid,
+          '1fbb3cf1-b443-4fd6-b172-012566090662'::uuid
+        )
+        AND r2.submitted_at IS NOT NULL
+      ), '[]'::jsonb)
+      ELSE NULL
+    END
   )
   INTO v_result
   FROM public.reviews r

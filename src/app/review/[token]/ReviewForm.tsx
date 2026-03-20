@@ -5,17 +5,36 @@ import { createClient } from "@/lib/supabase/client";
 import ReviewStars from "@/components/reviews/ReviewStars";
 import { Check } from "lucide-react";
 
+interface ReviewItem {
+  first_name: string;
+  rating: number;
+  feedback_text: string | null;
+  submitted_at: string;
+}
+
 interface ReviewFormProps {
   token: string;
   isDemo?: boolean;
+  recentReviews?: ReviewItem[];
 }
 
-export default function ReviewForm({ token, isDemo = false }: ReviewFormProps) {
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "1 day ago";
+  if (days < 30) return `${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? "1 month ago" : `${months} months ago`;
+}
+
+export default function ReviewForm({ token, isDemo = false, recentReviews = [] }: ReviewFormProps) {
   const [rating, setRating] = useState<number>(0);
   const [feedback, setFeedback] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [displayReviews, setDisplayReviews] = useState<ReviewItem[]>(recentReviews);
   const [platformRedirect, setPlatformRedirect] = useState<{
     name: string;
     url: string;
@@ -51,11 +70,59 @@ export default function ReviewForm({ token, isDemo = false }: ReviewFormProps) {
       });
     }
 
+    if (recentReviews.length > 0) {
+      setDisplayReviews([
+        {
+          first_name: "You",
+          rating,
+          feedback_text: feedback || null,
+          submitted_at: new Date().toISOString(),
+        },
+        ...recentReviews,
+      ]);
+    }
+
     setSubmitted(true);
   }
 
+  const reviewsSection = displayReviews.length > 0 && (
+    <div className="mb-4">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3">
+        What others are saying
+      </h3>
+      <div className="space-y-3">
+        {displayReviews.map((rev, i) => (
+          <div
+            key={i}
+            className={`rounded-lg border p-3 ${
+              rev.first_name === "You"
+                ? "border-blue-200 bg-blue-50"
+                : "border-gray-200 bg-white"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-900">
+                  {rev.first_name}
+                </span>
+                <ReviewStars mode="readonly" value={rev.rating} size="sm" />
+              </div>
+              <span className="text-xs text-gray-400">
+                {timeAgo(rev.submitted_at)}
+              </span>
+            </div>
+            {rev.feedback_text && (
+              <p className="text-sm text-gray-600">{rev.feedback_text}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   if (submitted) {
     return (
+      <div>
       <div className="text-center">
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
           <Check className="h-8 w-8 text-green-600" />
@@ -102,11 +169,14 @@ export default function ReviewForm({ token, isDemo = false }: ReviewFormProps) {
           </div>
         ) : null}
       </div>
+      {reviewsSection}
+      </div>
     );
   }
 
   return (
     <div>
+      {!submitted && reviewsSection}
       <div className="rounded-xl border border-gray-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-1 text-center">
           How was your visit?

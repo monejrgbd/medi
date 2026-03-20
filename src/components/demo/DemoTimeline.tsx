@@ -24,7 +24,7 @@ const STEPS = [
   {
     label: "Feedback",
     role: "Visit complete",
-    hint: "Patients receive an SMS with their visit summary and a review request. You can configure which external platform they are directed to and set the star threshold in platform settings.",
+    hint: "Check your SMS for the review link and submit a review. You can also use the link shown below. Once submitted, your review will appear in the dashboard.",
   },
 ] as const;
 

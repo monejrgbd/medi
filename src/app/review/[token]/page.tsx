@@ -101,7 +101,7 @@ export default async function ReviewPage({ params }: PageProps) {
           )}
         </div>
 
-        <ReviewForm token={token} isDemo={!!data.is_demo} />
+        <ReviewForm token={token} isDemo={!!data.is_demo} recentReviews={data.recent_reviews ?? []} />
 
         <div className="text-center py-6">
           <a
