@@ -12,6 +12,8 @@ VOLATILE
 SECURITY DEFINER
 SET search_path TO ''
 AS $$
+DECLARE
+  v_code text;
 BEGIN
   -- Auth: must be platform admin
   IF NOT COALESCE(
@@ -22,7 +24,15 @@ BEGIN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  -- Delegate to existing code generation logic
+  -- Quick create: no identifiers → direct INSERT (bypasses request_premium_code's identifier requirement)
+  IF p_email IS NULL AND p_phone IS NULL AND p_domain IS NULL THEN
+    v_code := upper(substr(md5(random()::text), 1, 8));
+    INSERT INTO public.approval_codes (code, email_sent)
+    VALUES (v_code, true);
+    RETURN jsonb_build_object('success', true, 'code', v_code, 'email_queued', false);
+  END IF;
+
+  -- With identifiers: delegate to existing code generation logic
   RETURN private.request_premium_code(p_email, p_domain, p_phone, p_send_email);
 END;
 $$;

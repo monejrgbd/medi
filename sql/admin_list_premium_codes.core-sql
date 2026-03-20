@@ -20,7 +20,7 @@ BEGIN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  SELECT COALESCE(jsonb_agg(row_to_json(t.*) ORDER BY t.created_at DESC), '[]'::jsonb)
+  SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY t.created_at DESC), '[]'::jsonb)
   INTO v_result
   FROM (
     SELECT

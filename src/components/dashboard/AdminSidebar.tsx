@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TicketCheck, LogOut, ArrowLeftRight } from "lucide-react";
+import { TicketCheck, LogOut } from "lucide-react";
 
 const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
   { href: "/d/admin", label: "Premium Codes", icon: <TicketCheck className="h-4 w-4" /> },
@@ -23,14 +23,6 @@ export default function AdminSidebar() {
       <div className="p-6 border-b border-gray-100">
         <h2 className="font-semibold text-ink">Hilt Health</h2>
         <p className="text-xs text-slate mt-0.5">Platform Admin</p>
-        <Link
-          href="/d/select-role"
-          onClick={() => setMobileOpen(false)}
-          className="mt-3 flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-2 text-xs font-medium text-purple-600 hover:bg-purple-100 transition-colors"
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5" />
-          Switch Role
-        </Link>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">
