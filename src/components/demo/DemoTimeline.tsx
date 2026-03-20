@@ -4,27 +4,32 @@ const STEPS = [
   {
     label: "Check In",
     role: "You are the patient",
-    hint: "Fill out the check in form, just like your patients would on their phone after scanning the QR code. Note: you get a unique QR code per location.",
+    todo: "Fill out the check in form and submit.",
+    info: "This is what your patients see on their phone after scanning the QR code, which you get per location after signing up. Kiosk mode is also supported.",
   },
   {
     label: "Approve",
     role: "You are the receptionist",
-    hint: "Review the patient details and approve them to trigger the AI pre screening conversation. You can edit their info using the edit icon. Returning patients are automatically identified by name and date of birth.",
+    todo: "Review the patient details and click Approve.",
+    info: "This triggers the AI pre screening conversation. Returning patients are automatically identified by name and date of birth. You can edit their info using the edit icon.",
   },
   {
     label: "AI Screening",
     role: "You are the patient",
-    hint: "Answer the AI's questions. It builds a structured symptom profile automatically, saving your staff time. The conversation ends on its own when enough information is collected. Afterward, you will verify a phone number.",
+    todo: "Answer the AI's questions. The conversation ends on its own when enough information is collected.",
+    info: "The AI builds a structured symptom profile automatically, saving the doctor time. Afterward, you will verify a phone number.",
   },
   {
     label: "Diagnose",
     role: "You are the doctor",
-    hint: "Browse the summary, full transcript, and AI diagnostic tabs. When ready, click the pulsing Complete button at the bottom to enter a diagnosis and set a follow up. Patients who miss their follow up date receive up to two SMS reminders automatically.",
+    todo: "Browse the tabs, then click the pulsing Complete button to enter a diagnosis and set a follow up.",
+    info: "The AI generates a summary, full transcript, and diagnostic suggestions. Patients who miss their follow up date receive up to two SMS reminders automatically.",
   },
   {
     label: "Feedback",
     role: "Visit complete",
-    hint: "Check your SMS for the review link and submit a review. You can also use the link shown below. Once submitted, your review will appear in the dashboard.",
+    todo: "Open the review link from your SMS or below and submit a review.",
+    info: "Once submitted, your review will appear in the dashboard. You can configure which external platform patients are directed to.",
   },
 ] as const;
 
@@ -90,11 +95,16 @@ export default function DemoTimeline({ currentStep }: DemoTimelineProps) {
 
       {/* Current step explanation */}
       <div className="mt-2.5 mx-auto max-w-md rounded-lg bg-blue-50/80 border border-blue-100 px-3.5 py-2">
-        <p className="text-xs text-center text-gray-600">
+        <p className="text-xs text-center">
           <span className="font-semibold text-hilt-blue">
             {STEPS[currentStep - 1].role}.
           </span>{" "}
-          {STEPS[currentStep - 1].hint}
+          <span className="text-ink font-medium">
+            {STEPS[currentStep - 1].todo}
+          </span>
+        </p>
+        <p className="text-[11px] text-center text-gray-500 mt-1">
+          {STEPS[currentStep - 1].info}
         </p>
       </div>
     </div>

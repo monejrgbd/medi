@@ -84,6 +84,7 @@ export default function ApprovalCard({
   const [editFirst, setEditFirst] = useState(visit.first_name);
   const [editLast, setEditLast] = useState(visit.last_name);
   const [editBirthday, setEditBirthday] = useState(visit.birthday);
+  const [editSex, setEditSex] = useState(visit.sex || "");
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
 
@@ -91,6 +92,7 @@ export default function ApprovalCard({
   const [displayFirst, setDisplayFirst] = useState(visit.first_name);
   const [displayLast, setDisplayLast] = useState(visit.last_name);
   const [displayBirthday, setDisplayBirthday] = useState(visit.birthday);
+  const [displaySex, setDisplaySex] = useState(visit.sex || "");
 
   async function handleExpand() {
     if (expanded) {
@@ -121,6 +123,7 @@ export default function ApprovalCard({
     setEditFirst(displayFirst);
     setEditLast(displayLast);
     setEditBirthday(displayBirthday);
+    setEditSex(displaySex);
     setEditError("");
     setEditing(true);
   }
@@ -148,8 +151,9 @@ export default function ApprovalCard({
     const changedFirst = trimFirst !== displayFirst ? trimFirst : undefined;
     const changedLast = trimLast !== displayLast ? trimLast : undefined;
     const changedBirthday = editBirthday !== displayBirthday ? editBirthday : undefined;
+    const changedSex = editSex !== displaySex ? (editSex || undefined) : undefined;
 
-    if (!changedFirst && !changedLast && !changedBirthday) {
+    if (!changedFirst && !changedLast && !changedBirthday && !changedSex) {
       setEditing(false);
       return;
     }
@@ -159,7 +163,8 @@ export default function ApprovalCard({
       visit.patient_id,
       changedFirst,
       changedLast,
-      changedBirthday
+      changedBirthday,
+      changedSex
     );
     setEditLoading(false);
 
@@ -172,6 +177,7 @@ export default function ApprovalCard({
     setDisplayFirst(trimFirst);
     setDisplayLast(trimLast);
     setDisplayBirthday(editBirthday);
+    setDisplaySex(editSex);
     setEditing(false);
   }
 
@@ -220,13 +226,25 @@ export default function ApprovalCard({
                   className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
                 />
               </div>
-              <input
-                type="date"
-                value={editBirthday}
-                onChange={(e) => setEditBirthday(e.target.value)}
-                max={new Date().toISOString().split("T")[0]}
-                className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={editBirthday}
+                  onChange={(e) => setEditBirthday(e.target.value)}
+                  max={new Date().toISOString().split("T")[0]}
+                  className="flex-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+                />
+                <select
+                  value={editSex}
+                  onChange={(e) => setEditSex(e.target.value)}
+                  className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+                >
+                  <option value="">Sex</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
               {editError && (
                 <p className="text-xs text-red-600">{editError}</p>
               )}
@@ -269,7 +287,7 @@ export default function ApprovalCard({
                   </svg>
                 </button>
               </div>
-              <p className="text-sm text-slate">DOB: {displayBirthday}{visit.sex ? ` · ${visit.sex}` : ""}</p>
+              <p className="text-sm text-slate">DOB: {displayBirthday}{displaySex ? ` · ${displaySex}` : ""}</p>
               {visit.phone_masked && (
                 <p className="text-xs text-ash mt-0.5">Phone: {visit.phone_masked}</p>
               )}

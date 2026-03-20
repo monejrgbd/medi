@@ -15,6 +15,7 @@ interface ReceptionistHeaderProps {
   onCheckOut: () => void;
   soundEnabled?: boolean;
   onToggleSound?: () => void;
+  demoMode?: boolean;
 }
 
 export default function ReceptionistHeader({
@@ -23,6 +24,7 @@ export default function ReceptionistHeader({
   onCheckOut,
   soundEnabled,
   onToggleSound,
+  demoMode = false,
 }: ReceptionistHeaderProps) {
   const items = [
     { label: "Awaiting", value: counts.awaiting, color: "text-yellow-600" },
@@ -56,12 +58,14 @@ export default function ReceptionistHeader({
               )}
             </button>
           )}
-          <button
-            onClick={onCheckOut}
-            className="text-sm text-slate hover:text-red-600 transition-colors"
-          >
-            Check Out
-          </button>
+          {!demoMode && (
+            <button
+              onClick={onCheckOut}
+              className="text-sm text-slate hover:text-red-600 transition-colors"
+            >
+              Check Out
+            </button>
+          )}
         </div>
       </div>
       <div className="flex flex-wrap gap-4">

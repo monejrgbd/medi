@@ -495,6 +495,7 @@ export default function ReceptionistDashboard({
         onCheckOut={handleCheckOut}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
+        demoMode={demoMode}
       />
 
       <div className="px-4 py-4 lg:px-6">
