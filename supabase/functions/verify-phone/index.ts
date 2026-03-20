@@ -99,7 +99,7 @@ async function handleSendCode(
     .gte("created_at", oneHourAgo)
     ;
 
-  if ((phoneCount ?? 0) >= 3) {
+  if ((phoneCount ?? 0) >= 10) {
     return jsonResponse({ error: "Too many verification attempts for this phone number. Please try again later." }, 429);
   }
 

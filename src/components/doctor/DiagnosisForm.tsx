@@ -20,6 +20,7 @@ export default function DiagnosisForm({
   const [diagnosis, setDiagnosis] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [showDiagnosis, setShowDiagnosis] = useState(true);
 
   const [followUpEnabled, setFollowUpEnabled] = useState(demoMode);
   const [followUpDays, setFollowUpDays] = useState<number | null>(demoMode ? 7 : 14);
@@ -48,7 +49,7 @@ export default function DiagnosisForm({
           }
         : undefined;
 
-      const result = await completeVisit(visitId, trimmed, followUp);
+      const result = await completeVisit(visitId, trimmed, followUp, showDiagnosis);
       if (result.success) {
         onComplete();
       } else {
@@ -88,6 +89,42 @@ export default function DiagnosisForm({
           instructions={followUpInstructions}
           onInstructionsChange={setFollowUpInstructions}
         />
+
+        {/* Diagnosis visibility toggle */}
+        <div className="mt-4 rounded-lg border border-gray-200 p-3">
+          <p className="text-sm font-medium text-ink mb-2">
+            Allow the patient to see this diagnosis?
+          </p>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setShowDiagnosis(true)}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                showDiagnosis
+                  ? "bg-hilt-blue text-white"
+                  : "border border-gray-200 text-slate hover:bg-gray-50"
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDiagnosis(false)}
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                !showDiagnosis
+                  ? "bg-red-600 text-white"
+                  : "border border-gray-200 text-slate hover:bg-gray-50"
+              }`}
+            >
+              No
+            </button>
+          </div>
+          <p className="text-xs text-slate mt-1.5">
+            {showDiagnosis
+              ? "The patient will see this diagnosis in their visit summary."
+              : "The patient will not see this diagnosis. Only staff can view it."}
+          </p>
+        </div>
 
         <div className="mt-4 flex gap-3">
           <button

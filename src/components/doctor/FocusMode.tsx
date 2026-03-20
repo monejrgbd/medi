@@ -58,6 +58,7 @@ interface VisitDetail {
     updated_at: string;
     is_follow_up: boolean;
     follow_up_of: string | null;
+    diagnostic_enabled: boolean;
   };
   patient: {
     id: string;
@@ -78,7 +79,7 @@ interface VisitDetail {
   attachments: VisitAttachment[];
 }
 
-type FocusTab = "summary" | "transcript" | "diagnostic" | "notes" | "attachments";
+type FocusTab = "summary" | "transcript" | "notes" | "attachments";
 
 interface FocusModeProps {
   locationId: string;
@@ -195,7 +196,17 @@ export default function FocusMode({
         (payload) => {
           const newRow = payload.new as Record<string, unknown>;
           if (newRow.updated_at !== updatedAtRef.current) {
-            setUpdateNotice(true);
+            // Auto-refresh if diagnostic just arrived (was null, now set)
+            if (newRow.ai_diagnostic && !detail.visit.ai_diagnostic) {
+              fetchVisitDetail(detail.visit.id).then((result) => {
+                if (result.success && result.data) {
+                  setDetail(result.data as VisitDetail);
+                  updatedAtRef.current = (result.data as VisitDetail).visit.updated_at;
+                }
+              });
+            } else {
+              setUpdateNotice(true);
+            }
           }
         }
       )
@@ -337,7 +348,6 @@ export default function FocusMode({
   const tabs: { key: FocusTab; label: string; show: boolean }[] = [
     { key: "summary", label: "Summary", show: true },
     { key: "transcript", label: "Transcript", show: true },
-    { key: "diagnostic", label: "AI Diagnostic", show: !!detail?.visit.ai_diagnostic },
     { key: "notes", label: `Notes (${(detail?.notes || []).length})`, show: true },
     { key: "attachments", label: `Files (${(detail?.attachments || []).length})`, show: true },
   ];
@@ -411,10 +421,13 @@ export default function FocusMode({
           {/* Patient profile card with medications, allergies, chronic conditions */}
           <PatientProfileCard patient={detail.patient} />
 
-          {/* AI Diagnostic (always visible if present, as a collapsible section) */}
-          {detail.visit.ai_diagnostic && (
+          {/* AI Diagnostic — inline above tabs */}
+          {(detail.visit.ai_diagnostic || detail.visit.diagnostic_enabled) && (
             <div className="mt-4">
-              <AIDiagnosticPanel diagnostic={detail.visit.ai_diagnostic} />
+              <AIDiagnosticPanel
+                diagnostic={detail.visit.ai_diagnostic}
+                loading={detail.visit.diagnostic_enabled && !detail.visit.ai_diagnostic}
+              />
             </div>
           )}
 
@@ -448,10 +461,6 @@ export default function FocusMode({
 
             {tab === "transcript" && (
               <TranscriptView messages={detail.transcript} />
-            )}
-
-            {tab === "diagnostic" && detail.visit.ai_diagnostic && (
-              <AIDiagnosticPanel diagnostic={detail.visit.ai_diagnostic} />
             )}
 
             {tab === "notes" && (

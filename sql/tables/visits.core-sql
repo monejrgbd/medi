@@ -34,6 +34,7 @@ CREATE TABLE public.visits (
   timeout_flagged       boolean DEFAULT false,
   phone_verification_pending boolean DEFAULT false,
   is_return_visit       boolean DEFAULT false,
+  summary_show_diagnosis boolean DEFAULT true,
   patient_approved      boolean DEFAULT false,
   patient_approved_at   timestamptz,
   patient_denied        boolean DEFAULT false,

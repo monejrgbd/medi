@@ -197,7 +197,13 @@ BEGIN
       'entered_queue_at', v.entered_queue_at,
       'updated_at', v.updated_at,
       'is_follow_up', v.is_follow_up,
-      'follow_up_of', v.follow_up_of
+      'follow_up_of', v.follow_up_of,
+      'diagnostic_enabled', (
+        SELECT (o2.diagnostic_addon = true AND l2.diagnostic_enabled = true)
+        FROM public.organizations o2
+        JOIN public.locations l2 ON l2.id = v.location_id
+        WHERE o2.id = v.org_id
+      )
     ),
     'patient', jsonb_build_object(
       'id', p.id,

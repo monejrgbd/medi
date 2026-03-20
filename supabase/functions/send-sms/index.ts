@@ -99,6 +99,7 @@ Deno.serve(async (req) => {
           status: logStatus,
           provider_sid: providerId,
           error_message: errorMsg,
+          message_body: body,
         })
         .eq("id", sms_log_id);
     } else {
@@ -113,6 +114,7 @@ Deno.serve(async (req) => {
         provider_sid: providerId,
         status: logStatus,
         error_message: errorMsg,
+        message_body: body,
       });
     }
 

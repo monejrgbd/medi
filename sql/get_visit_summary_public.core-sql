@@ -19,7 +19,7 @@ BEGIN
     'visit_date', v.completed_at,
     'doctor_name', doc.full_name,
     'summary', v.ai_summary,
-    'diagnosis', v.doctor_diagnosis,
+    'diagnosis', CASE WHEN v.summary_show_diagnosis THEN v.doctor_diagnosis ELSE NULL END,
     'medications', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', pm.name))
       FROM public.patient_medications pm
@@ -39,6 +39,15 @@ BEGIN
       SELECT jsonb_agg(jsonb_build_object('name', pp.name))
       FROM public.patient_pets pp
       WHERE pp.patient_id = v.patient_id AND pp.active = true
+    ), '[]'::jsonb),
+    'transcript', COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'role', vm.role,
+        'content', COALESCE(vm.content_original, vm.content),
+        'created_at', vm.created_at
+      ) ORDER BY vm.created_at ASC)
+      FROM public.visit_messages vm
+      WHERE vm.visit_id = v.id AND vm.role IN ('patient', 'ai')
     ), '[]'::jsonb)
   )
   INTO v_result

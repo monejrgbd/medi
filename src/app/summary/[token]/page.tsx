@@ -81,6 +81,8 @@ export default async function SummaryPage({ params }: PageProps) {
   const chronicConditions: { name: string }[] =
     summary.chronic_conditions ?? [];
   const pets: { name: string }[] = summary.pets ?? [];
+  const transcript: { role: string; content: string; created_at: string }[] =
+    summary.transcript ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -227,6 +229,33 @@ export default async function SummaryPage({ params }: PageProps) {
                 </div>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Transcript */}
+        {transcript.length > 0 && (
+          <div className="rounded-xl border border-gray-200 bg-white p-6 mb-4">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4">
+              Pre Screening Transcript
+            </h3>
+            <div className="space-y-3">
+              {transcript.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`flex ${msg.role === "patient" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] rounded-lg px-3.5 py-2.5 text-sm ${
+                      msg.role === "patient"
+                        ? "bg-hilt-blue text-white"
+                        : "bg-gray-100 text-gray-900"
+                    }`}
+                  >
+                    <p className="whitespace-pre-wrap">{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

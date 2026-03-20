@@ -54,7 +54,8 @@ export async function cancelClaim(visitId: string) {
 export async function completeVisit(
   visitId: string,
   diagnosis: string,
-  followUp?: { timeframe_days: number | null; ai_instructions?: string }
+  followUp?: { timeframe_days: number | null; ai_instructions?: string },
+  showDiagnosis: boolean = true
 ) {
   await requireAuth();
   if (!visitId || !validUUID(visitId))
@@ -70,6 +71,7 @@ export async function completeVisit(
   const rpcParams: Record<string, unknown> = {
     p_visit_id: visitId,
     p_diagnosis: clean,
+    p_show_diagnosis: showDiagnosis,
   };
   if (followUp) {
     rpcParams.p_follow_up = {

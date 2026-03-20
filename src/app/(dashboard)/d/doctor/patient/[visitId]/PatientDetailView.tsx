@@ -55,6 +55,7 @@ interface VisitDetail {
     updated_at: string;
     is_follow_up: boolean;
     follow_up_of: string | null;
+    diagnostic_enabled: boolean;
   };
   patient: {
     id: string;
@@ -230,10 +231,10 @@ export default function PatientDetailView({
           </div>
         )}
 
-        {/* AI Diagnostic (always visible if present, as a collapsible section) */}
-        {visit.ai_diagnostic && (
+        {/* AI Diagnostic */}
+        {(visit.ai_diagnostic || visit.diagnostic_enabled) && (
           <div className="mt-4">
-            <AIDiagnosticPanel diagnostic={visit.ai_diagnostic} />
+            <AIDiagnosticPanel diagnostic={visit.ai_diagnostic} loading={visit.diagnostic_enabled && !visit.ai_diagnostic} />
           </div>
         )}
 
