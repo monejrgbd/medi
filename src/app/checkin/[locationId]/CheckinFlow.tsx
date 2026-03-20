@@ -118,6 +118,8 @@ export default function CheckinFlow({
   const [phoneError, setPhoneError] = useState("");
   const [phoneLoading, setPhoneLoading] = useState(false);
   const [collisionContext, setCollisionContext] = useState<{ patientId: string; visitId: string } | null>(null);
+  const [phoneRetryAt, setPhoneRetryAt] = useState<number | null>(null);
+  const [phoneRetryReady, setPhoneRetryReady] = useState(false);
 
   // Birthday verification for session recovery on shared kiosks
   const [pendingSession, setPendingSession] = useState<{
@@ -154,6 +156,21 @@ export default function CheckinFlow({
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(PHONE_STORAGE_KEY);
   }, [kiosk]);
+
+  // Phone retry timer — 60s after SMS failure
+  useEffect(() => {
+    if (!phoneRetryAt) {
+      setPhoneRetryReady(false);
+      return;
+    }
+    const remaining = phoneRetryAt - Date.now();
+    if (remaining <= 0) {
+      setPhoneRetryReady(true);
+      return;
+    }
+    const timer = setTimeout(() => setPhoneRetryReady(true), remaining);
+    return () => clearTimeout(timer);
+  }, [phoneRetryAt]);
 
   // Summary generation: 45s slow warning + 60s timeout
   const [summaryWarning, setSummaryWarning] = useState(false);
@@ -420,6 +437,14 @@ export default function CheckinFlow({
       }
 
       if (status === "completed") {
+        const current = stateRef.current;
+        if (
+          current === "phone_collection" ||
+          current === "phone_input" ||
+          current === "phone_verification"
+        ) {
+          return;
+        }
         setState("visit_completed");
       }
     },
@@ -716,6 +741,8 @@ export default function CheckinFlow({
   async function handlePhoneSubmit(phone: string) {
     setPhoneLoading(true);
     setPhoneError("");
+    setPhoneRetryAt(null);
+    setPhoneRetryReady(false);
     setPatientPhone(phone);
     localStorage.setItem(PHONE_STORAGE_KEY, phone);
 
@@ -763,6 +790,7 @@ export default function CheckinFlow({
 
       if (!res.ok || !data.success) {
         setPhoneError(data.error || "Failed to send verification code");
+        setPhoneRetryAt(Date.now() + 60_000);
         setPhoneLoading(false);
         return;
       }
@@ -772,16 +800,24 @@ export default function CheckinFlow({
       setState("phone_verification");
     } catch {
       setPhoneError("Failed to send verification code. Please try again.");
+      setPhoneRetryAt(Date.now() + 60_000);
       setPhoneLoading(false);
     }
   }
 
   async function handlePhoneVerified() {
     if (collisionContext) {
-      // Pre-approval collision flow: go back to waiting (receptionist still processes)
       setState("waiting");
     } else {
-      // Post-AI collection: fetch queue position then go to queue
+      // Check if visit was completed while patient was in phone flow
+      const supabase = createClient();
+      if (sessionToken) {
+        const { data } = await supabase.rpc("get_patient_session", { p_session_token: sessionToken });
+        if (data?.success && data.status === "completed") {
+          setState("visit_completed");
+          return;
+        }
+      }
       await fetchQueuePosition();
       if (onPhoneComplete) onPhoneComplete();
       setState("queued");
@@ -791,12 +827,6 @@ export default function CheckinFlow({
   async function handlePhoneResend() {
     if (!patientPhone) return;
     await handlePhoneSubmit(patientPhone);
-  }
-
-  async function handlePhoneSkip() {
-    await fetchQueuePosition();
-    if (onPhoneComplete) onPhoneComplete();
-    setState("queued");
   }
 
   async function handleNoPhone() {
@@ -1091,6 +1121,8 @@ export default function CheckinFlow({
           loading={phoneLoading}
           error={phoneError}
           onNoPhone={handleNoPhone}
+          retryReady={phoneRetryReady}
+          onRetry={patientPhone ? () => handlePhoneSubmit(patientPhone) : undefined}
         />
       );
 
@@ -1123,9 +1155,8 @@ export default function CheckinFlow({
             onSubmit={handlePhoneSubmit}
             loading={phoneLoading}
             error={phoneError}
-            onSkip={demoMode ? undefined : handlePhoneSkip}
-            skipDelay={demoMode ? undefined : 10_000}
-            autoSkipAfter={demoMode ? undefined : 60_000}
+            retryReady={phoneRetryReady}
+            onRetry={patientPhone ? () => handlePhoneSubmit(patientPhone) : undefined}
           />
         </div>
       );

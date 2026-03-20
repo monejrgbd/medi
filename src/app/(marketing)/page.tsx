@@ -285,18 +285,15 @@ function HeroSection() {
                 <div className="h-full rounded-2xl border border-green-200 bg-gradient-to-b from-green-50/80 to-white p-5 shadow-xl ring-1 ring-green-900/5">
                   <div className="mb-3 flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                    <span className="text-xs font-semibold text-green-700">Follow-up reminder</span>
-                    <span className="ml-auto rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700">via SMS</span>
+                    <span className="text-xs font-semibold text-green-700">Continuity of care, built in</span>
+                    <span className="ml-auto rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700">AI powered</span>
                   </div>
                   <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-900/5">
                     <p className="text-sm text-slate leading-relaxed">
-                      Hi Sarah, Dr. Chen recommended a follow-up visit. It has been 2 weeks, ready to book your next appointment?
+                      Doctors can tag sessions with follow ups. On the return visit, the AI continues with full memory of the original visit and the doctor's follow up notes.
                     </p>
-                    <div className="mt-3 rounded-lg bg-green-600 py-2 text-center text-xs font-semibold text-white">
-                      Book appointment
-                    </div>
                   </div>
-                  <p className="mt-3 text-[9px] text-right text-ash">Sent automatically</p>
+                  <p className="mt-3 text-[9px] text-right text-ash">Linked automatically on return visit</p>
                 </div>
               </FadeIn>
 
@@ -392,8 +389,8 @@ function BeforeAfterSection() {
           </FadeIn>
           <FadeIn delay={0.24}>
             <p className="text-lg leading-relaxed text-gray-300">
-              After the visit, nothing happens. Patients told to come back never do, no one asks for a review, no record sent to the patient.{" "}
-              <span className="text-white font-semibold">They do not return, and the next thing you hear is a one star rating on Google.</span>
+              After the visit, nothing happens. The doctor forgets what they wanted to ask on the follow up. No one asks for a review, no record sent to the patient.{" "}
+              <span className="text-white font-semibold">Continuity of care breaks down, and the next thing you hear is a one star rating on Google.</span>
             </p>
           </FadeIn>
           <FadeIn delay={0.56}>
@@ -416,7 +413,7 @@ function BeforeAfterSection() {
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">After the visit, everything is handled.</span>{" "}
-                Follow up reminders sent automatically. Happy patients guided to leave a review. Low ratings come to you privately first.
+                Follow ups carry doctor instructions across visits. Happy patients guided to leave a review. Low ratings come to you privately first.
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">Real time analytics.</span>{" "}
@@ -564,7 +561,7 @@ function BuiltForYourClinicSection() {
                   { label: "Nurse triage", desc: "Nurses screen before doctor", on: true },
                   { label: "Weight tracking", desc: "Per patient over time", on: true },
                   { label: "Height tracking", desc: "Per patient over time", on: false },
-                  { label: "Follow up SMS", desc: "Automated return reminders", on: false },
+                  { label: "Smart follow ups", desc: "AI linked cross session care", on: true },
                   { label: "Review collection", desc: "Post visit feedback routing", on: true },
                 ].map(f => (
                   <div key={f.label} className="flex items-center justify-between">
@@ -777,13 +774,13 @@ function BeyondTheVisitSection() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
                 </svg>
               </div>
-              <h3 className="mb-1.5 text-base font-semibold text-ink">Patients return on schedule</h3>
+              <h3 className="mb-1.5 text-base font-semibold text-ink">Follow ups that remember everything</h3>
               <p className="text-xs leading-relaxed text-slate mb-4">
-                When a doctor says &ldquo;come back in two weeks,&rdquo; the patient gets an SMS reminder automatically. No sticky notes, no forgotten callbacks, no staff effort.
+                Doctors tag follow ups with instructions for the AI. When the patient returns, the receptionist links it and the AI picks up with full memory of the original visit and the doctor's follow up notes.
               </p>
-              {/* Mini follow-up timeline */}
+              {/* Mini follow-up flow */}
               <div className="mt-auto rounded-xl bg-white/80 p-4 ring-1 ring-green-200/60">
-                <p className="text-[10px] font-semibold text-green-800 mb-3">Patient timeline</p>
+                <p className="text-[10px] font-semibold text-green-800 mb-3">How it works</p>
                 <div className="flex items-center gap-0">
                   {/* Step 1: Visit */}
                   <div className="flex flex-col items-center">
@@ -793,29 +790,29 @@ function BeyondTheVisitSection() {
                       </svg>
                     </div>
                     <p className="mt-1.5 text-[9px] font-medium text-green-800">Visit</p>
-                    <p className="text-[8px] text-ash">Mar 1</p>
+                    <p className="text-[8px] text-ash">Completed</p>
                   </div>
                   <div className="h-0.5 flex-1 bg-green-300 -mt-4" />
-                  {/* Step 2: SMS sent */}
+                  {/* Step 2: Doctor tags */}
                   <div className="flex flex-col items-center">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500">
                       <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                       </svg>
                     </div>
-                    <p className="mt-1.5 text-[9px] font-medium text-green-800">SMS sent</p>
-                    <p className="text-[8px] text-ash">Mar 14</p>
+                    <p className="mt-1.5 text-[9px] font-medium text-green-800">Doctor tags</p>
+                    <p className="text-[8px] text-ash">Instructions</p>
                   </div>
                   <div className="h-0.5 flex-1 bg-green-300 -mt-4" />
-                  {/* Step 3: Returned */}
+                  {/* Step 3: AI continues */}
                   <div className="flex flex-col items-center">
                     <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500">
                       <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                       </svg>
                     </div>
-                    <p className="mt-1.5 text-[9px] font-medium text-green-800">Returned</p>
-                    <p className="text-[8px] text-ash">Mar 16</p>
+                    <p className="mt-1.5 text-[9px] font-medium text-green-800">AI continues</p>
+                    <p className="text-[8px] text-ash">On return</p>
                   </div>
                 </div>
               </div>

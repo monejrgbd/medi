@@ -162,6 +162,7 @@ export default function LanguagePicker({ onSelect, loading, initialLanguage }: L
           <button
             key={lang.code}
             onClick={() => setSelected(lang.code)}
+            onDoubleClick={() => onSelect(lang.code)}
             className={`w-full px-3 py-2 text-left text-sm transition-colors ${
               selected === lang.code
                 ? "bg-blue-50 text-hilt-blue font-medium"
@@ -180,6 +181,7 @@ export default function LanguagePicker({ onSelect, loading, initialLanguage }: L
           <button
             key={lang.code}
             onClick={() => setSelected(lang.code)}
+            onDoubleClick={() => onSelect(lang.code)}
             className={`w-full px-3 py-2 text-left text-sm transition-colors ${
               selected === lang.code
                 ? "bg-blue-50 text-hilt-blue font-medium"

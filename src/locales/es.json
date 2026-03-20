@@ -70,7 +70,7 @@
   "phone.label": "Número de teléfono",
   "phone.send": "Enviar código de verificación",
   "phone.sending": "Enviando...",
-  "phone.skip": "Omitir por ahora",
+  "phone.retry": "Reintentar envío de código",
   "phone.noPhone": "No tengo teléfono",
   "phone.terms": "Acepto recibir mensajes de texto incluyendo códigos de verificación, resúmenes de visita y recordatorios de seguimiento. Pueden aplicarse tarifas de mensajes y datos.",
   "verify.title": "Ingrese el código de verificación",

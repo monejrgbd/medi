@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PatientStatusBadge from "@/components/patient/PatientStatusBadge";
 import PatientRecordEditor from "./PatientRecordEditor";
+import { scheduleFollowUp } from "@/app/(dashboard)/d/_actions/receptionist";
 import {
   markPatientLeft,
   toggleGaveTablet,
@@ -29,6 +30,13 @@ interface ActiveVisit {
   } | null;
 }
 
+interface FollowUpRecord {
+  id: string;
+  due_at: string | null;
+  ai_instructions: string | null;
+  status: string;
+}
+
 interface CompletedVisit {
   id: string;
   status: string;
@@ -41,6 +49,7 @@ interface CompletedVisit {
     last_name: string;
     birthday: string;
   };
+  follow_ups?: FollowUpRecord[];
 }
 
 interface ActivePatientsListProps {
@@ -213,30 +222,22 @@ export default function ActivePatientsList({
             Completed Today ({completedVisits.length})
           </h3>
           <div className="space-y-2">
-            {completedVisits.map((visit) => (
-              <div
-                key={visit.id}
-                className="flex items-center justify-between rounded-lg border border-gray-100 bg-white p-3"
-              >
-                <div>
-                  <p className="text-sm font-medium text-ink">
-                    {visit.patients.first_name} {visit.patients.last_name}
-                  </p>
-                  <p className="text-xs text-ash">
-                    Completed{" "}
-                    {new Date(visit.completed_at).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-                {visit.gave_tablet && (
-                  <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
-                    Tablet not returned
-                  </span>
-                )}
-              </div>
-            ))}
+            {completedVisits.map((visit) => {
+              const unscheduledFu = visit.follow_ups?.find(
+                (fu) => fu.status === "active" && fu.due_at === null
+              );
+              const scheduledFu = visit.follow_ups?.find(
+                (fu) => fu.status === "active" && fu.due_at !== null
+              );
+              return (
+                <CompletedVisitCard
+                  key={visit.id}
+                  visit={visit}
+                  unscheduledFollowUp={unscheduledFu || null}
+                  scheduledFollowUp={scheduledFu || null}
+                />
+              );
+            })}
           </div>
         </div>
       )}
@@ -254,6 +255,109 @@ export default function ActivePatientsList({
           }}
           onCancel={() => setEditingPatient(null)}
         />
+      )}
+    </div>
+  );
+}
+
+function CompletedVisitCard({
+  visit,
+  unscheduledFollowUp,
+  scheduledFollowUp,
+}: {
+  visit: CompletedVisit;
+  unscheduledFollowUp: FollowUpRecord | null;
+  scheduledFollowUp: FollowUpRecord | null;
+}) {
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [scheduling, setScheduling] = useState(false);
+  const [scheduled, setScheduled] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState<string | null>(null);
+
+  async function handleSchedule() {
+    if (!unscheduledFollowUp || !selectedDate) return;
+    setScheduling(true);
+    const res = await scheduleFollowUp(unscheduledFollowUp.id, selectedDate);
+    setScheduling(false);
+    if (res.success) {
+      setScheduled(true);
+      setScheduledDate(selectedDate);
+      setShowDatePicker(false);
+    }
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+
+  return (
+    <div className="rounded-lg border border-gray-100 bg-white p-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-ink">
+            {visit.patients.first_name} {visit.patients.last_name}
+          </p>
+          <p className="text-xs text-ash">
+            Completed{" "}
+            {new Date(visit.completed_at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {visit.gave_tablet && (
+            <span className="rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+              Tablet not returned
+            </span>
+          )}
+          {scheduledFollowUp && !scheduled && (
+            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+              Follow up: {new Date(scheduledFollowUp.due_at!).toLocaleDateString()}
+            </span>
+          )}
+          {scheduled && scheduledDate && (
+            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
+              Follow up: {new Date(scheduledDate).toLocaleDateString()}
+            </span>
+          )}
+          {unscheduledFollowUp && !scheduled && !showDatePicker && (
+            <button
+              onClick={() => setShowDatePicker(true)}
+              className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 transition-colors animate-pulse"
+            >
+              Schedule follow up
+            </button>
+          )}
+        </div>
+      </div>
+      {showDatePicker && unscheduledFollowUp && (
+        <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3">
+          <input
+            type="date"
+            min={today}
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-ink focus:border-hilt-blue focus:outline-none"
+          />
+          <button
+            onClick={handleSchedule}
+            disabled={!selectedDate || scheduling}
+            className="rounded-lg bg-hilt-blue px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {scheduling ? "Saving..." : "Confirm"}
+          </button>
+          <button
+            onClick={() => setShowDatePicker(false)}
+            className="text-xs text-ash hover:text-slate"
+          >
+            Cancel
+          </button>
+          {unscheduledFollowUp.ai_instructions && (
+            <p className="text-[10px] text-slate ml-2 truncate max-w-[200px]" title={unscheduledFollowUp.ai_instructions}>
+              Dr. notes: {unscheduledFollowUp.ai_instructions}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

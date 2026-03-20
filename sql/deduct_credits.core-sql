@@ -39,7 +39,7 @@ BEGIN
   END IF;
 
   -- After lock: check credits_log for existing entry (prevents double-deduction)
-  IF EXISTS (SELECT 1 FROM public.credits_log WHERE visit_id = p_visit_id) THEN
+  IF EXISTS (SELECT 1 FROM public.credits_log WHERE visit_id = p_visit_id AND credit_type = 'conversation') THEN
     RETURN jsonb_build_object('success', true, 'already_deducted', true);
   END IF;
 
@@ -64,7 +64,7 @@ BEGIN
   -- Log the deduction with UNIQUE constraint as final guard
   INSERT INTO public.credits_log (org_id, visit_id, credits_amount, ai_model, description)
   VALUES (p_org_id, p_visit_id, -v_amount, p_ai_model, 'AI conversation credit deduction')
-  ON CONFLICT (visit_id) DO NOTHING;
+  ON CONFLICT (visit_id, credit_type) WHERE visit_id IS NOT NULL DO NOTHING;
 
   GET DIAGNOSTICS v_rows_inserted = ROW_COUNT;
   IF v_rows_inserted = 0 THEN

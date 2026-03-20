@@ -70,7 +70,7 @@
   "phone.label": "电话号码",
   "phone.send": "发送验证码",
   "phone.sending": "发送中...",
-  "phone.skip": "暂时跳过",
+  "phone.retry": "重新发送验证码",
   "phone.noPhone": "我没有电话",
   "phone.terms": "我同意接收短信，包括验证码、就诊摘要和后续提醒。可能会收取短信和数据费用。",
   "verify.title": "输入验证码",

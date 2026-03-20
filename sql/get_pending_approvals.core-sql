@@ -80,8 +80,9 @@ BEGIN
             'ai_instructions_preview', left(fu.ai_instructions, 100),
             'visit_id', fu.visit_id,
             'visit_date', fv.completed_at,
-            'visit_summary_preview', left(fv.ai_summary, 100)
-          ) ORDER BY fu.due_at ASC), '[]'::jsonb)
+            'visit_summary_preview', left(fv.ai_summary, 100),
+            'needs_scheduling', (fu.due_at IS NULL)
+          ) ORDER BY fu.due_at ASC NULLS FIRST), '[]'::jsonb)
           FROM public.follow_ups fu
           JOIN public.staff_users su ON su.id = fu.doctor_id
           JOIN public.visits fv ON fv.id = fu.visit_id

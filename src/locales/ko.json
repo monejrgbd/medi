@@ -70,7 +70,7 @@
   "phone.label": "전화번호",
   "phone.send": "인증 코드 전송",
   "phone.sending": "전송 중...",
-  "phone.skip": "나중에",
+  "phone.retry": "코드 재전송",
   "phone.noPhone": "전화가 없습니다",
   "phone.terms": "인증 코드, 진료 요약 및 후속 알림을 포함한 문자 메시지 수신에 동의합니다. 메시지 및 데이터 요금이 부과될 수 있습니다.",
   "verify.title": "인증 코드 입력",

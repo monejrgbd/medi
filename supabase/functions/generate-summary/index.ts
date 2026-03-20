@@ -316,7 +316,7 @@ Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
               .join("\n");
           }
 
-          const diagnosticPrompt = `You are a senior clinical consultant. Analyze ALL data below and produce a doctor-eyes-only clinical assessment.
+          const diagnosticPrompt = `You are a senior clinical consultant. Analyze the data below and produce a concise diagnostic suggestion.
 
 PATIENT: ${patientAge ?? "unknown"}yo ${patientCtx?.sex || "not specified"}
 SPECIALTY: ${locDiag.specialty || "General Practice"}
@@ -335,15 +335,10 @@ ${summary}
 ${transcript}
 </transcript>
 
-Produce a clinical assessment with:
-1. Clinical reasoning
-2. Differential diagnoses (ranked by likelihood)
-3. Suggested workup/tests
-4. Red flags or concerns
-5. Drug interactions or contraindications
-6. Environmental factors (pets, exposures)
+Respond ONLY with valid JSON, no markdown, no code fences:
+{"diagnosis":"<short phrase, max 3 words>","reasoning":"<one sentence explaining why>"}
 
-Doctor reference only. Not shown to patients. Plain text, no JSON.`;
+Doctor reference only. Not shown to patients.`;
 
           let diagResponse: Response | null = null;
           for (let attempt = 0; attempt < 3; attempt++) {
@@ -357,7 +352,7 @@ Doctor reference only. Not shown to patients. Plain text, no JSON.`;
                 },
                 body: JSON.stringify({
                   model: "claude-opus-4-20250514",
-                  max_tokens: 2048,
+                  max_tokens: 256,
                   messages: [{ role: "user", content: diagnosticPrompt }],
                 }),
               });

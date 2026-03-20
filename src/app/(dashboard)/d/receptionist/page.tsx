@@ -138,7 +138,7 @@ export default async function ReceptionistPage({
     supabase
       .from("visits")
       .select(
-        "id, status, gave_tablet, has_previous_visits, created_at, completed_at, patient_id, patients(id, first_name, last_name, birthday)"
+        "id, status, gave_tablet, has_previous_visits, created_at, completed_at, patient_id, patients(id, first_name, last_name, birthday), follow_ups(id, due_at, ai_instructions, status)"
       )
       .eq("location_id", checkedInLocationId)
       .eq("status", "completed")

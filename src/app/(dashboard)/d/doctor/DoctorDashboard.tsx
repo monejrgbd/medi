@@ -109,10 +109,18 @@ export default function DoctorDashboard({
 }: DoctorDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("pending");
-  const [queue, setQueue] = useState<QueueVisit[]>(initialQueue);
-  const [claimed, setClaimed] = useState<ClaimedVisit[]>(initialClaimed);
-  const [completed, setCompleted] = useState<CompletedVisit[]>(initialCompleted);
-  const [left, setLeft] = useState<CompletedVisit[]>(initialLeft);
+  const [queue, setQueue] = useState<QueueVisit[]>(
+    demoMode && demoVisitId ? initialQueue.filter((q) => q.visit_id === demoVisitId) : initialQueue
+  );
+  const [claimed, setClaimed] = useState<ClaimedVisit[]>(
+    demoMode && demoVisitId ? initialClaimed.filter((c) => c.visit_id === demoVisitId) : initialClaimed
+  );
+  const [completed, setCompleted] = useState<CompletedVisit[]>(
+    demoMode && demoVisitId ? initialCompleted.filter((c) => c.visit_id === demoVisitId) : initialCompleted
+  );
+  const [left, setLeft] = useState<CompletedVisit[]>(
+    demoMode && demoVisitId ? initialLeft.filter((c) => c.visit_id === demoVisitId) : initialLeft
+  );
   const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     suggestedLocationId ?? (locations.length === 1 ? locations[0].id : null)

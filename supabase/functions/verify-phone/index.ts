@@ -1,6 +1,13 @@
 // Deploy with: --no-verify-jwt (called by unauthenticated patients, auth via session token)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
+
+async function sha256(input: string): Promise<string> {
+  const data = new TextEncoder().encode(input);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
 
@@ -125,8 +132,8 @@ async function handleSendCode(
   crypto.getRandomValues(array);
   const code = String(100000 + (array[0] % 900000));
 
-  // Hash with bcrypt
-  const codeHash = await bcrypt.hash(code);
+  // Hash with SHA-256 (built-in, no external imports)
+  const codeHash = await sha256(code);
 
   // Get org_id and patient_id from visit
   const { data: visitData } = await supabase
@@ -228,7 +235,7 @@ async function handleVerifyCode(
   }
 
   // Compare code against hash
-  const isValid = await bcrypt.compare(code, verification.code_hash);
+  const isValid = (await sha256(code)) === verification.code_hash;
 
   if (!isValid) {
     const remaining = 3 - newAttempts;

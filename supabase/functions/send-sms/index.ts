@@ -1,8 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
-const TELNYX_API_KEY = Deno.env.get("TELNYX_API_KEY");
-const TELNYX_MESSAGING_PROFILE_ID = Deno.env.get("TELNYX_MESSAGING_PROFILE_ID");
+const D7_API_TOKEN = Deno.env.get("D7_API_TOKEN");
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://hilthealth.com";
 
 // SMS templates
@@ -60,36 +59,42 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!TELNYX_API_KEY || !TELNYX_MESSAGING_PROFILE_ID) {
+    if (!D7_API_TOKEN) {
       return new Response(
-        JSON.stringify({ error: "Telnyx not configured" }),
+        JSON.stringify({ error: "D7 Networks not configured" }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Call Telnyx v2 Messages API (number selected from messaging profile pool)
-    const telnyxRes = await fetch("https://api.telnyx.com/v2/messages", {
+    // Call D7 Networks SMS API
+    const d7Res = await fetch("https://api.d7networks.com/messages/v1/send", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${TELNYX_API_KEY}`,
+        Authorization: `Bearer ${D7_API_TOKEN}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        messaging_profile_id: TELNYX_MESSAGING_PROFILE_ID,
-        to,
-        text: body,
+        messages: [{
+          recipients: [to],
+          content: body,
+          msg_type: "text",
+          data_coding: "text",
+        }],
+        message_globals: {
+          originator: "HiltHealth",
+        },
       }),
     });
 
-    const telnyxData = await telnyxRes.json();
+    const d7Data = await d7Res.json();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const logStatus = telnyxRes.ok ? "sent" : "failed";
-    const providerId = telnyxData?.data?.id || null;
+    const logStatus = d7Res.ok ? "sent" : "failed";
+    const providerId = d7Data?.request_id || null;
 
     if (sms_log_id) {
       // Update existing sms_log row (pre-inserted by SQL function)
@@ -98,9 +103,9 @@ Deno.serve(async (req) => {
         .update({
           status: logStatus,
           provider_sid: providerId,
-          error_message: telnyxRes.ok
+          error_message: d7Res.ok
             ? null
-            : telnyxData?.errors?.[0]?.detail || "Unknown error",
+            : d7Data?.detail?.description || d7Data?.detail || "Unknown error",
         })
         .eq("id", sms_log_id);
     } else {
@@ -114,13 +119,13 @@ Deno.serve(async (req) => {
         sms_type,
         provider_sid: providerId,
         status: logStatus,
-        error_message: telnyxRes.ok
+        error_message: d7Res.ok
           ? null
-          : telnyxData?.errors?.[0]?.detail || "Unknown error",
+          : d7Data?.detail?.description || d7Data?.detail || "Unknown error",
       });
     }
 
-    if (!telnyxRes.ok) {
+    if (!d7Res.ok) {
       return new Response(
         JSON.stringify({ error: "Failed to send SMS" }),
         { status: 502, headers: { "Content-Type": "application/json" } }

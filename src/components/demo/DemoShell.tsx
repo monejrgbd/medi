@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowLeft } from "lucide-react";
 import DemoTabBar, { type Tab } from "@/components/demo/DemoTabBar";
-import DemoGuide from "@/components/demo/DemoGuide";
+import DemoTimeline from "@/components/demo/DemoTimeline";
 import DemoComplete from "@/components/demo/DemoComplete";
 import DemoFAQ from "@/components/demo/DemoFAQ";
 import CheckinFlow from "@/app/checkin/[locationId]/CheckinFlow";
@@ -57,30 +57,48 @@ export default function DemoShell({
 }: DemoShellProps) {
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
-  const [guideMessage, setGuideMessage] = useState<string | null>(
-    "Welcome! Fill in the check in form to start the demo."
-  );
-  const [guideHint, setGuideHint] = useState<string | null>(
-    "This is what your patients see when they scan the QR code. You are given one after you sign up."
-  );
   const [demoComplete, setDemoComplete] = useState(false);
-  const [demoVisitId, setDemoVisitId] = useState<string | null>(null);
+  const [demoVisitId, setDemoVisitId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return sessionStorage.getItem("demo_visit_id");
+  });
   const [demoKey, setDemoKey] = useState(0);
-  const [pendingApproval, setPendingApproval] = useState(false);
   const [waitingForDoctor, setWaitingForDoctor] = useState(false);
   const [phoneStepDone, setPhoneStepDone] = useState(false);
-  const [visitCompleted, setVisitCompleted] = useState(false);
+  const [visitCompleted, setVisitCompleted] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem("demo_step") === "5";
+  });
   const [visitClaimed, setVisitClaimed] = useState(false);
+  const [demoStep, setDemoStep] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    return parseInt(sessionStorage.getItem("demo_step") || "1", 10);
+  });
+
+  const demoVisitIdRef = useRef(demoVisitId);
+  useEffect(() => { demoVisitIdRef.current = demoVisitId; }, [demoVisitId]);
+
+  // Persist demo state to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem("demo_step", String(demoStep));
+  }, [demoStep]);
+
+  useEffect(() => {
+    if (demoVisitId) {
+      sessionStorage.setItem("demo_visit_id", demoVisitId);
+    } else {
+      sessionStorage.removeItem("demo_visit_id");
+    }
+  }, [demoVisitId]);
 
   // Auto-switch to doctor tab once phone step is complete
   useEffect(() => {
     if (waitingForDoctor && phoneStepDone) {
       setPulsingTab("doctor");
-      setGuideMessage("The patient is ready for a doctor!");
-      setGuideHint("Switch to the Doctor view to claim the patient.");
       setTimeout(() => {
         setActiveTab("doctor");
         setPulsingTab(null);
+        setDemoStep(4);
       }, 3000);
       setWaitingForDoctor(false);
     }
@@ -91,9 +109,7 @@ export default function DemoShell({
     if (!visitClaimed || activeTab === "doctor") return;
     const timer = setTimeout(() => {
       setActiveTab("doctor");
-      setGuideMessage("Complete the visit to continue the demo.");
-      setGuideHint("Enter a diagnosis and submit to finish the visit.");
-    }, 10_000);
+    }, 50_000);
     return () => clearTimeout(timer);
   }, [visitClaimed, activeTab]);
 
@@ -114,13 +130,12 @@ export default function DemoShell({
           if (payload.new.status === "pending_approval") {
             // Capture visit ID as backup (onVisitCreated is primary)
             const visitId = (payload.new as { id?: string }).id;
+            // Ignore if this is a different session's visit
+            if (demoVisitIdRef.current && visitId !== demoVisitIdRef.current) return;
             if (visitId) setDemoVisitId((prev) => prev ?? visitId);
-            setPendingApproval(true);
+
+            setDemoStep(2);
             setPulsingTab("receptionist");
-            setGuideMessage("A new patient just checked in!");
-            setGuideHint(
-              "Switch to the Receptionist view to approve them. The patient's name and date of birth are how returning patients are identified. You can edit their details by clicking the edit icon next to the status badge."
-            );
             setTimeout(() => {
               setActiveTab("receptionist");
               setPulsingTab(null);
@@ -137,6 +152,10 @@ export default function DemoShell({
           filter: `location_id=eq.${locationId}`,
         },
         (payload) => {
+          const visitId = (payload.new as { id?: string }).id;
+          // Only process events for the current demo visit
+          if (demoVisitIdRef.current && visitId !== demoVisitIdRef.current) return;
+
           const status = payload.new?.status;
           const oldStatus = payload.old?.status;
 
@@ -144,12 +163,9 @@ export default function DemoShell({
             status === "still_answering_ai" &&
             oldStatus === "pending_approval"
           ) {
-            setPendingApproval(false);
+
+            setDemoStep(3);
             setPulsingTab("patient");
-            setGuideMessage("The AI conversation has started!");
-            setGuideHint(
-              "Switch to the Patient view to chat with the AI."
-            );
             setTimeout(() => {
               setActiveTab("patient");
               setPulsingTab(null);
@@ -168,15 +184,12 @@ export default function DemoShell({
           if (status === "completed") {
             setVisitClaimed(false);
             setVisitCompleted(true);
-            setPendingApproval(false);
+            setDemoStep(5);
+
             setPulsingTab("reviews");
-            setGuideMessage("Visit complete! The patient receives an SMS with their visit summary and a review request.");
-            setGuideHint("Switch to the Reviews tab to see how the review system works.");
             setTimeout(() => {
               setActiveTab("reviews");
               setPulsingTab(null);
-              setGuideMessage("Reviews Dashboard");
-              setGuideHint("Patients are asked to leave a review via SMS after each visit. You can configure which external platform they are directed to and track all reviews here.");
             }, 4000);
             // Auto-finish after 60s
             setTimeout(() => {
@@ -195,26 +208,6 @@ export default function DemoShell({
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
     setPulsingTab(null);
-
-    // Keep the approval guide message until the receptionist approves
-    if (pendingApproval) return;
-
-    if (tab === "patient") {
-      setGuideMessage("Patient View");
-      setGuideHint("This is what your patients see when they scan the QR code. You are given one after you sign up.");
-    } else if (tab === "receptionist") {
-      setGuideMessage("Receptionist View");
-      setGuideHint("Manage check ins, approve patients, and monitor the queue.");
-    } else if (tab === "doctor") {
-      setGuideMessage("Doctor View");
-      setGuideHint("Claim patients, review AI summaries, and complete visits.");
-    } else if (tab === "reviews") {
-      setGuideMessage("Reviews Dashboard");
-      setGuideHint("This dashboard is accessible by staff with the reviews role. All patients are asked to review via SMS after their visit. You can configure which external platform they are directed to, and re request a review on a different platform if needed.");
-    } else if (tab === "faq") {
-      setGuideMessage(null);
-      setGuideHint(null);
-    }
   }
 
   const handleVisitCreated = useCallback((visitId: string) => {
@@ -230,19 +223,17 @@ export default function DemoShell({
     if (typeof window !== "undefined") {
       localStorage.removeItem("hilt_session_token");
       localStorage.removeItem("hilt_session_phone");
+      sessionStorage.removeItem("demo_step");
+      sessionStorage.removeItem("demo_visit_id");
     }
     setDemoVisitId(null);
-    setPendingApproval(false);
     setWaitingForDoctor(false);
     setPhoneStepDone(false);
     setVisitCompleted(false);
     setVisitClaimed(false);
+    setDemoStep(1);
     setDemoComplete(false);
     setActiveTab("patient");
-    setGuideMessage("Welcome! Fill in the check in form to start the demo.");
-    setGuideHint(
-      "This is what your patients see when they scan the QR code. You are given one after you sign up."
-    );
     // Force CheckinFlow remount with fresh state
     setDemoKey((prev) => prev + 1);
   }
@@ -284,11 +275,9 @@ export default function DemoShell({
         pulsingTab={pulsingTab}
       />
 
-      {/* Guide banner */}
-      <DemoGuide
-        message={guideMessage}
-        hint={guideHint}
-      />
+      {/* Timeline */}
+      <DemoTimeline currentStep={demoStep} />
+
 
 
       {/* Content area — all 3 mounted, toggled via display */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from "react";
+import { useState, useTransition } from "react";
 import { completeVisit } from "@/app/(dashboard)/d/_actions/doctor";
 import FollowUpForm from "./FollowUpForm";
 
@@ -17,28 +17,16 @@ export default function DiagnosisForm({
   onComplete,
   demoMode = false,
 }: DiagnosisFormProps) {
-  const [diagnosis, setDiagnosis] = useState(demoMode ? "Demo visit, patient assessed." : "");
-  const autoSubmitRef = useRef(false);
+  const [diagnosis, setDiagnosis] = useState(demoMode ? "Acute pharyngitis, likely viral. Supportive care advised. Return if symptoms worsen or persist beyond 5 days." : "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [followUpEnabled, setFollowUpEnabled] = useState(demoMode);
-  const [followUpDays, setFollowUpDays] = useState(demoMode ? 7 : 14);
+  const [followUpDays, setFollowUpDays] = useState<number | null>(demoMode ? 7 : 14);
   const [followUpInstructions, setFollowUpInstructions] = useState(
-    demoMode ? "Hello, please do not forget to book on the agreed time." : ""
+    demoMode ? "Ask if the sore throat has resolved and whether the patient developed any new symptoms such as fever or rash." : ""
   );
 
-  // Demo: auto-submit after 20s
-  useEffect(() => {
-    if (!demoMode) return;
-    const timer = setTimeout(() => {
-      if (!autoSubmitRef.current) {
-        autoSubmitRef.current = true;
-        handleSubmit();
-      }
-    }, 20_000);
-    return () => clearTimeout(timer);
-  }, [demoMode]);
 
   function handleSubmit() {
     const trimmed = diagnosis.trim();

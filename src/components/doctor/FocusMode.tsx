@@ -111,6 +111,7 @@ export default function FocusMode({
   const [autoClaiming, setAutoClaiming] = useState(false);
   const [showDiagnosis, setShowDiagnosis] = useState(false);
   const [cancelling, setCancelling] = useState(false);
+  const [demoCompleted, setDemoCompleted] = useState(false);
   const [tab, setTab] = useState<FocusTab>("summary");
   const [updateNotice, setUpdateNotice] = useState(false);
   const supabaseRef = useRef(createClient());
@@ -134,15 +135,6 @@ export default function FocusMode({
     }
   }, [demoVisitId]);
 
-  // Demo: auto-open diagnosis form after 15s
-  useEffect(() => {
-    if (!demoMode || !detail || showDiagnosis) return;
-    const timer = setTimeout(() => {
-      if (!showDiagnosis) setShowDiagnosis(true);
-    }, 15_000);
-    return () => clearTimeout(timer);
-  }, [demoMode, detail, showDiagnosis]);
-
   // Keyboard shortcuts for focus mode speed
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -154,8 +146,8 @@ export default function FocusMode({
         e.preventDefault();
         if (showDiagnosis) {
           setShowDiagnosis(false);
-        } else if (cancelling) {
-          // do nothing while cancelling
+        } else if (cancelling || demoMode) {
+          // do nothing while cancelling or in demo
         } else {
           onExit();
         }
@@ -279,10 +271,30 @@ export default function FocusMode({
     setCurrentVisit(null);
     setDetail(null);
     setShowDiagnosis(false);
-    setTimeout(() => doClaimNext(), 500);
+    if (demoMode) {
+      setDemoCompleted(true);
+    } else {
+      setTimeout(() => doClaimNext(), 500);
+    }
   }
 
   if (!currentVisit) {
+    if (demoCompleted) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+            <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-ink mb-2">Visit Completed</h2>
+          <p className="text-sm text-slate">
+            The patient will receive an SMS with their visit summary and a review request.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
         <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
@@ -315,12 +327,14 @@ export default function FocusMode({
           </>
         )}
 
-        <button
-          onClick={onExit}
-          className="mt-6 text-sm text-slate hover:text-ink transition-colors"
-        >
-          Exit Focus Mode
-        </button>
+        {!demoMode && (
+          <button
+            onClick={onExit}
+            className="mt-6 text-sm text-slate hover:text-ink transition-colors"
+          >
+            Exit Focus Mode
+          </button>
+        )}
       </div>
     );
   }
@@ -347,13 +361,15 @@ export default function FocusMode({
               {!demoVisitId && queue.length > 0 && ` | ${queue.length} more in queue`}
             </p>
           </div>
-          <button
-            onClick={onExit}
-            className="text-sm text-slate hover:text-ink transition-colors"
-            aria-label="Exit focus mode"
-          >
-            Exit Focus
-          </button>
+          {!demoMode && (
+            <button
+              onClick={onExit}
+              className="text-sm text-slate hover:text-ink transition-colors"
+              aria-label="Exit focus mode"
+            >
+              Exit Focus
+            </button>
+          )}
         </div>
       </div>
 
@@ -487,10 +503,12 @@ export default function FocusMode({
               onClick={() => setShowDiagnosis(true)}
               className={`flex-1 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors ${demoMode ? "animate-pulse ring-2 ring-green-400 ring-offset-2" : ""}`}
             >
-              Complete Visit & Claim Next
-              <kbd className="ml-2 hidden sm:inline rounded bg-green-700/50 px-1.5 py-0.5 text-[10px] font-mono">
-                {typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent) ? "⌘" : "Ctrl"}+↵
-              </kbd>
+              {demoMode ? "Complete Visit" : "Complete Visit & Claim Next"}
+              {!demoMode && (
+                <kbd className="ml-2 hidden sm:inline rounded bg-green-700/50 px-1.5 py-0.5 text-[10px] font-mono">
+                  {typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent) ? "⌘" : "Ctrl"}+↵
+                </kbd>
+              )}
             </button>
           </div>
         </div>

@@ -5,8 +5,8 @@ CREATE TABLE IF NOT EXISTS public.follow_ups (
   doctor_id       uuid NOT NULL REFERENCES public.staff_users(id),
   org_id          uuid NOT NULL REFERENCES public.organizations(id),
   location_id     uuid NOT NULL REFERENCES public.locations(id),
-  timeframe_days  int NOT NULL CHECK (timeframe_days BETWEEN 1 AND 365),
-  due_at          timestamptz NOT NULL,
+  timeframe_days  int CHECK (timeframe_days IS NULL OR (timeframe_days BETWEEN 1 AND 365)),
+  due_at          timestamptz,
   ai_instructions text CHECK (length(ai_instructions) <= 2000),
   status          text NOT NULL DEFAULT 'active'
     CHECK (status IN ('active', 'completed', 'expired')),

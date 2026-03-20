@@ -283,6 +283,28 @@ export async function markFollowUpCompleted(followUpId: string) {
   return { success: true };
 }
 
+export async function scheduleFollowUp(followUpId: string, dueAt: string) {
+  await requireAuth();
+  if (!followUpId || !validUUID(followUpId))
+    return { success: false, error: "Invalid follow-up ID" };
+
+  const date = new Date(dueAt);
+  if (isNaN(date.getTime()))
+    return { success: false, error: "Invalid date" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("schedule_follow_up", {
+    p_follow_up_id: followUpId,
+    p_due_at: date.toISOString(),
+  });
+
+  if (error) return { success: false, error: "Failed to schedule follow-up" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
 export async function fetchAuditTrail(
   orgId: string,
   filters?: {

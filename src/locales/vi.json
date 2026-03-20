@@ -70,7 +70,7 @@
   "phone.label": "Số điện thoại",
   "phone.send": "Gửi mã xác minh",
   "phone.sending": "Đang gửi...",
-  "phone.skip": "Bỏ qua",
+  "phone.retry": "Gửi lại mã",
   "phone.noPhone": "Tôi không có điện thoại",
   "phone.terms": "Tôi đồng ý nhận tin nhắn bao gồm mã xác minh, tóm tắt khám và nhắc nhở theo dõi. Có thể áp dụng phí tin nhắn và dữ liệu.",
   "verify.title": "Nhập mã xác minh",

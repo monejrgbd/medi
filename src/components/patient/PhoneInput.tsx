@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PhoneInputProps {
@@ -8,12 +8,10 @@ interface PhoneInputProps {
   loading: boolean;
   error?: string;
   mode: "verification" | "collection";
-  onSkip?: () => void;
   onNoPhone?: () => void;
-  /** Delay in ms before showing the skip button (only if input is empty) */
-  skipDelay?: number;
-  /** Auto-skip after this many ms if input is still empty */
-  autoSkipAfter?: number;
+  /** Show retry button (appears after SMS send failure + delay) */
+  retryReady?: boolean;
+  onRetry?: () => void;
 }
 
 const COUNTRY_CODES = [
@@ -54,37 +52,15 @@ export default function PhoneInput({
   loading,
   error,
   mode,
-  onSkip,
   onNoPhone,
-  skipDelay,
-  autoSkipAfter,
+  retryReady,
+  onRetry,
 }: PhoneInputProps) {
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [localError, setLocalError] = useState("");
   const [termsAccepted, setTermsAccepted] = useState(false);
-  const [skipVisible, setSkipVisible] = useState(!skipDelay);
-  const phoneRef = useRef(phoneNumber);
-  phoneRef.current = phoneNumber;
   const { t } = useLanguage();
-
-  // Delayed skip button visibility
-  useEffect(() => {
-    if (!skipDelay || !onSkip) return;
-    const timer = setTimeout(() => {
-      if (!phoneRef.current) setSkipVisible(true);
-    }, skipDelay);
-    return () => clearTimeout(timer);
-  }, [skipDelay, onSkip]);
-
-  // Auto-skip after timeout if nothing typed
-  useEffect(() => {
-    if (!autoSkipAfter || !onSkip) return;
-    const timer = setTimeout(() => {
-      if (!phoneRef.current) onSkip();
-    }, autoSkipAfter);
-    return () => clearTimeout(timer);
-  }, [autoSkipAfter, onSkip]);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -185,12 +161,12 @@ export default function PhoneInput({
       </form>
 
       <div className="mt-4 flex flex-col gap-2">
-        {mode === "collection" && onSkip && skipVisible && (
+        {retryReady && onRetry && (
           <button
-            onClick={onSkip}
-            className="w-full text-xs text-ash hover:text-slate transition-colors py-2 animate-fade-in"
+            onClick={onRetry}
+            className="w-full rounded-lg border border-hilt-blue px-4 py-2.5 text-sm font-medium text-hilt-blue transition-colors hover:bg-blue-50 animate-fade-in"
           >
-            {t("phone.skip")}
+            {t("phone.retry")}
           </button>
         )}
         {mode === "verification" && onNoPhone && (
