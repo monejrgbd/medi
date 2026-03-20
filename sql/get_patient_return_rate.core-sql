@@ -68,24 +68,28 @@ BEGIN
 
   -- Per-doctor breakdown
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
-    'staff_user_id', v.claimed_by,
-    'full_name', su.full_name,
-    'total', count(*),
-    'returns', count(*) FILTER (WHERE v.is_return_visit = true),
-    'rate', CASE
-      WHEN count(*) > 0 THEN round(count(*) FILTER (WHERE v.is_return_visit = true)::numeric / count(*)::numeric * 100, 1)
-      ELSE 0
-    END
-  ) ORDER BY count(*) DESC), '[]'::jsonb)
+    'staff_user_id', sub.claimed_by,
+    'full_name', sub.full_name,
+    'total', sub.total,
+    'returns', sub.returns,
+    'rate', CASE WHEN sub.total > 0 THEN round(sub.returns::numeric / sub.total::numeric * 100, 1) ELSE 0 END
+  ) ORDER BY sub.total DESC), '[]'::jsonb)
   INTO v_per_doctor
-  FROM public.visits v
-  JOIN public.staff_users su ON su.id = v.claimed_by
-  WHERE v.org_id = p_org_id
-    AND v.status = 'completed'
-    AND v.claimed_by IS NOT NULL
-    AND v.completed_at >= p_start_date::timestamptz
-    AND v.completed_at < (p_end_date + 1)::timestamptz
-  GROUP BY v.claimed_by, su.full_name;
+  FROM (
+    SELECT
+      v.claimed_by,
+      su.full_name,
+      count(*) AS total,
+      count(*) FILTER (WHERE v.is_return_visit = true) AS returns
+    FROM public.visits v
+    JOIN public.staff_users su ON su.id = v.claimed_by
+    WHERE v.org_id = p_org_id
+      AND v.status = 'completed'
+      AND v.claimed_by IS NOT NULL
+      AND v.completed_at >= p_start_date::timestamptz
+      AND v.completed_at < (p_end_date + 1)::timestamptz
+    GROUP BY v.claimed_by, su.full_name
+  ) sub;
 
   -- Trend: week if ≤30 days, else month
   v_granularity := CASE WHEN (p_end_date - p_start_date) <= 30 THEN 'week' ELSE 'month' END;

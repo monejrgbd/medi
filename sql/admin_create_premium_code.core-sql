@@ -1,0 +1,48 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.admin_create_premium_code(
+  p_caller_auth_uid uuid,
+  p_email text DEFAULT NULL,
+  p_phone text DEFAULT NULL,
+  p_domain text DEFAULT NULL,
+  p_send_email boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- Auth: must be platform admin
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean
+     FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  -- Delegate to existing code generation logic
+  RETURN private.request_premium_code(p_email, p_domain, p_phone, p_send_email);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.admin_create_premium_code(
+  p_email text DEFAULT NULL,
+  p_phone text DEFAULT NULL,
+  p_domain text DEFAULT NULL,
+  p_send_email boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_create_premium_code(auth.uid(), p_email, p_phone, p_domain, p_send_email);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_create_premium_code(text, text, text, boolean) TO authenticated;

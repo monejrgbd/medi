@@ -45,7 +45,10 @@ export async function createStaffUser(formData: {
     p_roles: formData.roles,
   });
 
-  if (error) return { success: false, error: "Failed to create staff user" };
+  if (error) {
+    console.error("create_staff_user RPC error:", error.message, error.code);
+    return { success: false, error: "Failed to create staff user" };
+  }
   if (data && !data.success) return { success: false, error: data.error };
 
   revalidatePath("/d/owner");

@@ -57,6 +57,12 @@ export async function getMyRoles() {
   return data ?? [];
 }
 
+export async function isPlatformAdmin(): Promise<boolean> {
+  const user = await getUser();
+  if (!user) return false;
+  return user.app_metadata?.is_platform_admin === true;
+}
+
 export async function getMyOrg() {
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_my_org");

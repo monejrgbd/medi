@@ -10,7 +10,7 @@
 Deploy a SQL file to the database:
 
 ```bash
-PGPASSFILE=.pgpass psql "postgresql://postgres.sdzeoeturtpkqlagobwj@aws-1-us-east-2.pooler.supabase.com:5432/postgres" -f "<file_path>"
+PGPASSFILE=.pgpass psql "postgresql://postgres.sdzeoeturtpkqlagobwj@aws-1-us-east-2.pooler.supabase.com:5432/postgres" -f "<file_path>" -c "NOTIFY pgrst, 'reload schema';"
 ```
 
 ## Edge Function Deployment

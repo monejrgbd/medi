@@ -1,4 +1,4 @@
-import { requireAuth, isOwner, getMyOrg } from "@/lib/auth";
+import { requireAuth, isOwner, getMyOrg, isPlatformAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import RoleSelector from "@/components/RoleSelector";
@@ -16,6 +16,12 @@ export default async function SelectRolePage() {
     await supabase.auth.signOut();
     redirect("/login");
   }
+  // Platform admin → admin dashboard
+  const adminCheck = await isPlatformAdmin();
+  if (adminCheck) {
+    redirect("/d/admin");
+  }
+
   const ownerCheck = await isOwner(user.id);
 
   if (ownerCheck) {

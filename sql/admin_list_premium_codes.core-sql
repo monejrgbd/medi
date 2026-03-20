@@ -1,0 +1,60 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.admin_list_premium_codes(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  -- Auth: must be platform admin
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean
+     FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(row_to_json(t.*) ORDER BY t.created_at DESC), '[]'::jsonb)
+  INTO v_result
+  FROM (
+    SELECT
+      ac.id,
+      ac.code,
+      ac.email,
+      ac.phone,
+      ac.domain,
+      ac.created_at,
+      ac.used_at,
+      ac.expires_at,
+      ac.email_sent,
+      ac.used_by_org_id,
+      o.name AS used_by_org_name
+    FROM public.approval_codes ac
+    LEFT JOIN public.organizations o ON o.id = ac.used_by_org_id
+    ORDER BY ac.created_at DESC
+  ) t;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.admin_list_premium_codes()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_list_premium_codes(auth.uid());
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_list_premium_codes() TO authenticated;
