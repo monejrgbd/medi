@@ -368,6 +368,91 @@ function HeroSection() {
   );
 }
 
+/* ── Raven Scheduler Partner ───────────────────────────── */
+
+function RavenSchedulerSection() {
+  return (
+    <section className="bg-snow py-12 lg:py-16">
+      <div className="mx-auto max-w-[1200px] px-6">
+        <FadeIn>
+          <a
+            href="https://ravenscheduler.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block rounded-2xl border border-violet-200 bg-violet-50/50 p-7 transition-colors hover:bg-violet-50/80 lg:flex lg:items-center lg:gap-10"
+          >
+            <div className="lg:flex-1 mb-6 lg:mb-0">
+              <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-violet-100">
+                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
+                </svg>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <h3 className="text-lg font-semibold text-ink">Partnered with Raven Scheduler</h3>
+                <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-medium text-violet-700">AI Receptionist</span>
+              </div>
+              <p className="text-sm leading-relaxed text-slate mb-4">
+                Fully integrated into Hilt. Raven Scheduler answers every call, books appointments, sends reminders, and follows up on no shows. When the patient walks in, Hilt already knows who they are and why they are here.
+              </p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
+                {[
+                  { icon: "phone", label: "24/7 call answering", desc: "AI answers every call and books instantly" },
+                  { icon: "chat", label: "SMS reminders", desc: "Confirmations and reminders, automatic" },
+                  { icon: "arrow", label: "No show recovery", desc: "AI calls back missed patients" },
+                  { icon: "list", label: "Waitlist management", desc: "Fills cancellations automatically" },
+                ].map(f => (
+                  <div key={f.label} className="flex items-start gap-2">
+                    <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded bg-violet-100/80">
+                      {f.icon === "phone" && (
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" /></svg>
+                      )}
+                      {f.icon === "chat" && (
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" /></svg>
+                      )}
+                      {f.icon === "arrow" && (
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" /></svg>
+                      )}
+                      {f.icon === "list" && (
+                        <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" /></svg>
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-medium text-ink">{f.label}</p>
+                      <p className="text-[9px] text-ash">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Mini phone call mockup */}
+            <div className="lg:w-[280px] shrink-0 rounded-xl bg-white/80 p-4 ring-1 ring-violet-200/60">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                <p className="text-[10px] font-semibold text-violet-800">Incoming call</p>
+              </div>
+              <div className="space-y-2.5">
+                {[
+                  { from: "ai", text: "Good morning, Downtown Clinic. How can I help?" },
+                  { from: "caller", text: "I need to see Dr. Patel on Thursday" },
+                  { from: "ai", text: "I have 10:15 AM and 2:30 PM open. Which works for you?" },
+                  { from: "caller", text: "2:30 works" },
+                  { from: "ai", text: "Booked with Dr. Patel, Thursday at 2:30. You will get a confirmation text shortly." },
+                ].map((m, i) => (
+                  <div key={i} className={`flex ${m.from === "caller" ? "justify-end" : "justify-start"}`}>
+                    <div className={`rounded-lg px-2.5 py-1.5 max-w-[85%] ${m.from === "caller" ? "bg-violet-100 text-violet-900" : "bg-gray-100 text-ink"}`}>
+                      <p className="text-[10px] leading-snug">{m.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </a>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
 /* ── Before / After ───────────────────────────────────── */
 
 function BeforeAfterSection() {
@@ -531,7 +616,7 @@ function HowItWorksSection() {
 
 function BuiltForYourClinicSection() {
   return (
-    <section className="cv-auto bg-snow pt-32 pb-10 lg:pt-40 lg:pb-12">
+    <section className="cv-auto bg-snow pt-32 pb-0 lg:pt-40 lg:pb-0">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <div className="rounded-2xl border border-sky-200 bg-sky-50/50 p-7 lg:flex lg:items-center lg:gap-10">
@@ -578,29 +663,6 @@ function BuiltForYourClinicSection() {
             </div>
           </div>
 
-          {/* RavenScheduler partner card */}
-          <a
-            href="https://ravenscheduler.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 flex items-center gap-4 rounded-xl border border-violet-200 bg-violet-50/50 p-4 transition-colors hover:bg-violet-50"
-          >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#7C3AED" strokeWidth="1.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z" />
-              </svg>
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="text-xs font-semibold text-ink">Partnered with RavenScheduler</p>
-                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-medium text-violet-700">AI Receptionist</span>
-              </div>
-              <p className="mt-0.5 text-[11px] text-slate">24/7 call answering, appointment booking, SMS reminders, and no show recovery.</p>
-            </div>
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#9CA3AF" strokeWidth="2" className="shrink-0">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-            </svg>
-          </a>
         </FadeIn>
       </div>
     </section>
@@ -1100,6 +1162,7 @@ export default async function Home() {
     <>
       <main>
         <HeroSection />
+        <RavenSchedulerSection />
         <BeforeAfterSection />
         <BuiltForYourClinicSection />
         <HowToSetUpSection />
