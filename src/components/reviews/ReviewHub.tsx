@@ -31,12 +31,14 @@ interface ReviewHubProps {
   locations: Location[];
   isOwnerOrManager: boolean;
   demoMode?: boolean;
+  initialReviews?: Review[];
+  initialStats?: Stats | null;
 }
 
-export default function ReviewHub({ locations, isOwnerOrManager, demoMode = false }: ReviewHubProps) {
+export default function ReviewHub({ locations, isOwnerOrManager, demoMode = false, initialReviews, initialStats }: ReviewHubProps) {
   const [selectedLocation, setSelectedLocation] = useState(locations[0]?.id || "");
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [reviews, setReviews] = useState<Review[]>(initialReviews ?? []);
+  const [stats, setStats] = useState<Stats | null>(initialStats ?? null);
   const [loading, setLoading] = useState(false);
   const [ratingFilter, setRatingFilter] = useState<number | null>(null);
   const [cursorTs, setCursorTs] = useState<string | null>(null);

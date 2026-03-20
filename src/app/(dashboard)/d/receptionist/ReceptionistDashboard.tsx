@@ -144,13 +144,13 @@ export default function ReceptionistDashboard({
   const router = useRouter();
   const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
   const [pending, setPending] = useState<PendingVisit[]>(
-    demoMode && demoVisitId ? initialPending.filter((p) => p.visit_id === demoVisitId) : initialPending
+    demoMode ? (demoVisitId ? initialPending.filter((p) => p.visit_id === demoVisitId) : []) : initialPending
   );
   const [active, setActive] = useState<ActiveVisit[]>(
-    demoMode && demoVisitId ? initialActive.filter((a) => a.id === demoVisitId) : initialActive
+    demoMode ? (demoVisitId ? initialActive.filter((a) => a.id === demoVisitId) : []) : initialActive
   );
   const [completed, setCompleted] = useState<CompletedVisit[]>(
-    demoMode && demoVisitId ? initialCompleted.filter((c) => c.id === demoVisitId) : initialCompleted
+    demoMode ? (demoVisitId ? initialCompleted.filter((c) => c.id === demoVisitId) : []) : initialCompleted
   );
   const [counts, setCounts] = useState<Counts>(initialCounts ?? DEFAULT_COUNTS);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(

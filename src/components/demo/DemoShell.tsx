@@ -43,6 +43,10 @@ interface DemoShellProps {
     hasMoreCompleted: boolean;
     hasMoreLeft: boolean;
   };
+  reviewsInitial: {
+    reviews: any[];
+    stats: any;
+  };
 }
 
 // Tab type imported from DemoTabBar
@@ -55,6 +59,7 @@ export default function DemoShell({
   locationName,
   receptionistInitial,
   doctorInitial,
+  reviewsInitial,
 }: DemoShellProps) {
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
@@ -87,16 +92,17 @@ export default function DemoShell({
   useEffect(() => {
     const stored = sessionStorage.getItem("demo_visit_id");
     if (!stored) return;
-    setDemoVisitId(stored);
+    demoStepRef.current = 99; // Block handleVisitCreated from overriding during restore
     const supabase = createClient();
     supabase.rpc("get_visit_status", { p_visit_id: stored }).then(({ data, error }) => {
       if (error || !data?.success) {
         console.warn("[Demo] get_visit_status failed:", error?.message || data?.error);
-        // Visit not found or not authorized — reset
-        setDemoVisitId(null);
         sessionStorage.removeItem("demo_visit_id");
+        demoStepRef.current = 1;
         return;
       }
+      // Set visit ID only after we know the status — prevents FocusMode from auto-claiming during restore
+      setDemoVisitId(stored);
       const statusToStep: Record<string, number> = {
         pending_approval: 2,
         still_answering_ai: 3,
@@ -443,6 +449,8 @@ export default function DemoShell({
               locations={[{ id: locationId, name: locationName }]}
               isOwnerOrManager={true}
               demoMode={true}
+              initialReviews={reviewsInitial.reviews}
+              initialStats={reviewsInitial.stats}
             />
           </div>
         </div>

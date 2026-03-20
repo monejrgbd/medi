@@ -57,7 +57,7 @@ export default function DiagnosisForm({
     setShowDiagnosis(allow);
     setShowConfirm(false);
     startTransition(async () => {
-      const followUp = followUpEnabled
+      const followUp = followUpEnabled && followUpDays
         ? {
             timeframe_days: followUpDays,
             ai_instructions: followUpInstructions.trim() || undefined,
@@ -119,7 +119,7 @@ export default function DiagnosisForm({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={isPending || !diagnosis.trim()}
+            disabled={isPending}
             className="flex-1 rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {isPending ? "Completing..." : "Complete Visit"}

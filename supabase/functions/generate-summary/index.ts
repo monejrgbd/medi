@@ -370,7 +370,7 @@ Doctor reference only. Not shown to patients.`;
             if (diagnosticText) {
               await supabase
                 .from("visits")
-                .update({ ai_diagnostic: diagnosticText })
+                .update({ ai_diagnostic: diagnosticText, updated_at: new Date().toISOString() })
                 .eq("id", visit_id);
             }
           } else {

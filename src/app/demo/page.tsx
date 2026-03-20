@@ -28,6 +28,7 @@ export default async function DemoPage() {
     completedLeftRes,
     doctorsRes,
     staffRes,
+    reviewsRes,
   ] = await Promise.all([
     supabase.rpc("check_location_active", {
       p_location_id: DEMO_LOCATION_ID,
@@ -70,6 +71,7 @@ export default async function DemoPage() {
       p_location_id: DEMO_LOCATION_ID,
     }),
     supabase.rpc("get_my_staff_user"),
+    supabase.rpc("get_review_hub", { p_location_id: DEMO_LOCATION_ID }),
   ]);
 
   const locationData = locationRes.data ?? {
@@ -114,6 +116,10 @@ export default async function DemoPage() {
         hasMoreCompleted:
           completedLeftRes.data?.has_more_completed ?? false,
         hasMoreLeft: completedLeftRes.data?.has_more_left ?? false,
+      }}
+      reviewsInitial={{
+        reviews: (reviewsRes.data?.reviews ?? []) as any[],
+        stats: (reviewsRes.data?.stats ?? null) as any,
       }}
     />
   );

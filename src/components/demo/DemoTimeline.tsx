@@ -5,7 +5,7 @@ const STEPS = [
     label: "Check In",
     role: "You are the patient",
     todo: "Fill out the check in form and submit.",
-    info: "This is what your patients see on their phone after scanning the QR code, which you get per location after signing up. Kiosk mode is also supported.",
+    info: "This is what your patients see on their phone after scanning the QR code, which you get per location after signing up. Kiosk mode is also supported. Selecting a language makes the AI chat in that language, but the doctor still sees everything in English.",
   },
   {
     label: "Approve",

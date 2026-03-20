@@ -83,7 +83,7 @@ BEGIN
   END IF;
 
   -- Lock org and deduct 0.1 credits (all validation passed)
-  SELECT o.credits_total, o.credits_used, o.subscription_plan
+  SELECT o.id, o.name, o.owner_id, o.subscription_plan, o.credits_total, o.credits_used
   INTO v_org
   FROM public.organizations o
   WHERE o.id = v_visit.org_id
