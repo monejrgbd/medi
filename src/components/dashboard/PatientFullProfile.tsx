@@ -53,6 +53,7 @@ export default function PatientFullProfile({
     site: string | null;
     refused: boolean;
     refusal_reason: string | null;
+    notes: string | null;
     administered_at: string;
     administered_by_name: string;
   }>;

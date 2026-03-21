@@ -39,9 +39,11 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
 export default function MarketingDashboard({
   initialData,
   onCampaignSelect,
+  demoScanLimitReached,
 }: {
   initialData: CampaignListData | null;
   onCampaignSelect?: (campaignId: string) => void;
+  demoScanLimitReached?: boolean;
 }) {
   const { org, roles, isOwner } = useRole();
   const router = useRouter();
@@ -171,7 +173,8 @@ export default function MarketingDashboard({
         </h1>
         <button
           onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-hilt-blue text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          disabled={demoScanLimitReached}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-hilt-blue text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-4 h-4" />
           New Campaign
@@ -179,94 +182,109 @@ export default function MarketingDashboard({
       </div>
 
       {campaigns.length === 0 ? (
-        <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-10 text-center">
-          <p className="text-sm text-slate">
-            No campaigns yet. Create your first one to start reaching
-            patients.
+        <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
+          <Megaphone className="w-10 h-10 text-ash mx-auto mb-3" />
+          <p className="text-sm font-medium text-ink mb-1">No campaigns yet</p>
+          <p className="text-xs text-slate mb-4">
+            Create your first campaign to find and reach the right patients.
           </p>
+          <button
+            onClick={() => setModalOpen(true)}
+            disabled={demoScanLimitReached}
+            className="inline-flex items-center gap-1.5 px-4 py-2 bg-hilt-blue text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Plus className="w-4 h-4" />
+            New Campaign
+          </button>
         </div>
       ) : (
-        <div className="rounded-xl border border-gray-100 bg-white overflow-hidden">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Date
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Criteria
-                </th>
-                <th className="text-left py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Status
-                </th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Matched
-                </th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Sent
-                </th>
-                <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Credits
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {campaigns.map((c) => {
-                const colors = STATUS_COLORS[c.status] ?? STATUS_COLORS.cancelled;
-                return (
-                  <tr
-                    key={c.id}
-                    onClick={() =>
-                      onCampaignSelect ? onCampaignSelect(c.id) : router.push(`${basePath}/${c.id}`)
-                    }
-                    className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
-                  >
-                    <td className="py-3 px-4 text-ink">
-                      {new Date(c.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="py-3 px-4 text-slate max-w-[200px] truncate">
-                      {c.ai_criteria
-                        ? c.ai_criteria.length > 60
-                          ? c.ai_criteria.slice(0, 60) + "..."
-                          : c.ai_criteria
-                        : "Structured filters only"}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span
-                        className={`inline-block rounded-full ${colors.bg} px-2 py-0.5 text-[10px] font-medium ${colors.text}`}
-                      >
-                        {c.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right text-ink">
-                      {c.matched_count}
-                    </td>
-                    <td className="py-3 px-4 text-right text-ink">
-                      {c.sent_count}
-                    </td>
-                    <td className="py-3 px-4 text-right text-ink">
-                      {c.credits_charged > 0
-                        ? c.credits_charged.toFixed(1)
-                        : "\u2014"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <>
+          {/* Mobile: card layout */}
+          <div className="sm:hidden space-y-3">
+            {campaigns.map((c) => {
+              const colors = STATUS_COLORS[c.status] ?? STATUS_COLORS.cancelled;
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => onCampaignSelect ? onCampaignSelect(c.id) : router.push(`${basePath}/${c.id}`)}
+                  className="rounded-xl border border-gray-100 bg-white p-4 cursor-pointer hover:shadow-sm transition-shadow"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-ash">{new Date(c.created_at).toLocaleDateString()}</span>
+                    <span className={`rounded-full ${colors.bg} px-2 py-0.5 text-[10px] font-medium ${colors.text}`}>
+                      {c.status}
+                    </span>
+                  </div>
+                  <p className="text-sm text-ink mb-2 line-clamp-2">
+                    {c.ai_criteria || "Structured filters only"}
+                  </p>
+                  <div className="flex gap-4 text-xs text-ash">
+                    <span>{c.matched_count} matched</span>
+                    <span>{c.sent_count} sent</span>
+                    {c.credits_charged > 0 && <span>{c.credits_charged.toFixed(1)} credits</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-          {hasMore && (
-            <div className="p-4 text-center border-t border-gray-50">
-              <button
-                onClick={handleLoadMore}
-                disabled={loadingMore}
-                className="text-sm text-hilt-blue hover:text-blue-700 font-medium disabled:opacity-50"
-              >
-                {loadingMore ? "Loading..." : "Load more"}
-              </button>
-            </div>
-          )}
-        </div>
+          {/* Desktop: table layout */}
+          <div className="hidden sm:block rounded-xl border border-gray-100 bg-white overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Date</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Criteria</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Status</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Matched</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Sent</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Credits</th>
+                </tr>
+              </thead>
+              <tbody>
+                {campaigns.map((c) => {
+                  const colors = STATUS_COLORS[c.status] ?? STATUS_COLORS.cancelled;
+                  return (
+                    <tr
+                      key={c.id}
+                      onClick={() => onCampaignSelect ? onCampaignSelect(c.id) : router.push(`${basePath}/${c.id}`)}
+                      className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
+                    >
+                      <td className="py-3 px-4 text-ink">{new Date(c.created_at).toLocaleDateString()}</td>
+                      <td className="py-3 px-4 text-slate max-w-[200px] truncate">
+                        {c.ai_criteria
+                          ? c.ai_criteria.length > 60 ? c.ai_criteria.slice(0, 60) + "..." : c.ai_criteria
+                          : "Structured filters only"}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-block rounded-full ${colors.bg} px-2 py-0.5 text-[10px] font-medium ${colors.text}`}>
+                          {c.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right text-ink">{c.matched_count}</td>
+                      <td className="py-3 px-4 text-right text-ink">{c.sent_count}</td>
+                      <td className="py-3 px-4 text-right text-ink">
+                        {c.credits_charged > 0 ? c.credits_charged.toFixed(1) : "\u2014"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+
+            {hasMore && (
+              <div className="p-4 text-center border-t border-gray-50">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="text-sm text-hilt-blue hover:text-blue-700 font-medium disabled:opacity-50"
+                >
+                  {loadingMore ? "Loading..." : "Load more"}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
       <CreateCampaignModal

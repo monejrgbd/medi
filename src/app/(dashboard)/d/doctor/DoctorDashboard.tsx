@@ -85,6 +85,7 @@ interface DoctorDashboardProps {
   demoVisitId?: string | null;
   initialHasMoreCompleted?: boolean;
   initialHasMoreLeft?: boolean;
+  nurseEnabled?: boolean;
 }
 
 type Tab = "pending" | "claimed" | "completed" | "left";
@@ -107,6 +108,7 @@ export default function DoctorDashboard({
   initialHasMoreLeft = false,
   demoMode = false,
   demoVisitId,
+  nurseEnabled = false,
 }: DoctorDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("pending");
@@ -368,6 +370,7 @@ export default function DoctorDashboard({
         onExit={() => setFocusMode(false)}
         demoVisitId={demoVisitId}
         demoMode={demoMode}
+        nurseEnabled={nurseEnabled}
       />
     );
   }

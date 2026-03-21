@@ -62,10 +62,27 @@ export default async function NursePage({
     if (checkedInLocationId) {
       const { data: locationRow } = await supabase
         .from("locations")
-        .select("name")
+        .select("name, nurse_enabled")
         .eq("id", checkedInLocationId)
         .single();
       locationName = locationRow?.name ?? "Clinic";
+
+      // Check if nurse features are enabled at this location
+      if (locationRow && !locationRow.nurse_enabled) {
+        return (
+          <div className="flex min-h-screen items-center justify-center px-4">
+            <div className="text-center max-w-sm">
+              <p className="text-lg font-semibold text-ink mb-2">Nurse features are not enabled</p>
+              <p className="text-sm text-slate mb-4">
+                The nurse role is not enabled at this location. Ask your administrator to enable it in location settings.
+              </p>
+              <a href="/d/select-role" className="text-sm text-hilt-blue hover:underline">
+                Back to role selection
+              </a>
+            </div>
+          </div>
+        );
+      }
     }
   }
 

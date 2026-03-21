@@ -71,6 +71,7 @@ interface VaccineRecord {
   site: string | null;
   refused: boolean;
   refusal_reason: string | null;
+  notes: string | null;
   administered_at: string;
   administered_by_name: string;
 }

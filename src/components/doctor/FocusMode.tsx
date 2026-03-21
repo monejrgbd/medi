@@ -61,6 +61,7 @@ interface VaccineRecord {
   lot_number: string | null;
   manufacturer: string | null;
   site: string | null;
+  notes: string | null;
   administered_by_name: string;
 }
 
@@ -120,6 +121,7 @@ interface FocusModeProps {
   onExit: () => void;
   demoVisitId?: string | null;
   demoMode?: boolean;
+  nurseEnabled?: boolean;
 }
 
 export default function FocusMode({
@@ -131,6 +133,7 @@ export default function FocusMode({
   onExit,
   demoVisitId,
   demoMode = false,
+  nurseEnabled = false,
 }: FocusModeProps) {
   const router = useRouter();
   const [currentVisit, setCurrentVisit] = useState<ClaimedVisit | null>(
@@ -145,6 +148,12 @@ export default function FocusMode({
   const [demoCompleted, setDemoCompleted] = useState(false);
   const [tab, setTab] = useState<FocusTab>("summary");
   const [updateNotice, setUpdateNotice] = useState(false);
+  const [focusNurseOnly, setFocusNurseOnly] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('focus_nurse_only') === 'true';
+    }
+    return false;
+  });
   const supabaseRef = useRef(createClient());
   const updatedAtRef = useRef<string | null>(null);
   const currentVisitRef = useRef(currentVisit);
@@ -189,6 +198,11 @@ export default function FocusMode({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showDiagnosis, cancelling, onExit]);
+
+  function handleNurseOnlyToggle(checked: boolean) {
+    setFocusNurseOnly(checked);
+    localStorage.setItem('focus_nurse_only', String(checked));
+  }
 
   useEffect(() => {
     if (!currentVisit) {
@@ -278,25 +292,34 @@ export default function FocusMode({
 
   async function doClaimNext(fromQueue?: QueueVisit[]) {
     const q = fromQueue || queue;
-    if (q.length === 0 || autoClaimingRef.current) return;
+    const effectiveNurseOnly = nurseEnabled && focusNurseOnly;
+    const claimableQueue = effectiveNurseOnly
+      ? q.filter((v: QueueVisit) => v.nurse_reviewed === true)
+      : q;
+
+    if (claimableQueue.length === 0 || autoClaimingRef.current) {
+      if (claimableQueue.length === 0) setCurrentVisit(null);
+      return;
+    }
 
     setAutoClaiming(true);
-    const result = await claimPatient(q[0].visit_id);
+    const target = claimableQueue[0];
+    const result = await claimPatient(target.visit_id);
     setAutoClaiming(false);
 
     if (result.success) {
       setCurrentVisit({
-        visit_id: q[0].visit_id,
-        first_name: q[0].first_name,
-        last_name: q[0].last_name,
+        visit_id: target.visit_id,
+        first_name: target.first_name,
+        last_name: target.last_name,
         claimed_at: new Date().toISOString(),
-        priority: q[0].priority,
-        is_sensitive: q[0].is_sensitive,
-        has_previous_visits: q[0].has_previous_visits,
+        priority: target.priority,
+        is_sensitive: target.is_sensitive,
+        has_previous_visits: target.has_previous_visits,
       });
       setQueue((prev) => {
-        const target = fromQueue || prev;
-        return target.slice(1);
+        const source = fromQueue || prev;
+        return source.filter((v) => v.visit_id !== target.visit_id);
       });
       setShowDiagnosis(false);
       setTab("summary");
@@ -339,29 +362,50 @@ export default function FocusMode({
           </svg>
         </div>
 
-        {queue.length > 0 ? (
-          <>
-            <h2 className="text-xl font-bold text-ink mb-2">
-              {queue.length} patient{queue.length > 1 ? "s" : ""} in queue
-            </h2>
-            <button
-              onClick={() => doClaimNext()}
-              disabled={autoClaiming}
-              className="rounded-lg bg-hilt-blue px-6 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors mt-4"
-            >
-              {autoClaiming ? "Claiming..." : "Claim Next Patient"}
-            </button>
-          </>
-        ) : (
-          <>
-            <h2 className="text-xl font-bold text-ink mb-2">
-              No patients in queue
-            </h2>
-            <p className="text-sm text-slate">
-              You&apos;ll be notified when a patient arrives.
-            </p>
-          </>
-        )}
+        {(() => {
+          const nurseFilterActive = nurseEnabled && focusNurseOnly;
+          const nurseReviewedCount = queue.filter(v => v.nurse_reviewed).length;
+          const claimableCount = nurseFilterActive ? nurseReviewedCount : queue.length;
+
+          if (claimableCount > 0) {
+            return (
+              <>
+                <h2 className="text-xl font-bold text-ink mb-2">
+                  {claimableCount} patient{claimableCount > 1 ? "s" : ""} in queue
+                </h2>
+                <button
+                  onClick={() => doClaimNext()}
+                  disabled={autoClaiming}
+                  className="rounded-lg bg-hilt-blue px-6 py-3 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors mt-4"
+                >
+                  {autoClaiming ? "Claiming..." : "Claim Next Patient"}
+                </button>
+              </>
+            );
+          }
+
+          if (nurseFilterActive && queue.length > 0 && nurseReviewedCount === 0) {
+            return (
+              <div className="rounded-lg border border-teal-200 bg-teal-50 p-4 text-center">
+                <p className="text-sm font-medium text-teal-800">Waiting for nurse reviewed patients...</p>
+                <p className="text-xs text-teal-600 mt-1">
+                  {queue.length} patient{queue.length !== 1 ? "s" : ""} in queue, not yet reviewed by a nurse
+                </p>
+              </div>
+            );
+          }
+
+          return (
+            <>
+              <h2 className="text-xl font-bold text-ink mb-2">
+                No patients in queue
+              </h2>
+              <p className="text-sm text-slate">
+                You will be notified when a patient arrives.
+              </p>
+            </>
+          );
+        })()}
 
         {!demoMode && (
           <button
@@ -398,15 +442,28 @@ export default function FocusMode({
               {!demoVisitId && queue.length > 0 && ` | ${queue.length} more in queue`}
             </p>
           </div>
-          {!demoMode && (
-            <button
-              onClick={onExit}
-              className="text-sm text-slate hover:text-ink transition-colors"
-              aria-label="Exit focus mode"
-            >
-              Exit Focus
-            </button>
-          )}
+          <div className="flex items-center gap-3">
+            {nurseEnabled && (
+              <label className="flex items-center gap-2 text-xs text-slate">
+                <input
+                  type="checkbox"
+                  checked={focusNurseOnly}
+                  onChange={(e) => handleNurseOnlyToggle(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-teal-600 focus:ring-teal-500"
+                />
+                Nurse reviewed only
+              </label>
+            )}
+            {!demoMode && (
+              <button
+                onClick={onExit}
+                className="text-sm text-slate hover:text-ink transition-colors"
+                aria-label="Exit focus mode"
+              >
+                Exit Focus
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

@@ -31,6 +31,12 @@ const STEPS = [
     todo: "Open the review link from your SMS or below and submit a review.",
     info: "Once submitted, your review will appear in the dashboard. You can configure which external platform patients are directed to.",
   },
+  {
+    label: "Outreach",
+    role: "You are the marketer",
+    todo: "Create a campaign to find and reach patients matching any criteria.",
+    info: "AI scans visit summaries, diagnoses, medications, and conditions across 200 demo patients. Describe who you want to reach and it finds them. No real SMS is sent in this demo.",
+  },
 ] as const;
 
 interface DemoTimelineProps {

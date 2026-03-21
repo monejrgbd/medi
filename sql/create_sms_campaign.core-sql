@@ -18,6 +18,9 @@ DECLARE
   v_campaign_count int;
   v_total_scanned int := 0;
   v_matched_count int := 0;
+  v_eligible_count int := 0;
+  v_scan_cost numeric := 0;
+  v_remaining numeric;
   v_edge_url text;
   v_edge_secret text;
   v_anon_key text;
@@ -60,26 +63,15 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'At least one of structured filters or AI criteria must be provided');
   END IF;
 
-  -- Rate limit: max 3 campaigns per org per 24 hours
-  SELECT count(*) INTO v_campaign_count
-  FROM public.sms_campaigns
-  WHERE org_id = v_org.id
-    AND created_at > now() - interval '24 hours';
-
-  IF v_campaign_count >= 3 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Campaign limit reached (3 per 24 hours)');
-  END IF;
-
-  -- Rate limit AI scans: max 10 per org per hour
-  IF p_ai_criteria IS NOT NULL THEN
+  -- Rate limit: max 3 campaigns per org per 24 hours (skip for demo org)
+  IF v_org.id != 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0' THEN
     SELECT count(*) INTO v_campaign_count
     FROM public.sms_campaigns
     WHERE org_id = v_org.id
-      AND ai_criteria IS NOT NULL
-      AND created_at > now() - interval '1 hour';
+      AND created_at > now() - interval '24 hours';
 
-    IF v_campaign_count >= 10 THEN
-      RETURN jsonb_build_object('success', false, 'error', 'AI scan limit reached (10 per hour)');
+    IF v_campaign_count >= 3 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Campaign limit reached (3 per 24 hours)');
     END IF;
   END IF;
 
@@ -199,7 +191,40 @@ BEGIN
     WHERE id = v_campaign_id;
 
   ELSE
-    -- AI path: trigger ai-scan-campaign edge function
+    -- AI path: count eligible patients and charge scan cost (1 credit per 1K, minimum 1)
+    SELECT count(*) INTO v_eligible_count
+    FROM public.patients p
+    WHERE p.org_id = v_org.id
+      AND p.phone IS NOT NULL AND p.phone_verified AND p.consent_given AND NOT p.marketing_sms_opted_out;
+
+    v_scan_cost := GREATEST(1, CEIL(v_eligible_count / 1000.0));
+
+    -- Skip cost for demo org
+    IF v_org.id != 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0' THEN
+      v_remaining := v_org.credits_total - v_org.credits_used;
+      IF v_org.recharge_limit IS NOT NULL THEN
+        v_remaining := v_remaining + (v_org.recharge_limit - v_org.recharge_used);
+      END IF;
+
+      IF v_remaining < v_scan_cost THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Not enough credits for AI scan (' || v_scan_cost || ' credits needed for ' || v_eligible_count || ' patients)');
+      END IF;
+
+      -- Deduct from regular credits first, overflow to recharge
+      IF (v_org.credits_total - v_org.credits_used) >= v_scan_cost THEN
+        UPDATE public.organizations SET credits_used = credits_used + v_scan_cost WHERE id = v_org.id;
+      ELSE
+        UPDATE public.organizations
+        SET credits_used = credits_total,
+            recharge_used = recharge_used + (v_scan_cost - (credits_total - credits_used))
+        WHERE id = v_org.id;
+      END IF;
+
+      INSERT INTO public.credits_log (org_id, credits_amount, credit_type, description)
+      VALUES (v_org.id, v_scan_cost, 'marketing_scan', 'AI scan: ' || v_eligible_count || ' patients, campaign ' || LEFT(p_ai_criteria, 80));
+    END IF;
+
+    -- Trigger ai-scan-campaign edge function
     SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
     SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
     SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';

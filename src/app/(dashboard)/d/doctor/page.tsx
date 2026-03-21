@@ -45,6 +45,7 @@ export default async function DoctorPage({
   // Check if checked in as doctor
   let checkedInLocationId: string | null = null;
   let locationName = "Clinic";
+  let nurseEnabled = false;
 
   if (staffUser) {
     const { data: checkin } = await supabase
@@ -62,10 +63,11 @@ export default async function DoctorPage({
     if (checkedInLocationId) {
       const { data: locationRow } = await supabase
         .from("locations")
-        .select("name")
+        .select("name, nurse_enabled")
         .eq("id", checkedInLocationId)
         .single();
       locationName = locationRow?.name ?? "Clinic";
+      nurseEnabled = locationRow?.nurse_enabled ?? false;
     }
   }
 
@@ -146,6 +148,7 @@ export default async function DoctorPage({
       initialDoctors={doctorsRes.data?.doctors ?? []}
       initialHasMoreCompleted={completedLeftRes.data?.has_more_completed ?? false}
       initialHasMoreLeft={completedLeftRes.data?.has_more_left ?? false}
+      nurseEnabled={nurseEnabled}
     />
   );
 }

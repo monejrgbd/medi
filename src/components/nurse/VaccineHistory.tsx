@@ -9,6 +9,7 @@ interface VaccineRecord {
   site: string | null;
   refused: boolean;
   refusal_reason: string | null;
+  notes: string | null;
   administered_at: string;
   administered_by_name: string;
 }
@@ -78,6 +79,9 @@ export default function VaccineHistory({ records }: VaccineHistoryProps) {
                 <p className="text-[10px] text-ash">{r.administered_by_name}</p>
               </div>
             </div>
+            {r.notes && (
+              <p className="mt-1.5 text-[10px] text-slate border-t border-gray-100 pt-1.5">{r.notes}</p>
+            )}
           </div>
         ))}
       </div>

@@ -194,72 +194,75 @@ export default function CampaignReview({
         </p>
       </div>
 
-      {/* Patient table */}
+      {/* Patient list */}
       <div className="rounded-xl border border-gray-100 bg-white overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100">
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-medium text-ink">
             Matched Patients ({recipients.length})
           </h3>
+          <span className="text-xs text-ash">{activeCount} will receive SMS</span>
         </div>
         <div className="max-h-[400px] overflow-y-auto">
-          <table className="w-full text-sm">
+          {/* Mobile: card layout */}
+          <div className="sm:hidden divide-y divide-gray-50">
+            {recipients.map((r) => {
+              const isExcluded = excludedIds.has(r.id);
+              return (
+                <div key={r.id} className={`px-4 py-3 ${isExcluded ? "opacity-50 bg-gray-50/50" : ""}`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium text-ink">{r.first_name} {r.last_name}</span>
+                    <label className="flex items-center gap-1.5 text-xs text-ash">
+                      <input
+                        type="checkbox"
+                        checked={isExcluded}
+                        disabled={togglingExclude === r.id}
+                        onChange={(e) => handleExclude(r.id, e.target.checked)}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue/20"
+                      />
+                      Exclude
+                    </label>
+                  </div>
+                  <p className="text-xs text-slate">{r.phone}</p>
+                  {r.match_reason && <p className="text-xs text-ash mt-1">{r.match_reason}</p>}
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop: table layout */}
+          <table className="hidden sm:table w-full text-sm">
             <thead className="sticky top-0 bg-white">
               <tr className="border-b border-gray-100">
-                <th className="text-left py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Name
-                </th>
-                <th className="text-left py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Phone
-                </th>
-                <th className="text-left py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Match Reason
-                </th>
-                <th className="text-center py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">
-                  Exclude
-                </th>
+                <th className="text-left py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">Name</th>
+                <th className="text-left py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">Phone</th>
+                <th className="text-left py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">Match Reason</th>
+                <th className="text-center py-2.5 px-4 text-xs font-medium text-ash uppercase tracking-wide">Exclude</th>
               </tr>
             </thead>
             <tbody>
               {recipients.map((r) => {
                 const isExcluded = excludedIds.has(r.id);
                 return (
-                  <tr
-                    key={r.id}
-                    className={`border-b border-gray-50 ${isExcluded ? "opacity-50" : ""}`}
-                  >
-                    <td className="py-2.5 px-4 text-ink">
-                      {r.first_name} {r.last_name}
-                    </td>
+                  <tr key={r.id} className={`border-b border-gray-50 ${isExcluded ? "opacity-50" : ""}`}>
+                    <td className="py-2.5 px-4 text-ink">{r.first_name} {r.last_name}</td>
                     <td className="py-2.5 px-4 text-slate">{r.phone}</td>
-                    <td className="py-2.5 px-4 text-slate text-xs">
-                      {r.match_reason || "\u2014"}
-                    </td>
+                    <td className="py-2.5 px-4 text-slate text-xs">{r.match_reason || "\u2014"}</td>
                     <td className="py-2.5 px-4 text-center">
                       <input
                         type="checkbox"
                         checked={isExcluded}
                         disabled={togglingExclude === r.id}
-                        onChange={(e) =>
-                          handleExclude(r.id, e.target.checked)
-                        }
+                        onChange={(e) => handleExclude(r.id, e.target.checked)}
                         className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue/20"
                       />
                     </td>
                   </tr>
                 );
               })}
-              {recipients.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={4}
-                    className="py-8 text-center text-sm text-slate"
-                  >
-                    No recipients found.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
+          {recipients.length === 0 && (
+            <p className="py-8 text-center text-sm text-slate">No recipients found.</p>
+          )}
         </div>
       </div>
 

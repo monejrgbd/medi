@@ -706,10 +706,10 @@ function BuiltForYourClinicSection() {
               <div className="space-y-2.5">
                 {[
                   { label: "Nurse triage", desc: "Nurses screen before doctor", on: true },
-                  { label: "Weight tracking", desc: "Per patient over time", on: true },
-                  { label: "Height tracking", desc: "Per patient over time", on: false },
+                  { label: "Vitals tracking", desc: "Custom vitals per visit", on: true },
+                  { label: "Vaccine management", desc: "Schedule, record, track", on: true },
                   { label: "Smart follow ups", desc: "AI linked cross session care", on: true },
-                  { label: "Review collection", desc: "Post visit feedback routing", on: true },
+                  { label: "Review collection", desc: "Post visit feedback routing", on: false },
                 ].map(f => (
                   <div key={f.label} className="flex items-center justify-between">
                     <div>

@@ -46,7 +46,7 @@ const CREDIT_COSTS = [
   {
     action: "Marketing SMS",
     credits: 0.3,
-    desc: "AI targeted patient outreach campaigns",
+    desc: "0.3 per SMS sent, 1 credit per 1K AI scans (simple filtering is free)",
     tag: "Org level add on",
     icon: (
       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
@@ -231,7 +231,7 @@ function CreditCostsSection() {
           </div>
 
           {/* SMS items */}
-          {CREDIT_COSTS.map((item) => (
+          {CREDIT_COSTS.filter((item) => item.action !== "Marketing SMS").map((item) => (
             <div
               key={item.action}
               className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-sm"
@@ -252,6 +252,35 @@ function CreditCostsSection() {
               </div>
             </div>
           ))}
+
+          {/* Marketing SMS — distinct card with dual pricing */}
+          <div className="rounded-xl border border-blue-200 bg-gradient-to-br from-blue-50/50 to-white p-5 shadow-sm">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-hilt-blue/10">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-ink">AI Targeted Marketing</p>
+                <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-medium text-blue-700">Add on</span>
+              </div>
+            </div>
+            <p className="text-sm text-slate mb-4">
+              Filter patients by demographics and visit history, then let AI scan clinical data to find exactly who you need. Send targeted SMS campaigns.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg bg-white border border-gray-200 p-3 text-center">
+                <p className="text-2xl font-bold text-ink">0.3</p>
+                <p className="text-xs text-ash">credits per SMS sent</p>
+              </div>
+              <div className="rounded-lg bg-white border border-gray-200 p-3 text-center">
+                <p className="text-2xl font-bold text-ink">1</p>
+                <p className="text-xs text-ash">credit per 1K AI scans</p>
+              </div>
+            </div>
+            <p className="text-xs text-green-700 mt-3 font-medium">Simple filtering by age, sex, and visit history is always free</p>
+          </div>
         </div>
         <p className="mt-4 text-center text-sm text-ash">
           Credits only cover AI conversations, diagnostics, and SMS. The rest of the platform, including summaries, analytics, referrals, review management, 130+ languages, and multi location support, is yours from day one.

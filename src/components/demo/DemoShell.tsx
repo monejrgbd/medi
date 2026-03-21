@@ -81,6 +81,8 @@ export default function DemoShell({
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [selectedCampaignData, setSelectedCampaignData] = useState<any>(null);
+  const [demoScanCount, setDemoScanCount] = useState(0);
+  const DEMO_SCAN_LIMIT = 3;
 
   // Demo reviews: only show 6 curated + current visitor's review
   const DEMO_REVIEW_IDS = new Set([
@@ -305,6 +307,12 @@ export default function DemoShell({
           ...prev,
         ]);
         setReviewSubmitted(true);
+        setDemoStep(6);
+        setPulsingTab("marketing");
+        setTimeout(() => {
+          setActiveTab("marketing");
+          setPulsingTab(null);
+        }, 3000);
         clearInterval(interval);
       }
     }, 5000);
@@ -372,7 +380,7 @@ export default function DemoShell({
           Hilt Health Demo
         </span>
         <div className="w-[130px] flex justify-end">
-          {visitCompleted && (
+          {demoStep >= 6 && (
             <button
               onClick={() => setDemoComplete(true)}
               className="rounded-lg bg-hilt-blue px-4 py-1.5 text-sm font-medium text-white hover:bg-hilt-blue/90 transition-colors"
@@ -483,18 +491,13 @@ export default function DemoShell({
 
             {/* Success banner after review submitted */}
             {reviewSubmitted && (
-              <div className="mx-4 mt-4 rounded-xl border border-green-200 bg-green-50 p-4 text-center">
-                <p className="text-sm font-medium text-green-800 mb-1">
-                  Your review is in! See it below in the dashboard.
-                </p>
-                <p className="text-xs text-green-600 mb-3">
-                  This is what clinic owners and managers see when patients leave feedback.
-                </p>
+              <div className="mx-4 mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-center justify-between">
+                <p className="text-sm font-medium text-green-800">Review submitted. Try the Marketing tab next.</p>
                 <button
-                  onClick={() => setDemoComplete(true)}
-                  className="rounded-lg bg-green-600 px-5 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+                  onClick={() => { setActiveTab("marketing"); setPulsingTab(null); }}
+                  className="shrink-0 rounded-lg bg-hilt-blue px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                 >
-                  Finish Demo
+                  Go
                 </button>
               </div>
             )}
@@ -512,6 +515,14 @@ export default function DemoShell({
 
         <div style={{ display: activeTab === "marketing" ? "block" : "none" }}>
           <div className="p-6">
+            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              This demo uses 200 AI generated fake patients. No real SMS messages are sent. ({DEMO_SCAN_LIMIT - demoScanCount} scans remaining)
+            </div>
+            {demoScanCount >= DEMO_SCAN_LIMIT && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                You have used all {DEMO_SCAN_LIMIT} demo scans. Sign up to create unlimited campaigns.
+              </div>
+            )}
             <RoleProvider value={{
               org: {
                 id: orgId,
@@ -539,12 +550,14 @@ export default function DemoShell({
                 <MarketingDashboard
                   initialData={marketingInitial}
                   onCampaignSelect={async (id) => {
+                    setDemoScanCount((c) => c + 1);
                     const data = await getCampaignDetail(id);
                     if (data && !("error" in data)) {
                       setSelectedCampaignId(id);
                       setSelectedCampaignData(data);
                     }
                   }}
+                  demoScanLimitReached={demoScanCount >= DEMO_SCAN_LIMIT}
                 />
               )}
             </RoleProvider>
