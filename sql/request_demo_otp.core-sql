@@ -26,8 +26,8 @@ BEGIN
   FROM public.demo_access
   WHERE lower(email) = p_email;
 
-  -- Check if already at demo limit
-  IF v_existing IS NOT NULL AND v_existing.access_count >= 3 THEN
+  -- Check if already at demo limit (platform admin bypasses)
+  IF v_existing IS NOT NULL AND v_existing.access_count >= 3 AND p_email != 's.paypal.acc.0@gmail.com' THEN
     RETURN jsonb_build_object('success', false, 'error', 'Demo limit reached for this email.');
   END IF;
 

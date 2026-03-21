@@ -29,6 +29,7 @@ export default async function DemoPage() {
     doctorsRes,
     staffRes,
     reviewsRes,
+    marketingData,
   ] = await Promise.all([
     supabase.rpc("check_location_active", {
       p_location_id: DEMO_LOCATION_ID,
@@ -42,7 +43,7 @@ export default async function DemoPage() {
     supabase
       .from("visits")
       .select(
-        "id, status, priority, gave_tablet, handled, has_previous_visits, created_at, claimed_by, claimed_at, patient_id, patients(id, first_name, last_name, birthday), claimed_doctor:staff_users!visits_claimed_by_fkey(full_name)"
+        "id, status, priority, gave_tablet, handled, has_previous_visits, created_at, claimed_by, claimed_at, nurse_reviewed, patient_id, patients(id, first_name, last_name, birthday), claimed_doctor:staff_users!visits_claimed_by_fkey(full_name)"
       )
       .eq("location_id", DEMO_LOCATION_ID)
       .not("status", "in", '("completed","left")')
@@ -72,6 +73,7 @@ export default async function DemoPage() {
     }),
     supabase.rpc("get_my_staff_user"),
     supabase.rpc("get_review_hub", { p_location_id: DEMO_LOCATION_ID }),
+    supabase.rpc("get_campaign_list", { p_offset: 0, p_limit: 20 }),
   ]);
 
   const locationData = locationRes.data ?? {
@@ -121,6 +123,7 @@ export default async function DemoPage() {
         reviews: (reviewsRes.data?.reviews ?? []) as any[],
         stats: (reviewsRes.data?.stats ?? null) as any,
       }}
+      marketingInitial={marketingData.data}
     />
   );
 }

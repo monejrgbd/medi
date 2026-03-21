@@ -2,8 +2,33 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
-const SMSMOBILEAPI_KEY = Deno.env.get("SMSMOBILEAPI_KEY");
+const D7_CLIENT_ID = Deno.env.get("D7_CLIENT_ID");
+const D7_CLIENT_SECRET = Deno.env.get("D7_CLIENT_SECRET");
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://hilthealth.com";
+
+// D7 Networks OAuth2 token cache
+let d7Token: string | null = null;
+let d7TokenExpiresAt = 0;
+
+async function getD7Token(): Promise<string> {
+  if (d7Token && Date.now() < d7TokenExpiresAt) return d7Token;
+
+  const res = await fetch("https://api.d7networks.com/auth/v1/login/application", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: D7_CLIENT_ID!,
+      client_secret: D7_CLIENT_SECRET!,
+    }),
+  });
+
+  if (!res.ok) throw new Error(`D7 auth failed: ${res.status}`);
+  const data = await res.json();
+  d7Token = data.access_token;
+  // Refresh 5 minutes before assumed 1-hour expiry
+  d7TokenExpiresAt = Date.now() + 55 * 60 * 1000;
+  return d7Token!;
+}
 
 // SMS templates
 const TEMPLATES: Record<string, (params: Record<string, string>) => string> = {
@@ -60,36 +85,45 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!SMSMOBILEAPI_KEY) {
+    if (!D7_CLIENT_ID || !D7_CLIENT_SECRET) {
       return new Response(
-        JSON.stringify({ error: "SMSMobileAPI not configured" }),
+        JSON.stringify({ error: "D7 Networks not configured" }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    // Call SMSMobileAPI
-    const smaRes = await fetch("https://api.smsmobileapi.com/sendsms/", {
+    // Get D7 OAuth2 token and send SMS
+    const token = await getD7Token();
+    const d7Res = await fetch("https://api.d7networks.com/messages/v1/send", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        apikey: SMSMOBILEAPI_KEY,
-        recipients: to,
-        message: body,
-        sendsms: "1",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages: [{
+          recipients: [to],
+          content: body,
+          msg_type: "text",
+          data_coding: "text",
+        }],
+        message_globals: {
+          originator: "HiltHealth",
+        },
       }),
     });
 
-    const smaData = await smaRes.json();
+    const d7Data = await d7Res.json();
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const success = smaData?.success === true || smaData?.status === "ok" || smaRes.ok;
+    const success = d7Data?.status === "accepted" || d7Res.ok;
     const logStatus = success ? "sent" : "failed";
-    const providerId = smaData?.id || smaData?.message_id || null;
-    const errorMsg = success ? null : smaData?.error || smaData?.message || "Unknown error";
+    const providerId = d7Data?.request_id || null;
+    const errorMsg = success ? null : d7Data?.detail?.description || d7Data?.message || "Unknown error";
 
     if (sms_log_id) {
       // Update existing sms_log row (pre-inserted by SQL function)

@@ -1,0 +1,148 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.configure_org_vitals(
+  p_caller_auth_uid uuid,
+  p_configs jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_manager boolean := false;
+  v_elem jsonb;
+  v_vital_type_id uuid;
+  v_config_id uuid;
+BEGIN
+  -- Get caller org
+  SELECT o.id, o.owner_id INTO v_org_id, v_owner_id
+  FROM public.organizations o
+  WHERE o.owner_id = p_caller_auth_uid;
+
+  IF v_org_id IS NULL THEN
+    SELECT su.org_id, su.id INTO v_org_id, v_caller_staff_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_active = true
+      AND su.is_deleted = false;
+
+    IF v_org_id IS NOT NULL THEN
+      SELECT o.owner_id INTO v_owner_id
+      FROM public.organizations o
+      WHERE o.id = v_org_id;
+    END IF;
+  END IF;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Authorization: owner or manager
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can configure
+  ELSE
+    IF v_caller_staff_id IS NULL THEN
+      SELECT su.id INTO v_caller_staff_id
+      FROM public.staff_users su
+      WHERE su.auth_uid = p_caller_auth_uid
+        AND su.org_id = v_org_id
+        AND su.is_active = true
+        AND su.is_deleted = false;
+    END IF;
+
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      JOIN public.locations l ON l.id = sr.location_id
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND l.org_id = v_org_id
+        AND sr.role = 'manager'
+    ) INTO v_is_manager;
+
+    IF NOT v_is_manager THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Only owner or manager can configure vitals');
+    END IF;
+  END IF;
+
+  -- Validate input is array
+  IF jsonb_typeof(p_configs) <> 'array' OR jsonb_array_length(p_configs) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'configs must be a non-empty array');
+  END IF;
+
+  -- Process each element
+  FOR v_elem IN SELECT * FROM jsonb_array_elements(p_configs)
+  LOOP
+    IF v_elem ? 'vital_type_id' AND v_elem ? 'enabled' AND NOT (v_elem ? 'custom_name') AND NOT (v_elem ? 'config_id') THEN
+      -- Upsert predefined vital
+      v_vital_type_id := (v_elem->>'vital_type_id')::uuid;
+
+      -- Verify vital_type_id exists
+      IF NOT EXISTS(SELECT 1 FROM public.vital_types WHERE id = v_vital_type_id) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Invalid vital_type_id: ' || v_vital_type_id::text);
+      END IF;
+
+      INSERT INTO public.org_vital_configs (org_id, vital_type_id, display_order, enabled)
+      SELECT v_org_id, vt.id, vt.display_order, (v_elem->>'enabled')::boolean
+      FROM public.vital_types vt
+      WHERE vt.id = v_vital_type_id
+      ON CONFLICT (org_id, vital_type_id) DO UPDATE SET enabled = EXCLUDED.enabled;
+
+    ELSIF v_elem ? 'custom_name' AND v_elem ? 'custom_unit' THEN
+      -- Insert custom vital
+      INSERT INTO public.org_vital_configs (
+        org_id, custom_name, custom_unit, custom_min, custom_max, custom_step,
+        display_order, enabled
+      )
+      VALUES (
+        v_org_id,
+        v_elem->>'custom_name',
+        v_elem->>'custom_unit',
+        (v_elem->>'custom_min')::numeric,
+        (v_elem->>'custom_max')::numeric,
+        COALESCE((v_elem->>'custom_step')::numeric, 0.1),
+        COALESCE((v_elem->>'display_order')::smallint, 100),
+        COALESCE((v_elem->>'enabled')::boolean, true)
+      );
+
+    ELSIF v_elem ? 'config_id' AND v_elem ? 'enabled' THEN
+      -- Update existing config
+      v_config_id := (v_elem->>'config_id')::uuid;
+
+      UPDATE public.org_vital_configs
+      SET enabled = (v_elem->>'enabled')::boolean
+      WHERE id = v_config_id AND org_id = v_org_id;
+
+    ELSE
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid config element format');
+    END IF;
+  END LOOP;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.configure_org_vitals(
+  p_configs jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.configure_org_vitals(v_auth_uid, p_configs);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.configure_org_vitals(jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.configure_org_vitals(jsonb) TO authenticated;

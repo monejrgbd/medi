@@ -1,0 +1,182 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.send_campaign(
+  p_caller_auth_uid uuid,
+  p_campaign_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_campaign record;
+  v_recipient_count int;
+  v_total_cost numeric;
+  v_remaining numeric;
+  v_from_regular numeric := 0;
+  v_from_recharge numeric := 0;
+  v_recharge_remaining numeric;
+  v_rec record;
+  v_sms_log_id uuid;
+BEGIN
+  -- Try owner (locks org row)
+  SELECT id, subscription_plan, credits_total, credits_used, recharge_limit, recharge_used, owner_id
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  -- If not owner, try marketer (still locks org row)
+  IF v_org IS NULL THEN
+    SELECT o.id, o.subscription_plan, o.credits_total, o.credits_used, o.recharge_limit, o.recharge_used, o.owner_id
+    INTO v_org
+    FROM public.organizations o
+    JOIN public.staff_users su ON su.org_id = o.id
+    JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+    WHERE su.auth_uid = p_caller_auth_uid AND su.is_active AND NOT su.is_deleted AND sr.role = 'marketer'
+    FOR UPDATE OF o;
+  END IF;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Load campaign
+  SELECT id, status, message_body, ai_criteria, org_id
+  INTO v_campaign
+  FROM public.sms_campaigns
+  WHERE id = p_campaign_id
+    AND org_id = v_org.id;
+
+  IF v_campaign IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign not found');
+  END IF;
+
+  -- Guard: must be ready
+  IF v_campaign.status <> 'ready' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign must be in ready status to send');
+  END IF;
+
+  -- Guard: message must be set
+  IF v_campaign.message_body IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign message has not been set');
+  END IF;
+
+  -- Count non-excluded recipients
+  SELECT count(*) INTO v_recipient_count
+  FROM public.sms_campaign_recipients
+  WHERE campaign_id = p_campaign_id
+    AND NOT excluded;
+
+  IF v_recipient_count = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'No recipients to send to');
+  END IF;
+
+  -- Calculate total cost
+  v_total_cost := v_recipient_count * 0.3;
+
+  -- Credit deduction logic (same pattern as deduct_credits)
+  v_remaining := v_org.credits_total - v_org.credits_used;
+
+  IF v_remaining >= v_total_cost THEN
+    v_from_regular := v_total_cost;
+  ELSIF v_org.recharge_limit IS NOT NULL THEN
+    v_from_regular := GREATEST(v_remaining, 0);
+    v_from_recharge := v_total_cost - v_from_regular;
+    v_recharge_remaining := v_org.recharge_limit - v_org.recharge_used;
+
+    IF v_from_recharge > v_recharge_remaining THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Insufficient credits. This campaign requires ' || v_total_cost || ' credits.');
+    END IF;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Insufficient credits. This campaign requires ' || v_total_cost || ' credits.');
+  END IF;
+
+  -- Deduct credits
+  UPDATE public.organizations
+  SET credits_used = credits_used + v_from_regular,
+      recharge_used = recharge_used + v_from_recharge
+  WHERE id = v_org.id;
+
+  -- Log credit deduction
+  INSERT INTO public.credits_log (org_id, visit_id, credits_amount, credit_type, description)
+  VALUES (
+    v_org.id,
+    NULL,
+    -v_total_cost,
+    'marketing_sms',
+    'Marketing campaign: ' || LEFT(COALESCE(v_campaign.ai_criteria, 'Structured filters'), 100)
+  );
+
+  -- Create sms_log entries and link to recipients
+  FOR v_rec IN
+    SELECT id, patient_id, phone
+    FROM public.sms_campaign_recipients
+    WHERE campaign_id = p_campaign_id
+      AND NOT excluded
+  LOOP
+    INSERT INTO public.sms_log (org_id, patient_id, phone, sms_type, status, message_body)
+    VALUES (v_org.id, v_rec.patient_id, v_rec.phone, 'marketing', 'pending', v_campaign.message_body)
+    RETURNING id INTO v_sms_log_id;
+
+    UPDATE public.sms_campaign_recipients
+    SET sms_log_id = v_sms_log_id
+    WHERE id = v_rec.id;
+  END LOOP;
+
+  -- Update campaign status
+  UPDATE public.sms_campaigns
+  SET status = 'sending',
+      send_started_at = now(),
+      credits_charged = v_total_cost
+  WHERE id = p_campaign_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (
+    v_org.id,
+    p_caller_auth_uid,
+    'owner',
+    'send_campaign',
+    'sms_campaign',
+    p_campaign_id,
+    jsonb_build_object(
+      'sending_count', v_recipient_count,
+      'credits_charged', v_total_cost
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'sending_count', v_recipient_count,
+    'credits_charged', v_total_cost
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.send_campaign(
+  p_campaign_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.send_campaign(v_uid, p_campaign_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.send_campaign(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.send_campaign(uuid) TO authenticated;

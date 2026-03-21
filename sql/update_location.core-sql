@@ -11,7 +11,12 @@ CREATE OR REPLACE FUNCTION private.update_location(
   p_referral_email text DEFAULT NULL,
   p_tablet_count int DEFAULT NULL,
   p_timezone text DEFAULT NULL,
-  p_logo_url text DEFAULT NULL
+  p_logo_url text DEFAULT NULL,
+  p_nurse_enabled boolean DEFAULT NULL,
+  p_vaccines_enabled boolean DEFAULT NULL,
+  p_vitals_enabled boolean DEFAULT NULL,
+  p_ai_custom_instructions text DEFAULT NULL,
+  p_ai_message_limit integer DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -68,8 +73,20 @@ BEGIN
     referral_email = COALESCE(p_referral_email, referral_email),
     tablet_count = COALESCE(p_tablet_count, tablet_count),
     timezone = COALESCE(p_timezone, timezone),
-    logo_url = COALESCE(p_logo_url, logo_url)
+    logo_url = COALESCE(p_logo_url, logo_url),
+    nurse_enabled = COALESCE(p_nurse_enabled, nurse_enabled),
+    vaccines_enabled = COALESCE(p_vaccines_enabled, vaccines_enabled),
+    vitals_enabled = COALESCE(p_vitals_enabled, vitals_enabled),
+    ai_custom_instructions = CASE WHEN p_ai_custom_instructions IS NOT NULL THEN NULLIF(trim(p_ai_custom_instructions), '') ELSE ai_custom_instructions END,
+    ai_message_limit = CASE WHEN p_ai_message_limit = 0 THEN NULL WHEN p_ai_message_limit IS NOT NULL THEN p_ai_message_limit ELSE ai_message_limit END
   WHERE id = p_location_id;
+
+  -- Auto-initialize org vitals when vitals_enabled is turned on
+  IF p_vitals_enabled = true THEN
+    IF NOT EXISTS(SELECT 1 FROM public.org_vital_configs WHERE org_id = v_org_id) THEN
+      PERFORM private.initialize_org_default_vitals(p_caller_auth_uid, v_org_id);
+    END IF;
+  END IF;
 
   RETURN jsonb_build_object('success', true);
 END;
@@ -87,7 +104,12 @@ CREATE OR REPLACE FUNCTION public.update_location(
   p_referral_email text DEFAULT NULL,
   p_tablet_count int DEFAULT NULL,
   p_timezone text DEFAULT NULL,
-  p_logo_url text DEFAULT NULL
+  p_logo_url text DEFAULT NULL,
+  p_nurse_enabled boolean DEFAULT NULL,
+  p_vaccines_enabled boolean DEFAULT NULL,
+  p_vitals_enabled boolean DEFAULT NULL,
+  p_ai_custom_instructions text DEFAULT NULL,
+  p_ai_message_limit integer DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -98,9 +120,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url);
+  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url, p_nurse_enabled, p_vaccines_enabled, p_vitals_enabled, p_ai_custom_instructions, p_ai_message_limit);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer) TO authenticated;

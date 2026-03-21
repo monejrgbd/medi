@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import VitalsHistory from "@/components/nurse/VitalsHistory";
+import VaccineHistory from "@/components/nurse/VaccineHistory";
 
 interface PatientFullProfileProps {
   data: Record<string, unknown>;
   onClose: () => void;
 }
 
-type Tab = "overview" | "visits" | "notes" | "referrals";
+type Tab = "overview" | "visits" | "notes" | "referrals" | "vitals" | "vaccines";
 
 export default function PatientFullProfile({
   data,
@@ -32,12 +34,36 @@ export default function PatientFullProfile({
   const pets = (data.pets || []) as Record<string, unknown>[];
   const referrals = (data.referrals || []) as Record<string, unknown>[];
   const followUps = (data.follow_ups || []) as Record<string, unknown>[];
+  const vitals = (data.vitals || []) as Array<{
+    id: string;
+    value: number;
+    vital_name: string;
+    vital_unit: string;
+    display_order?: number;
+    notes: string | null;
+    measured_at: string;
+    recorded_by_name: string;
+  }>;
+  const vaccines = (data.vaccines || []) as Array<{
+    id: string;
+    vaccine_name: string;
+    dose_number: number | null;
+    lot_number: string | null;
+    manufacturer: string | null;
+    site: string | null;
+    refused: boolean;
+    refusal_reason: string | null;
+    administered_at: string;
+    administered_by_name: string;
+  }>;
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "visits", label: `Visits (${visits.length})` },
-    { key: "notes", label: `Notes (${notes.length})` },
-    { key: "referrals", label: `Referrals (${referrals.length})` },
+  const tabs: { key: Tab; label: string; show: boolean }[] = [
+    { key: "overview", label: "Overview", show: true },
+    { key: "visits", label: `Visits (${visits.length})`, show: true },
+    { key: "vitals", label: `Vitals (${vitals.length})`, show: vitals.length > 0 },
+    { key: "vaccines", label: `Vaccines (${vaccines.length})`, show: vaccines.length > 0 },
+    { key: "notes", label: `Notes (${notes.length})`, show: true },
+    { key: "referrals", label: `Referrals (${referrals.length})`, show: true },
   ];
 
   return (
@@ -67,20 +93,22 @@ export default function PatientFullProfile({
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 px-4 pt-2 border-b border-gray-100">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                tab === t.key
-                  ? "border-hilt-blue text-hilt-blue"
-                  : "border-transparent text-slate hover:text-ink"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
+        <div className="flex gap-1 px-4 pt-2 border-b border-gray-100 overflow-x-auto">
+          {tabs
+            .filter((t) => t.show)
+            .map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors whitespace-nowrap ${
+                  tab === t.key
+                    ? "border-hilt-blue text-hilt-blue"
+                    : "border-transparent text-slate hover:text-ink"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
         </div>
 
         {/* Content */}
@@ -205,6 +233,14 @@ export default function PatientFullProfile({
                 ))
               )}
             </div>
+          )}
+
+          {tab === "vitals" && (
+            <VitalsHistory vitals={vitals} />
+          )}
+
+          {tab === "vaccines" && (
+            <VaccineHistory records={vaccines} />
           )}
         </div>
       </div>

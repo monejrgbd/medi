@@ -129,7 +129,7 @@ export default async function ReceptionistPage({
     supabase
       .from("visits")
       .select(
-        "id, status, priority, gave_tablet, handled, has_previous_visits, created_at, claimed_by, claimed_at, patient_id, patients(id, first_name, last_name, birthday), claimed_doctor:staff_users!visits_claimed_by_fkey(full_name)"
+        "id, status, priority, gave_tablet, handled, has_previous_visits, created_at, claimed_by, claimed_at, nurse_reviewed, patient_id, patients(id, first_name, last_name, birthday), claimed_doctor:staff_users!visits_claimed_by_fkey(full_name)"
       )
       .eq("location_id", checkedInLocationId)
       .not("status", "in", '("completed","left")')
@@ -146,6 +146,28 @@ export default async function ReceptionistPage({
       .order("completed_at", { ascending: false }),
   ]);
 
+  // Enrich active visits with claimer role info (nurse vs doctor)
+  const activeVisits = (activeRes.data ?? []) as any[];
+  const claimedStaffIds = activeVisits
+    .filter((v: any) => v.claimed_by)
+    .map((v: any) => v.claimed_by as string);
+
+  let nurseStaffIds = new Set<string>();
+  if (claimedStaffIds.length > 0) {
+    const { data: nurseRoles } = await supabase
+      .from("staff_roles")
+      .select("staff_user_id")
+      .eq("location_id", checkedInLocationId)
+      .eq("role", "nurse")
+      .in("staff_user_id", claimedStaffIds);
+    nurseStaffIds = new Set((nurseRoles ?? []).map((r: any) => r.staff_user_id));
+  }
+
+  const enrichedActive = activeVisits.map((v: any) => ({
+    ...v,
+    claimed_is_nurse: v.claimed_by ? nurseStaffIds.has(v.claimed_by) : false,
+  }));
+
   return (
     <ReceptionistDashboard
       mode="dashboard"
@@ -156,7 +178,7 @@ export default async function ReceptionistPage({
       locationId={checkedInLocationId}
       locationName={locationName}
       initialPending={pendingRes.data?.pending ?? []}
-      initialActive={(activeRes.data ?? []) as any}
+      initialActive={enrichedActive as any}
       initialCompleted={(completedRes.data ?? []) as any}
       initialCounts={countsRes.data ?? null}
     />

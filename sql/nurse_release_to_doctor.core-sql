@@ -1,0 +1,116 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.nurse_release_to_doctor(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid,
+  p_nurse_notes text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_nurse_enabled boolean;
+  v_clean_notes text;
+BEGIN
+  -- Get visit details
+  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.nurse_reviewed, v.entered_queue_at
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.status <> 'claimed_by_doctor' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not claimed');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account required');
+  END IF;
+
+  -- Verify claimed_by = caller
+  IF v_visit.claimed_by <> v_caller_staff_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Verify caller has nurse role at visit location
+  IF NOT EXISTS(
+    SELECT 1 FROM public.staff_roles sr
+    WHERE sr.staff_user_id = v_caller_staff_id
+      AND sr.role = 'nurse'
+      AND sr.location_id = v_visit.location_id
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Verify location has nurse_enabled
+  SELECT l.nurse_enabled INTO v_nurse_enabled
+  FROM public.locations l WHERE l.id = v_visit.location_id;
+
+  IF v_nurse_enabled IS NOT TRUE THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Nurse workflow not enabled at this location');
+  END IF;
+
+  -- Sanitize nurse notes
+  v_clean_notes := regexp_replace(trim(COALESCE(p_nurse_notes, '')), '<[^>]*>', '', 'g');
+
+  IF length(v_clean_notes) > 10000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Nurse notes exceed maximum length');
+  END IF;
+
+  -- Set audit context
+  PERFORM set_config('app.audit_actor_id', v_caller_staff_id::text, true);
+  PERFORM set_config('app.audit_actor_type', 'nurse', true);
+  PERFORM set_config('app.audit_action', 'nurse_released', true);
+
+  -- Release to doctor queue: keep entered_queue_at unchanged for fair re-entry
+  UPDATE public.visits
+  SET status = 'waiting_doctor_claim',
+      claimed_by = NULL,
+      claimed_at = NULL,
+      nurse_reviewed = true,
+      nurse_notes = v_clean_notes
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.nurse_release_to_doctor(
+  p_visit_id uuid,
+  p_nurse_notes text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.nurse_release_to_doctor(v_auth_uid, p_visit_id, p_nurse_notes);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.nurse_release_to_doctor(uuid, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.nurse_release_to_doctor(uuid, text) TO authenticated;

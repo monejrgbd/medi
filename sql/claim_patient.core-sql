@@ -14,12 +14,13 @@ DECLARE
   v_org_id uuid;
   v_owner_id uuid;
   v_caller_staff_id uuid;
-  v_is_doctor boolean := false;
+  v_can_access boolean := false;
+  v_nurse_enabled boolean;
   v_locked record;
   -- v_claimer_name removed (m10: don't leak doctor names)
 BEGIN
   -- Get visit details
-  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id
+  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.nurse_reviewed
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -36,8 +37,11 @@ BEGIN
     AND su.is_active = true
     AND su.is_deleted = false;
 
-  -- Authorization: owner or doctor at visit location
+  -- Authorization: owner or doctor/nurse at visit location
   SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  -- Fetch nurse_enabled from location
+  SELECT l.nurse_enabled INTO v_nurse_enabled FROM public.locations l WHERE l.id = v_visit.location_id;
 
   IF v_owner_id = p_caller_auth_uid THEN
     NULL; -- Owner can claim
@@ -45,12 +49,30 @@ BEGIN
     SELECT EXISTS(
       SELECT 1 FROM public.staff_roles sr
       WHERE sr.staff_user_id = v_caller_staff_id
-        AND sr.role = 'doctor'
         AND sr.location_id = v_visit.location_id
-    ) INTO v_is_doctor;
+        AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND v_nurse_enabled = true))
+    ) INTO v_can_access;
 
-    IF NOT v_is_doctor THEN
+    IF NOT v_can_access THEN
       RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Nurse double-review guard: if caller is nurse and visit already nurse_reviewed, block
+  IF v_visit.nurse_reviewed = true AND v_owner_id <> p_caller_auth_uid THEN
+    IF EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'nurse'
+        AND sr.location_id = v_visit.location_id
+      AND NOT EXISTS(
+        SELECT 1 FROM public.staff_roles sr2
+        WHERE sr2.staff_user_id = v_caller_staff_id
+          AND sr2.role = 'doctor'
+          AND sr2.location_id = v_visit.location_id
+      )
+    ) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Already reviewed by nurse');
     END IF;
   END IF;
 
@@ -89,7 +111,12 @@ BEGIN
 
   -- Set audit context
   PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
-  PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END, true);
+  PERFORM set_config('app.audit_actor_type',
+    CASE
+      WHEN v_owner_id = p_caller_auth_uid THEN 'owner'
+      WHEN EXISTS(SELECT 1 FROM public.staff_roles WHERE staff_user_id = v_caller_staff_id AND role = 'nurse' AND location_id = v_visit.location_id) THEN 'nurse'
+      ELSE 'doctor'
+    END, true);
   PERFORM set_config('app.audit_action', 'claimed', true);
 
   -- Claim the visit

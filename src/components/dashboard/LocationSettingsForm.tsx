@@ -17,6 +17,11 @@ interface LocationData {
   referral_email: string | null;
   tablet_count: number;
   timezone: string;
+  nurse_enabled?: boolean;
+  vitals_enabled?: boolean;
+  vaccines_enabled?: boolean;
+  ai_custom_instructions?: string | null;
+  ai_message_limit?: number | null;
 }
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -77,6 +82,11 @@ export default function LocationSettingsForm({
       acc[day] = (location.operating_hours as Record<string, string>)?.[day] || "";
       return acc;
     }, {} as Record<string, string>),
+    nurseEnabled: location.nurse_enabled ?? false,
+    vitalsEnabled: location.vitals_enabled ?? false,
+    vaccinesEnabled: location.vaccines_enabled ?? false,
+    aiCustomInstructions: location.ai_custom_instructions || "",
+    aiMessageLimit: location.ai_message_limit ?? null as number | null,
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -103,6 +113,11 @@ export default function LocationSettingsForm({
       referralEmail: form.referralEmail,
       tabletCount: form.tabletCount,
       timezone: form.timezone,
+      nurseEnabled: form.nurseEnabled,
+      vitalsEnabled: form.vitalsEnabled,
+      vaccinesEnabled: form.vaccinesEnabled,
+      aiCustomInstructions: form.aiCustomInstructions,
+      aiMessageLimit: form.aiMessageLimit,
     });
 
     setLoading(false);
@@ -252,6 +267,79 @@ export default function LocationSettingsForm({
           max={100}
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
         />
+      </div>
+
+      {/* Clinic Features */}
+      <div className="space-y-4 border-t border-gray-100 pt-5">
+        <h3 className="text-sm font-semibold text-ink">Clinic Features</h3>
+
+        <label className="flex items-center justify-between">
+          <span className="text-sm text-ink">Enable Nurse Role</span>
+          <input
+            type="checkbox"
+            checked={form.nurseEnabled}
+            onChange={(e) => setForm((prev) => ({ ...prev, nurseEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <label className="flex items-center justify-between">
+          <span className="text-sm text-ink">Enable Vitals Tracking</span>
+          <input
+            type="checkbox"
+            checked={form.vitalsEnabled}
+            onChange={(e) => setForm((prev) => ({ ...prev, vitalsEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <label className="flex items-center justify-between">
+          <span className="text-sm text-ink">Enable Vaccine Tracking</span>
+          <input
+            type="checkbox"
+            checked={form.vaccinesEnabled}
+            onChange={(e) => setForm((prev) => ({ ...prev, vaccinesEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+      </div>
+
+      {/* AI Configuration */}
+      <div className="space-y-4 border-t border-gray-100 pt-5">
+        <h3 className="text-sm font-semibold text-ink">AI Configuration</h3>
+
+        <div>
+          <label className="block text-sm text-ink mb-1">Custom AI Instructions</label>
+          <textarea
+            value={form.aiCustomInstructions}
+            onChange={(e) => setForm((prev) => ({ ...prev, aiCustomInstructions: e.target.value }))}
+            maxLength={2000}
+            rows={4}
+            placeholder="e.g. Ask about family history if applicable"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+          />
+          <p className="text-xs text-ash mt-1">{form.aiCustomInstructions.length}/2000 characters</p>
+        </div>
+
+        <div>
+          <label className="block text-sm text-ink mb-1">AI Message Limit</label>
+          <input
+            type="number"
+            value={form.aiMessageLimit ?? ""}
+            onChange={(e) => {
+              const val = e.target.value;
+              setForm((prev) => ({
+                ...prev,
+                aiMessageLimit: val === "" ? null : parseInt(val, 10),
+              }));
+            }}
+            min={10}
+            max={50}
+            placeholder="30 (default)"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+          />
+          <p className="text-xs text-ash mt-1">Maximum patient messages per conversation (10 to 50). The AI will pace itself to cover critical fields within this limit.</p>
+        </div>
       </div>
 
       <button

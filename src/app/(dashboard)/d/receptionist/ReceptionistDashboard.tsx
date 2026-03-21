@@ -61,6 +61,8 @@ interface ActiveVisit {
   has_previous_visits: boolean;
   created_at: string;
   claimed_by: string | null;
+  nurse_reviewed: boolean;
+  claimed_is_nurse: boolean;
   patients: {
     first_name: string;
     last_name: string;
@@ -92,6 +94,7 @@ interface Counts {
   with_doctor: number;
   tablets_out: number;
   doctors_checked_in: number;
+  nurses_checked_in: number;
 }
 
 interface Location {
@@ -123,6 +126,7 @@ const DEFAULT_COUNTS: Counts = {
   with_doctor: 0,
   tablets_out: 0,
   doctors_checked_in: 0,
+  nurses_checked_in: 0,
 };
 
 export default function ReceptionistDashboard({
@@ -180,6 +184,7 @@ export default function ReceptionistDashboard({
         with_doctor: status === "claimed_by_doctor" ? 1 : 0,
         tablets_out: 0,
         doctors_checked_in: 1,
+        nurses_checked_in: 0,
       });
     } else if (!demoMode) {
       setPending(initialPending);
@@ -201,6 +206,7 @@ export default function ReceptionistDashboard({
       with_doctor: status === "claimed_by_doctor" ? 1 : 0,
       tablets_out: 0,
       doctors_checked_in: 1,
+      nurses_checked_in: 0,
     });
   }, [demoMode, pending, active]);
 

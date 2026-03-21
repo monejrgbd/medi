@@ -1,0 +1,165 @@
+-- Drop old function signatures
+DROP FUNCTION IF EXISTS public.record_vitals(uuid, uuid, numeric, numeric, text);
+DROP FUNCTION IF EXISTS private.record_vitals(uuid, uuid, uuid, numeric, numeric, text);
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.record_vitals(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid,
+  p_visit_id uuid,
+  p_readings jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_nurse_enabled boolean;
+  v_vitals_enabled boolean;
+  v_can_access boolean := false;
+  v_reading jsonb;
+  v_config_id uuid;
+  v_value numeric;
+  v_eff_min numeric;
+  v_eff_max numeric;
+  v_count int := 0;
+BEGIN
+  -- Validate p_readings is array with length > 0
+  IF p_readings IS NULL OR jsonb_typeof(p_readings) <> 'array' OR jsonb_array_length(p_readings) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'readings must be a non-empty JSON array');
+  END IF;
+
+  -- Get visit details
+  SELECT v.id, v.org_id, v.location_id, v.patient_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Check vitals_enabled on location
+  SELECT l.vitals_enabled, l.nurse_enabled
+  INTO v_vitals_enabled, v_nurse_enabled
+  FROM public.locations l
+  WHERE l.id = v_visit.location_id;
+
+  IF v_vitals_enabled IS NOT TRUE THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Vitals are not enabled at this location');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+  END IF;
+
+  -- Authorization: owner or doctor/nurse at visit location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can record
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.location_id = v_visit.location_id
+        AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND v_nurse_enabled = true))
+    ) INTO v_can_access;
+
+    IF NOT v_can_access THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Validate patient belongs to same org
+  IF NOT EXISTS(
+    SELECT 1 FROM public.patients p
+    WHERE p.id = p_patient_id
+      AND p.org_id = v_visit.org_id
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found in this organization');
+  END IF;
+
+  -- Loop through each reading
+  FOR v_reading IN SELECT * FROM jsonb_array_elements(p_readings)
+  LOOP
+    v_config_id := (v_reading->>'vital_config_id')::uuid;
+    v_value := (v_reading->>'value')::numeric;
+
+    IF v_config_id IS NULL OR v_value IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Each reading must have vital_config_id and value');
+    END IF;
+
+    -- Verify config exists in org_vital_configs for this org AND enabled
+    -- Also get effective min/max via JOIN with vital_types
+    SELECT
+      COALESCE(vt.min_value, ovc.custom_min),
+      COALESCE(vt.max_value, ovc.custom_max)
+    INTO v_eff_min, v_eff_max
+    FROM public.org_vital_configs ovc
+    LEFT JOIN public.vital_types vt ON vt.id = ovc.vital_type_id
+    WHERE ovc.id = v_config_id
+      AND ovc.org_id = v_visit.org_id
+      AND ovc.enabled = true;
+
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Vital config not found or not enabled: ' || v_config_id::text);
+    END IF;
+
+    -- Range validation
+    IF v_eff_min IS NOT NULL AND v_value < v_eff_min THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Value ' || v_value::text || ' is below minimum ' || v_eff_min::text || ' for config ' || v_config_id::text);
+    END IF;
+
+    IF v_eff_max IS NOT NULL AND v_value > v_eff_max THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Value ' || v_value::text || ' exceeds maximum ' || v_eff_max::text || ' for config ' || v_config_id::text);
+    END IF;
+
+    -- Insert into patient_vitals
+    INSERT INTO public.patient_vitals (patient_id, visit_id, org_id, vital_config_id, value, recorded_by, notes)
+    VALUES (p_patient_id, p_visit_id, v_visit.org_id, v_config_id, v_value, v_caller_staff_id, v_reading->>'notes');
+
+    v_count := v_count + 1;
+  END LOOP;
+
+  RETURN jsonb_build_object('success', true, 'count', v_count);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.record_vitals(
+  p_patient_id uuid,
+  p_visit_id uuid,
+  p_readings jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.record_vitals(v_auth_uid, p_patient_id, p_visit_id, p_readings);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.record_vitals(uuid, uuid, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_vitals(uuid, uuid, jsonb) TO authenticated;

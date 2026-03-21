@@ -1,0 +1,25 @@
+CREATE TABLE public.vaccine_schedule (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id            uuid NOT NULL REFERENCES public.patients(id),
+  vaccine_id            uuid NOT NULL REFERENCES public.vaccines(id),
+  org_id                uuid NOT NULL REFERENCES public.organizations(id),
+  dose_number           smallint NOT NULL DEFAULT 1,
+  due_date              date NOT NULL,
+  completed_at          timestamptz,
+  completed_by          uuid REFERENCES public.patient_vaccines(id),
+  skipped               boolean DEFAULT false,
+  created_at            timestamptz DEFAULT now(),
+  UNIQUE (patient_id, vaccine_id, dose_number)
+);
+
+ALTER TABLE public.vaccine_schedule ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_vaccine_schedule" ON public.vaccine_schedule FOR SELECT
+  USING (org_id = requesting_org_id());
+
+CREATE INDEX idx_vaccine_schedule_patient
+  ON public.vaccine_schedule (patient_id, due_date);
+
+CREATE INDEX idx_vaccine_schedule_due
+  ON public.vaccine_schedule (org_id, due_date)
+  WHERE completed_at IS NULL AND skipped = false;

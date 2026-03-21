@@ -117,7 +117,7 @@ export async function assignRole(
   role: string
 ) {
   await requireAuth();
-  if (!["doctor", "receptionist", "manager", "reviews"].includes(role)) {
+  if (!["doctor", "nurse", "receptionist", "manager", "reviews"].includes(role)) {
     return { success: false, error: "Invalid role" };
   }
 
@@ -142,7 +142,7 @@ export async function removeRole(
   role: string
 ) {
   await requireAuth();
-  if (!["doctor", "receptionist", "manager", "reviews"].includes(role)) {
+  if (!["doctor", "nurse", "receptionist", "manager", "reviews"].includes(role)) {
     return { success: false, error: "Invalid role" };
   }
 

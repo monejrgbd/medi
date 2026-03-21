@@ -41,6 +41,8 @@ CREATE TABLE public.visits (
   patient_denied        boolean DEFAULT false,
   gave_tablet           boolean DEFAULT false,
   handled               boolean DEFAULT false,
+  nurse_reviewed        boolean DEFAULT false,
+  nurse_notes           text DEFAULT NULL,
   updated_at            timestamptz DEFAULT now(),
   created_at            timestamptz DEFAULT now()
 );

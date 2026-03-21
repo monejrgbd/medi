@@ -68,7 +68,7 @@ BEGIN
   END IF;
 
   -- Load location info
-  SELECT l.name, l.specialty, l.ai_model, l.display_format
+  SELECT l.name, l.specialty, l.ai_model, l.display_format, l.ai_custom_instructions, l.ai_message_limit
   INTO v_location
   FROM public.locations l
   WHERE l.id = v_visit.location_id;
@@ -116,7 +116,8 @@ BEGIN
       'already_initialized', true,
       'is_follow_up', COALESCE(v_visit.is_follow_up, false),
       'follow_up_prior_summary', v_prior_summary,
-      'follow_up_prior_date', v_prior_date
+      'follow_up_prior_date', v_prior_date,
+      'ai_message_limit', v_location.ai_message_limit
     );
   END IF;
 
@@ -260,6 +261,27 @@ BEGIN
     || E'\n- When you have a complete picture, ask: "Is there anything else we might be missing?"'
     || E'\n- If they say no, end your final message with the marker [CONVERSATION_COMPLETE]';
 
+  -- Message pacing: tell the AI about the conversation limit so it can pace itself
+  IF v_location.ai_message_limit IS NOT NULL THEN
+    v_system_prompt := v_system_prompt
+      || E'\n\nMESSAGE PACING:'
+      || E'\nThis conversation is limited to approximately ' || v_location.ai_message_limit || ' patient messages.'
+      || E'\nPace yourself accordingly. Prioritize gathering these critical fields early:'
+      || E'\n- Chief complaint and core symptoms (FIRST)'
+      || E'\n- Current medications'
+      || E'\n- Known allergies'
+      || E'\n- Chronic conditions'
+      || E'\n- Pets at home'
+      || E'\nDo not rush the patient, but be efficient. If you sense you are running low on messages, combine remaining questions or move directly to "Is there anything else we might be missing?" to conclude.';
+  END IF;
+
+  -- Append clinic-specific custom instructions if configured
+  IF v_location.ai_custom_instructions IS NOT NULL AND length(trim(v_location.ai_custom_instructions)) > 0 THEN
+    v_system_prompt := v_system_prompt
+      || E'\n\nCLINIC SPECIFIC INSTRUCTIONS:\n'
+      || left(trim(v_location.ai_custom_instructions), 2000);
+  END IF;
+
   -- Insert system prompt as first message (cached for subsequent get_conversation calls)
   INSERT INTO public.visit_messages (visit_id, role, content)
   VALUES (p_visit_id, 'system', v_system_prompt);
@@ -287,7 +309,8 @@ BEGIN
     'already_initialized', false,
     'is_follow_up', COALESCE(v_visit.is_follow_up, false),
     'follow_up_prior_summary', v_prior_summary,
-    'follow_up_prior_date', v_prior_date
+    'follow_up_prior_date', v_prior_date,
+    'ai_message_limit', v_location.ai_message_limit
   );
 END;
 $$;

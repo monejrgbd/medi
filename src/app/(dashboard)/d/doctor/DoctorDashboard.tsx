@@ -33,6 +33,7 @@ export interface QueueVisit {
   is_sensitive: boolean;
   timeout_flagged: boolean;
   has_previous_visits: boolean;
+  nurse_reviewed: boolean;
   created_at: string;
 }
 

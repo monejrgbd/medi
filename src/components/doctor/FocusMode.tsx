@@ -17,6 +17,8 @@ import AIDiagnosticPanel from "@/components/doctor/AIDiagnosticPanel";
 import NotesPanel from "@/components/doctor/NotesPanel";
 import AttachmentsSection from "@/components/doctor/AttachmentsSection";
 import DiagnosisForm from "@/components/doctor/DiagnosisForm";
+import VitalsHistory from "@/components/nurse/VitalsHistory";
+import VaccineHistory from "@/components/nurse/VaccineHistory";
 import type { ClaimedVisit, QueueVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 
 interface VisitNote {
@@ -36,6 +38,30 @@ interface VisitAttachment {
   mime_type: string;
   uploader_name: string;
   created_at: string;
+}
+
+interface VitalRecord {
+  id: string;
+  measured_at: string;
+  value: number;
+  vital_name: string;
+  vital_unit: string;
+  display_order?: number;
+  notes: string | null;
+  recorded_by_name: string;
+}
+
+interface VaccineRecord {
+  id: string;
+  vaccine_name: string;
+  dose_number: number | null;
+  administered_at: string;
+  refused: boolean;
+  refusal_reason: string | null;
+  lot_number: string | null;
+  manufacturer: string | null;
+  site: string | null;
+  administered_by_name: string;
 }
 
 interface VisitDetail {
@@ -58,6 +84,8 @@ interface VisitDetail {
     updated_at: string;
     is_follow_up: boolean;
     follow_up_of: string | null;
+    nurse_reviewed?: boolean;
+    nurse_notes?: string;
     diagnostic_enabled: boolean;
   };
   patient: {
@@ -77,9 +105,11 @@ interface VisitDetail {
   addendums: { id: string; content: string; created_at: string }[];
   notes: VisitNote[];
   attachments: VisitAttachment[];
+  vitals?: VitalRecord[];
+  vaccines?: VaccineRecord[];
 }
 
-type FocusTab = "summary" | "transcript" | "notes" | "attachments";
+type FocusTab = "summary" | "transcript" | "notes" | "attachments" | "vitals" | "vaccines";
 
 interface FocusModeProps {
   locationId: string;
@@ -349,6 +379,8 @@ export default function FocusMode({
     { key: "summary", label: "Summary", show: true },
     { key: "transcript", label: "Transcript", show: true },
     { key: "notes", label: `Notes (${(detail?.notes || []).length})`, show: true },
+    { key: "vitals", label: `Vitals (${(detail?.vitals || []).length})`, show: (detail?.vitals || []).length > 0 },
+    { key: "vaccines", label: `Vaccines (${(detail?.vaccines || []).length})`, show: (detail?.vaccines || []).length > 0 },
     { key: "attachments", label: `Files (${(detail?.attachments || []).length})`, show: true },
   ];
 
@@ -421,6 +453,15 @@ export default function FocusMode({
           {/* Patient profile card with medications, allergies, chronic conditions */}
           <PatientProfileCard patient={detail.patient} />
 
+          {/* Nurse notes */}
+          {detail.visit.nurse_notes && (
+            <div className="mt-4 rounded-lg bg-teal-50 border border-teal-200 p-4">
+              <h4 className="text-sm font-semibold text-teal-800 mb-1">Nurse Notes</h4>
+              <p className="text-sm text-ink whitespace-pre-wrap">{detail.visit.nurse_notes}</p>
+            </div>
+          )}
+
+
           {/* AI Diagnostic — inline above tabs */}
           {(detail.visit.ai_diagnostic || detail.visit.diagnostic_enabled) && (
             <div className="mt-4">
@@ -469,6 +510,14 @@ export default function FocusMode({
                 patientId={detail.patient.id}
                 initialNotes={detail.notes || []}
               />
+            )}
+
+            {tab === "vitals" && (
+              <VitalsHistory vitals={detail.vitals || []} />
+            )}
+
+            {tab === "vaccines" && (
+              <VaccineHistory records={detail.vaccines || []} />
             )}
 
             {tab === "attachments" && (

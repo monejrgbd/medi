@@ -1,0 +1,12 @@
+CREATE TABLE public.vital_types (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name          text NOT NULL UNIQUE,
+  unit          text NOT NULL,
+  min_value     numeric,
+  max_value     numeric,
+  step_value    numeric DEFAULT 0.1,
+  display_order smallint DEFAULT 100,
+  created_at    timestamptz DEFAULT now()
+);
+ALTER TABLE public.vital_types ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "authenticated_read_vital_types" ON public.vital_types FOR SELECT USING (true);

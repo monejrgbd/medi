@@ -1,0 +1,13 @@
+CREATE TABLE public.vaccines (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name                  text NOT NULL UNIQUE,
+  code                  text,
+  dose_series           smallint DEFAULT 1,
+  notes                 text,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.vaccines ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "authenticated_read_vaccines" ON public.vaccines FOR SELECT
+  USING (true);

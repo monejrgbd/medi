@@ -19,6 +19,11 @@ interface LocationData {
   referral_email: string | null;
   tablet_count: number;
   timezone: string;
+  nurse_enabled?: boolean;
+  vitals_enabled?: boolean;
+  vaccines_enabled?: boolean;
+  ai_custom_instructions?: string | null;
+  ai_message_limit?: number | null;
   created_at: string;
 }
 

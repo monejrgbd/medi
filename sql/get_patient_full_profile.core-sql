@@ -22,6 +22,8 @@ DECLARE
   v_pets jsonb;
   v_referrals jsonb;
   v_follow_ups jsonb;
+  v_vitals jsonb;
+  v_vaccines jsonb;
 BEGIN
   -- Verify caller is active staff or org owner
   SELECT o.id, o.owner_id INTO v_caller_org_id, v_owner_auth_uid
@@ -140,6 +142,42 @@ BEGIN
     LIMIT 20
   ) fu;
 
+  -- Vitals
+  SELECT COALESCE(jsonb_agg(row_to_json(vq.*)), '[]'::jsonb)
+  INTO v_vitals
+  FROM (
+    SELECT pv.id, pv.measured_at, pv.value, pv.notes,
+      COALESCE(vt.name, ovc.custom_name) AS vital_name,
+      COALESCE(vt.unit, ovc.custom_unit) AS vital_unit,
+      ovc.display_order,
+      su.full_name AS recorded_by_name
+    FROM public.patient_vitals pv
+    JOIN public.org_vital_configs ovc ON ovc.id = pv.vital_config_id
+    LEFT JOIN public.vital_types vt ON vt.id = ovc.vital_type_id
+    LEFT JOIN public.staff_users su ON su.id = pv.recorded_by
+    WHERE pv.patient_id = p_patient_id
+      AND pv.org_id = v_caller_org_id
+    ORDER BY pv.measured_at DESC, ovc.display_order ASC
+    LIMIT 100
+  ) vq;
+
+  -- Vaccines
+  SELECT COALESCE(jsonb_agg(row_to_json(vc.*)), '[]'::jsonb)
+  INTO v_vaccines
+  FROM (
+    SELECT pvac.id, v.name AS vaccine_name, pvac.dose_number,
+      pvac.administered_at, pvac.refused, pvac.refusal_reason,
+      pvac.lot_number, pvac.manufacturer, pvac.site, pvac.notes,
+      su.full_name AS administered_by_name
+    FROM public.patient_vaccines pvac
+    JOIN public.vaccines v ON v.id = pvac.vaccine_id
+    LEFT JOIN public.staff_users su ON su.id = pvac.administered_by
+    WHERE pvac.patient_id = p_patient_id
+      AND pvac.org_id = v_caller_org_id
+    ORDER BY pvac.administered_at DESC
+    LIMIT 100
+  ) vc;
+
   RETURN jsonb_build_object(
     'success', true,
     'patient', jsonb_build_object(
@@ -161,7 +199,9 @@ BEGIN
     'chronic_conditions', v_chronic,
     'pets', v_pets,
     'referrals', v_referrals,
-    'follow_ups', v_follow_ups
+    'follow_ups', v_follow_ups,
+    'vitals', v_vitals,
+    'vaccines', v_vaccines
   );
 END;
 $$;

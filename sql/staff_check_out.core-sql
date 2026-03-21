@@ -31,7 +31,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
   END IF;
 
-  -- Check if target is a doctor
+  -- Check if target is a doctor (nurses skip this entire block)
   SELECT EXISTS(
     SELECT 1 FROM public.staff_roles sr
     WHERE sr.staff_user_id = v_target_staff_id
@@ -39,6 +39,7 @@ BEGIN
   ) INTO v_is_doctor;
 
   IF v_is_doctor THEN
+    -- Note: nurses are NOT subject to last-clinician check — only doctors trigger it
     -- Fail if they have claimed patients
     SELECT count(*) INTO v_claimed_count
     FROM public.visits v

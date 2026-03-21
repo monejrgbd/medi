@@ -1,0 +1,38 @@
+CREATE TABLE public.sms_campaign_recipients (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  campaign_id           uuid NOT NULL REFERENCES public.sms_campaigns(id) ON DELETE CASCADE,
+  patient_id            uuid NOT NULL REFERENCES public.patients(id),
+  phone                 text NOT NULL,
+  match_reason          text,
+  excluded              boolean DEFAULT false,
+  sms_log_id            uuid REFERENCES public.sms_log(id),
+  status                text DEFAULT 'pending'
+    CHECK (status IN ('pending', 'sent', 'failed', 'excluded')),
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.sms_campaign_recipients ENABLE ROW LEVEL SECURITY;
+
+-- Owner or marketer SELECT policy via campaign join
+CREATE POLICY "owner_marketer_read_recipients" ON public.sms_campaign_recipients FOR SELECT
+  USING (
+    campaign_id IN (
+      SELECT c.id FROM public.sms_campaigns c
+      WHERE c.org_id IN (
+        SELECT o.id FROM public.organizations o WHERE o.owner_id = auth.uid()
+        UNION
+        SELECT su.org_id FROM public.staff_users su
+        JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+        WHERE su.auth_uid = auth.uid() AND su.is_active AND NOT su.is_deleted
+          AND sr.role = 'marketer'
+      )
+    )
+  );
+
+-- No direct INSERT/UPDATE/DELETE — all via SECURITY DEFINER functions
+
+CREATE INDEX idx_sms_campaign_recipients_campaign
+  ON public.sms_campaign_recipients (campaign_id);
+
+CREATE UNIQUE INDEX idx_sms_campaign_recipients_unique
+  ON public.sms_campaign_recipients (campaign_id, patient_id);

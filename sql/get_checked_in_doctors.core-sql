@@ -15,6 +15,7 @@ DECLARE
   v_caller_staff_id uuid;
   v_is_staff boolean := false;
   v_result jsonb;
+  v_nurses jsonb;
 BEGIN
   -- Get location org
   SELECT l.org_id INTO v_org_id
@@ -56,7 +57,19 @@ BEGIN
     AND sc.role = 'doctor'
     AND sc.checked_out_at IS NULL;
 
-  RETURN jsonb_build_object('success', true, 'doctors', v_result);
+  -- Get checked-in nurses
+  SELECT COALESCE(jsonb_agg(jsonb_build_object(
+    'staff_user_id', sc.staff_user_id,
+    'full_name', su.full_name
+  )), '[]'::jsonb)
+  INTO v_nurses
+  FROM public.staff_checkins sc
+  JOIN public.staff_users su ON su.id = sc.staff_user_id
+  WHERE sc.location_id = p_location_id
+    AND sc.role = 'nurse'
+    AND sc.checked_out_at IS NULL;
+
+  RETURN jsonb_build_object('success', true, 'doctors', v_result, 'nurses', v_nurses);
 END;
 $$;
 

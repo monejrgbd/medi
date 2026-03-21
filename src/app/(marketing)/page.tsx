@@ -21,10 +21,10 @@ const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMo
 
 function ChatMockup() {
   const chatMessages = [
-    { role: "ai", text: "Hi Sarah, welcome back! Last time you came in for knee pain. Is today\u2019s visit related?", time: "9:03 AM", delay: "0.5s" },
-    { role: "patient", text: "Yes, it is worse now and my hands are stiff every morning too", time: "9:04 AM", delay: "1.8s" },
-    { role: "ai", text: "How long does the morning stiffness last? Any swelling or redness?", time: "9:05 AM", delay: "3.2s" },
-    { role: "patient", text: "About an hour each morning. My knuckles have been a bit swollen", time: "9:06 AM", delay: "4.6s" },
+    { role: "ai", text: "Hi Sarah, welcome back to All locations Clinic! What brings you in today?", time: "9:03 AM", delay: "0.5s" },
+    { role: "patient", text: "My hands have been really stiff every morning and my knuckles are swollen", time: "9:04 AM", delay: "1.8s" },
+    { role: "ai", text: "I see you came in for knee pain on March 1. Could the hand stiffness be related?", time: "9:05 AM", delay: "3.2s" },
+    { role: "patient", text: "Actually yes, my knee has been worse too", time: "9:06 AM", delay: "4.6s" },
   ];
 
   return (
@@ -37,7 +37,7 @@ function ChatMockup() {
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-hilt-blue">
               <span className="text-[10px] font-bold text-white">H</span>
             </div>
-            <span className="text-xs font-semibold text-ink">Downtown Clinic</span>
+            <span className="text-xs font-semibold text-ink">All locations Clinic</span>
           </div>
           <button className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[10px] text-slate">
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -251,13 +251,51 @@ function HeroSection() {
             </div>
             <p className="mb-8 text-center text-sm font-medium text-slate">After the visit</p>
 
-            <div className="mx-auto max-w-4xl grid gap-5 sm:grid-cols-3">
-              {/* Review SMS */}
+            <div className="mx-auto max-w-4xl grid gap-5 sm:grid-cols-2">
+              {/* Marketing SMS Campaign */}
               <FadeIn delay={0.1}>
+                <div className="h-full rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50/80 to-white p-3.5 shadow-xl ring-1 ring-blue-900/5">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-blue-500" />
+                    <span className="text-[10px] font-semibold text-blue-700">Targeted patient outreach</span>
+                    <span className="ml-auto rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-medium text-blue-700">via SMS</span>
+                  </div>
+                  <div className="rounded-lg bg-white p-2.5 shadow-sm ring-1 ring-gray-900/5 space-y-1.5">
+                    {/* Filter chips */}
+                    <div className="flex gap-1">
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[7px] text-ink">Age 50+</span>
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[7px] text-ink">Female</span>
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[7px] text-ink">All locations</span>
+                    </div>
+                    {/* AI criteria */}
+                    <div className="rounded border border-blue-200 bg-blue-50/50 px-2 py-1">
+                      <p className="text-[7px] font-medium text-blue-600 mb-0.5">AI criteria</p>
+                      <p className="text-[8px] text-ink italic">&ldquo;Mentioned joint pain or arthritis&rdquo;</p>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1">
+                        <div className="h-2 w-2 rounded-full bg-green-400" />
+                        <span className="text-[8px] font-medium text-ink">31 matched</span>
+                      </div>
+                      <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[7px] font-medium text-green-700">Ready</span>
+                    </div>
+                    <div className="rounded bg-gray-50 px-2 py-1 text-[8px] text-slate">
+                      Hi &#123;first_name&#125;, &#123;clinic_name&#125; now offers orthopedic services. Call us to book.
+                    </div>
+                    <div className="rounded bg-blue-600 py-1 text-center text-[8px] font-semibold text-white">
+                      Send to 31 Patients
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[8px] text-ash">Filter first, then AI scans visit summaries for the rest</p>
+                </div>
+              </FadeIn>
+
+              {/* Review SMS */}
+              <FadeIn delay={0.2}>
                 <div className="h-full rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50/80 to-white p-5 shadow-xl ring-1 ring-amber-900/5">
                   <div className="mb-3 flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                    <span className="text-xs font-semibold text-amber-700">Internal review request</span>
+                    <span className="text-xs font-semibold text-amber-700">Review request</span>
                     <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-700">via SMS</span>
                   </div>
                   <div className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-gray-900/5">
@@ -274,31 +312,54 @@ function HeroSection() {
                   </div>
                   <div className="mt-3 rounded-lg bg-amber-100/80 px-3 py-2 text-center">
                     <p className="text-[11px] font-medium text-amber-800">
-                      Happy patient gets redirected to Google Reviews &amp; more
+                      Review collected internally first, then happy patients redirected to any review platform(s) you choose
                     </p>
                   </div>
                 </div>
               </FadeIn>
 
               {/* Follow-up SMS */}
-              <FadeIn delay={0.2}>
+              <FadeIn delay={0.3}>
                 <div className="h-full rounded-2xl border border-green-200 bg-gradient-to-b from-green-50/80 to-white p-5 shadow-xl ring-1 ring-green-900/5">
                   <div className="mb-3 flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
                     <span className="text-xs font-semibold text-green-700">Continuity of care, built in</span>
                     <span className="ml-auto rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700">AI powered</span>
                   </div>
-                  <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-900/5">
-                    <p className="text-sm text-slate leading-relaxed">
-                      Doctors can tag sessions with follow ups. On the return visit, the AI continues with full memory of the original visit and the doctor's follow up notes.
+                  {/* AI remembers past visits */}
+                  <p className="text-[8px] font-semibold text-green-800 mb-1.5">AI remembers past visits</p>
+                  <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-900/5 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-200">
+                        <span className="text-[7px] font-bold text-ash">S</span>
+                      </div>
+                      <p className="text-[10px] text-ink leading-relaxed">
+                        My hands have been really stiff every morning.
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-green-500">
+                        <span className="text-[7px] font-bold text-white">AI</span>
+                      </div>
+                      <p className="text-[10px] text-ink leading-relaxed">
+                        You came in for knee pain on March 1. Could the hand stiffness be related?
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="my-3 border-t border-green-200" />
+                  {/* Follow-up tagging */}
+                  <p className="text-[8px] font-semibold text-green-800 mb-1.5">Doctor tagged follow ups</p>
+                  <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-900/5">
+                    <p className="text-[10px] text-slate leading-relaxed">
+                      Doctors tag sessions with instructions. On the return visit, the AI continues with full memory of what was said and what the doctor wanted next.
                     </p>
                   </div>
-                  <p className="mt-3 text-[9px] text-right text-ash">Linked automatically on return visit</p>
                 </div>
               </FadeIn>
 
               {/* Refer patient */}
-              <FadeIn delay={0.3}>
+              <FadeIn delay={0.4}>
                 <div className="h-full rounded-2xl border border-purple-200 bg-gradient-to-b from-purple-50/80 to-white p-3.5 shadow-xl ring-1 ring-purple-900/5">
                   <div className="mb-2 flex items-center gap-1.5">
                     <div className="h-2 w-2 rounded-full bg-purple-500" />
@@ -345,6 +406,7 @@ function HeroSection() {
                 </div>
               </FadeIn>
 
+
             </div>
 
             {/* Arrow: post-visit → analytics */}
@@ -389,10 +451,10 @@ function RavenSchedulerSection() {
               </div>
               <div className="flex items-center gap-2 mb-2">
                 <h3 className="text-lg font-semibold text-ink">Partnered with Raven Scheduler</h3>
-                <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-medium text-violet-700">AI Receptionist</span>
+                <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-[10px] font-medium text-violet-700">Optional add on</span>
               </div>
               <p className="text-sm leading-relaxed text-slate mb-4">
-                Fully integrated into Hilt. Raven Scheduler answers every call, books appointments, sends reminders, and follows up on no shows. When the patient walks in, Hilt already knows who they are and why they are here.
+                Hilt works great on its own, but if you want an AI receptionist too, Raven Scheduler plugs right in. It answers every call, books appointments, sends reminders, and follows up on no shows. When the patient walks in, Hilt already knows who they are and why they are here.
               </p>
               <div className="grid grid-cols-2 gap-x-6 gap-y-2.5">
                 {[
@@ -432,7 +494,7 @@ function RavenSchedulerSection() {
               </div>
               <div className="space-y-2.5">
                 {[
-                  { from: "ai", text: "Good morning, Downtown Clinic. How can I help?" },
+                  { from: "ai", text: "Good morning, All locations Clinic. How can I help?" },
                   { from: "caller", text: "I need to see Dr. Patel on Thursday" },
                   { from: "ai", text: "I have 10:15 AM and 2:30 PM open. Which works for you?" },
                   { from: "caller", text: "2:30 works" },
@@ -474,7 +536,7 @@ function BeforeAfterSection() {
           </FadeIn>
           <FadeIn delay={0.24}>
             <p className="text-lg leading-relaxed text-gray-300">
-              After the visit, nothing happens. The doctor forgets what they wanted to ask on the follow up. No one asks for a review, no record sent to the patient.{" "}
+              After the visit, nothing happens. The doctor forgets what they wanted to ask on the follow up. No one asks for a review, no record sent to the patient. You have no way to tell your own patients about new services.{" "}
               <span className="text-white font-semibold">Continuity of care breaks down, and the next thing you hear is a one star rating on Google.</span>
             </p>
           </FadeIn>
@@ -498,7 +560,7 @@ function BeforeAfterSection() {
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">After the visit, everything is handled.</span>{" "}
-                Follow ups carry doctor instructions across visits. Happy patients guided to leave a review. Low ratings come to you privately first.
+                Follow ups carry doctor instructions across visits. Happy patients guided to leave a review. Low ratings come to you privately first. Tell AI which patients to bring back and reach them by SMS.
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">Real time analytics.</span>{" "}
@@ -774,7 +836,7 @@ function BeyondTheVisitSection() {
   ];
 
   return (
-    <section className="cv-auto bg-white py-24 lg:py-32">
+    <section className="bg-white py-24 lg:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
@@ -790,7 +852,7 @@ function BeyondTheVisitSection() {
           </p>
         </FadeIn>
 
-        <div className="grid gap-8 lg:grid-cols-3 items-stretch">
+        <div className="grid gap-8 sm:grid-cols-2 items-stretch">
           {/* Reviews */}
           <FadeIn delay={0} className="h-full">
             <div className="h-full rounded-2xl border border-amber-200 bg-amber-50/50 p-5 flex flex-col">
@@ -943,6 +1005,60 @@ function BeyondTheVisitSection() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                   </svg>
                   AI summary + notes + history sent digitally
+                </div>
+              </div>
+            </div>
+          </FadeIn>
+
+          {/* Targeted Marketing SMS */}
+          <FadeIn delay={0.36} className="h-full">
+            <div className="h-full rounded-2xl border border-blue-200 bg-blue-50/50 p-5 flex flex-col">
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 1 1 0-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 0 1-1.44-4.282m3.102.069a18.03 18.03 0 0 1-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 0 1 8.835 2.535M10.34 6.66a23.847 23.847 0 0 0 8.835-2.535m0 0A23.74 23.74 0 0 0 18.795 3m.38 1.125a23.91 23.91 0 0 1 1.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 0 0 1.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 0 1 0 3.46" />
+                </svg>
+              </div>
+              <h3 className="mb-1.5 text-base font-semibold text-ink">Bring the right patients back</h3>
+              <p className="text-xs leading-relaxed text-slate mb-4">
+                Filter by age, sex, or visit history. Then let AI scan every conversation summary to find exactly who you need. Review the matches, write your message, send.
+              </p>
+              {/* Mini campaign mockup — mirrors actual UI */}
+              <div className="mt-auto rounded-xl bg-white/80 p-4 ring-1 ring-blue-200/60">
+                {/* Filters row */}
+                <div className="flex gap-1.5 mb-2">
+                  <div className="flex-1 rounded border border-gray-200 bg-gray-50 px-1.5 py-1">
+                    <p className="text-[7px] text-ash">Age</p>
+                    <p className="text-[9px] text-ink font-medium">50+</p>
+                  </div>
+                  <div className="flex-1 rounded border border-gray-200 bg-gray-50 px-1.5 py-1">
+                    <p className="text-[7px] text-ash">Sex</p>
+                    <p className="text-[9px] text-ink font-medium">Female</p>
+                  </div>
+                  <div className="flex-1 rounded border border-gray-200 bg-gray-50 px-1.5 py-1">
+                    <p className="text-[7px] text-ash">Location</p>
+                    <p className="text-[9px] text-ink font-medium">All locations</p>
+                  </div>
+                </div>
+                {/* AI criteria */}
+                <div className="rounded border border-blue-200 bg-blue-50/60 px-2 py-1.5 mb-2">
+                  <p className="text-[7px] font-medium text-blue-600 mb-0.5">AI criteria</p>
+                  <p className="text-[9px] text-ink italic">&ldquo;Mentioned joint pain or arthritis&rdquo;</p>
+                </div>
+                {/* Results */}
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-green-400" />
+                    <p className="text-[9px] font-medium text-ink">31 patients matched</p>
+                  </div>
+                  <span className="rounded-full bg-green-100 px-2 py-0.5 text-[8px] font-medium text-green-700">Ready</span>
+                </div>
+                {/* Message preview */}
+                <div className="rounded bg-gray-50 px-2 py-1.5 text-[9px] text-slate mb-1.5">
+                  Hi &#123;first_name&#125;, &#123;clinic_name&#125; now offers orthopedic services. Call us to book.
+                </div>
+                {/* Send button */}
+                <div className="rounded bg-hilt-blue py-1 text-center text-[8px] font-semibold text-white">
+                  Send to 31 Patients
                 </div>
               </div>
             </div>
@@ -1162,9 +1278,9 @@ export default async function Home() {
     <>
       <main>
         <HeroSection />
+        <BuiltForYourClinicSection />
         <RavenSchedulerSection />
         <BeforeAfterSection />
-        <BuiltForYourClinicSection />
         <HowToSetUpSection />
         <HowItWorksSection />
         <BeyondTheVisitSection />

@@ -15,6 +15,7 @@ import SearchableSelect from "@/components/ui/SearchableSelect";
 import { Check, Tablet, Star, CreditCard, ArrowRight } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
+import ClinicFeaturesStep from "./ClinicFeaturesStep";
 
 interface OrgInfo {
   id: string;
@@ -38,7 +39,12 @@ export default function OnboardingWizard({
   existingLocations: ExistingLocation[];
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(existingLocations.length > 0 ? 2 : 0);
+  const [step, setStep] = useState(existingLocations.length > 0 ? 3 : 0);
+
+  // Step 2 state (Customize Clinic)
+  const [nurseEnabled, setNurseEnabled] = useState(false);
+  const [vitalsEnabled, setVitalsEnabled] = useState(false);
+  const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
 
   // Step 1 state
   const [locationName, setLocationName] = useState("");
@@ -54,7 +60,7 @@ export default function OnboardingWizard({
     existingLocations[0]?.name ?? ""
   );
 
-  // Step 3 (Try It) state
+  // Step 4 (Try It) state
   const [demoReady, setDemoReady] = useState(false);
   const [demoError, setDemoError] = useState("");
   type TryItPhase = "ready" | "detected" | "success";
@@ -68,7 +74,7 @@ export default function OnboardingWizard({
 
   // Set up demo (create owner staff account + check in as receptionist)
   useEffect(() => {
-    if (step !== 3 || !locationId || demoReady) return;
+    if (step !== 4 || !locationId || demoReady) return;
 
     let cancelled = false;
     setupOnboardingDemo(locationId).then((result) => {
@@ -85,7 +91,7 @@ export default function OnboardingWizard({
 
   // QR rendering
   useEffect(() => {
-    if (step === 3 && locationId && demoReady && canvasRef.current) {
+    if (step === 4 && locationId && demoReady && canvasRef.current) {
       QRCode.toCanvas(
         canvasRef.current,
         `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
@@ -94,9 +100,9 @@ export default function OnboardingWizard({
     }
   }, [step, locationId, demoReady, tryPhase]);
 
-  // Realtime subscription — starts immediately when step 3 is ready
+  // Realtime subscription — starts immediately when step 4 is ready
   useEffect(() => {
-    if (step !== 3 || !locationId || !demoReady || tryPhase !== "ready") return;
+    if (step !== 4 || !locationId || !demoReady || tryPhase !== "ready") return;
 
     const supabase = createClient();
     const channel = supabase
@@ -341,19 +347,33 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 2: Add Staff */}
+      {/* Step 2: Customize Clinic */}
       {step === 2 && locationId && (
+        <ClinicFeaturesStep
+          locationId={locationId}
+          onComplete={(features) => {
+            setNurseEnabled(features.nurse);
+            setVitalsEnabled(features.vitals);
+            setVaccinesEnabled(features.vaccines);
+            setStep(3);
+          }}
+        />
+      )}
+
+      {/* Step 3: Add Staff */}
+      {step === 3 && locationId && (
         <AddStaffStep
           orgId={org.id}
           orgSlug={org.slug}
           locationId={locationId}
           locationName={createdLocationName}
-          onContinue={() => setStep(3)}
+          nurseEnabled={nurseEnabled}
+          onContinue={() => setStep(4)}
         />
       )}
 
-      {/* Step 3: Try the Check-in */}
-      {step === 3 && (
+      {/* Step 4: Try the Check-in */}
+      {step === 4 && (
         <div className="max-w-md mx-auto text-center">
           <h2 className="text-xl font-bold text-ink mb-1">
             Try the Check in
@@ -441,7 +461,7 @@ export default function OnboardingWizard({
           <div className="mt-6 space-y-3">
             {demoReady && (
               <button
-                onClick={() => setStep(4)}
+                onClick={() => setStep(5)}
                 className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white ${
                   tryPhase === "success"
                     ? "bg-hilt-blue hover:bg-hilt-blue-dark"
@@ -455,8 +475,8 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 4: All Set */}
-      {step === 4 && (
+      {/* Step 5: All Set */}
+      {step === 5 && (
         <div className="max-w-lg mx-auto text-center">
           <div className="mb-3 flex justify-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">

@@ -152,11 +152,12 @@ Deno.serve(async (req) => {
 
     const { data: locationRow } = await supabase
       .from("locations")
-      .select("ai_model")
+      .select("ai_model, ai_message_limit")
       .eq("id", visitRow.location_id)
       .single();
 
     const aiModel = locationRow?.ai_model || "standard";
+    const messageLimit = locationRow?.ai_message_limit ?? 30;
 
     // Load conversation before storing message (for credit check + rate limit)
     const { data: convData } = await supabase.rpc("get_conversation", {
@@ -177,7 +178,7 @@ Deno.serve(async (req) => {
       (m: { role: string }) => m.role === "patient"
     ).length;
 
-    if (existingPatientCount >= 30) {
+    if (existingPatientCount >= messageLimit) {
       return new Response(
         JSON.stringify({ error: "message_limit_reached" }),
         { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
@@ -276,6 +277,12 @@ Deno.serve(async (req) => {
           content: msg.content,
         });
       }
+    }
+
+    // Wrap-up nudge: when approaching message limit, tell AI to prioritize remaining fields
+    const messagesRemaining = messageLimit - patientMessageCount;
+    if (messagesRemaining <= 4 && messagesRemaining >= 0) {
+      systemPrompt += `\n\nURGENT PACING NOTICE: The patient has approximately ${messagesRemaining} messages remaining. If you have not yet covered current medications, known allergies, chronic conditions, or pets at home, ask about ALL remaining uncovered items in your NEXT response. Move toward wrapping up the conversation.`;
     }
 
     const claudeModel = aiModel === "advanced"

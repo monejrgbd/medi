@@ -55,3 +55,17 @@ export const ALLOWED_SPECIALTIES = [
   "Walk-in Clinic",
   "Other",
 ];
+
+export const INJECTION_SITES = [
+  'left_deltoid', 'right_deltoid', 'left_thigh', 'right_thigh',
+  'left_gluteal', 'right_gluteal', 'subcutaneous', 'intranasal', 'oral',
+] as const;
+
+export const MARKETING_SMS_CREDIT_COST = 0.3;
+
+export const MARKETING_SCAN_EXAMPLES = [
+  "Patients with diabetes or high blood sugar",
+  "Women over 50 who have not visited in 6 months",
+  "Patients taking blood pressure medication",
+  "Anyone with chronic back pain or joint issues",
+];

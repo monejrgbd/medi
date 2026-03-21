@@ -1,0 +1,57 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.complete_campaign_sending(
+  p_campaign_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_sent int;
+  v_failed int;
+BEGIN
+  -- Validate campaign exists
+  IF NOT EXISTS (SELECT 1 FROM public.sms_campaigns WHERE id = p_campaign_id) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign not found');
+  END IF;
+
+  -- Count sent and failed from recipients
+  SELECT
+    count(*) FILTER (WHERE r.status = 'sent'),
+    count(*) FILTER (WHERE r.status = 'failed')
+  INTO v_sent, v_failed
+  FROM public.sms_campaign_recipients r
+  WHERE r.campaign_id = p_campaign_id;
+
+  -- Update campaign to completed
+  UPDATE public.sms_campaigns
+  SET status = 'completed',
+      sent_count = v_sent,
+      failed_count = v_failed,
+      completed_at = now()
+  WHERE id = p_campaign_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service_role only)
+CREATE OR REPLACE FUNCTION public.complete_campaign_sending(
+  p_campaign_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.complete_campaign_sending(p_campaign_id);
+END;
+$$;
+
+-- Service role only: revoke from authenticated and anon
+REVOKE EXECUTE ON FUNCTION public.complete_campaign_sending(uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.complete_campaign_sending(uuid) FROM anon;

@@ -19,6 +19,8 @@ interface ActiveVisit {
   has_previous_visits: boolean;
   created_at: string;
   claimed_by: string | null;
+  nurse_reviewed: boolean;
+  claimed_is_nurse: boolean;
   patients: {
     id?: string;
     first_name: string;
@@ -150,7 +152,9 @@ export default function ActivePatientsList({
                       DOB: {visit.patients.birthday}{(visit.patients as Record<string, unknown>).sex ? ` · ${(visit.patients as Record<string, unknown>).sex}` : ""}
                       {visit.claimed_doctor && (
                         <span className="ml-2">
-                          — Dr. {visit.claimed_doctor.full_name}
+                          {visit.claimed_is_nurse
+                            ? `, Nurse: ${visit.claimed_doctor.full_name}`
+                            : `, Dr. ${visit.claimed_doctor.full_name}`}
                         </span>
                       )}
                     </p>

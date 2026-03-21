@@ -13,6 +13,7 @@ AS $$
 DECLARE
   v_caller_staff_id uuid;
   v_has_doctor_role boolean;
+  v_nurse_enabled boolean;
 BEGIN
   -- Get caller staff id (from any org, since patient_id is the anchor)
   SELECT su.id INTO v_caller_staff_id
@@ -27,16 +28,26 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
   END IF;
 
-  -- Check has doctor role
+  -- Check if nurse_enabled at any of caller's nurse locations
+  SELECT EXISTS(
+    SELECT 1
+      FROM public.staff_roles sr
+      JOIN public.locations l ON l.id = sr.location_id
+     WHERE sr.staff_user_id = v_caller_staff_id
+       AND sr.role = 'nurse'
+       AND l.nurse_enabled = true
+  ) INTO v_nurse_enabled;
+
+  -- Check has doctor or nurse (if nurse_enabled) role
   SELECT EXISTS(
     SELECT 1
       FROM public.staff_roles
      WHERE staff_user_id = v_caller_staff_id
-       AND role = 'doctor'
+       AND (role = 'doctor' OR (role = 'nurse' AND v_nurse_enabled = true))
   ) INTO v_has_doctor_role;
 
   IF NOT v_has_doctor_role THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Not authorized: doctor role required');
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized: doctor or nurse role required');
   END IF;
 
   -- Upsert preference

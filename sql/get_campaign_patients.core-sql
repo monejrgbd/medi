@@ -1,0 +1,180 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_campaign_patients(
+  p_campaign_id uuid,
+  p_offset int DEFAULT 0,
+  p_limit int DEFAULT 25
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_campaign record;
+  v_patients jsonb;
+  v_count int;
+BEGIN
+  -- Load campaign
+  SELECT id, org_id, structured_filters, location_id
+  INTO v_campaign
+  FROM public.sms_campaigns
+  WHERE id = p_campaign_id;
+
+  IF v_campaign IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign not found');
+  END IF;
+
+  -- Build patient list with medical data
+  SELECT coalesce(jsonb_agg(patient_row), '[]'::jsonb), count(*) OVER() INTO v_patients, v_count
+  FROM (
+    SELECT
+      jsonb_build_object(
+        'patient_id', p.id,
+        'first_name', p.first_name,
+        'last_name', p.last_name,
+        'phone', p.phone,
+        'birthday', p.birthday,
+        'sex', p.sex,
+        'language', p.language,
+        'age', EXTRACT(YEAR FROM age(p.birthday)),
+        'visit_count', vs.visit_count,
+        'last_visit_date', vs.last_visit_date,
+        'medications', COALESCE(med.names, '[]'::jsonb),
+        'allergies', COALESCE(alg.names, '[]'::jsonb),
+        'chronic_conditions', COALESCE(cc.names, '[]'::jsonb),
+        'pets', COALESCE(pets.names, '[]'::jsonb),
+        'recent_visits', COALESCE(rv.visits, '[]'::jsonb)
+      ) AS patient_row,
+      p.id AS patient_id
+    FROM public.patients p
+    LEFT JOIN LATERAL (
+      SELECT
+        count(*) AS visit_count,
+        max(v.created_at) AS last_visit_date
+      FROM public.visits v
+      WHERE v.patient_id = p.id
+        AND v.org_id = v_campaign.org_id
+        AND v.status = 'completed'
+        AND (v_campaign.location_id IS NULL OR v.location_id = v_campaign.location_id)
+    ) vs ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(pm.name) AS names
+      FROM public.patient_medications pm
+      WHERE pm.patient_id = p.id AND pm.active
+    ) med ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(pa.name) AS names
+      FROM public.patient_allergies pa
+      WHERE pa.patient_id = p.id AND pa.active
+    ) alg ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(pc.name) AS names
+      FROM public.patient_chronic_conditions pc
+      WHERE pc.patient_id = p.id AND pc.active
+    ) cc ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(pp.name) AS names
+      FROM public.patient_pets pp
+      WHERE pp.patient_id = p.id AND pp.active
+    ) pets ON true
+    LEFT JOIN LATERAL (
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'date', rv_inner.created_at,
+          'summary', rv_inner.ai_summary,
+          'diagnosis', rv_inner.doctor_diagnosis
+        )
+        ORDER BY rv_inner.created_at DESC
+      ) AS visits
+      FROM (
+        SELECT v2.created_at, v2.ai_summary, v2.doctor_diagnosis
+        FROM public.visits v2
+        WHERE v2.patient_id = p.id
+          AND v2.org_id = v_campaign.org_id
+          AND v2.status = 'completed'
+        ORDER BY v2.created_at DESC
+        LIMIT 3
+      ) rv_inner
+    ) rv ON true
+    WHERE p.org_id = v_campaign.org_id
+      AND p.phone IS NOT NULL
+      AND p.phone_verified
+      AND p.consent_given
+      AND NOT p.marketing_sms_opted_out
+      -- Location filter
+      AND (v_campaign.location_id IS NULL OR vs.visit_count > 0)
+      -- Age filters
+      AND (
+        v_campaign.structured_filters IS NULL
+        OR v_campaign.structured_filters->>'min_age' IS NULL
+        OR EXTRACT(YEAR FROM age(p.birthday)) >= (v_campaign.structured_filters->>'min_age')::int
+      )
+      AND (
+        v_campaign.structured_filters IS NULL
+        OR v_campaign.structured_filters->>'max_age' IS NULL
+        OR EXTRACT(YEAR FROM age(p.birthday)) <= (v_campaign.structured_filters->>'max_age')::int
+      )
+      -- Sex filter
+      AND (
+        v_campaign.structured_filters IS NULL
+        OR v_campaign.structured_filters->>'sex' IS NULL
+        OR p.sex = v_campaign.structured_filters->>'sex'
+      )
+      -- Last visit before
+      AND (
+        v_campaign.structured_filters IS NULL
+        OR v_campaign.structured_filters->>'last_visit_before' IS NULL
+        OR vs.last_visit_date < (v_campaign.structured_filters->>'last_visit_before')::date
+      )
+      -- Last visit after
+      AND (
+        v_campaign.structured_filters IS NULL
+        OR v_campaign.structured_filters->>'last_visit_after' IS NULL
+        OR vs.last_visit_date > (v_campaign.structured_filters->>'last_visit_after')::date
+      )
+      -- Min visits
+      AND (
+        v_campaign.structured_filters IS NULL
+        OR v_campaign.structured_filters->>'min_visits' IS NULL
+        OR vs.visit_count >= (v_campaign.structured_filters->>'min_visits')::int
+      )
+      -- Max visits
+      AND (
+        v_campaign.structured_filters IS NULL
+        OR v_campaign.structured_filters->>'max_visits' IS NULL
+        OR vs.visit_count <= (v_campaign.structured_filters->>'max_visits')::int
+      )
+    ORDER BY p.id
+    OFFSET p_offset
+    LIMIT p_limit
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'patients', COALESCE(v_patients, '[]'::jsonb),
+    'has_more', COALESCE(v_count > p_offset + p_limit, false)
+  );
+END;
+$$;
+
+-- Public wrapper (service_role only)
+CREATE OR REPLACE FUNCTION public.get_campaign_patients(
+  p_campaign_id uuid,
+  p_offset int DEFAULT 0,
+  p_limit int DEFAULT 25
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.get_campaign_patients(p_campaign_id, p_offset, p_limit);
+END;
+$$;
+
+-- Service role only: revoke from authenticated and anon
+REVOKE EXECUTE ON FUNCTION public.get_campaign_patients(uuid, int, int) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_campaign_patients(uuid, int, int) FROM anon;

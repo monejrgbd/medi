@@ -20,6 +20,7 @@ DECLARE
   v_with_doctor bigint;
   v_tablets_out bigint;
   v_doctors_checked_in bigint;
+  v_nurses_checked_in bigint;
 BEGIN
   -- Get location org
   SELECT l.org_id INTO v_org_id
@@ -74,6 +75,13 @@ BEGIN
     AND sc.role = 'doctor'
     AND sc.checked_out_at IS NULL;
 
+  -- Nurses checked in
+  SELECT count(*) INTO v_nurses_checked_in
+  FROM public.staff_checkins sc
+  WHERE sc.location_id = p_location_id
+    AND sc.role = 'nurse'
+    AND sc.checked_out_at IS NULL;
+
   RETURN jsonb_build_object(
     'success', true,
     'awaiting', v_awaiting,
@@ -81,7 +89,8 @@ BEGIN
     'in_queue', v_in_queue,
     'with_doctor', v_with_doctor,
     'tablets_out', v_tablets_out,
-    'doctors_checked_in', v_doctors_checked_in
+    'doctors_checked_in', v_doctors_checked_in,
+    'nurses_checked_in', v_nurses_checked_in
   );
 END;
 $$;

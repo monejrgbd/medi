@@ -1,0 +1,105 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.add_vaccine_schedule_entry(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid,
+  p_vaccine_id uuid,
+  p_dose_number smallint DEFAULT 1,
+  p_due_date date DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_patient_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_can_access boolean := false;
+BEGIN
+  IF p_due_date IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Due date is required');
+  END IF;
+
+  -- Get patient org
+  SELECT p.org_id INTO v_patient_org_id
+  FROM public.patients p
+  WHERE p.id = p_patient_id;
+
+  IF v_patient_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_patient_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+  END IF;
+
+  -- Authorization: owner or doctor/nurse at any org location with vaccines_enabled
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_patient_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can add
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      JOIN public.locations l ON l.id = sr.location_id
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND l.org_id = v_patient_org_id
+        AND l.vaccines_enabled = true
+        AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND l.nurse_enabled = true))
+    ) INTO v_can_access;
+
+    IF NOT v_can_access THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Validate vaccine_id exists
+  IF NOT EXISTS(SELECT 1 FROM public.vaccines WHERE id = p_vaccine_id) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Vaccine not found');
+  END IF;
+
+  -- Upsert schedule entry (idempotent on patient_id, vaccine_id, dose_number)
+  INSERT INTO public.vaccine_schedule (patient_id, vaccine_id, org_id, dose_number, due_date)
+  VALUES (p_patient_id, p_vaccine_id, v_patient_org_id, p_dose_number, p_due_date)
+  ON CONFLICT (patient_id, vaccine_id, dose_number)
+  DO UPDATE SET due_date = EXCLUDED.due_date;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.add_vaccine_schedule_entry(
+  p_patient_id uuid,
+  p_vaccine_id uuid,
+  p_dose_number smallint DEFAULT 1,
+  p_due_date date DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.add_vaccine_schedule_entry(v_auth_uid, p_patient_id, p_vaccine_id, p_dose_number, p_due_date);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.add_vaccine_schedule_entry(uuid, uuid, smallint, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.add_vaccine_schedule_entry(uuid, uuid, smallint, date) TO authenticated;

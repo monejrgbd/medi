@@ -16,12 +16,14 @@ export default function AddStaffStep({
   orgSlug,
   locationId,
   locationName,
+  nurseEnabled,
   onContinue,
 }: {
   orgId: string;
   orgSlug: string;
   locationId: string;
   locationName: string;
+  nurseEnabled?: boolean;
   onContinue: () => void;
 }) {
   const [fullName, setFullName] = useState("");
@@ -287,7 +289,7 @@ export default function AddStaffStep({
               Roles
             </label>
             <div className="flex flex-wrap gap-3">
-              {["doctor", "receptionist", "manager"].map((role) => (
+              {["doctor", "receptionist", ...(nurseEnabled ? ["nurse"] : []), "manager"].map((role) => (
                 <label
                   key={role}
                   className="flex items-center gap-2 cursor-pointer"

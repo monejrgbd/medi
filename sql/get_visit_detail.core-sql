@@ -13,7 +13,8 @@ DECLARE
   v_visit record;
   v_owner_id uuid;
   v_caller_staff_id uuid;
-  v_is_doctor boolean := false;
+  v_can_access boolean := false;
+  v_nurse_enabled boolean;
   v_result jsonb;
 BEGIN
   -- Get visit basic info for auth check
@@ -34,8 +35,11 @@ BEGIN
     AND su.is_active = true
     AND su.is_deleted = false;
 
-  -- Authorization: owner or doctor at org
+  -- Authorization: owner or doctor/nurse at location
   SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  -- Fetch nurse_enabled from location
+  SELECT l.nurse_enabled INTO v_nurse_enabled FROM public.locations l WHERE l.id = v_visit.location_id;
 
   IF v_owner_id = p_caller_auth_uid THEN
     NULL;
@@ -43,15 +47,15 @@ BEGIN
     SELECT EXISTS(
       SELECT 1 FROM public.staff_roles sr
       WHERE sr.staff_user_id = v_caller_staff_id
-        AND sr.role = 'doctor'
         AND sr.location_id = v_visit.location_id
-    ) INTO v_is_doctor;
+        AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND v_nurse_enabled = true))
+    ) INTO v_can_access;
 
-    IF NOT v_is_doctor THEN
+    IF NOT v_can_access THEN
       RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
     END IF;
 
-    -- Only the claiming doctor can view during active claim
+    -- Only the claiming doctor/nurse can view during active claim
     IF v_visit.status = 'claimed_by_doctor' AND v_visit.claimed_by IS NOT NULL
        AND v_visit.claimed_by <> v_caller_staff_id THEN
       RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
@@ -62,7 +66,11 @@ BEGIN
   INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
   SELECT v_visit.org_id, 'visit', p_visit_id,
     COALESCE(v_caller_staff_id, p_caller_auth_uid),
-    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END,
+    CASE
+      WHEN v_owner_id = p_caller_auth_uid THEN 'owner'
+      WHEN EXISTS(SELECT 1 FROM public.staff_roles WHERE staff_user_id = v_caller_staff_id AND role = 'nurse' AND location_id = v_visit.location_id) THEN 'nurse'
+      ELSE 'doctor'
+    END,
     'viewed', jsonb_build_object('patient_id', v_visit.patient_id)
   WHERE NOT EXISTS (
     SELECT 1 FROM public.audit_trail
@@ -177,6 +185,44 @@ BEGIN
       ORDER BY va.created_at ASC
       LIMIT 50
     ) sub
+  ),
+  vitals_cte AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', sub.id, 'measured_at', sub.measured_at, 'value', sub.value,
+      'vital_name', sub.vital_name, 'vital_unit', sub.vital_unit,
+      'notes', sub.notes, 'recorded_by_name', sub.recorded_by_name
+    ) ORDER BY sub.measured_at DESC, sub.display_order ASC), '[]'::jsonb) AS vitals
+    FROM (
+      SELECT pv.id, pv.measured_at, pv.value, pv.notes,
+        COALESCE(vt.name, ovc.custom_name) AS vital_name,
+        COALESCE(vt.unit, ovc.custom_unit) AS vital_unit,
+        ovc.display_order,
+        su.full_name AS recorded_by_name
+      FROM public.patient_vitals pv
+      JOIN public.org_vital_configs ovc ON ovc.id = pv.vital_config_id
+      LEFT JOIN public.vital_types vt ON vt.id = ovc.vital_type_id
+      LEFT JOIN public.staff_users su ON su.id = pv.recorded_by
+      WHERE pv.patient_id = v_visit.patient_id
+      ORDER BY pv.measured_at DESC, ovc.display_order ASC
+      LIMIT 50
+    ) sub
+  ),
+  vaccines_cte AS (
+    SELECT COALESCE(jsonb_agg(jsonb_build_object(
+      'id', pvac.id, 'vaccine_name', pvac.vaccine_name, 'dose_number', pvac.dose_number,
+      'administered_at', pvac.administered_at, 'refused', pvac.refused,
+      'refusal_reason', pvac.refusal_reason,
+      'lot_number', pvac.lot_number, 'manufacturer', pvac.manufacturer, 'site', pvac.site,
+      'administered_by_name', pvac.administered_by_name
+    ) ORDER BY pvac.administered_at DESC), '[]'::jsonb) AS vaccines
+    FROM (
+      SELECT pvac.*, vc.name AS vaccine_name, su.full_name AS administered_by_name
+      FROM public.patient_vaccines pvac
+      JOIN public.vaccines vc ON vc.id = pvac.vaccine_id
+      LEFT JOIN public.staff_users su ON su.id = pvac.administered_by
+      WHERE pvac.patient_id = v_visit.patient_id
+      ORDER BY pvac.administered_at DESC LIMIT 50
+    ) pvac
   )
   SELECT jsonb_build_object(
     'visit', jsonb_build_object(
@@ -184,7 +230,7 @@ BEGIN
       'status', v.status,
       'ai_summary', v.ai_summary,
       'ai_structured_card', v.ai_structured_card,
-      'ai_diagnostic', CASE WHEN v_is_doctor OR v_owner_id = p_caller_auth_uid THEN v.ai_diagnostic ELSE NULL END,
+      'ai_diagnostic', CASE WHEN v_can_access OR v_owner_id = p_caller_auth_uid THEN v.ai_diagnostic ELSE NULL END,
       'ai_model_used', v.ai_model_used,
       'doctor_diagnosis', v.doctor_diagnosis,
       'priority', v.priority,
@@ -198,6 +244,8 @@ BEGIN
       'updated_at', v.updated_at,
       'is_follow_up', v.is_follow_up,
       'follow_up_of', v.follow_up_of,
+      'nurse_reviewed', v.nurse_reviewed,
+      'nurse_notes', v.nurse_notes,
       'diagnostic_enabled', (
         SELECT (o2.diagnostic_addon = true AND l2.diagnostic_enabled = true)
         FROM public.organizations o2
@@ -223,7 +271,9 @@ BEGIN
     'transcript', t.messages,
     'addendums', a.items,
     'notes', vnc.notes,
-    'attachments', vac.files
+    'attachments', vac.files,
+    'vitals', vtl.vitals,
+    'vaccines', vxc.vaccines
   ) INTO v_result
   FROM public.visits v
   JOIN public.patients p ON p.id = v.patient_id
@@ -236,6 +286,8 @@ BEGIN
   CROSS JOIN past_visits pv
   CROSS JOIN visit_notes_cte vnc
   CROSS JOIN visit_attachments_cte vac
+  CROSS JOIN vitals_cte vtl
+  CROSS JOIN vaccines_cte vxc
   WHERE v.id = p_visit_id;
 
   RETURN jsonb_build_object('success', true, 'data', v_result);

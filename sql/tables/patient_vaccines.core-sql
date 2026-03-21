@@ -1,0 +1,35 @@
+CREATE TABLE public.patient_vaccines (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id            uuid NOT NULL REFERENCES public.patients(id),
+  vaccine_id            uuid NOT NULL REFERENCES public.vaccines(id),
+  visit_id              uuid REFERENCES public.visits(id),
+  org_id                uuid NOT NULL REFERENCES public.organizations(id),
+  dose_number           smallint DEFAULT 1,
+  lot_number            text,
+  manufacturer          text,
+  site                  text
+    CHECK (site IS NULL OR site IN (
+      'left_deltoid', 'right_deltoid', 'left_thigh', 'right_thigh',
+      'left_gluteal', 'right_gluteal', 'subcutaneous', 'intranasal', 'oral'
+    )),
+  administered_at       timestamptz NOT NULL DEFAULT now(),
+  administered_by       uuid NOT NULL REFERENCES public.staff_users(id),
+  refused               boolean DEFAULT false,
+  refusal_reason        text,
+  notes                 text,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.patient_vaccines ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_patient_vaccines" ON public.patient_vaccines FOR SELECT
+  USING (org_id = requesting_org_id());
+
+CREATE INDEX idx_patient_vaccines_patient
+  ON public.patient_vaccines (patient_id, administered_at DESC);
+
+CREATE INDEX idx_patient_vaccines_visit
+  ON public.patient_vaccines (visit_id);
+
+CREATE INDEX idx_patient_vaccines_vaccine
+  ON public.patient_vaccines (vaccine_id);

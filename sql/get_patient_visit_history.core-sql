@@ -16,6 +16,7 @@ DECLARE
   v_owner_id uuid;
   v_caller_staff_id uuid;
   v_is_doctor boolean := false;
+  v_nurse_enabled boolean;
   v_visits jsonb;
   v_count int;
   v_has_more boolean;
@@ -42,16 +43,26 @@ BEGIN
     AND su.is_active = true
     AND su.is_deleted = false;
 
-  -- Authorization: owner or doctor at org
+  -- Authorization: owner or doctor or nurse (if nurse_enabled) at org
   SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_patient_org_id;
 
   IF v_owner_id = p_caller_auth_uid THEN
     NULL;
   ELSE
+    -- Check if nurse_enabled at any of caller's nurse locations
+    SELECT EXISTS(
+      SELECT 1
+        FROM public.staff_roles sr
+        JOIN public.locations l ON l.id = sr.location_id
+       WHERE sr.staff_user_id = v_caller_staff_id
+         AND sr.role = 'nurse'
+         AND l.nurse_enabled = true
+    ) INTO v_nurse_enabled;
+
     SELECT EXISTS(
       SELECT 1 FROM public.staff_roles sr
       WHERE sr.staff_user_id = v_caller_staff_id
-        AND sr.role = 'doctor'
+        AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND v_nurse_enabled = true))
         AND sr.location_id IN (
           SELECT v.location_id FROM public.visits v
           WHERE v.patient_id = p_patient_id

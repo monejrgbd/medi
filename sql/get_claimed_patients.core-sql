@@ -13,7 +13,8 @@ DECLARE
   v_org_id uuid;
   v_owner_id uuid;
   v_caller_staff_id uuid;
-  v_is_doctor boolean := false;
+  v_can_access boolean := false;
+  v_nurse_enabled boolean;
   v_result jsonb;
 BEGIN
   -- Get location org
@@ -33,8 +34,11 @@ BEGIN
     AND su.is_active = true
     AND su.is_deleted = false;
 
-  -- Authorization: owner or doctor at location
+  -- Authorization: owner or doctor/nurse at location
   SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_org_id;
+
+  -- Fetch nurse_enabled from location
+  SELECT l.nurse_enabled INTO v_nurse_enabled FROM public.locations l WHERE l.id = p_location_id;
 
   IF v_owner_id = p_caller_auth_uid THEN
     NULL;
@@ -42,11 +46,11 @@ BEGIN
     SELECT EXISTS(
       SELECT 1 FROM public.staff_roles sr
       WHERE sr.staff_user_id = v_caller_staff_id
-        AND sr.role = 'doctor'
         AND sr.location_id = p_location_id
-    ) INTO v_is_doctor;
+        AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND v_nurse_enabled = true))
+    ) INTO v_can_access;
 
-    IF NOT v_is_doctor THEN
+    IF NOT v_can_access THEN
       RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
     END IF;
   END IF;
@@ -63,7 +67,9 @@ BEGIN
       v.claimed_at,
       v.priority,
       v.is_sensitive,
-      v.has_previous_visits
+      v.has_previous_visits,
+      v.nurse_reviewed,
+      v.nurse_notes
     FROM public.visits v
     JOIN public.patients p ON p.id = v.patient_id
     WHERE v.status = 'claimed_by_doctor'

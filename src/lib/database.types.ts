@@ -277,7 +277,7 @@ export type Database = {
           {
             foreignKeyName: "credits_log_visit_id_fkey"
             columns: ["visit_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "visits"
             referencedColumns: ["id"]
           },
@@ -387,7 +387,7 @@ export type Database = {
           ai_instructions: string | null
           created_at: string | null
           doctor_id: string
-          due_at: string
+          due_at: string | null
           id: string
           location_id: string
           org_id: string
@@ -402,7 +402,7 @@ export type Database = {
           ai_instructions?: string | null
           created_at?: string | null
           doctor_id: string
-          due_at: string
+          due_at?: string | null
           id?: string
           location_id: string
           org_id: string
@@ -417,7 +417,7 @@ export type Database = {
           ai_instructions?: string | null
           created_at?: string | null
           doctor_id?: string
-          due_at?: string
+          due_at?: string | null
           id?: string
           location_id?: string
           org_id?: string
@@ -504,6 +504,8 @@ export type Database = {
       locations: {
         Row: {
           address: string | null
+          ai_custom_instructions: string | null
+          ai_message_limit: number | null
           ai_model: string | null
           created_at: string | null
           diagnostic_enabled: boolean | null
@@ -513,6 +515,7 @@ export type Database = {
           id: string
           logo_url: string | null
           name: string
+          nurse_enabled: boolean | null
           operating_hours: Json | null
           org_id: string
           qr_code_url: string | null
@@ -521,9 +524,13 @@ export type Database = {
           specialty: string | null
           tablet_count: number | null
           timezone: string | null
+          vaccines_enabled: boolean | null
+          vitals_enabled: boolean | null
         }
         Insert: {
           address?: string | null
+          ai_custom_instructions?: string | null
+          ai_message_limit?: number | null
           ai_model?: string | null
           created_at?: string | null
           diagnostic_enabled?: boolean | null
@@ -533,6 +540,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name: string
+          nurse_enabled?: boolean | null
           operating_hours?: Json | null
           org_id: string
           qr_code_url?: string | null
@@ -541,9 +549,13 @@ export type Database = {
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
+          vaccines_enabled?: boolean | null
+          vitals_enabled?: boolean | null
         }
         Update: {
           address?: string | null
+          ai_custom_instructions?: string | null
+          ai_message_limit?: number | null
           ai_model?: string | null
           created_at?: string | null
           diagnostic_enabled?: boolean | null
@@ -553,6 +565,7 @@ export type Database = {
           id?: string
           logo_url?: string | null
           name?: string
+          nurse_enabled?: boolean | null
           operating_hours?: Json | null
           org_id?: string
           qr_code_url?: string | null
@@ -561,6 +574,8 @@ export type Database = {
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
+          vaccines_enabled?: boolean | null
+          vitals_enabled?: boolean | null
         }
         Relationships: [
           {
@@ -599,6 +614,63 @@ export type Database = {
         }
         Relationships: []
       }
+      org_vital_configs: {
+        Row: {
+          created_at: string | null
+          custom_max: number | null
+          custom_min: number | null
+          custom_name: string | null
+          custom_step: number | null
+          custom_unit: string | null
+          display_order: number | null
+          enabled: boolean | null
+          id: string
+          org_id: string
+          vital_type_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_max?: number | null
+          custom_min?: number | null
+          custom_name?: string | null
+          custom_step?: number | null
+          custom_unit?: string | null
+          display_order?: number | null
+          enabled?: boolean | null
+          id?: string
+          org_id: string
+          vital_type_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_max?: number | null
+          custom_min?: number | null
+          custom_name?: string | null
+          custom_step?: number | null
+          custom_unit?: string | null
+          display_order?: number | null
+          enabled?: boolean | null
+          id?: string
+          org_id?: string
+          vital_type_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_vital_configs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_vital_configs_vital_type_id_fkey"
+            columns: ["vital_type_id"]
+            isOneToOne: false
+            referencedRelation: "vital_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           billing_cycle_start: string | null
@@ -612,6 +684,7 @@ export type Database = {
           followup_sms_addon: boolean | null
           id: string
           last_credit_alert_at: string | null
+          marketing_sms_addon: boolean | null
           name: string
           onboarding_completed_at: string | null
           owner_id: string
@@ -639,6 +712,7 @@ export type Database = {
           followup_sms_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
+          marketing_sms_addon?: boolean | null
           name: string
           onboarding_completed_at?: string | null
           owner_id: string
@@ -666,6 +740,7 @@ export type Database = {
           followup_sms_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
+          marketing_sms_addon?: boolean | null
           name?: string
           onboarding_completed_at?: string | null
           owner_id?: string
@@ -875,6 +950,171 @@ export type Database = {
           },
         ]
       }
+      patient_vaccines: {
+        Row: {
+          administered_at: string
+          administered_by: string
+          created_at: string | null
+          dose_number: number | null
+          id: string
+          lot_number: string | null
+          manufacturer: string | null
+          notes: string | null
+          org_id: string
+          patient_id: string
+          refusal_reason: string | null
+          refused: boolean | null
+          site: string | null
+          vaccine_id: string
+          visit_id: string | null
+        }
+        Insert: {
+          administered_at?: string
+          administered_by: string
+          created_at?: string | null
+          dose_number?: number | null
+          id?: string
+          lot_number?: string | null
+          manufacturer?: string | null
+          notes?: string | null
+          org_id: string
+          patient_id: string
+          refusal_reason?: string | null
+          refused?: boolean | null
+          site?: string | null
+          vaccine_id: string
+          visit_id?: string | null
+        }
+        Update: {
+          administered_at?: string
+          administered_by?: string
+          created_at?: string | null
+          dose_number?: number | null
+          id?: string
+          lot_number?: string | null
+          manufacturer?: string | null
+          notes?: string | null
+          org_id?: string
+          patient_id?: string
+          refusal_reason?: string | null
+          refused?: boolean | null
+          site?: string | null
+          vaccine_id?: string
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_vaccines_administered_by_fkey"
+            columns: ["administered_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vaccines_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vaccines_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vaccines_vaccine_id_fkey"
+            columns: ["vaccine_id"]
+            isOneToOne: false
+            referencedRelation: "vaccines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vaccines_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_vitals: {
+        Row: {
+          created_at: string | null
+          id: string
+          measured_at: string
+          notes: string | null
+          org_id: string
+          patient_id: string
+          recorded_by: string
+          value: number
+          visit_id: string | null
+          vital_config_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          measured_at?: string
+          notes?: string | null
+          org_id: string
+          patient_id: string
+          recorded_by: string
+          value: number
+          visit_id?: string | null
+          vital_config_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          measured_at?: string
+          notes?: string | null
+          org_id?: string
+          patient_id?: string
+          recorded_by?: string
+          value?: number
+          visit_id?: string | null
+          vital_config_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_vitals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vitals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vitals_recorded_by_fkey"
+            columns: ["recorded_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vitals_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_vitals_vital_config_id_fkey"
+            columns: ["vital_config_id"]
+            isOneToOne: false
+            referencedRelation: "org_vital_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           birthday: string
@@ -884,9 +1124,11 @@ export type Database = {
           created_at: string | null
           first_name: string
           id: string
+          is_demo_patient: boolean | null
           is_orphaned: boolean | null
           language: string | null
           last_name: string
+          marketing_sms_opted_out: boolean | null
           org_id: string
           phone: string | null
           phone_verified: boolean | null
@@ -901,9 +1143,11 @@ export type Database = {
           created_at?: string | null
           first_name: string
           id?: string
+          is_demo_patient?: boolean | null
           is_orphaned?: boolean | null
           language?: string | null
           last_name: string
+          marketing_sms_opted_out?: boolean | null
           org_id: string
           phone?: string | null
           phone_verified?: boolean | null
@@ -918,9 +1162,11 @@ export type Database = {
           created_at?: string | null
           first_name?: string
           id?: string
+          is_demo_patient?: boolean | null
           is_orphaned?: boolean | null
           language?: string | null
           last_name?: string
+          marketing_sms_opted_out?: boolean | null
           org_id?: string
           phone?: string | null
           phone_verified?: boolean | null
@@ -1390,18 +1636,162 @@ export type Database = {
           },
         ]
       }
+      sms_campaign_recipients: {
+        Row: {
+          campaign_id: string
+          created_at: string | null
+          excluded: boolean | null
+          id: string
+          match_reason: string | null
+          patient_id: string
+          phone: string
+          sms_log_id: string | null
+          status: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string | null
+          excluded?: boolean | null
+          id?: string
+          match_reason?: string | null
+          patient_id: string
+          phone: string
+          sms_log_id?: string | null
+          status?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string | null
+          excluded?: boolean | null
+          id?: string
+          match_reason?: string | null
+          patient_id?: string
+          phone?: string
+          sms_log_id?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "sms_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_campaign_recipients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_campaign_recipients_sms_log_id_fkey"
+            columns: ["sms_log_id"]
+            isOneToOne: false
+            referencedRelation: "sms_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_campaigns: {
+        Row: {
+          ai_criteria: string | null
+          completed_at: string | null
+          created_at: string | null
+          created_by: string
+          credits_charged: number | null
+          failed_count: number | null
+          id: string
+          location_id: string | null
+          matched_count: number | null
+          message_body: string | null
+          org_id: string
+          scan_completed_at: string | null
+          scan_started_at: string | null
+          send_started_at: string | null
+          sent_count: number | null
+          status: string | null
+          structured_filters: Json | null
+          total_scanned: number | null
+        }
+        Insert: {
+          ai_criteria?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by: string
+          credits_charged?: number | null
+          failed_count?: number | null
+          id?: string
+          location_id?: string | null
+          matched_count?: number | null
+          message_body?: string | null
+          org_id: string
+          scan_completed_at?: string | null
+          scan_started_at?: string | null
+          send_started_at?: string | null
+          sent_count?: number | null
+          status?: string | null
+          structured_filters?: Json | null
+          total_scanned?: number | null
+        }
+        Update: {
+          ai_criteria?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string
+          credits_charged?: number | null
+          failed_count?: number | null
+          id?: string
+          location_id?: string | null
+          matched_count?: number | null
+          message_body?: string | null
+          org_id?: string
+          scan_completed_at?: string | null
+          scan_started_at?: string | null
+          send_started_at?: string | null
+          sent_count?: number | null
+          status?: string | null
+          structured_filters?: Json | null
+          total_scanned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_campaigns_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_campaigns_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sms_campaigns_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_log: {
         Row: {
           created_at: string | null
           error_message: string | null
           id: string
           location_id: string | null
+          message_body: string | null
           org_id: string
           patient_id: string | null
           phone: string
+          provider_sid: string | null
           sms_type: string
           status: string | null
-          twilio_sid: string | null
           visit_id: string | null
         }
         Insert: {
@@ -1409,12 +1799,13 @@ export type Database = {
           error_message?: string | null
           id?: string
           location_id?: string | null
+          message_body?: string | null
           org_id: string
           patient_id?: string | null
           phone: string
+          provider_sid?: string | null
           sms_type: string
           status?: string | null
-          twilio_sid?: string | null
           visit_id?: string | null
         }
         Update: {
@@ -1422,12 +1813,13 @@ export type Database = {
           error_message?: string | null
           id?: string
           location_id?: string | null
+          message_body?: string | null
           org_id?: string
           patient_id?: string | null
           phone?: string
+          provider_sid?: string | null
           sms_type?: string
           status?: string | null
-          twilio_sid?: string | null
           visit_id?: string | null
         }
         Relationships: [
@@ -1612,6 +2004,101 @@ export type Database = {
           },
         ]
       }
+      vaccine_schedule: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string | null
+          dose_number: number
+          due_date: string
+          id: string
+          org_id: string
+          patient_id: string
+          skipped: boolean | null
+          vaccine_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          dose_number?: number
+          due_date: string
+          id?: string
+          org_id: string
+          patient_id: string
+          skipped?: boolean | null
+          vaccine_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string | null
+          dose_number?: number
+          due_date?: string
+          id?: string
+          org_id?: string
+          patient_id?: string
+          skipped?: boolean | null
+          vaccine_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vaccine_schedule_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "patient_vaccines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccine_schedule_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccine_schedule_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vaccine_schedule_vaccine_id_fkey"
+            columns: ["vaccine_id"]
+            isOneToOne: false
+            referencedRelation: "vaccines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vaccines: {
+        Row: {
+          code: string | null
+          created_at: string | null
+          dose_series: number | null
+          id: string
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string | null
+          dose_series?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string | null
+          dose_series?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       visit_addendums: {
         Row: {
           content: string
@@ -1794,6 +2281,7 @@ export type Database = {
           ai_started_at: string | null
           ai_structured_card: Json | null
           ai_summary: string | null
+          ai_summary_translated: string | null
           claimed_at: string | null
           claimed_by: string | null
           completed_at: string | null
@@ -1811,6 +2299,8 @@ export type Database = {
           is_return_visit: boolean | null
           is_sensitive: boolean | null
           location_id: string
+          nurse_notes: string | null
+          nurse_reviewed: boolean | null
           org_id: string
           patient_approved: boolean | null
           patient_approved_at: string | null
@@ -1822,6 +2312,7 @@ export type Database = {
           review_token: string | null
           session_token: string
           status: string
+          summary_show_diagnosis: boolean | null
           summary_sms_sent: boolean | null
           summary_token: string | null
           timeout_flagged: boolean | null
@@ -1834,6 +2325,7 @@ export type Database = {
           ai_started_at?: string | null
           ai_structured_card?: Json | null
           ai_summary?: string | null
+          ai_summary_translated?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
@@ -1851,6 +2343,8 @@ export type Database = {
           is_return_visit?: boolean | null
           is_sensitive?: boolean | null
           location_id: string
+          nurse_notes?: string | null
+          nurse_reviewed?: boolean | null
           org_id: string
           patient_approved?: boolean | null
           patient_approved_at?: string | null
@@ -1862,6 +2356,7 @@ export type Database = {
           review_token?: string | null
           session_token?: string
           status?: string
+          summary_show_diagnosis?: boolean | null
           summary_sms_sent?: boolean | null
           summary_token?: string | null
           timeout_flagged?: boolean | null
@@ -1874,6 +2369,7 @@ export type Database = {
           ai_started_at?: string | null
           ai_structured_card?: Json | null
           ai_summary?: string | null
+          ai_summary_translated?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
@@ -1891,6 +2387,8 @@ export type Database = {
           is_return_visit?: boolean | null
           is_sensitive?: boolean | null
           location_id?: string
+          nurse_notes?: string | null
+          nurse_reviewed?: boolean | null
           org_id?: string
           patient_approved?: boolean | null
           patient_approved_at?: string | null
@@ -1902,6 +2400,7 @@ export type Database = {
           review_token?: string | null
           session_token?: string
           status?: string
+          summary_show_diagnosis?: boolean | null
           summary_sms_sent?: boolean | null
           summary_token?: string | null
           timeout_flagged?: boolean | null
@@ -1945,6 +2444,39 @@ export type Database = {
           },
         ]
       }
+      vital_types: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          id: string
+          max_value: number | null
+          min_value: number | null
+          name: string
+          step_value: number | null
+          unit: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          name: string
+          step_value?: number | null
+          unit: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          id?: string
+          max_value?: number | null
+          min_value?: number | null
+          name?: string
+          step_value?: number | null
+          unit?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1970,10 +2502,29 @@ export type Database = {
         }
         Returns: Json
       }
+      add_vaccine_schedule_entry: {
+        Args: {
+          p_dose_number?: number
+          p_due_date?: string
+          p_patient_id: string
+          p_vaccine_id: string
+        }
+        Returns: Json
+      }
       add_visit_note: {
         Args: { p_content: string; p_is_private?: boolean; p_visit_id: string }
         Returns: Json
       }
+      admin_create_premium_code: {
+        Args: {
+          p_domain?: string
+          p_email?: string
+          p_phone?: string
+          p_send_email?: boolean
+        }
+        Returns: Json
+      }
+      admin_list_premium_codes: { Args: never; Returns: Json }
       approve_patient: {
         Args: {
           p_follow_up_id?: string
@@ -1991,6 +2542,7 @@ export type Database = {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
         Returns: Json
       }
+      cancel_campaign: { Args: { p_campaign_id: string }; Returns: Json }
       cancel_claim: { Args: { p_visit_id: string }; Returns: Json }
       cancel_subscription: { Args: never; Returns: Json }
       change_subscription_plan: { Args: { p_new_plan: string }; Returns: Json }
@@ -2033,12 +2585,31 @@ export type Database = {
         Args: { p_phone: string; p_session_token: string; p_visit_id: string }
         Returns: Json
       }
-      complete_onboarding: { Args: never; Returns: Json }
-      complete_referral: { Args: { p_referral_id: string }; Returns: Json }
-      complete_visit: {
-        Args: { p_diagnosis: string; p_follow_up?: Json; p_visit_id: string }
+      complete_campaign_sending: {
+        Args: { p_campaign_id: string }
         Returns: Json
       }
+      complete_onboarding: { Args: never; Returns: Json }
+      complete_referral: { Args: { p_referral_id: string }; Returns: Json }
+      complete_visit:
+        | {
+            Args: {
+              p_diagnosis: string
+              p_follow_up?: Json
+              p_visit_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_diagnosis: string
+              p_follow_up?: Json
+              p_show_diagnosis?: boolean
+              p_visit_id: string
+            }
+            Returns: Json
+          }
+      configure_org_vitals: { Args: { p_configs: Json }; Returns: Json }
       configure_review_platforms: {
         Args: { p_location_id: string; p_platforms: Json }
         Returns: Json
@@ -2081,6 +2652,14 @@ export type Database = {
         }
         Returns: Json
       }
+      create_sms_campaign: {
+        Args: {
+          p_ai_criteria?: string
+          p_location_id?: string
+          p_structured_filters: Json
+        }
+        Returns: Json
+      }
       create_staff_user: {
         Args: {
           p_full_name: string
@@ -2108,13 +2687,36 @@ export type Database = {
       }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       deny_patient: { Args: { p_visit_id: string }; Returns: Json }
-      edit_patient_record: {
+      edit_patient_record:
+        | {
+            Args: {
+              p_birthday?: string
+              p_first_name?: string
+              p_last_name?: string
+              p_patient_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birthday?: string
+              p_first_name?: string
+              p_last_name?: string
+              p_patient_id: string
+              p_sex?: string
+            }
+            Returns: Json
+          }
+      exclude_campaign_recipient: {
         Args: {
-          p_birthday?: string
-          p_first_name?: string
-          p_last_name?: string
-          p_patient_id: string
+          p_campaign_id: string
+          p_excluded: boolean
+          p_recipient_id: string
         }
+        Returns: Json
+      }
+      finalize_campaign_scan: {
+        Args: { p_campaign_id: string; p_total_scanned: number }
         Returns: Json
       }
       generate_summary_token: { Args: { p_visit_id: string }; Returns: Json }
@@ -2131,6 +2733,15 @@ export type Database = {
           p_org_id: string
           p_start_date?: string
         }
+        Returns: Json
+      }
+      get_campaign_detail: { Args: { p_campaign_id: string }; Returns: Json }
+      get_campaign_list: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
+      get_campaign_patients: {
+        Args: { p_campaign_id: string; p_limit?: number; p_offset?: number }
         Returns: Json
       }
       get_checked_in_doctors: { Args: { p_location_id: string }; Returns: Json }
@@ -2182,6 +2793,7 @@ export type Database = {
         Returns: Json
       }
       get_notes_for_visit: { Args: { p_visit_id: string }; Returns: Json }
+      get_org_vital_configs: { Args: never; Returns: Json }
       get_organization_overview: { Args: never; Returns: Json }
       get_past_visit_summaries: {
         Args: { p_limit?: number; p_patient_id: string }
@@ -2264,9 +2876,15 @@ export type Database = {
         Args: { p_location_id: string }
         Returns: Json
       }
+      get_vaccine_history: { Args: { p_patient_id: string }; Returns: Json }
+      get_vaccine_schedule: { Args: { p_patient_id: string }; Returns: Json }
+      get_vaccines_master_list: { Args: never; Returns: Json }
       get_visit_attachments: { Args: { p_visit_id: string }; Returns: Json }
       get_visit_detail: { Args: { p_visit_id: string }; Returns: Json }
+      get_visit_status: { Args: { p_visit_id: string }; Returns: Json }
       get_visit_summary_public: { Args: { p_token: string }; Returns: Json }
+      get_vital_types_master_list: { Args: never; Returns: Json }
+      get_vitals_history: { Args: { p_patient_id: string }; Returns: Json }
       get_wait_time_heatmap: {
         Args: {
           p_end_date: string
@@ -2300,6 +2918,7 @@ export type Database = {
         Args: { p_verification_id: string }
         Returns: number
       }
+      initialize_org_default_vitals: { Args: never; Returns: Json }
       link_referral_to_visit: {
         Args: { p_referral_id: string; p_visit_id: string }
         Returns: Json
@@ -2317,9 +2936,32 @@ export type Database = {
         Args: { p_session_token: string; p_visit_id: string }
         Returns: Json
       }
+      nurse_release_to_doctor: {
+        Args: { p_nurse_notes: string; p_visit_id: string }
+        Returns: Json
+      }
       purchase_overage_credits: { Args: { p_amount: number }; Returns: Json }
       purge_expired_orgs: { Args: never; Returns: Json }
       reactivate_referral: { Args: { p_referral_id: string }; Returns: Json }
+      record_vaccine: {
+        Args: {
+          p_dose_number?: number
+          p_lot_number?: string
+          p_manufacturer?: string
+          p_notes?: string
+          p_patient_id: string
+          p_refusal_reason?: string
+          p_refused?: boolean
+          p_site?: string
+          p_vaccine_id: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      record_vitals: {
+        Args: { p_patient_id: string; p_readings: Json; p_visit_id: string }
+        Returns: Json
+      }
       reject_summary: {
         Args: { p_session_token: string; p_visit_id: string }
         Returns: Json
@@ -2345,6 +2987,10 @@ export type Database = {
         Returns: Json
       }
       rotate_review_platforms: { Args: never; Returns: undefined }
+      save_campaign_matches: {
+        Args: { p_campaign_id: string; p_matches: Json }
+        Returns: Json
+      }
       save_followup_sms_config: {
         Args: {
           p_first_reminder_days: number
@@ -2365,6 +3011,10 @@ export type Database = {
         }
         Returns: Json
       }
+      schedule_follow_up: {
+        Args: { p_due_at: string; p_follow_up_id: string }
+        Returns: Json
+      }
       search_locations_public: {
         Args: { p_exclude_org_id: string; p_query: string }
         Returns: Json
@@ -2377,6 +3027,11 @@ export type Database = {
         Args: { p_location_id: string; p_query: string }
         Returns: Json
       }
+      seed_demo_batch: {
+        Args: { p_data: Json; p_location_id: string; p_org_id: string }
+        Returns: number
+      }
+      send_campaign: { Args: { p_campaign_id: string }; Returns: Json }
       send_patient_message: {
         Args: {
           p_content: string
@@ -2472,6 +3127,10 @@ export type Database = {
         Args: { p_allergies: string[]; p_patient_id: string }
         Returns: Json
       }
+      update_campaign_message: {
+        Args: { p_campaign_id: string; p_message_body: string }
+        Returns: Json
+      }
       update_chronic_conditions: {
         Args: { p_conditions: string[]; p_patient_id: string }
         Returns: Json
@@ -2479,16 +3138,21 @@ export type Database = {
       update_location: {
         Args: {
           p_address?: string
+          p_ai_custom_instructions?: string
+          p_ai_message_limit?: number
           p_ai_model?: string
           p_display_format?: string
           p_location_id: string
           p_logo_url?: string
           p_name?: string
+          p_nurse_enabled?: boolean
           p_operating_hours?: Json
           p_referral_email?: string
           p_specialty?: string
           p_tablet_count?: number
           p_timezone?: string
+          p_vaccines_enabled?: boolean
+          p_vitals_enabled?: boolean
         }
         Returns: Json
       }

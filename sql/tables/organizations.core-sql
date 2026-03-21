@@ -16,6 +16,7 @@ CREATE TABLE public.organizations (
   review_sms_addon      boolean DEFAULT false,
   followup_sms_addon    boolean DEFAULT false,
   diagnostic_addon      boolean DEFAULT false,
+  marketing_sms_addon   boolean DEFAULT false,
   last_credit_alert_at  timestamptz,
   trial_alert_sent      boolean DEFAULT false,
   payment_failure_count int DEFAULT 0,

@@ -28,8 +28,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Code expired. Request a new one.');
   END IF;
 
-  -- Check demo limit
-  IF v_row.access_count >= 3 THEN
+  -- Check demo limit (platform admin bypasses)
+  IF v_row.access_count >= 3 AND p_email != 's.paypal.acc.0@gmail.com' THEN
     RETURN jsonb_build_object('success', false, 'error', 'Demo limit reached for this email.');
   END IF;
 

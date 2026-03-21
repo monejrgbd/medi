@@ -79,7 +79,7 @@ export default function RoleAssignmentModal({
             <div key={loc.id} className="rounded-lg border border-gray-100 p-4">
               <p className="text-sm font-medium text-ink mb-3">{loc.name}</p>
               <div className="flex gap-2">
-                {["doctor", "receptionist", "manager"].map((role) => {
+                {["doctor", "nurse", "receptionist", "manager"].map((role) => {
                   const key = `${loc.id}-${role}`;
                   const active = hasRole(loc.id, role);
                   return (

@@ -17,6 +17,7 @@ DECLARE
   v_caller_staff_id uuid;
   v_owner_id uuid;
   v_is_doctor boolean;
+  v_nurse_enabled boolean;
   v_used_private boolean;
   v_note_id uuid;
 BEGIN
@@ -59,7 +60,12 @@ BEGIN
     FROM public.organizations
    WHERE id = v_visit.org_id;
 
-  -- Auth: owner OR doctor at visit's location
+  -- Check nurse_enabled at visit's location
+  SELECT l.nurse_enabled INTO v_nurse_enabled
+    FROM public.locations l
+   WHERE l.id = v_visit.location_id;
+
+  -- Auth: owner OR doctor OR nurse (if nurse_enabled) at visit's location
   IF p_caller_auth_uid = v_owner_id THEN
     -- Owner is authorized
     NULL;
@@ -68,7 +74,7 @@ BEGIN
       SELECT 1
         FROM public.staff_roles sr
        WHERE sr.staff_user_id = v_caller_staff_id
-         AND sr.role = 'doctor'
+         AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND v_nurse_enabled = true))
          AND sr.location_id = v_visit.location_id
     ) INTO v_is_doctor;
 

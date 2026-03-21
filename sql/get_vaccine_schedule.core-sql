@@ -1,0 +1,104 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_vaccine_schedule(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_patient_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_can_access boolean := false;
+  v_schedule jsonb;
+BEGIN
+  -- Get patient org
+  SELECT p.org_id INTO v_patient_org_id
+  FROM public.patients p
+  WHERE p.id = p_patient_id;
+
+  IF v_patient_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_patient_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+  END IF;
+
+  -- Authorization: owner or doctor/nurse at any org location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_patient_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can access
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      JOIN public.locations l ON l.id = sr.location_id
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND l.org_id = v_patient_org_id
+        AND (sr.role = 'doctor' OR (sr.role = 'nurse' AND l.nurse_enabled = true))
+    ) INTO v_can_access;
+
+    IF NOT v_can_access THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Fetch vaccine schedule
+  SELECT COALESCE(jsonb_agg(row_to_json(q)), '[]'::jsonb)
+  INTO v_schedule
+  FROM (
+    SELECT
+      vs.id,
+      v.name AS vaccine_name,
+      vs.dose_number,
+      vs.due_date,
+      vs.completed_at,
+      vs.skipped,
+      (vs.due_date < CURRENT_DATE AND vs.completed_at IS NULL AND vs.skipped = false) AS overdue
+    FROM public.vaccine_schedule vs
+    JOIN public.vaccines v ON v.id = vs.vaccine_id
+    WHERE vs.patient_id = p_patient_id
+      AND vs.org_id = v_patient_org_id
+    ORDER BY vs.due_date ASC
+    LIMIT 100
+  ) q;
+
+  RETURN jsonb_build_object('success', true, 'schedule', v_schedule);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_vaccine_schedule(
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_vaccine_schedule(v_auth_uid, p_patient_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_vaccine_schedule(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_vaccine_schedule(uuid) TO authenticated;

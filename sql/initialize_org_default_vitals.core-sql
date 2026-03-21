@@ -1,0 +1,107 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.initialize_org_default_vitals(
+  p_caller_auth_uid uuid,
+  p_org_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_owner_id uuid;
+  v_is_manager boolean := false;
+  v_count int;
+BEGIN
+  -- Check if caller is owner
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = p_org_id;
+
+  IF v_owner_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can initialize
+  ELSE
+    -- Get caller staff id
+    SELECT su.id INTO v_caller_staff_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.org_id = p_org_id
+      AND su.is_active = true
+      AND su.is_deleted = false;
+
+    IF v_caller_staff_id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Staff account not found or inactive');
+    END IF;
+
+    -- Check if caller is manager at any org location
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      JOIN public.locations l ON l.id = sr.location_id
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND l.org_id = p_org_id
+        AND sr.role = 'manager'
+    ) INTO v_is_manager;
+
+    IF NOT v_is_manager THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Only owner or manager can initialize vitals');
+    END IF;
+  END IF;
+
+  -- Check if org already has configs
+  IF EXISTS(SELECT 1 FROM public.org_vital_configs WHERE org_id = p_org_id) THEN
+    RETURN jsonb_build_object('success', true, 'already_initialized', true);
+  END IF;
+
+  -- Insert 6 defaults: Weight, Height, BP Systolic, BP Diastolic, Heart Rate, Temperature
+  INSERT INTO public.org_vital_configs (org_id, vital_type_id, display_order, enabled)
+  SELECT p_org_id, vt.id, vt.display_order, true
+  FROM public.vital_types vt
+  WHERE vt.name IN ('Weight', 'Height', 'Blood Pressure Systolic', 'Blood Pressure Diastolic', 'Heart Rate', 'Temperature')
+  ORDER BY vt.display_order;
+
+  GET DIAGNOSTICS v_count = ROW_COUNT;
+
+  RETURN jsonb_build_object('success', true, 'count', v_count);
+END;
+$$;
+
+-- Public wrapper (no params — derives org from caller's auth)
+CREATE OR REPLACE FUNCTION public.initialize_org_default_vitals()
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+  v_org_id uuid;
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  -- Get org from owner or staff
+  SELECT o.id INTO v_org_id
+  FROM public.organizations o
+  WHERE o.owner_id = v_auth_uid;
+  IF v_org_id IS NULL THEN
+    SELECT su.org_id INTO v_org_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = v_auth_uid AND su.is_active = true AND su.is_deleted = false
+    LIMIT 1;
+  END IF;
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+  RETURN private.initialize_org_default_vitals(v_auth_uid, v_org_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.initialize_org_default_vitals() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.initialize_org_default_vitals() TO authenticated;

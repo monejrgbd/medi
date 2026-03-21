@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 
-type Tab = "summary" | "transcript" | "notes" | "history";
+type Tab = "summary" | "transcript" | "notes" | "vitals" | "vaccines" | "history";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "summary", label: "Summary" },
   { key: "transcript", label: "Transcript" },
   { key: "notes", label: "Notes" },
+  { key: "vitals", label: "Vitals (5)" },
+  { key: "vaccines", label: "Vaccines (1)" },
   { key: "history", label: "History" },
 ];
 
@@ -84,6 +86,92 @@ function NotesTab() {
   );
 }
 
+function VitalsTab() {
+  return (
+    <div className="space-y-2.5">
+      <div className="rounded-lg border border-gray-200 bg-white p-2.5">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-medium text-ink">Today, 9:01 AM</p>
+          <p className="text-[9px] text-ash">Nurse Amy R.</p>
+        </div>
+        <div className="space-y-1">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-slate">Weight</span>
+            <span className="text-[10px] text-ink font-medium">68.2 kg</span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-slate">Height</span>
+            <span className="text-[10px] text-ink font-medium">165.0 cm</span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-slate">Blood Pressure</span>
+            <span className="text-[10px] text-ink font-medium">118/76 mmHg</span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-slate">Heart Rate</span>
+            <span className="text-[10px] text-ink font-medium">72 bpm</span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-slate">Temperature</span>
+            <span className="text-[10px] text-ink font-medium">98.4 F</span>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-lg bg-gray-50 p-2.5">
+        <p className="text-[10px] font-medium text-ink mb-1">Jan 15, 2026</p>
+        <div className="space-y-1">
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-slate">Weight</span>
+            <span className="text-[10px] text-ink font-medium">67.8 kg</span>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="text-[10px] text-slate">Blood Pressure</span>
+            <span className="text-[10px] text-ink font-medium">122/80 mmHg</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VaccinesTab() {
+  return (
+    <div className="space-y-2">
+      <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[10px] font-medium text-ink">Influenza (Seasonal)</p>
+            <div className="mt-0.5 flex items-center gap-2 text-[9px] text-slate">
+              <span>Lot: FL2026A</span>
+              <span>Sanofi</span>
+              <span>Left Deltoid</span>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] text-slate">Today</p>
+            <p className="text-[8px] text-ash">Nurse Amy R.</p>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-lg border border-gray-100 bg-gray-50 p-2.5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[10px] font-medium text-ink">Tdap <span className="text-[9px] text-slate ml-1">Dose #1</span></p>
+            <div className="mt-0.5 text-[9px] text-slate">Right Deltoid</div>
+          </div>
+          <div className="text-right">
+            <p className="text-[9px] text-slate">Sep 8, 2025</p>
+          </div>
+        </div>
+      </div>
+      <div className="mt-3 rounded-lg border border-red-100 bg-red-50/50 p-2">
+        <p className="text-[9px] font-medium text-red-700">Overdue</p>
+        <p className="text-[10px] text-ink">Hepatitis B <span className="text-[9px] text-slate">Dose #2, due Dec 8, 2025</span></p>
+      </div>
+    </div>
+  );
+}
+
 function HistoryTab() {
   const visits = [
     { date: "Jan 15, 2026", summary: "Right knee pain, prescribed ibuprofen, advised rest" },
@@ -116,7 +204,10 @@ export default function DoctorMockup() {
             <p className="text-sm font-bold text-ink">Sarah Martinez</p>
             <p className="text-[11px] text-ash">32 years old</p>
           </div>
-          <span className="text-[10px] text-ash">3 visits</span>
+          <div className="flex items-center gap-1.5">
+            <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[9px] font-medium text-teal-600">Nurse Reviewed</span>
+            <span className="text-[10px] text-ash">3 visits</span>
+          </div>
         </div>
         <div className="mt-3 grid grid-cols-4 gap-1.5 text-[9px]">
           <div>
@@ -153,6 +244,16 @@ export default function DoctorMockup() {
         </div>
       </div>
 
+      {/* Nurse notes */}
+      <div className="border-b border-gray-100 px-4 py-3">
+        <div className="rounded-lg bg-teal-50 border border-teal-200 p-2.5">
+          <p className="text-[9px] font-semibold text-teal-800 mb-0.5">Nurse Notes</p>
+          <p className="text-[10px] text-ink leading-relaxed">
+            Patient appears fatigued. Swelling visible in both knuckles. Range of motion limited in right knee. Vitals within normal range. No fever.
+          </p>
+        </div>
+      </div>
+
       {/* Tabs + content */}
       <div className="p-4">
         {/* Interactive hint, pulses until user clicks a tab */}
@@ -162,12 +263,12 @@ export default function DoctorMockup() {
           </p>
         )}
 
-        <div className="mb-3 flex gap-3 border-b border-gray-100 text-[10px]">
+        <div className="mb-3 flex gap-2 border-b border-gray-100 text-[10px] overflow-x-auto">
           {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => { setTab(t.key); setHasInteracted(true); }}
-              className={`pb-1.5 font-medium transition-colors cursor-pointer ${
+              className={`pb-1.5 font-medium transition-colors cursor-pointer whitespace-nowrap ${
                 tab === t.key
                   ? "border-b-2 border-hilt-blue text-hilt-blue"
                   : "text-ash hover:text-slate"
@@ -182,6 +283,8 @@ export default function DoctorMockup() {
           {tab === "summary" && <SummaryTab />}
           {tab === "transcript" && <TranscriptTab />}
           {tab === "notes" && <NotesTab />}
+          {tab === "vitals" && <VitalsTab />}
+          {tab === "vaccines" && <VaccinesTab />}
           {tab === "history" && <HistoryTab />}
         </div>
       </div>

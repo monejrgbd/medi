@@ -3,7 +3,7 @@ CREATE TABLE public.staff_roles (
   staff_user_id         uuid NOT NULL REFERENCES public.staff_users(id),
   location_id           uuid NOT NULL REFERENCES public.locations(id),
   role                  text NOT NULL
-    CHECK (role = ANY (ARRAY['doctor', 'receptionist', 'manager', 'reviews'])),
+    CHECK (role = ANY (ARRAY['doctor', 'receptionist', 'manager', 'reviews', 'nurse', 'marketer'])),
   working_hours         numeric,
   UNIQUE(staff_user_id, location_id, role)
 );

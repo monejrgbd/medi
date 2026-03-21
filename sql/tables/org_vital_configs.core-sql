@@ -1,0 +1,21 @@
+CREATE TABLE public.org_vital_configs (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id        uuid NOT NULL REFERENCES public.organizations(id),
+  vital_type_id uuid REFERENCES public.vital_types(id),
+  custom_name   text,
+  custom_unit   text,
+  custom_min    numeric,
+  custom_max    numeric,
+  custom_step   numeric DEFAULT 0.1,
+  display_order smallint DEFAULT 100,
+  enabled       boolean DEFAULT true,
+  created_at    timestamptz DEFAULT now(),
+  UNIQUE(org_id, vital_type_id),
+  CHECK (
+    (vital_type_id IS NOT NULL AND custom_name IS NULL)
+    OR (vital_type_id IS NULL AND custom_name IS NOT NULL AND custom_unit IS NOT NULL)
+  )
+);
+ALTER TABLE public.org_vital_configs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_read_vital_configs" ON public.org_vital_configs FOR SELECT
+  USING (org_id = requesting_org_id());

@@ -7,6 +7,7 @@ interface Counts {
   with_doctor: number;
   tablets_out: number;
   doctors_checked_in: number;
+  nurses_checked_in: number;
 }
 
 interface ReceptionistHeaderProps {
@@ -33,6 +34,7 @@ export default function ReceptionistHeader({
     { label: "With Doctor", value: counts.with_doctor, color: "text-indigo-600" },
     { label: "Tablets Out", value: counts.tablets_out, color: "text-orange-600" },
     { label: "Doctors In", value: counts.doctors_checked_in, color: "text-green-600" },
+    { label: "Nurses In", value: counts.nurses_checked_in, color: "text-teal-600" },
   ];
 
   return (

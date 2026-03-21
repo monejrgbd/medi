@@ -13,6 +13,10 @@ import CheckinFlow from "@/app/checkin/[locationId]/CheckinFlow";
 import ReceptionistDashboard from "@/app/(dashboard)/d/receptionist/ReceptionistDashboard";
 import DoctorDashboard from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 import ReviewHub from "@/components/reviews/ReviewHub";
+import MarketingDashboard from "@/components/dashboard/marketing/MarketingDashboard";
+import CampaignDetail from "@/components/dashboard/marketing/CampaignDetail";
+import { RoleProvider } from "@/contexts/RoleContext";
+import { getCampaignDetail } from "@/app/(dashboard)/d/_actions/marketing";
 
 interface DemoShellProps {
   locationId: string;
@@ -47,6 +51,7 @@ interface DemoShellProps {
     reviews: any[];
     stats: any;
   };
+  marketingInitial: any;
 }
 
 // Tab type imported from DemoTabBar
@@ -60,6 +65,7 @@ export default function DemoShell({
   receptionistInitial,
   doctorInitial,
   reviewsInitial,
+  marketingInitial,
 }: DemoShellProps) {
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
@@ -73,6 +79,8 @@ export default function DemoShell({
   const [demoStep, setDemoStep] = useState(1);
   const [reviewToken, setReviewToken] = useState<string | null>(null);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
+  const [selectedCampaignData, setSelectedCampaignData] = useState<any>(null);
 
   // Demo reviews: only show 6 curated + current visitor's review
   const DEMO_REVIEW_IDS = new Set([
@@ -499,6 +507,47 @@ export default function DemoShell({
               initialReviews={demoReviews}
               initialStats={demoStats}
             />
+          </div>
+        </div>
+
+        <div style={{ display: activeTab === "marketing" ? "block" : "none" }}>
+          <div className="p-6">
+            <RoleProvider value={{
+              org: {
+                id: orgId,
+                name: locationData.org_name || "Smith Family Clinic",
+                slug: "smith-family-clinic",
+                owner_id: "",
+                subscription_plan: "standard",
+                credits_total: 10000,
+                credits_used: 0,
+                trial_end_date: "",
+                review_sms_addon: true,
+                followup_sms_addon: true,
+                onboarding_completed_at: null,
+                cancel_at_period_end: null,
+                created_at: "",
+                marketing_sms_addon: true,
+              } as any,
+              roles: [{ role: "marketer", location_id: locationId, location_name: locationName }],
+              isOwner: false,
+              currentStaffUser: { id: staffUserId, org_id: orgId, auth_uid: "", full_name: "Demo User", username: "demo" },
+            }}>
+              {selectedCampaignId && selectedCampaignData ? (
+                <CampaignDetail initialData={selectedCampaignData} campaignId={selectedCampaignId} onBack={() => { setSelectedCampaignId(null); setSelectedCampaignData(null); }} />
+              ) : (
+                <MarketingDashboard
+                  initialData={marketingInitial}
+                  onCampaignSelect={async (id) => {
+                    const data = await getCampaignDetail(id);
+                    if (data && !("error" in data)) {
+                      setSelectedCampaignId(id);
+                      setSelectedCampaignData(data);
+                    }
+                  }}
+                />
+              )}
+            </RoleProvider>
           </div>
         </div>
 

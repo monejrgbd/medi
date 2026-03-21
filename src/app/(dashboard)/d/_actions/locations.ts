@@ -47,6 +47,11 @@ export async function updateLocation(formData: {
   tabletCount?: number;
   timezone?: string;
   logoUrl?: string;
+  nurseEnabled?: boolean;
+  vaccinesEnabled?: boolean;
+  vitalsEnabled?: boolean;
+  aiCustomInstructions?: string;
+  aiMessageLimit?: number | null;
 }) {
   await requireAuth();
   const supabase = await createClient();
@@ -69,6 +74,11 @@ export async function updateLocation(formData: {
   if (formData.tabletCount !== undefined) params.p_tablet_count = formData.tabletCount;
   if (formData.timezone !== undefined) params.p_timezone = formData.timezone;
   if (formData.logoUrl !== undefined) params.p_logo_url = formData.logoUrl;
+  if (formData.nurseEnabled !== undefined) params.p_nurse_enabled = formData.nurseEnabled;
+  if (formData.vaccinesEnabled !== undefined) params.p_vaccines_enabled = formData.vaccinesEnabled;
+  if (formData.vitalsEnabled !== undefined) params.p_vitals_enabled = formData.vitalsEnabled;
+  if (formData.aiCustomInstructions !== undefined) params.p_ai_custom_instructions = formData.aiCustomInstructions;
+  if (formData.aiMessageLimit !== undefined) params.p_ai_message_limit = formData.aiMessageLimit === null ? 0 : formData.aiMessageLimit;
 
   const { data, error } = await supabase.rpc("update_location", params);
 

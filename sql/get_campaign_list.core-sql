@@ -1,0 +1,95 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_campaign_list(
+  p_caller_auth_uid uuid,
+  p_offset int DEFAULT 0,
+  p_limit int DEFAULT 20
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_campaigns jsonb;
+  v_total_count int;
+BEGIN
+  -- Try owner
+  SELECT id INTO v_org_id FROM public.organizations WHERE owner_id = p_caller_auth_uid;
+  -- If not owner, try marketer
+  IF v_org_id IS NULL THEN
+    SELECT su.org_id INTO v_org_id
+    FROM public.staff_users su
+    JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_active AND NOT su.is_deleted
+      AND sr.role = 'marketer';
+  END IF;
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Get total count
+  SELECT count(*) INTO v_total_count
+  FROM public.sms_campaigns
+  WHERE org_id = v_org_id;
+
+  -- Build campaign list
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'id', c.id,
+      'ai_criteria', LEFT(c.ai_criteria, 100),
+      'structured_filters', c.structured_filters,
+      'status', c.status,
+      'matched_count', c.matched_count,
+      'sent_count', c.sent_count,
+      'failed_count', c.failed_count,
+      'credits_charged', c.credits_charged,
+      'created_at', c.created_at
+    )
+  ), '[]'::jsonb)
+  INTO v_campaigns
+  FROM (
+    SELECT *
+    FROM public.sms_campaigns
+    WHERE org_id = v_org_id
+    ORDER BY created_at DESC
+    OFFSET p_offset
+    LIMIT p_limit
+  ) c;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'campaigns', v_campaigns,
+    'total_count', v_total_count,
+    'has_more', (p_offset + p_limit) < v_total_count
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_campaign_list(
+  p_offset int DEFAULT 0,
+  p_limit int DEFAULT 20
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_campaign_list(v_uid, p_offset, p_limit);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_campaign_list(int, int) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_campaign_list(int, int) TO authenticated;

@@ -1,0 +1,120 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_campaign_detail(
+  p_caller_auth_uid uuid,
+  p_campaign_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_campaign record;
+  v_recipients jsonb;
+  v_credit_cost numeric;
+BEGIN
+  -- Try owner
+  SELECT id INTO v_org_id FROM public.organizations WHERE owner_id = p_caller_auth_uid;
+  -- If not owner, try marketer
+  IF v_org_id IS NULL THEN
+    SELECT su.org_id INTO v_org_id
+    FROM public.staff_users su
+    JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_active AND NOT su.is_deleted
+      AND sr.role = 'marketer';
+  END IF;
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Load campaign
+  SELECT c.*
+  INTO v_campaign
+  FROM public.sms_campaigns c
+  WHERE c.id = p_campaign_id
+    AND c.org_id = v_org_id;
+
+  IF v_campaign IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign not found');
+  END IF;
+
+  -- Build recipients list
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'id', r.id,
+      'first_name', p.first_name,
+      'last_name', p.last_name,
+      'phone', r.phone,
+      'match_reason', r.match_reason,
+      'excluded', r.excluded,
+      'status', r.status
+    )
+    ORDER BY p.last_name, p.first_name
+  ), '[]'::jsonb)
+  INTO v_recipients
+  FROM public.sms_campaign_recipients r
+  JOIN public.patients p ON p.id = r.patient_id
+  WHERE r.campaign_id = p_campaign_id;
+
+  -- Calculate credit cost preview: non-excluded pending recipients * 0.3
+  SELECT count(*) * 0.3 INTO v_credit_cost
+  FROM public.sms_campaign_recipients
+  WHERE campaign_id = p_campaign_id
+    AND NOT excluded
+    AND status = 'pending';
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'campaign', jsonb_build_object(
+      'id', v_campaign.id,
+      'org_id', v_campaign.org_id,
+      'created_by', v_campaign.created_by,
+      'structured_filters', v_campaign.structured_filters,
+      'ai_criteria', v_campaign.ai_criteria,
+      'location_id', v_campaign.location_id,
+      'message_body', v_campaign.message_body,
+      'status', v_campaign.status,
+      'total_scanned', v_campaign.total_scanned,
+      'matched_count', v_campaign.matched_count,
+      'sent_count', v_campaign.sent_count,
+      'failed_count', v_campaign.failed_count,
+      'credits_charged', v_campaign.credits_charged,
+      'scan_started_at', v_campaign.scan_started_at,
+      'scan_completed_at', v_campaign.scan_completed_at,
+      'send_started_at', v_campaign.send_started_at,
+      'completed_at', v_campaign.completed_at,
+      'created_at', v_campaign.created_at
+    ),
+    'recipients', v_recipients,
+    'credit_cost_preview', v_credit_cost
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_campaign_detail(
+  p_campaign_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.get_campaign_detail(v_uid, p_campaign_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_campaign_detail(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_campaign_detail(uuid) TO authenticated;

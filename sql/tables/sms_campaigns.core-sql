@@ -1,0 +1,41 @@
+CREATE TABLE public.sms_campaigns (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id                uuid NOT NULL REFERENCES public.organizations(id),
+  created_by            uuid NOT NULL REFERENCES public.staff_users(id),
+  structured_filters    jsonb,
+  ai_criteria           text,
+  location_id           uuid REFERENCES public.locations(id),
+  message_body          text,
+  status                text DEFAULT 'scanning'
+    CHECK (status IN ('scanning', 'ready', 'sending', 'completed', 'cancelled', 'failed')),
+  total_scanned         int DEFAULT 0,
+  matched_count         int DEFAULT 0,
+  sent_count            int DEFAULT 0,
+  failed_count          int DEFAULT 0,
+  credits_charged       numeric DEFAULT 0,
+  scan_started_at       timestamptz DEFAULT now(),
+  scan_completed_at     timestamptz,
+  send_started_at       timestamptz,
+  completed_at          timestamptz,
+  created_at            timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.sms_campaigns ENABLE ROW LEVEL SECURITY;
+
+-- Owner or marketer SELECT policy
+CREATE POLICY "owner_marketer_read_campaigns" ON public.sms_campaigns FOR SELECT
+  USING (
+    org_id IN (
+      SELECT o.id FROM public.organizations o WHERE o.owner_id = auth.uid()
+      UNION
+      SELECT su.org_id FROM public.staff_users su
+      JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+      WHERE su.auth_uid = auth.uid() AND su.is_active AND NOT su.is_deleted
+        AND sr.role = 'marketer'
+    )
+  );
+
+-- No direct INSERT/UPDATE/DELETE — all via SECURITY DEFINER functions
+
+CREATE INDEX idx_sms_campaigns_org_created
+  ON public.sms_campaigns (org_id, created_at DESC);

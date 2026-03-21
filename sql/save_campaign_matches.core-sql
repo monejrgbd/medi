@@ -1,0 +1,59 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.save_campaign_matches(
+  p_campaign_id uuid,
+  p_matches jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_inserted int;
+BEGIN
+  -- Validate campaign exists
+  IF NOT EXISTS (SELECT 1 FROM public.sms_campaigns WHERE id = p_campaign_id) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign not found');
+  END IF;
+
+  -- Bulk insert recipients from jsonb array
+  INSERT INTO public.sms_campaign_recipients (campaign_id, patient_id, phone, match_reason, status)
+  SELECT
+    p_campaign_id,
+    (elem->>'patient_id')::uuid,
+    elem->>'phone',
+    elem->>'match_reason',
+    'pending'
+  FROM jsonb_array_elements(p_matches) AS elem;
+
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+
+  -- Update matched_count on campaign
+  UPDATE public.sms_campaigns
+  SET matched_count = matched_count + v_inserted
+  WHERE id = p_campaign_id;
+
+  RETURN jsonb_build_object('success', true, 'inserted', v_inserted);
+END;
+$$;
+
+-- Public wrapper (service_role only)
+CREATE OR REPLACE FUNCTION public.save_campaign_matches(
+  p_campaign_id uuid,
+  p_matches jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.save_campaign_matches(p_campaign_id, p_matches);
+END;
+$$;
+
+-- Service role only: revoke from authenticated and anon
+REVOKE EXECUTE ON FUNCTION public.save_campaign_matches(uuid, jsonb) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.save_campaign_matches(uuid, jsonb) FROM anon;

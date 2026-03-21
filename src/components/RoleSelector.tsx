@@ -11,16 +11,20 @@ import {
   Star,
   Building2,
   Lightbulb,
+  HeartPulse,
+  Megaphone,
 } from "lucide-react";
 
 const ROLE_CONFIG: Record<string, { label: string; icon: ReactNode; color: string }> = {
   doctor: { label: "Doctor", icon: <Stethoscope className="h-6 w-6" />, color: "bg-blue-50 border-blue-200 hover:border-blue-400" },
   receptionist: { label: "Receptionist", icon: <ClipboardList className="h-6 w-6" />, color: "bg-green-50 border-green-200 hover:border-green-400" },
   manager: { label: "Manager", icon: <Settings className="h-6 w-6" />, color: "bg-purple-50 border-purple-200 hover:border-purple-400" },
+  nurse: { label: "Nurse", icon: <HeartPulse className="h-6 w-6" />, color: "bg-teal-50 border-teal-200 hover:border-teal-400" },
   reviews: { label: "Reviews", icon: <Star className="h-6 w-6" />, color: "bg-yellow-50 border-yellow-200 hover:border-yellow-400" },
+  marketer: { label: "Marketing", icon: <Megaphone className="h-6 w-6" />, color: "bg-blue-50 border-blue-200 hover:border-blue-400" },
 };
 
-const ALL_ROLES = ["doctor", "receptionist", "manager", "reviews"];
+const ALL_ROLES = ["doctor", "nurse", "receptionist", "manager", "reviews", "marketer"];
 
 export default function RoleSelector() {
   const { org, roles, isOwner, currentStaffUser } = useRole();
@@ -125,8 +129,14 @@ export default function RoleSelector() {
                     if (role === "manager") {
                       router.push("/d/manager");
                     }
+                    if (role === "nurse") {
+                      router.push("/d/nurse");
+                    }
                     if (role === "reviews") {
                       router.push("/d/reviews");
+                    }
+                    if (role === "marketer") {
+                      router.push("/d/marketer");
                     }
                   }}
                 >

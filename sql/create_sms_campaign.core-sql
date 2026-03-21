@@ -1,0 +1,268 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.create_sms_campaign(
+  p_caller_auth_uid uuid,
+  p_structured_filters jsonb,
+  p_ai_criteria text DEFAULT NULL,
+  p_location_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_staff_id uuid;
+  v_campaign_id uuid;
+  v_campaign_count int;
+  v_total_scanned int := 0;
+  v_matched_count int := 0;
+  v_edge_url text;
+  v_edge_secret text;
+  v_anon_key text;
+BEGIN
+  -- Try owner (locks org row)
+  SELECT id, subscription_plan, marketing_sms_addon, owner_id
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  -- If not owner, try marketer (still locks org row)
+  IF v_org IS NULL THEN
+    SELECT o.id, o.subscription_plan, o.marketing_sms_addon, o.owner_id
+    INTO v_org
+    FROM public.organizations o
+    JOIN public.staff_users su ON su.org_id = o.id
+    JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+    WHERE su.auth_uid = p_caller_auth_uid AND su.is_active AND NOT su.is_deleted AND sr.role = 'marketer'
+    FOR UPDATE OF o;
+  END IF;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Guard: marketing_sms addon must be enabled
+  IF NOT v_org.marketing_sms_addon THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Marketing SMS addon is not enabled');
+  END IF;
+
+  -- Guard: subscription must be active
+  IF v_org.subscription_plan IN ('expired', 'suspended', 'read_only') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Cannot create campaigns while account is ' || v_org.subscription_plan);
+  END IF;
+
+  -- Guard: at least one filter type must be provided
+  IF (p_structured_filters IS NULL OR p_structured_filters = '{}'::jsonb OR p_structured_filters = 'null'::jsonb)
+     AND p_ai_criteria IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'At least one of structured filters or AI criteria must be provided');
+  END IF;
+
+  -- Rate limit: max 3 campaigns per org per 24 hours
+  SELECT count(*) INTO v_campaign_count
+  FROM public.sms_campaigns
+  WHERE org_id = v_org.id
+    AND created_at > now() - interval '24 hours';
+
+  IF v_campaign_count >= 3 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Campaign limit reached (3 per 24 hours)');
+  END IF;
+
+  -- Rate limit AI scans: max 10 per org per hour
+  IF p_ai_criteria IS NOT NULL THEN
+    SELECT count(*) INTO v_campaign_count
+    FROM public.sms_campaigns
+    WHERE org_id = v_org.id
+      AND ai_criteria IS NOT NULL
+      AND created_at > now() - interval '1 hour';
+
+    IF v_campaign_count >= 10 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'AI scan limit reached (10 per hour)');
+    END IF;
+  END IF;
+
+  -- Get the caller's staff_user id
+  SELECT su.id INTO v_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_org.id
+    AND su.is_active AND NOT su.is_deleted;
+
+  -- INSERT the campaign
+  INSERT INTO public.sms_campaigns (
+    org_id, created_by, structured_filters, ai_criteria, location_id, status
+  ) VALUES (
+    v_org.id,
+    v_staff_id,
+    CASE WHEN p_structured_filters IS NULL OR p_structured_filters = 'null'::jsonb
+         THEN NULL ELSE p_structured_filters END,
+    p_ai_criteria,
+    p_location_id,
+    CASE WHEN p_ai_criteria IS NOT NULL THEN 'scanning' ELSE 'ready' END
+  )
+  RETURNING id INTO v_campaign_id;
+
+  IF p_ai_criteria IS NULL THEN
+    -- Structure-only path: run filter query inline
+    -- Count total eligible patients first
+    SELECT count(*) INTO v_total_scanned
+    FROM public.patients p
+    WHERE p.org_id = v_org.id
+      AND p.phone IS NOT NULL
+      AND p.phone_verified
+      AND p.consent_given
+      AND NOT p.marketing_sms_opted_out;
+
+    -- Insert matching patients into recipients
+    INSERT INTO public.sms_campaign_recipients (campaign_id, patient_id, phone, match_reason, status)
+    SELECT
+      v_campaign_id,
+      sub.patient_id,
+      sub.phone,
+      'Matched filters',
+      'pending'
+    FROM (
+      SELECT
+        p.id AS patient_id,
+        p.phone
+      FROM public.patients p
+      LEFT JOIN LATERAL (
+        SELECT
+          count(*) AS visit_count,
+          max(v.created_at) AS last_visit_date
+        FROM public.visits v
+        WHERE v.patient_id = p.id
+          AND v.org_id = v_org.id
+          AND v.status = 'completed'
+          AND (p_location_id IS NULL OR v.location_id = p_location_id)
+      ) vs ON true
+      WHERE p.org_id = v_org.id
+        AND p.phone IS NOT NULL
+        AND p.phone_verified
+        AND p.consent_given
+        AND NOT p.marketing_sms_opted_out
+        -- Location filter: if set, patient must have at least one completed visit there
+        AND (p_location_id IS NULL OR vs.visit_count > 0)
+        -- Age filters
+        AND (
+          p_structured_filters IS NULL
+          OR p_structured_filters->>'min_age' IS NULL
+          OR EXTRACT(YEAR FROM age(p.birthday)) >= (p_structured_filters->>'min_age')::int
+        )
+        AND (
+          p_structured_filters IS NULL
+          OR p_structured_filters->>'max_age' IS NULL
+          OR EXTRACT(YEAR FROM age(p.birthday)) <= (p_structured_filters->>'max_age')::int
+        )
+        -- Sex filter
+        AND (
+          p_structured_filters IS NULL
+          OR p_structured_filters->>'sex' IS NULL
+          OR p.sex = p_structured_filters->>'sex'
+        )
+        -- Last visit before
+        AND (
+          p_structured_filters IS NULL
+          OR p_structured_filters->>'last_visit_before' IS NULL
+          OR vs.last_visit_date < (p_structured_filters->>'last_visit_before')::date
+        )
+        -- Last visit after
+        AND (
+          p_structured_filters IS NULL
+          OR p_structured_filters->>'last_visit_after' IS NULL
+          OR vs.last_visit_date > (p_structured_filters->>'last_visit_after')::date
+        )
+        -- Min visits
+        AND (
+          p_structured_filters IS NULL
+          OR p_structured_filters->>'min_visits' IS NULL
+          OR vs.visit_count >= (p_structured_filters->>'min_visits')::int
+        )
+        -- Max visits
+        AND (
+          p_structured_filters IS NULL
+          OR p_structured_filters->>'max_visits' IS NULL
+          OR vs.visit_count <= (p_structured_filters->>'max_visits')::int
+        )
+    ) sub;
+
+    GET DIAGNOSTICS v_matched_count = ROW_COUNT;
+
+    -- Update campaign with results
+    UPDATE public.sms_campaigns
+    SET status = 'ready',
+        matched_count = v_matched_count,
+        total_scanned = v_total_scanned,
+        scan_completed_at = now()
+    WHERE id = v_campaign_id;
+
+  ELSE
+    -- AI path: trigger ai-scan-campaign edge function
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+    SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+    PERFORM net.http_post(
+      url := v_edge_url || '/ai-scan-campaign',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || v_anon_key,
+        'x-internal-secret', v_edge_secret
+      ),
+      body := jsonb_build_object('campaign_id', v_campaign_id),
+      timeout_milliseconds := 600000
+    );
+  END IF;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (
+    v_org.id,
+    p_caller_auth_uid,
+    'owner',
+    'create_sms_campaign',
+    'sms_campaign',
+    v_campaign_id,
+    jsonb_build_object(
+      'has_ai_criteria', p_ai_criteria IS NOT NULL,
+      'has_structured_filters', p_structured_filters IS NOT NULL AND p_structured_filters <> '{}'::jsonb,
+      'location_id', p_location_id
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'campaign_id', v_campaign_id,
+    'status', CASE WHEN p_ai_criteria IS NOT NULL THEN 'scanning' ELSE 'ready' END
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.create_sms_campaign(
+  p_structured_filters jsonb,
+  p_ai_criteria text DEFAULT NULL,
+  p_location_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.create_sms_campaign(v_uid, p_structured_filters, p_ai_criteria, p_location_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.create_sms_campaign(jsonb, text, uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_sms_campaign(jsonb, text, uuid) TO authenticated;

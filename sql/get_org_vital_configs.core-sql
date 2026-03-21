@@ -1,0 +1,75 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_org_vital_configs(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_org_id uuid;
+  v_caller_staff_id uuid;
+  v_owner_auth_uid uuid;
+  v_configs jsonb;
+BEGIN
+  -- Check if caller is owner
+  SELECT o.id, o.owner_id INTO v_caller_org_id, v_owner_auth_uid
+  FROM public.organizations o
+  WHERE o.owner_id = p_caller_auth_uid;
+
+  IF v_caller_org_id IS NULL THEN
+    -- Check if caller is staff
+    SELECT su.org_id, su.id INTO v_caller_org_id, v_caller_staff_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_active = true
+      AND su.is_deleted = false;
+  END IF;
+
+  IF v_caller_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(row_to_json(q) ORDER BY q.display_order, q.name), '[]'::jsonb)
+  INTO v_configs
+  FROM (
+    SELECT ovc.id, ovc.vital_type_id,
+      COALESCE(vt.name, ovc.custom_name) AS name,
+      COALESCE(vt.unit, ovc.custom_unit) AS unit,
+      COALESCE(vt.min_value, ovc.custom_min) AS min_value,
+      COALESCE(vt.max_value, ovc.custom_max) AS max_value,
+      COALESCE(vt.step_value, ovc.custom_step) AS step_value,
+      ovc.display_order,
+      (ovc.vital_type_id IS NULL) AS is_custom
+    FROM public.org_vital_configs ovc
+    LEFT JOIN public.vital_types vt ON vt.id = ovc.vital_type_id
+    WHERE ovc.org_id = v_caller_org_id AND ovc.enabled = true
+    ORDER BY ovc.display_order, COALESCE(vt.name, ovc.custom_name)
+  ) q;
+
+  RETURN jsonb_build_object('success', true, 'configs', v_configs);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_org_vital_configs()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_org_vital_configs(v_auth_uid);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_org_vital_configs() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_org_vital_configs() TO authenticated;

@@ -66,7 +66,12 @@ BEGIN
 
   -- Set audit context
   PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
-  PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END, true);
+  PERFORM set_config('app.audit_actor_type',
+    CASE
+      WHEN v_owner_id = p_caller_auth_uid THEN 'owner'
+      WHEN EXISTS(SELECT 1 FROM public.staff_roles WHERE staff_user_id = v_caller_staff_id AND role = 'nurse' AND location_id = v_visit.location_id) THEN 'nurse'
+      ELSE 'doctor'
+    END, true);
   PERFORM set_config('app.audit_action', 'completed', true);
 
   -- Complete the visit

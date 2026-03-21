@@ -48,6 +48,11 @@ export default function PatientQueueCard({
               {visit.first_name} {visit.last_name}
             </h3>
             <PriorityBadge priority={visit.priority} />
+            {visit.nurse_reviewed && (
+              <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-600">
+                Nurse Reviewed
+              </span>
+            )}
             {visit.has_previous_visits && (
               <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-600">
                 Returning

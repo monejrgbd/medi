@@ -18,6 +18,7 @@ DECLARE
   v_visit record;
   v_caller_staff_id uuid;
   v_owner_id uuid;
+  v_nurse_enabled boolean;
   v_attachment_id uuid;
 BEGIN
   -- Validate mime type
@@ -66,17 +67,22 @@ BEGIN
   FROM public.organizations
   WHERE id = v_visit.org_id;
 
-  -- Auth: must be owner or doctor at visit location
+  -- Check nurse_enabled at visit's location
+  SELECT l.nurse_enabled INTO v_nurse_enabled
+    FROM public.locations l
+   WHERE l.id = v_visit.location_id;
+
+  -- Auth: must be owner or doctor or nurse (if nurse_enabled) at visit location
   IF p_caller_auth_uid = v_owner_id THEN
     -- Owner is authorized
     NULL;
   ELSIF v_caller_staff_id IS NOT NULL AND EXISTS (
     SELECT 1 FROM public.staff_roles
     WHERE staff_user_id = v_caller_staff_id
-      AND role = 'doctor'
+      AND (role = 'doctor' OR (role = 'nurse' AND v_nurse_enabled = true))
       AND location_id = v_visit.location_id
   ) THEN
-    -- Doctor at visit location is authorized
+    -- Doctor or nurse at visit location is authorized
     NULL;
   ELSE
     RETURN jsonb_build_object('success', false, 'error', 'Not authorized to upload attachments for this visit');

@@ -15,9 +15,9 @@ DECLARE
   v_org_id uuid;
   v_has_role boolean;
 BEGIN
-  -- Only doctors and receptionists can check in
-  IF p_role NOT IN ('doctor', 'receptionist') THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Only doctors and receptionists can check in');
+  -- Only doctors, receptionists, and nurses can check in
+  IF p_role NOT IN ('doctor', 'receptionist', 'nurse') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only doctors, receptionists, and nurses can check in');
   END IF;
 
   -- Get staff user

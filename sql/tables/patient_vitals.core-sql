@@ -1,0 +1,18 @@
+DROP TABLE IF EXISTS public.patient_vitals;
+CREATE TABLE public.patient_vitals (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id      uuid NOT NULL REFERENCES public.patients(id),
+  visit_id        uuid REFERENCES public.visits(id),
+  org_id          uuid NOT NULL REFERENCES public.organizations(id),
+  vital_config_id uuid NOT NULL REFERENCES public.org_vital_configs(id),
+  value           numeric NOT NULL,
+  recorded_by     uuid NOT NULL REFERENCES public.staff_users(id),
+  notes           text,
+  measured_at     timestamptz NOT NULL DEFAULT now(),
+  created_at      timestamptz DEFAULT now()
+);
+ALTER TABLE public.patient_vitals ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "org_vitals_read" ON public.patient_vitals FOR SELECT
+  USING (org_id = requesting_org_id());
+CREATE INDEX idx_vitals_patient_config ON public.patient_vitals (patient_id, vital_config_id, measured_at DESC);
+CREATE INDEX idx_vitals_visit ON public.patient_vitals (visit_id) WHERE visit_id IS NOT NULL;
