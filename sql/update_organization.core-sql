@@ -1,7 +1,8 @@
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.update_organization(
   p_caller_auth_uid uuid,
-  p_name text
+  p_name text,
+  p_skip_ai boolean DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -28,7 +29,8 @@ BEGIN
   END IF;
 
   UPDATE public.organizations
-  SET name = v_trimmed_name
+  SET name = v_trimmed_name,
+      skip_ai = COALESCE(p_skip_ai, skip_ai)
   WHERE id = v_org_id;
 
   RETURN jsonb_build_object('success', true);
@@ -36,7 +38,7 @@ END;
 $$;
 
 -- Public wrapper
-CREATE OR REPLACE FUNCTION public.update_organization(p_name text)
+CREATE OR REPLACE FUNCTION public.update_organization(p_name text, p_skip_ai boolean DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
 VOLATILE
@@ -46,9 +48,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.update_organization(v_auth_uid, p_name);
+  RETURN private.update_organization(v_auth_uid, p_name, p_skip_ai);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.update_organization(text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.update_organization(text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_organization(text, boolean) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_organization(text, boolean) TO authenticated;

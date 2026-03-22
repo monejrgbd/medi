@@ -1,6 +1,7 @@
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.request_demo_otp(
-  p_email text
+  p_email text,
+  p_team_code text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -48,11 +49,13 @@ BEGIN
 
   -- Upsert demo_access row
   IF v_existing IS NULL THEN
-    INSERT INTO public.demo_access (email, otp_hash, otp_expires_at)
-    VALUES (p_email, v_hash, now() + interval '10 minutes');
+    INSERT INTO public.demo_access (email, otp_hash, otp_expires_at, team_code)
+    VALUES (p_email, v_hash, now() + interval '10 minutes', p_team_code);
   ELSE
     UPDATE public.demo_access
-    SET otp_hash = v_hash, otp_expires_at = now() + interval '10 minutes'
+    SET otp_hash = v_hash,
+        otp_expires_at = now() + interval '10 minutes',
+        team_code = COALESCE(p_team_code, team_code)
     WHERE id = v_existing.id;
   END IF;
 
@@ -78,7 +81,8 @@ $$;
 
 -- Public wrapper (anon-callable)
 CREATE OR REPLACE FUNCTION public.request_demo_otp(
-  p_email text
+  p_email text,
+  p_team_code text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -87,6 +91,6 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
-  RETURN private.request_demo_otp(p_email);
+  RETURN private.request_demo_otp(p_email, p_team_code);
 END;
 $$;

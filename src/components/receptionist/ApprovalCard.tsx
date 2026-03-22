@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { fetchSimilarPatients, editPatientRecord } from "@/app/(dashboard)/d/_actions/receptionist";
+import { useState, useTransition } from "react";
+import { fetchSimilarPatients, editPatientRecord, skipAiToQueue } from "@/app/(dashboard)/d/_actions/receptionist";
 import FollowUpIndicator from "./FollowUpIndicator";
 
 interface FollowUpInfo {
@@ -78,6 +78,8 @@ export default function ApprovalCard({
   const [expanded, setExpanded] = useState(false);
   const [similarPatients, setSimilarPatients] = useState<SimilarPatient[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
+
+  const [skippingAi, startSkipTransition] = useTransition();
 
   // Edit mode state
   const [editing, setEditing] = useState(false);
@@ -181,8 +183,14 @@ export default function ApprovalCard({
     setEditing(false);
   }
 
+  function handleSkipAi() {
+    startSkipTransition(async () => {
+      await skipAiToQueue(visit.visit_id);
+    });
+  }
+
   const isReturning = visit.match_type === "returning";
-  const busy = approving || denying || !!verifying || !!confirming || editing;
+  const busy = approving || denying || !!verifying || !!confirming || editing || skippingAi;
   const isPending = visit.phone_verification_pending;
   const isCollision = visit.collision_flag;
   const isPhoneVerified = visit.phone_verified;
@@ -450,7 +458,7 @@ export default function ApprovalCard({
             </div>
           </>
         ) : (
-          // Default: standard approve/deny + optional verify phone
+          // Default: standard approve/skip AI/deny + optional verify phone
           <div className="flex gap-2">
             <button
               onClick={() => onApprove(visit.visit_id)}
@@ -458,6 +466,13 @@ export default function ApprovalCard({
               className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
             >
               {approving ? "Approving..." : "Approve"}
+            </button>
+            <button
+              onClick={handleSkipAi}
+              disabled={busy}
+              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-slate transition-colors hover:bg-gray-50 disabled:opacity-50"
+            >
+              {skippingAi ? "Skipping..." : "Skip AI"}
             </button>
             <button
               onClick={() => onDeny(visit.visit_id)}

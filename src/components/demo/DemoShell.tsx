@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { ArrowLeft } from "lucide-react";
-import DemoTabBar, { type Tab } from "@/components/demo/DemoTabBar";
+import { ArrowLeft, User, ClipboardList, HeartPulse, Stethoscope, Star, Megaphone, HelpCircle } from "lucide-react";
+import DemoTabBar, { type Tab, type TabDef } from "@/components/demo/DemoTabBar";
 import DemoTimeline from "@/components/demo/DemoTimeline";
 import DemoComplete from "@/components/demo/DemoComplete";
 import DemoFAQ from "@/components/demo/DemoFAQ";
+import { DemoIntroCard, DemoGearButton } from "@/components/demo/DemoCustomizePanel";
+import NurseDemoMockup from "@/components/demo/NurseDemoMockup";
 import CheckinFlow from "@/app/checkin/[locationId]/CheckinFlow";
 import ReceptionistDashboard from "@/app/(dashboard)/d/receptionist/ReceptionistDashboard";
 import DoctorDashboard from "@/app/(dashboard)/d/doctor/DoctorDashboard";
@@ -16,6 +18,7 @@ import ReviewHub from "@/components/reviews/ReviewHub";
 import MarketingDashboard from "@/components/dashboard/marketing/MarketingDashboard";
 import CampaignDetail from "@/components/dashboard/marketing/CampaignDetail";
 import { RoleProvider } from "@/contexts/RoleContext";
+import { DemoFeatureProvider, useDemoFeatures } from "@/contexts/DemoFeatureContext";
 import { getCampaignDetail } from "@/app/(dashboard)/d/_actions/marketing";
 
 interface DemoShellProps {
@@ -56,7 +59,15 @@ interface DemoShellProps {
 
 // Tab type imported from DemoTabBar
 
-export default function DemoShell({
+export default function DemoShell(props: DemoShellProps) {
+  return (
+    <DemoFeatureProvider>
+      <DemoShellInner {...props} />
+    </DemoFeatureProvider>
+  );
+}
+
+function DemoShellInner({
   locationId,
   locationData,
   orgId,
@@ -67,6 +78,7 @@ export default function DemoShell({
   reviewsInitial,
   marketingInitial,
 }: DemoShellProps) {
+  const { features, isCustomized } = useDemoFeatures();
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
   const [demoComplete, setDemoComplete] = useState(false);
@@ -83,6 +95,73 @@ export default function DemoShell({
   const [selectedCampaignData, setSelectedCampaignData] = useState<any>(null);
   const [demoScanCount, setDemoScanCount] = useState(0);
   const DEMO_SCAN_LIMIT = 3;
+
+  // Build tabs array based on features
+  const tabs: TabDef[] = useMemo(() => [
+    {
+      key: "patient" as Tab,
+      label: "Patient",
+      icon: User,
+      accent: "border-blue-500 text-blue-600",
+      bg: "bg-blue-50",
+      dot: "bg-blue-500",
+      enabled: true,
+    },
+    {
+      key: "receptionist" as Tab,
+      label: "Receptionist",
+      icon: ClipboardList,
+      accent: "border-green-500 text-green-600",
+      bg: "bg-green-50",
+      dot: "bg-green-500",
+      enabled: true,
+    },
+    {
+      key: "nurse" as Tab,
+      label: "Nurse",
+      icon: HeartPulse,
+      accent: "border-teal-500 text-teal-600",
+      bg: "bg-teal-50",
+      dot: "bg-teal-500",
+      enabled: features.nurseEnabled,
+    },
+    {
+      key: "doctor" as Tab,
+      label: "Doctor",
+      icon: Stethoscope,
+      accent: "border-purple-500 text-purple-600",
+      bg: "bg-purple-50",
+      dot: "bg-purple-500",
+      enabled: true,
+    },
+    {
+      key: "reviews" as Tab,
+      label: "Reviews",
+      icon: Star,
+      accent: "border-orange-500 text-orange-600",
+      bg: "bg-orange-50",
+      dot: "bg-orange-500",
+      enabled: features.reviewCollection,
+    },
+    {
+      key: "marketing" as Tab,
+      label: "Marketing",
+      icon: Megaphone,
+      accent: "border-blue-500 text-blue-600",
+      bg: "bg-blue-50",
+      dot: "bg-blue-500",
+      enabled: true,
+    },
+    {
+      key: "faq" as Tab,
+      label: "Q&A",
+      icon: HelpCircle,
+      accent: "border-amber-500 text-amber-600",
+      bg: "bg-amber-50",
+      dot: "bg-amber-500",
+      enabled: true,
+    },
+  ], [features.nurseEnabled, features.reviewCollection]);
 
   // Demo reviews: only show 6 curated + current visitor's review
   const DEMO_REVIEW_IDS = new Set([
@@ -250,11 +329,20 @@ export default function DemoShell({
             setVisitClaimed(false);
             setVisitCompleted(true);
             setDemoStep(5);
-            setPulsingTab("reviews");
-            setTimeout(() => {
-              setActiveTab("reviews");
-              setPulsingTab(null);
-            }, 4000);
+            // Skip to marketing if reviews are disabled
+            if (!features.reviewCollection) {
+              setPulsingTab("marketing");
+              setTimeout(() => {
+                setActiveTab("marketing");
+                setPulsingTab(null);
+              }, 4000);
+            } else {
+              setPulsingTab("reviews");
+              setTimeout(() => {
+                setActiveTab("reviews");
+                setPulsingTab(null);
+              }, 4000);
+            }
           }
         }
       )
@@ -263,11 +351,21 @@ export default function DemoShell({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [locationId]);
+  }, [locationId, features.reviewCollection]);
 
   // After visit completes: fetch review token + poll for review submission
   useEffect(() => {
     if (!visitCompleted || !demoVisitId || reviewSubmitted) return;
+    // If reviews disabled, skip directly to step 6
+    if (!features.reviewCollection) {
+      setDemoStep(6);
+      setPulsingTab("marketing");
+      setTimeout(() => {
+        setActiveTab("marketing");
+        setPulsingTab(null);
+      }, 3000);
+      return;
+    }
     const supabase = createClient();
 
     // Fetch review token from the visit
@@ -318,7 +416,7 @@ export default function DemoShell({
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [visitCompleted, demoVisitId, reviewSubmitted, router]);
+  }, [visitCompleted, demoVisitId, reviewSubmitted, router, features.reviewCollection]);
 
   function handleTabChange(tab: Tab) {
     setActiveTab(tab);
@@ -365,6 +463,11 @@ export default function DemoShell({
     return <DemoComplete onRestart={handleRestart} />;
   }
 
+  // Show intro card before demo starts
+  if (!isCustomized) {
+    return <DemoIntroCard />;
+  }
+
   return (
     <div className="min-h-screen bg-snow flex flex-col">
       {/* Top bar */}
@@ -393,20 +496,27 @@ export default function DemoShell({
 
       {/* Tab bar */}
       <DemoTabBar
+        tabs={tabs}
         activeTab={activeTab}
-        onTabChange={handleTabChange}
         pulsingTab={pulsingTab}
+        onTabClick={handleTabChange}
       />
 
       {/* Timeline */}
-      <DemoTimeline currentStep={demoStep} />
+      <DemoTimeline currentStep={demoStep} features={features} />
 
 
 
-      {/* Content area — all 3 mounted, toggled via display */}
+      {/* Content area — all tabs mounted, toggled via display */}
       <div className="flex-1 overflow-hidden relative">
         <div className="absolute inset-0 bg-snow" style={{ display: activeTab === "patient" ? "flex" : "none" }}>
           <div className="h-full w-full flex flex-col items-center px-4 pt-6">
+            {/* Skip AI banner */}
+            {features.skipAi && (
+              <div className="w-full max-w-[40rem] mx-auto mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 text-center">
+                AI intake is disabled for this demo. Patients will go straight to the doctor queue after approval.
+              </div>
+            )}
             <div className="flex-1 w-full max-w-[40rem] min-h-0 flex flex-col items-center mx-auto">
               <CheckinFlow
                 key={demoKey}
@@ -444,6 +554,13 @@ export default function DemoShell({
         </div>
 
         <div
+          style={{ display: activeTab === "nurse" ? "flex" : "none" }}
+          className="justify-center items-start pt-8 px-4"
+        >
+          <NurseDemoMockup />
+        </div>
+
+        <div
           style={{ display: activeTab === "doctor" ? "block" : "none" }}
         >
           <DoctorDashboard
@@ -464,6 +581,7 @@ export default function DemoShell({
             initialHasMoreLeft={doctorInitial.hasMoreLeft}
             demoMode={true}
             demoVisitId={demoVisitId}
+            nurseEnabled={features.nurseEnabled}
           />
         </div>
 
@@ -490,17 +608,6 @@ export default function DemoShell({
             )}
 
             {/* Success banner after review submitted */}
-            {reviewSubmitted && (
-              <div className="mx-4 mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 flex items-center justify-between">
-                <p className="text-sm font-medium text-green-800">Review submitted. Try the Marketing tab next.</p>
-                <button
-                  onClick={() => { setActiveTab("marketing"); setPulsingTab(null); }}
-                  className="shrink-0 rounded-lg bg-hilt-blue px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-                >
-                  Go
-                </button>
-              </div>
-            )}
 
             <ReviewHub
               key={`demo-${demoReviews.length}`}
@@ -568,6 +675,9 @@ export default function DemoShell({
           <DemoFAQ />
         </div>
       </div>
+
+      {/* Gear button for feature customization */}
+      <DemoGearButton />
     </div>
   );
 }

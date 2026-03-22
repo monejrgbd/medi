@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { requestDemoOtp, verifyDemoOtp } from "@/app/demo/_actions/demo";
 import { Shield } from "lucide-react";
 
@@ -11,6 +11,8 @@ interface DemoGateProps {
 
 export default function DemoGate({ existingSession }: DemoGateProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const teamCode = searchParams.get("team") || undefined;
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
@@ -41,7 +43,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     setError("");
     setLoading(true);
 
-    const result = await requestDemoOtp(email);
+    const result = await requestDemoOtp(email, teamCode);
     setLoading(false);
 
     if (result.success) {
@@ -238,7 +240,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
                     if (resendCooldown > 0) return;
                     setError("");
                     setOtp(["", "", "", "", "", ""]);
-                    const result = await requestDemoOtp(email);
+                    const result = await requestDemoOtp(email, teamCode);
                     if (!result.success) {
                       setError(result.error ?? "Failed to resend.");
                     } else {

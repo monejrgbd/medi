@@ -4,7 +4,8 @@ CREATE OR REPLACE FUNCTION private.complete_visit(
   p_visit_id uuid,
   p_diagnosis text,
   p_follow_up jsonb DEFAULT NULL,
-  p_show_diagnosis boolean DEFAULT true
+  p_show_diagnosis boolean DEFAULT true,
+  p_care_instructions text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -17,6 +18,7 @@ DECLARE
   v_owner_id uuid;
   v_caller_staff_id uuid;
   v_clean_diagnosis text;
+  v_clean_instructions text;
   v_avg_wait numeric;
   v_sample_count int;
 BEGIN
@@ -29,6 +31,15 @@ BEGIN
 
   IF length(v_clean_diagnosis) > 10000 THEN
     RETURN jsonb_build_object('success', false, 'error', 'Diagnosis exceeds maximum length');
+  END IF;
+
+  -- Sanitize care instructions
+  v_clean_instructions := regexp_replace(trim(COALESCE(p_care_instructions, '')), '<[^>]*>', '', 'g');
+  IF length(v_clean_instructions) > 10000 THEN
+    v_clean_instructions := left(v_clean_instructions, 10000);
+  END IF;
+  IF length(v_clean_instructions) = 0 THEN
+    v_clean_instructions := NULL;
   END IF;
 
   -- Get visit details
@@ -78,6 +89,7 @@ BEGIN
   UPDATE public.visits
   SET status = 'completed',
       doctor_diagnosis = v_clean_diagnosis,
+      care_instructions = v_clean_instructions,
       completed_at = now(),
       summary_show_diagnosis = p_show_diagnosis,
       is_return_visit = EXISTS(
@@ -160,11 +172,15 @@ END;
 $$;
 
 -- Public wrapper
+-- Drop old signature before creating new one (parameter count changed)
+DROP FUNCTION IF EXISTS public.complete_visit(uuid, text, jsonb, boolean);
+
 CREATE OR REPLACE FUNCTION public.complete_visit(
   p_visit_id uuid,
   p_diagnosis text,
   p_follow_up jsonb DEFAULT NULL,
-  p_show_diagnosis boolean DEFAULT true
+  p_show_diagnosis boolean DEFAULT true,
+  p_care_instructions text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -178,9 +194,9 @@ BEGIN
   IF v_auth_uid IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
   END IF;
-  RETURN private.complete_visit(v_auth_uid, p_visit_id, p_diagnosis, p_follow_up, p_show_diagnosis);
+  RETURN private.complete_visit(v_auth_uid, p_visit_id, p_diagnosis, p_follow_up, p_show_diagnosis, p_care_instructions);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.complete_visit(uuid, text, jsonb, boolean) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.complete_visit(uuid, text, jsonb, boolean) TO authenticated;
+REVOKE ALL ON FUNCTION public.complete_visit(uuid, text, jsonb, boolean, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.complete_visit(uuid, text, jsonb, boolean, text) TO authenticated;

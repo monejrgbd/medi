@@ -148,6 +148,14 @@ export default async function SummaryPage({ params }: PageProps) {
             </div>
           )}
 
+          {/* Care Instructions */}
+          {summary.care_instructions && (
+            <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <h3 className="text-sm font-semibold text-blue-800 mb-2">Care Instructions</h3>
+              <p className="text-sm text-ink whitespace-pre-wrap">{summary.care_instructions}</p>
+            </div>
+          )}
+
           {/* No content fallback */}
           {!summary.summary && !summary.diagnosis && (
             <p className="text-sm text-gray-500 italic">

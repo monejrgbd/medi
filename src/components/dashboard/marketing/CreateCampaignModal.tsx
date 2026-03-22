@@ -43,7 +43,7 @@ export default function CreateCampaignModal({
   const [patientCount, setPatientCount] = useState<number | null>(null);
   const [scanCredits, setScanCredits] = useState<number>(0);
   const [countLoading, setCountLoading] = useState(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const buildFilters = useCallback(() => {
     const filters: Record<string, unknown> = {};

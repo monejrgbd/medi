@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 
-export async function requestDemoOtp(email: string) {
+export async function requestDemoOtp(email: string, teamCode?: string) {
   try {
     if (!email || !email.includes("@")) {
       return { success: false, error: "Please enter a valid email address." };
@@ -12,6 +12,7 @@ export async function requestDemoOtp(email: string) {
 
     const { data, error } = await supabase.rpc("request_demo_otp", {
       p_email: email,
+      p_team_code: teamCode || null,
     });
 
     if (error) {

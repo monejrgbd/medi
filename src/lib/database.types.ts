@@ -291,6 +291,7 @@ export type Database = {
           id: string
           otp_expires_at: string | null
           otp_hash: string | null
+          team_code: string | null
         }
         Insert: {
           access_count?: number
@@ -299,6 +300,7 @@ export type Database = {
           id?: string
           otp_expires_at?: string | null
           otp_hash?: string | null
+          team_code?: string | null
         }
         Update: {
           access_count?: number
@@ -307,6 +309,7 @@ export type Database = {
           id?: string
           otp_expires_at?: string | null
           otp_hash?: string | null
+          team_code?: string | null
         }
         Relationships: []
       }
@@ -521,6 +524,7 @@ export type Database = {
           qr_code_url: string | null
           referral_email: string | null
           review_sms_enabled: boolean | null
+          skip_ai: boolean | null
           specialty: string | null
           tablet_count: number | null
           timezone: string | null
@@ -546,6 +550,7 @@ export type Database = {
           qr_code_url?: string | null
           referral_email?: string | null
           review_sms_enabled?: boolean | null
+          skip_ai?: boolean | null
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
@@ -571,6 +576,7 @@ export type Database = {
           qr_code_url?: string | null
           referral_email?: string | null
           review_sms_enabled?: boolean | null
+          skip_ai?: boolean | null
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
@@ -695,6 +701,7 @@ export type Database = {
           recharge_limit: number | null
           recharge_used: number | null
           review_sms_addon: boolean | null
+          skip_ai: boolean | null
           slug: string
           subscription_plan: string | null
           trial_alert_sent: boolean | null
@@ -723,6 +730,7 @@ export type Database = {
           recharge_limit?: number | null
           recharge_used?: number | null
           review_sms_addon?: boolean | null
+          skip_ai?: boolean | null
           slug: string
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
@@ -751,6 +759,7 @@ export type Database = {
           recharge_limit?: number | null
           recharge_used?: number | null
           review_sms_addon?: boolean | null
+          skip_ai?: boolean | null
           slug?: string
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
@@ -2278,10 +2287,12 @@ export type Database = {
           ai_completed_at: string | null
           ai_diagnostic: string | null
           ai_model_used: string | null
+          ai_skipped: boolean | null
           ai_started_at: string | null
           ai_structured_card: Json | null
           ai_summary: string | null
           ai_summary_translated: string | null
+          care_instructions: string | null
           claimed_at: string | null
           claimed_by: string | null
           completed_at: string | null
@@ -2322,10 +2333,12 @@ export type Database = {
           ai_completed_at?: string | null
           ai_diagnostic?: string | null
           ai_model_used?: string | null
+          ai_skipped?: boolean | null
           ai_started_at?: string | null
           ai_structured_card?: Json | null
           ai_summary?: string | null
           ai_summary_translated?: string | null
+          care_instructions?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
@@ -2366,10 +2379,12 @@ export type Database = {
           ai_completed_at?: string | null
           ai_diagnostic?: string | null
           ai_model_used?: string | null
+          ai_skipped?: boolean | null
           ai_started_at?: string | null
           ai_structured_card?: Json | null
           ai_summary?: string | null
           ai_summary_translated?: string | null
+          care_instructions?: string | null
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
@@ -2591,24 +2606,16 @@ export type Database = {
       }
       complete_onboarding: { Args: never; Returns: Json }
       complete_referral: { Args: { p_referral_id: string }; Returns: Json }
-      complete_visit:
-        | {
-            Args: {
-              p_diagnosis: string
-              p_follow_up?: Json
-              p_visit_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_diagnosis: string
-              p_follow_up?: Json
-              p_show_diagnosis?: boolean
-              p_visit_id: string
-            }
-            Returns: Json
-          }
+      complete_visit: {
+        Args: {
+          p_care_instructions?: string
+          p_diagnosis: string
+          p_follow_up?: Json
+          p_show_diagnosis?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
       configure_org_vitals: { Args: { p_configs: Json }; Returns: Json }
       configure_review_platforms: {
         Args: { p_location_id: string; p_platforms: Json }
@@ -2740,6 +2747,10 @@ export type Database = {
         Args: { p_limit?: number; p_offset?: number }
         Returns: Json
       }
+      get_campaign_patient_count: {
+        Args: { p_location_id?: string; p_structured_filters?: Json }
+        Returns: Json
+      }
       get_campaign_patients: {
         Args: { p_campaign_id: string; p_limit?: number; p_offset?: number }
         Returns: Json
@@ -2766,6 +2777,7 @@ export type Database = {
         Args: { p_location_id: string }
         Returns: Json
       }
+      get_demo_tracker: { Args: { p_team_code: string }; Returns: Json }
       get_employee_stats: {
         Args: {
           p_end_date?: string
@@ -2970,7 +2982,9 @@ export type Database = {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
         Returns: Json
       }
-      request_demo_otp: { Args: { p_email: string }; Returns: Json }
+      request_demo_otp:
+        | { Args: { p_email: string }; Returns: Json }
+        | { Args: { p_email: string; p_team_code?: string }; Returns: Json }
       request_premium_code: {
         Args: {
           p_domain?: string
@@ -3059,6 +3073,7 @@ export type Database = {
       setup_onboarding_demo: { Args: { p_location_id: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      skip_ai_to_queue: { Args: { p_visit_id: string }; Returns: Json }
       staff_check_in: {
         Args: { p_location_id: string; p_role: string }
         Returns: Json
@@ -3148,6 +3163,7 @@ export type Database = {
           p_nurse_enabled?: boolean
           p_operating_hours?: Json
           p_referral_email?: string
+          p_skip_ai?: boolean
           p_specialty?: string
           p_tablet_count?: number
           p_timezone?: string
@@ -3164,7 +3180,10 @@ export type Database = {
         Args: { p_default_private: boolean; p_patient_id: string }
         Returns: Json
       }
-      update_organization: { Args: { p_name: string }; Returns: Json }
+      update_organization: {
+        Args: { p_name: string; p_skip_ai?: boolean }
+        Returns: Json
+      }
       update_pets: {
         Args: { p_patient_id: string; p_pets: string[] }
         Returns: Json

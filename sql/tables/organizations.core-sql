@@ -25,6 +25,7 @@ CREATE TABLE public.organizations (
   data_retention_until  timestamptz,
   recharge_limit        int DEFAULT NULL CHECK (recharge_limit IS NULL OR recharge_limit BETWEEN 1 AND 10000),
   recharge_used         numeric DEFAULT 0,
+  skip_ai               boolean DEFAULT false,
   created_at            timestamptz DEFAULT now()
 );
 

@@ -88,6 +88,7 @@ interface VisitDetail {
     nurse_reviewed?: boolean;
     nurse_notes?: string;
     diagnostic_enabled: boolean;
+    ai_skipped?: boolean;
   };
   patient: {
     id: string;
@@ -215,12 +216,37 @@ export default function FocusMode({
     setLoading(true);
     fetchVisitDetail(currentVisit.visit_id).then((result) => {
       if (result.success && result.data) {
-        setDetail(result.data as VisitDetail);
-        updatedAtRef.current = (result.data as VisitDetail).visit.updated_at;
+        let detail = result.data as VisitDetail;
+        // Inject mock nurse data in demo mode
+        if (demoMode && nurseEnabled) {
+          detail = {
+            ...detail,
+            visit: {
+              ...detail.visit,
+              nurse_reviewed: true,
+              nurse_notes: "Patient appears fatigued. Swelling visible in both knuckles. Range of motion limited in right knee. Vitals within normal range. No fever.",
+            },
+            vitals: [
+              { id: "demo-v1", measured_at: new Date().toISOString(), value: 68.2, vital_name: "Weight", vital_unit: "kg", display_order: 1, notes: null, recorded_by_name: "Nurse Amy R." },
+              { id: "demo-v2", measured_at: new Date().toISOString(), value: 165.0, vital_name: "Height", vital_unit: "cm", display_order: 2, notes: null, recorded_by_name: "Nurse Amy R." },
+              { id: "demo-v3", measured_at: new Date().toISOString(), value: 118, vital_name: "Blood Pressure Systolic", vital_unit: "mmHg", display_order: 3, notes: null, recorded_by_name: "Nurse Amy R." },
+              { id: "demo-v4", measured_at: new Date().toISOString(), value: 76, vital_name: "Blood Pressure Diastolic", vital_unit: "mmHg", display_order: 4, notes: null, recorded_by_name: "Nurse Amy R." },
+              { id: "demo-v5", measured_at: new Date().toISOString(), value: 72, vital_name: "Heart Rate", vital_unit: "bpm", display_order: 5, notes: null, recorded_by_name: "Nurse Amy R." },
+              { id: "demo-v6", measured_at: new Date().toISOString(), value: 98.4, vital_name: "Temperature", vital_unit: "F", display_order: 6, notes: null, recorded_by_name: "Nurse Amy R." },
+              ...(detail.vitals || []),
+            ],
+            vaccines: [
+              { id: "demo-vac1", vaccine_name: "Influenza (Seasonal)", dose_number: null, administered_at: new Date().toISOString(), refused: false, refusal_reason: null, lot_number: "FL2026A", manufacturer: "Sanofi", site: "Left Deltoid", notes: null, administered_by_name: "Nurse Amy R." },
+              ...(detail.vaccines || []),
+            ],
+          };
+        }
+        setDetail(detail);
+        updatedAtRef.current = detail.visit.updated_at;
       }
       setLoading(false);
     });
-  }, [currentVisit]);
+  }, [currentVisit, demoMode, nurseEnabled]);
 
   // Subscribe to visit updates
   useEffect(() => {
@@ -434,9 +460,16 @@ export default function FocusMode({
       <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-4 py-3 lg:px-6">
         <div className="flex items-center justify-between max-w-3xl mx-auto">
           <div>
-            <h2 className="text-lg font-bold text-ink">
-              {currentVisit.first_name} {currentVisit.last_name}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-ink">
+                {currentVisit.first_name} {currentVisit.last_name}
+              </h2>
+              {detail?.visit.ai_skipped && (
+                <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                  AI Skipped
+                </span>
+              )}
+            </div>
             <p className="text-xs text-slate">
               {locationName} | Focus Mode
               {!demoVisitId && queue.length > 0 && ` | ${queue.length} more in queue`}
@@ -551,14 +584,30 @@ export default function FocusMode({
           {/* Tab content */}
           <div className="mt-4">
             {tab === "summary" && (
-              <SummaryDisplay
-                summary={detail.visit.ai_summary}
-                structuredCard={detail.visit.ai_structured_card}
-              />
+              detail.visit.ai_skipped ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
+                  <p className="text-sm text-amber-800">
+                    AI intake was skipped for this visit
+                  </p>
+                </div>
+              ) : (
+                <SummaryDisplay
+                  summary={detail.visit.ai_summary}
+                  structuredCard={detail.visit.ai_structured_card}
+                />
+              )
             )}
 
             {tab === "transcript" && (
-              <TranscriptView messages={detail.transcript} />
+              detail.visit.ai_skipped ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
+                  <p className="text-sm text-amber-800">
+                    No transcript available, AI was skipped
+                  </p>
+                </div>
+              ) : (
+                <TranscriptView messages={detail.transcript} />
+              )
             )}
 
             {tab === "notes" && (

@@ -52,6 +52,7 @@ export async function updateLocation(formData: {
   vitalsEnabled?: boolean;
   aiCustomInstructions?: string;
   aiMessageLimit?: number | null;
+  skipAi?: boolean;
 }) {
   await requireAuth();
   const supabase = await createClient();
@@ -79,6 +80,7 @@ export async function updateLocation(formData: {
   if (formData.vitalsEnabled !== undefined) params.p_vitals_enabled = formData.vitalsEnabled;
   if (formData.aiCustomInstructions !== undefined) params.p_ai_custom_instructions = formData.aiCustomInstructions;
   if (formData.aiMessageLimit !== undefined) params.p_ai_message_limit = formData.aiMessageLimit === null ? 0 : formData.aiMessageLimit;
+  if (formData.skipAi !== undefined) params.p_skip_ai = formData.skipAi;
 
   const { data, error } = await supabase.rpc("update_location", params);
 
@@ -90,7 +92,7 @@ export async function updateLocation(formData: {
   return { success: true };
 }
 
-export async function updateOrganization(formData: { name: string }) {
+export async function updateOrganization(formData: { name: string; skipAi?: boolean }) {
   await requireAuth();
   const name = stripHtml(formData.name).slice(0, 100);
   if (!name) {
@@ -99,9 +101,10 @@ export async function updateOrganization(formData: { name: string }) {
 
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("update_organization", {
-    p_name: name,
-  });
+  const rpcParams: Record<string, unknown> = { p_name: name };
+  if (formData.skipAi !== undefined) rpcParams.p_skip_ai = formData.skipAi;
+
+  const { data, error } = await supabase.rpc("update_organization", rpcParams);
 
   if (error) return { success: false, error: "Failed to update organization" };
   if (data && !data.success) return { success: false, error: data.error };

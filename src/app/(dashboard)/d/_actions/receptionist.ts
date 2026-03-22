@@ -201,6 +201,23 @@ export async function handleNoPhoneExisting(visitId: string) {
   return { success: true };
 }
 
+export async function skipAiToQueue(visitId: string) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId))
+    return { success: false, error: "Invalid visit ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("skip_ai_to_queue", {
+    p_visit_id: visitId,
+  });
+
+  if (error) return { success: false, error: "Failed to skip AI" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true };
+}
+
 export async function editPatientRecord(
   patientId: string,
   firstName?: string,

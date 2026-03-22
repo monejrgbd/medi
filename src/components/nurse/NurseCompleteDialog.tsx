@@ -34,6 +34,9 @@ export default function NurseCompleteDialog({
   const [followUpDays, setFollowUpDays] = useState<number | null>(14);
   const [followUpInstructions, setFollowUpInstructions] = useState("");
 
+  const [showCareInstructions, setShowCareInstructions] = useState(false);
+  const [careInstructions, setCareInstructions] = useState("");
+
   function handleSubmit() {
     const trimmed = diagnosis.trim();
     if (!trimmed) {
@@ -63,7 +66,8 @@ export default function NurseCompleteDialog({
         visitId,
         diagnosis.trim(),
         followUp,
-        allow
+        allow,
+        careInstructions.trim() || undefined
       );
       if (result.success) {
         onComplete();
@@ -98,6 +102,36 @@ export default function NurseCompleteDialog({
             {diagnosis.length.toLocaleString()} / 10,000
           </p>
           {error && <p className="text-xs text-red-600">{error}</p>}
+        </div>
+
+        {/* Care Instructions (collapsible) */}
+        <div className="mt-4">
+          {!showCareInstructions ? (
+            <button
+              type="button"
+              onClick={() => setShowCareInstructions(true)}
+              className="text-sm text-teal-600 hover:underline"
+            >
+              Add care instructions
+            </button>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">
+                Care Instructions (optional)
+              </label>
+              <textarea
+                value={careInstructions}
+                onChange={(e) => setCareInstructions(e.target.value)}
+                placeholder="Instructions for the patient, e.g. rest for 48 hours, take medication twice daily..."
+                rows={3}
+                maxLength={10000}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-teal-500 focus:outline-none resize-none"
+              />
+              <p className="text-xs text-slate mt-1">
+                {careInstructions.length.toLocaleString()} / 10,000
+              </p>
+            </div>
+          )}
         </div>
 
         <FollowUpForm

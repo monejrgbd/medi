@@ -284,9 +284,13 @@ Two trial tiers. No credit card required for either.
 - Projected run-out date based on current usage pace
 - Helps owners decide when to upgrade their plan before hitting overages
 
-### Add-On Pricing
-- **Review SMS add-on** — $49/mo per location. Enables the review funnel SMS after visit completion. Phone collection and visit summary SMS are core features included in all plans.
-- **Follow-up SMS add-on** — $49/mo per location.
+### Credit-Based Features (per location toggle, pay per use, available to all clinics automatically)
+- **AI Diagnostic** — 0.5 credits per use. AI powered clinical assessment shown to doctors as a suggestion. Enable or disable per location. No addon required.
+- **Review request SMS** — 0.1 credits per SMS. Post visit review collection. Enable or disable per location. No addon required.
+- **Follow up reminder SMS** — 0.1 credits per SMS. Automated return visit reminders. Enable or disable per location. No addon required.
+
+### Add-On (org level gate, only feature that requires enabling)
+- **AI Targeted Marketing** — 0.3 credits per SMS sent, 1 credit per 1,000 AI scans. Filter patients by demographics and visit history, AI scans clinical data. Simple filtering by age, sex, and visit history is always free. Gated by `marketing_sms_addon` on organization. This is the ONLY feature that requires an org level toggle to activate.
 
 ### Payment & Billing
 - **Payment processor**: PayPal for subscription billing and overage charges.
@@ -307,8 +311,7 @@ Two trial tiers. No credit card required for either.
 - Organization name
 - Billing / subscription plan management
 - Credit usage dashboard (real-time consumption, remaining, projected run-out)
-- Review SMS add-on subscription (enable/disable, $49/mo)
-- Follow-up SMS add-on subscription (enable/disable, $49/mo)
+- AI Targeted Marketing add-on (enable/disable, credit based)
 - All locations overview
 
 ### Location Settings (Owner + Manager of that location)
@@ -367,9 +370,9 @@ These are confirmed for v1 beyond the core flow:
 28. **Self-check-in** — patients scan QR and enter their own info. Returning patients matched automatically, new patients can register themselves. Receptionist just approves/denies. Patient sees "Waiting for approval" until approved.
 29. **AI safety guardrail** — AI never diagnoses or suggests treatment to the patient. Deflects if asked. AI diagnostic is doctor-eyes-only.
 30. **Phone collection & visit summary SMS** — phone number is always collected after AI conversation (SMS-verified, only asked once per patient). Visit summary SMS sent automatically after every completed visit (no referral). Phone number stored on patient record. This is a core feature, not an add-on.
-30a. **Review SMS add-on** — $49/mo per location. Enables the review funnel SMS triggered after the visit summary. Included free during trial (14 days standard, 30 days premium) to demonstrate value.
+30a. **Review request SMS** — 0.1 credits per SMS. Post visit review collection, enable or disable per location. Triggers after the visit summary. Included free during trial (14 days standard, 30 days premium) to demonstrate value.
 31. **Review hub & funnel** — clinics get a review hub in their admin showing all internal patient ratings. After visit, patient receives an SMS with a link to a Hilt Health-hosted rating page. Page shows clinic name, doctor name, and a 1-5 star selector with optional text feedback. If they rate 5 stars → "Would you also leave a review on [Platform]?" with a direct link (current rotation per the cycle time setting). Below 5 → "Thank you for your feedback." (stays internal only — clinic sees the feedback but unhappy patients aren't funneled to public platforms). All ratings stored in review hub tagged by doctor. Each review is tagged with the doctor who handled that visit.
-32. **Follow-up SMS add-on** — $49/mo per location (separate from Review SMS add-on). Enables SMS reminders for patients who miss their follow up date. Doctors can optionally skip the timeframe and let the receptionist schedule a specific date with the patient. Credits charged when date is set (by doctor at completion or receptionist at scheduling). Owner pre-configures: reminder text template + how many reminders to send + timing (e.g., 1st reminder 3 days after due, 2nd 7 days after). Included free during trial (14 days standard, 30 days premium).
+32. **Follow up reminder SMS** — 0.1 credits per SMS. Automated return visit reminders, enable or disable per location. Doctors can optionally skip the timeframe and let the receptionist schedule a specific date with the patient. Credits charged when date is set (by doctor at completion or receptionist at scheduling). Owner pre-configures: reminder text template + how many reminders to send + timing (e.g., 1st reminder 3 days after due, 2nd 7 days after). Included free during trial (14 days standard, 30 days premium).
 33. **Follow-up compliance dashboard** — only available if Follow-up SMS add-on is enabled. Tracks: patients tagged for follow-up → returned (receptionist picked the follow-up) → overdue → reminded via SMS → returned after reminder. Per-doctor compliance rates. Follow-ups expire after 90 days overdue.
 34. **Stale session cleanup** — patients left in `waiting_doctor_claim` from the previous day auto-expire. Receptionist notified.
 35. **Check-out guard** — doctors can't check out with claimed patients. Must complete or cancel first.
@@ -398,6 +401,8 @@ These are confirmed for v1 beyond the core flow:
 59. **Onboarding feature selection** — new "Customize Your Clinic" step (Step 2) in the onboarding wizard, shown right after location creation. Three toggle cards: Nurse Triage, Vitals Tracking, Vaccine Management. Smart default: enabling Nurse auto enables Vitals. Skip link for clinics that want defaults. If Nurse is enabled, the next step (Add Staff) shows nurse as an assignable role. When Vitals is enabled during onboarding, default vital configs are auto seeded for the org. 6 step onboarding flow: Welcome, Location, Features, Staff, Try It, Done.
 57. **Marketer role** — new staff role for delegating marketing campaign management. Assigned per location like all roles, but the dashboard at `/d/marketer` is org scoped with no location pre selection. Marketer picks location scope per campaign in the form (filtered to their assigned locations). Auth: owner OR marketer can create, review, send, and cancel campaigns. Only owners can enable the `marketing_sms_addon`. Marketer sees "Ask your administrator to enable this" if addon is off. Campaigns created by marketers show the marketer's staff_user_id in `created_by`. All existing marketing components reused, no duplication. Rate limit (3 campaigns/24hr) is org wide.
 58. **Demo marketing integration** — 2000 AI generated fake patients seeded in the demo org via a one time `seed-demo-patients` edge function (Claude Sonnet, 40 batches of 50). Each patient has realistic demographics, medications, allergies, chronic conditions, and 2 to 4 completed visits with summaries and diagnoses. Marked with `is_demo_patient = true` on patients table. Phone numbers use `+1555000XXXX` format. `process-campaign-sms` skips actual SMS delivery for demo patients (marks as sent without calling D7). Demo org has `marketing_sms_addon` enabled and demo staff user assigned the marketer role. Marketing tab added to demo alongside existing Patient, Receptionist, Doctor, Reviews, Q and A tabs.
+
+60. **Demo live tracker** — internal tool at `/demo/track` for team members doing remote demo calls. Each team member gets a unique code (e.g. `HK001`). They share `hilthealth.com/demo?team=HK001` with the prospect. The team code is silently captured from the URL and stored on the `demo_access` record when the prospect enters their email. During the call, the team member opens `/demo/track`, enters their code, and sees the prospect's demo progress in real time (polls every 3 seconds): current step (1 through 5), patient name, message count during AI screening, and contextual talking points that appear at each step. Talking points are things NOT already shown in the demo's built in text, covering urgency detection, patient verified summaries, doctor only AI diagnostics, follow up AI instructions, visit summary SMS, and the review filtering funnel. No authentication required beyond knowing a valid team code. Zero friction for the prospect since the code is a URL parameter they never see. SQL function `get_demo_tracker` runs as SECURITY DEFINER to bypass RLS. New column: `demo_access.team_code`. New SQL function: `get_demo_tracker`. New page: `/demo/track`.
 
 ---
 

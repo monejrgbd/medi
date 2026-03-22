@@ -30,6 +30,7 @@ interface VisitDetail {
     priority: number;
     is_sensitive: boolean;
     timeout_flagged: boolean;
+    ai_skipped: boolean;
     created_at: string;
     claimed_at: string | null;
     is_follow_up: boolean;
@@ -202,16 +203,23 @@ export default function NursePatientView({
         {/* Patient profile */}
         <PatientProfileCard patient={patient} />
 
+        {/* AI Skipped badge */}
+        {visit.ai_skipped && (
+          <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm font-medium text-amber-800">AI intake was skipped for this visit</p>
+          </div>
+        )}
+
         {/* AI Summary quick look */}
-        {visit.ai_summary && (
+        {!visit.ai_skipped && visit.ai_summary && (
           <div className="mt-4 rounded-lg border border-teal-100 bg-teal-50 p-4">
             <h3 className="text-sm font-semibold text-teal-800 mb-1">AI Summary</h3>
             <p className="text-sm text-teal-900 whitespace-pre-wrap line-clamp-4">{visit.ai_summary}</p>
           </div>
         )}
 
-        {/* Transcript toggle */}
-        <button
+        {/* Transcript toggle (hidden when AI skipped) */}
+        {!visit.ai_skipped && <button
           onClick={() => setTranscriptOpen(!transcriptOpen)}
           className="mt-4 w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-slate hover:bg-gray-50 transition-colors flex items-center justify-between"
         >
@@ -222,8 +230,8 @@ export default function NursePatientView({
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
-        </button>
-        {transcriptOpen && (
+        </button>}
+        {!visit.ai_skipped && transcriptOpen && (
           <div className="mt-2 rounded-lg border border-gray-200 bg-white p-4">
             <TranscriptView messages={transcript} />
           </div>

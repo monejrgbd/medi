@@ -22,6 +22,7 @@ interface LocationData {
   vaccines_enabled?: boolean;
   ai_custom_instructions?: string | null;
   ai_message_limit?: number | null;
+  skip_ai?: boolean;
 }
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -87,6 +88,7 @@ export default function LocationSettingsForm({
     vaccinesEnabled: location.vaccines_enabled ?? false,
     aiCustomInstructions: location.ai_custom_instructions || "",
     aiMessageLimit: location.ai_message_limit ?? null as number | null,
+    skipAi: location.skip_ai ?? false,
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -118,6 +120,7 @@ export default function LocationSettingsForm({
       vaccinesEnabled: form.vaccinesEnabled,
       aiCustomInstructions: form.aiCustomInstructions,
       aiMessageLimit: form.aiMessageLimit,
+      skipAi: form.skipAi,
     });
 
     setLoading(false);
@@ -299,6 +302,19 @@ export default function LocationSettingsForm({
             type="checkbox"
             checked={form.vaccinesEnabled}
             onChange={(e) => setForm((prev) => ({ ...prev, vaccinesEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Skip AI Conversation</span>
+            <p className="text-xs text-ash">Patients bypass AI intake and go straight to the doctor queue</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.skipAi}
+            onChange={(e) => setForm((prev) => ({ ...prev, skipAi: e.target.checked }))}
             className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
           />
         </label>

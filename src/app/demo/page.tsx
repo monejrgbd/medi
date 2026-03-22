@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import DemoGate from "@/components/demo/DemoGate";
@@ -13,7 +14,7 @@ export default async function DemoPage() {
   const isDemoUser = user?.email === process.env.DEMO_STAFF_EMAIL;
 
   if (!isDemoUser) {
-    return <DemoGate existingSession={!!user} />;
+    return <Suspense><DemoGate existingSession={!!user} /></Suspense>;
   }
 
   // Fetch all demo data in parallel

@@ -24,6 +24,7 @@ CREATE TABLE public.locations (
   ai_custom_instructions text DEFAULT NULL,
   ai_message_limit      integer DEFAULT NULL
     CHECK (ai_message_limit IS NULL OR (ai_message_limit >= 10 AND ai_message_limit <= 50)),
+  skip_ai               boolean DEFAULT false,
   created_at            timestamptz DEFAULT now()
 );
 

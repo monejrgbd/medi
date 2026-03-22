@@ -61,7 +61,8 @@ export async function completeVisitAsNurse(
   visitId: string,
   diagnosis: string,
   followUp?: { timeframe_days: number; ai_instructions: string },
-  showDiagnosis?: boolean
+  showDiagnosis?: boolean,
+  careInstructions?: string
 ) {
   await requireAuth();
   if (!visitId || !validUUID(visitId))
@@ -86,6 +87,10 @@ export async function completeVisitAsNurse(
         ? stripHtml(followUp.ai_instructions).slice(0, 2000)
         : undefined,
     };
+  }
+  if (careInstructions) {
+    const cleanCare = stripHtml(careInstructions).slice(0, 10000);
+    if (cleanCare) rpcParams.p_care_instructions = cleanCare;
   }
 
   const { data, error } = await supabase.rpc("complete_visit", rpcParams);

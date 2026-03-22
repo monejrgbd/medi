@@ -38,6 +38,9 @@ export default function DiagnosisForm({
     ""
   );
 
+  const [showCareInstructions, setShowCareInstructions] = useState(false);
+  const [careInstructions, setCareInstructions] = useState("");
+
 
   function handleSubmit() {
     const trimmed = diagnosis.trim();
@@ -64,7 +67,7 @@ export default function DiagnosisForm({
           }
         : undefined;
 
-      const result = await completeVisit(visitId, diagnosis.trim(), followUp, allow);
+      const result = await completeVisit(visitId, diagnosis.trim(), followUp, allow, careInstructions.trim() || undefined);
       if (result.success) {
         onComplete();
       } else {
@@ -98,6 +101,36 @@ export default function DiagnosisForm({
             {diagnosis.length.toLocaleString()} / 10,000
           </p>
           {error && <p className="text-xs text-red-600">{error}</p>}
+        </div>
+
+        {/* Care Instructions (collapsible) */}
+        <div className="mt-4">
+          {!showCareInstructions ? (
+            <button
+              type="button"
+              onClick={() => setShowCareInstructions(true)}
+              className="text-sm text-hilt-blue hover:underline"
+            >
+              Add care instructions
+            </button>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">
+                Care Instructions (optional)
+              </label>
+              <textarea
+                value={careInstructions}
+                onChange={(e) => setCareInstructions(e.target.value)}
+                placeholder="Instructions for the patient, e.g. rest for 48 hours, take medication twice daily..."
+                rows={3}
+                maxLength={10000}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-none"
+              />
+              <p className="text-xs text-slate mt-1">
+                {careInstructions.length.toLocaleString()} / 10,000
+              </p>
+            </div>
+          )}
         </div>
 
         <FollowUpForm

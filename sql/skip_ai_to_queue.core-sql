@@ -1,0 +1,95 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.skip_ai_to_queue(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_receptionist boolean := false;
+BEGIN
+  -- Get visit details
+  SELECT v.id, v.status, v.org_id, v.location_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.status <> 'pending_approval' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not pending approval');
+  END IF;
+
+  -- Get caller staff id
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  -- Authorization: owner or receptionist at visit location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can skip
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'receptionist'
+        AND sr.location_id = v_visit.location_id
+    ) INTO v_is_receptionist;
+
+    IF NOT v_is_receptionist THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Set audit context
+  PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
+  PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
+  PERFORM set_config('app.audit_action', 'skipped_ai', true);
+
+  -- Skip AI and move directly to doctor queue
+  UPDATE public.visits
+  SET status = 'waiting_doctor_claim',
+      entered_queue_at = now(),
+      ai_skipped = true
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.skip_ai_to_queue(
+  p_visit_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.skip_ai_to_queue(v_auth_uid, p_visit_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.skip_ai_to_queue(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.skip_ai_to_queue(uuid) TO authenticated;

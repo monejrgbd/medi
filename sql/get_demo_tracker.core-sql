@@ -1,0 +1,89 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_demo_tracker(
+  p_team_code text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_code text;
+  v_emails jsonb;
+  v_sessions jsonb;
+BEGIN
+  v_code := upper(trim(p_team_code));
+
+  IF v_code IS NULL OR length(v_code) < 2 THEN
+    RETURN jsonb_build_object('sessions', '[]'::jsonb, 'emails', '[]'::jsonb);
+  END IF;
+
+  -- Get prospect emails associated with this team code
+  SELECT COALESCE(jsonb_agg(da.email ORDER BY da.created_at DESC), '[]'::jsonb)
+  INTO v_emails
+  FROM public.demo_access da
+  WHERE da.team_code = v_code;
+
+  -- Get recent visits in demo org (last 3 hours)
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'visitId', sub.id,
+      'patientName', sub.patient_name,
+      'status', sub.status,
+      'step', sub.step,
+      'stepLabel', sub.step_label,
+      'messageCount', sub.msg_count,
+      'startedAt', sub.created_at
+    ) ORDER BY sub.created_at DESC
+  ), '[]'::jsonb)
+  INTO v_sessions
+  FROM (
+    SELECT
+      v.id,
+      v.status,
+      v.created_at,
+      COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '') AS patient_name,
+      CASE
+        WHEN v.status = 'completed' AND EXISTS(SELECT 1 FROM public.reviews r WHERE r.visit_id = v.id) THEN 6
+        WHEN v.status = 'completed' THEN 5
+        WHEN v.status = 'claimed_by_doctor' THEN 4
+        WHEN v.status IN ('still_answering_ai', 'waiting_doctor_claim') THEN 3
+        WHEN v.status = 'pending_approval' THEN 2
+        ELSE 1
+      END AS step,
+      CASE
+        WHEN v.status = 'completed' AND EXISTS(SELECT 1 FROM public.reviews r WHERE r.visit_id = v.id) THEN 'Outreach'
+        WHEN v.status = 'completed' THEN 'Review'
+        WHEN v.status = 'claimed_by_doctor' THEN 'Diagnose'
+        WHEN v.status IN ('still_answering_ai', 'waiting_doctor_claim') THEN 'AI Screening'
+        WHEN v.status = 'pending_approval' THEN 'Approve'
+        ELSE 'Check In'
+      END AS step_label,
+      (SELECT count(*) FROM public.visit_messages vm WHERE vm.visit_id = v.id) AS msg_count
+    FROM public.visits v
+    JOIN public.patients p ON p.id = v.patient_id
+    WHERE v.org_id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'
+      AND v.created_at > now() - interval '3 hours'
+    ORDER BY v.created_at DESC
+    LIMIT 10
+  ) sub;
+
+  RETURN jsonb_build_object('sessions', v_sessions, 'emails', v_emails);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.get_demo_tracker(
+  p_team_code text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.get_demo_tracker(p_team_code);
+END;
+$$;

@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS public.demo_access (
   otp_hash        text,
   otp_expires_at  timestamptz,
   access_count    int DEFAULT 0 NOT NULL,
+  team_code       text,
   created_at      timestamptz DEFAULT now() NOT NULL
 );
 

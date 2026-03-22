@@ -710,6 +710,7 @@ function BuiltForYourClinicSection() {
                   { label: "Vaccine management", desc: "Schedule, record, track", on: true },
                   { label: "Smart follow ups", desc: "AI linked cross session care", on: true },
                   { label: "Review collection", desc: "Post visit feedback routing", on: false },
+                  { label: "Skip AI intake", desc: "Bypass AI, straight to queue", on: false },
                 ].map(f => (
                   <div key={f.label} className="flex items-center justify-between">
                     <div>

@@ -18,6 +18,8 @@ DECLARE
   v_owner_id uuid;
   v_caller_staff_id uuid;
   v_is_receptionist boolean := false;
+  v_org_skip_ai boolean;
+  v_loc_skip_ai boolean;
 BEGIN
   -- Get visit details
   SELECT v.* INTO v_visit
@@ -56,6 +58,24 @@ BEGIN
     IF NOT v_is_receptionist THEN
       RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
     END IF;
+  END IF;
+
+  -- Check if AI should be skipped (org overrides location)
+  SELECT o.skip_ai INTO v_org_skip_ai FROM public.organizations o WHERE o.id = v_visit.org_id;
+  SELECT l.skip_ai INTO v_loc_skip_ai FROM public.locations l WHERE l.id = v_visit.location_id;
+
+  IF COALESCE(v_org_skip_ai, false) = true OR COALESCE(v_loc_skip_ai, false) = true THEN
+    UPDATE public.visits
+    SET status = 'waiting_doctor_claim',
+        entered_queue_at = now(),
+        ai_skipped = true
+    WHERE id = p_visit_id;
+
+    PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
+    PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
+    PERFORM set_config('app.audit_action', 'approved_skip_ai', true);
+
+    RETURN jsonb_build_object('success', true, 'ai_skipped', true);
   END IF;
 
   -- Set audit context for trigger

@@ -246,6 +246,7 @@ BEGIN
       'follow_up_of', v.follow_up_of,
       'nurse_reviewed', v.nurse_reviewed,
       'nurse_notes', v.nurse_notes,
+      'ai_skipped', v.ai_skipped,
       'diagnostic_enabled', (
         SELECT (o2.diagnostic_addon = true AND l2.diagnostic_enabled = true)
         FROM public.organizations o2

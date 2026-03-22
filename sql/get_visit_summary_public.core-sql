@@ -22,6 +22,7 @@ BEGIN
     'summary', COALESCE(v.ai_summary_translated, v.ai_summary),
     'summary_english', v.ai_summary,
     'diagnosis', CASE WHEN v.summary_show_diagnosis THEN v.doctor_diagnosis ELSE NULL END,
+    'care_instructions', v.care_instructions,
     'medications', COALESCE((
       SELECT jsonb_agg(jsonb_build_object('name', pm.name))
       FROM public.patient_medications pm
