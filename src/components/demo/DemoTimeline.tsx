@@ -119,9 +119,9 @@ export default function DemoTimeline({ currentStep, features, onFinish }: DemoTi
 
           return (
             <div key={step.key} className="flex items-start">
-              <div className="flex flex-col items-center w-14 sm:w-16 h-16">
+              <div className="flex flex-col items-center w-10 sm:w-16">
                 <div
-                  className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
+                  className={`flex h-5 w-5 sm:h-7 sm:w-7 items-center justify-center rounded-full text-[9px] sm:text-xs font-bold transition-all duration-300 ${
                     isDisabled
                       ? "bg-red-100 text-red-400 border border-red-200"
                       : isDone
@@ -132,7 +132,7 @@ export default function DemoTimeline({ currentStep, features, onFinish }: DemoTi
                   }`}
                 >
                   {isDone ? (
-                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <svg className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   ) : (
@@ -140,7 +140,7 @@ export default function DemoTimeline({ currentStep, features, onFinish }: DemoTi
                   )}
                 </div>
                 <span
-                  className={`mt-1.5 text-[10px] leading-tight text-center whitespace-nowrap ${
+                  className={`mt-1 text-[8px] sm:text-[10px] leading-tight text-center whitespace-nowrap ${
                     isDisabled
                       ? "text-red-400"
                       : isActive
@@ -151,15 +151,15 @@ export default function DemoTimeline({ currentStep, features, onFinish }: DemoTi
                   }`}
                 >
                   {step.label}
-                  {isDisabled && <span className="block text-[8px] text-red-400">Skipped</span>}
-                  {simulated && <span className="block text-[8px] text-teal-500">(simulated)</span>}
+                  {isDisabled && <span className="block text-[6px] sm:text-[8px] text-red-400">Skipped</span>}
+                  {simulated && <span className="block text-[6px] sm:text-[8px] text-teal-500">(simulated)</span>}
                 </span>
               </div>
 
               {/* Connector */}
               {i < displaySteps.length - 1 && (
                 <div
-                  className={`h-0.5 w-4 sm:w-6 -mx-1 mt-[13px] rounded-full transition-colors duration-300 ${
+                  className={`h-0.5 w-2 sm:w-6 -mx-0.5 sm:-mx-1 mt-[9px] sm:mt-[13px] rounded-full transition-colors duration-300 ${
                     isDone ? "bg-green-400" : "bg-gray-200"
                   }`}
                 />
