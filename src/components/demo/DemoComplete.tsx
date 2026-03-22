@@ -84,7 +84,7 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
             onClick={async () => {
               await signOutDemoUser();
               sessionStorage.setItem("scrollToContact", "1");
-              sessionStorage.setItem("preselectInterest", "book");
+              sessionStorage.setItem("preselectInterest", "meet");
               router.push("/");
             }}
             className="inline-flex items-center justify-center px-8 py-2.5 border border-hilt-blue text-hilt-blue font-medium rounded-lg hover:bg-blue-50 transition-colors"
