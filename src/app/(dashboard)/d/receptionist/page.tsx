@@ -45,6 +45,7 @@ export default async function ReceptionistPage({
   // Check if user is currently checked in as receptionist
   let checkedInLocationId: string | null = null;
   let locationName = "Reception";
+  let aiAutoSkipped = false;
 
   if (staffUser) {
     const { data: checkin } = await supabase
@@ -62,11 +63,18 @@ export default async function ReceptionistPage({
     if (checkedInLocationId) {
       const { data: locationRow } = await supabase
         .from("locations")
-        .select("name")
+        .select("name, skip_ai")
         .eq("id", checkedInLocationId)
         .single();
       locationName = locationRow?.name ?? "Reception";
+      aiAutoSkipped = locationRow?.skip_ai ?? false;
     }
+  }
+
+  // Also check org-level skip_ai (overrides location)
+  if (!aiAutoSkipped && orgId) {
+    const { data: orgRow } = await supabase.from("organizations").select("skip_ai").eq("id", orgId).single();
+    if (orgRow?.skip_ai) aiAutoSkipped = true;
   }
 
   // Owner direct access: only if explicitly skipping check-in
@@ -181,6 +189,7 @@ export default async function ReceptionistPage({
       initialActive={enrichedActive as any}
       initialCompleted={(completedRes.data ?? []) as any}
       initialCounts={countsRes.data ?? null}
+      aiAutoSkipped={aiAutoSkipped}
     />
   );
 }

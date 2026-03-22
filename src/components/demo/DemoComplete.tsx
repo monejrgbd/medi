@@ -70,7 +70,7 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
         </p>
 
         {/* CTAs */}
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center gap-3 mb-6">
           <button
             onClick={async () => {
               await signOutDemoUser();
@@ -79,6 +79,17 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
             className="inline-flex items-center justify-center px-8 py-2.5 bg-hilt-blue text-white font-medium rounded-lg hover:bg-hilt-blue/90 transition-colors"
           >
             Start Free Trial, Up to $200 in Credits
+          </button>
+          <button
+            onClick={async () => {
+              await signOutDemoUser();
+              sessionStorage.setItem("scrollToContact", "1");
+              sessionStorage.setItem("preselectInterest", "book");
+              router.push("/");
+            }}
+            className="inline-flex items-center justify-center px-8 py-2.5 border border-hilt-blue text-hilt-blue font-medium rounded-lg hover:bg-blue-50 transition-colors"
+          >
+            Book a Meeting
           </button>
         </div>
 

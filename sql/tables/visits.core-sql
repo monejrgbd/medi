@@ -45,6 +45,7 @@ CREATE TABLE public.visits (
   nurse_notes           text DEFAULT NULL,
   care_instructions     text DEFAULT NULL,
   ai_skipped            boolean DEFAULT false,
+  demo_features         jsonb DEFAULT NULL,
   updated_at            timestamptz DEFAULT now(),
   created_at            timestamptz DEFAULT now()
 );

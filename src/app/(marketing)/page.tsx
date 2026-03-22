@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import FadeIn from "@/components/FadeIn";
+import TeamCodeCapture from "@/components/demo/TeamCodeCapture";
 const DoctorMockup = dynamic(() => import("@/components/marketing/DoctorMockup"), {
   loading: () => <div className="h-[500px] rounded-2xl border border-gray-200 bg-white" />,
 });
@@ -21,7 +23,7 @@ const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMo
 
 function ChatMockup() {
   const chatMessages = [
-    { role: "ai", text: "Hi Sarah, welcome back to All locations Clinic! What brings you in today?", time: "9:03 AM", delay: "0.5s" },
+    { role: "ai", text: "Hi Sarah, welcome back to Riverside Family Medicine! What brings you in today?", time: "9:03 AM", delay: "0.5s" },
     { role: "patient", text: "My hands have been really stiff every morning and my knuckles are swollen", time: "9:04 AM", delay: "1.8s" },
     { role: "ai", text: "I see you came in for knee pain on March 1. Could the hand stiffness be related?", time: "9:05 AM", delay: "3.2s" },
     { role: "patient", text: "Actually yes, my knee has been worse too", time: "9:06 AM", delay: "4.6s" },
@@ -37,7 +39,7 @@ function ChatMockup() {
             <div className="flex h-6 w-6 items-center justify-center rounded-md bg-hilt-blue">
               <span className="text-[10px] font-bold text-white">H</span>
             </div>
-            <span className="text-xs font-semibold text-ink">All locations Clinic</span>
+            <span className="text-xs font-semibold text-ink">Riverside Family Medicine</span>
           </div>
           <button className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[10px] text-slate">
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
@@ -494,7 +496,7 @@ function RavenSchedulerSection() {
               </div>
               <div className="space-y-2.5">
                 {[
-                  { from: "ai", text: "Good morning, All locations Clinic. How can I help?" },
+                  { from: "ai", text: "Good morning, Riverside Family Medicine. How can I help?" },
                   { from: "caller", text: "I need to see Dr. Patel on Thursday" },
                   { from: "ai", text: "I have 10:15 AM and 2:30 PM open. Which works for you?" },
                   { from: "caller", text: "2:30 works" },
@@ -710,7 +712,7 @@ function BuiltForYourClinicSection() {
                   { label: "Vaccine management", desc: "Schedule, record, track", on: true },
                   { label: "Smart follow ups", desc: "AI linked cross session care", on: true },
                   { label: "Review collection", desc: "Post visit feedback routing", on: false },
-                  { label: "Skip AI intake", desc: "Bypass AI, straight to queue", on: false },
+                  { label: "AI intake", desc: "AI screens patients before doctor", on: true },
                 ].map(f => (
                   <div key={f.label} className="flex items-center justify-between">
                     <div>
@@ -1277,6 +1279,7 @@ function Footer() {
 export default async function Home() {
   return (
     <>
+      <Suspense><TeamCodeCapture /></Suspense>
       <main>
         <HeroSection />
         <BuiltForYourClinicSection />

@@ -46,12 +46,14 @@ interface ApprovalQueueProps {
   pending: PendingVisit[];
   orgId: string;
   onActionComplete: (visitId: string, action: "approve" | "deny") => void;
+  aiAutoSkipped?: boolean;
 }
 
 export default function ApprovalQueue({
   pending,
   orgId,
   onActionComplete,
+  aiAutoSkipped,
 }: ApprovalQueueProps) {
   const [actionState, setActionState] = useState<
     Record<string, "approving" | "denying" | "verifying" | "confirming">
@@ -240,6 +242,7 @@ export default function ApprovalQueue({
           denying={actionState[visit.visit_id] === "denying"}
           verifying={actionState[visit.visit_id] === "verifying"}
           confirming={actionState[visit.visit_id] === "confirming"}
+          aiAutoSkipped={aiAutoSkipped}
         />
       ))}
       </div>

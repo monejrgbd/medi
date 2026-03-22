@@ -60,6 +60,7 @@ interface ApprovalCardProps {
   verifying?: boolean;
   confirming?: boolean;
   showCollisionDialog?: boolean;
+  aiAutoSkipped?: boolean;
 }
 
 export default function ApprovalCard({
@@ -74,6 +75,7 @@ export default function ApprovalCard({
   verifying,
   confirming,
   showCollisionDialog,
+  aiAutoSkipped,
 }: ApprovalCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [similarPatients, setSimilarPatients] = useState<SimilarPatient[]>([]);
@@ -467,13 +469,15 @@ export default function ApprovalCard({
             >
               {approving ? "Approving..." : "Approve"}
             </button>
-            <button
-              onClick={handleSkipAi}
-              disabled={busy}
-              className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-slate transition-colors hover:bg-gray-50 disabled:opacity-50"
-            >
-              {skippingAi ? "Skipping..." : "Skip AI"}
-            </button>
+            {!aiAutoSkipped && (
+              <button
+                onClick={handleSkipAi}
+                disabled={busy}
+                className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-slate transition-colors hover:bg-gray-50 disabled:opacity-50"
+              >
+                {skippingAi ? "Skipping..." : "Skip AI"}
+              </button>
+            )}
             <button
               onClick={() => onDeny(visit.visit_id)}
               disabled={busy}

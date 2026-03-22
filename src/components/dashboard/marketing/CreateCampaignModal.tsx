@@ -239,7 +239,7 @@ export default function CreateCampaignModal({
                   </span>
                   <span className="text-ash"> match your filters</span>
                   {aiCriteria.trim() ? (
-                    <span className="text-blue-600 font-medium"> · {scanCredits} credit{scanCredits !== 1 ? "s" : ""} for AI scan</span>
+                    <span className="text-blue-600 font-medium"> · {scanCredits} credit{scanCredits === 1 ? "" : "s"} for AI scan</span>
                   ) : (
                     <span className="text-green-600 font-medium"> · free (no AI)</span>
                   )}

@@ -46,6 +46,7 @@ BEGIN
       'sent_count', c.sent_count,
       'failed_count', c.failed_count,
       'credits_charged', c.credits_charged,
+      'created_by_name', COALESCE(su.full_name, 'Owner'),
       'created_at', c.created_at
     )
   ), '[]'::jsonb)
@@ -57,7 +58,8 @@ BEGIN
     ORDER BY created_at DESC
     OFFSET p_offset
     LIMIT p_limit
-  ) c;
+  ) c
+  LEFT JOIN public.staff_users su ON su.id = c.created_by;
 
   RETURN jsonb_build_object(
     'success', true,

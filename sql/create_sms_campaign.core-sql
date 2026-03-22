@@ -197,7 +197,7 @@ BEGIN
     WHERE p.org_id = v_org.id
       AND p.phone IS NOT NULL AND p.phone_verified AND p.consent_given AND NOT p.marketing_sms_opted_out;
 
-    v_scan_cost := GREATEST(1, CEIL(v_eligible_count / 1000.0));
+    v_scan_cost := ROUND(v_eligible_count / 1000.0, 1);
 
     -- Skip cost for demo org
     IF v_org.id != 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0' THEN
@@ -223,6 +223,9 @@ BEGIN
       INSERT INTO public.credits_log (org_id, credits_amount, credit_type, description)
       VALUES (v_org.id, v_scan_cost, 'marketing_scan', 'AI scan: ' || v_eligible_count || ' patients, campaign ' || LEFT(p_ai_criteria, 80));
     END IF;
+
+    -- Record scan cost on the campaign
+    UPDATE public.sms_campaigns SET credits_charged = v_scan_cost WHERE id = v_campaign_id;
 
     -- Trigger ai-scan-campaign edge function
     SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';

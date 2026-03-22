@@ -308,13 +308,13 @@ export default function LocationSettingsForm({
 
         <label className="flex items-center justify-between">
           <div>
-            <span className="text-sm text-ink">Skip AI Conversation</span>
-            <p className="text-xs text-ash">Patients bypass AI intake and go straight to the doctor queue</p>
+            <span className="text-sm text-ink">AI Intake</span>
+            <p className="text-xs text-ash">AI screens patients before the doctor. Turn off to send patients straight to the queue.</p>
           </div>
           <input
             type="checkbox"
-            checked={form.skipAi}
-            onChange={(e) => setForm((prev) => ({ ...prev, skipAi: e.target.checked }))}
+            checked={!form.skipAi}
+            onChange={(e) => setForm((prev) => ({ ...prev, skipAi: !e.target.checked }))}
             className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
           />
         </label>

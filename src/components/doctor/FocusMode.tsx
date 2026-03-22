@@ -553,7 +553,7 @@ export default function FocusMode({
 
 
           {/* AI Diagnostic — inline above tabs */}
-          {(detail.visit.ai_diagnostic || detail.visit.diagnostic_enabled) && (
+          {!detail.visit.ai_skipped && (detail.visit.ai_diagnostic || detail.visit.diagnostic_enabled) && (
             <div className="mt-4">
               <AIDiagnosticPanel
                 diagnostic={detail.visit.ai_diagnostic}

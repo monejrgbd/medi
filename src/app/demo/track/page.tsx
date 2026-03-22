@@ -24,30 +24,47 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
   },
   3: {
     keyPoints: [
-      "AI follows up on vague answers, does not stop at surface level",
-      "Urgent symptoms get flagged and moved ahead in queue",
-      "Returning patients: AI has their history, confirms and updates",
+      "Nurse records vitals, vaccines, and triage notes",
+      "Doctor sees nurse notes before walking in",
+      "Nurse can complete the visit or send to doctor",
+      "Custom vitals per clinic, not just weight and height",
     ],
     lines: [
-      "Watch how it follows up. It does not stop at 'my knee hurts.' It asks which knee, how long, what makes it worse.",
-      "If she mentioned chest pain right now, the system would flag her as urgent and move her ahead of everyone.",
+      "The nurse screens the patient first. Vitals, vaccines, initial observations. All of that shows up on the doctor's screen before they walk in.",
+      "Each clinic picks which vitals to track. Weight and height are defaults. Cardiology adds blood pressure. Pediatrics adds head circumference.",
     ],
   },
   4: {
+    keyPoints: [
+      "AI follows up on vague answers, does not stop at surface level",
+      "Voice input supported, patients can speak instead of type",
+      "Urgent symptoms get flagged and moved ahead in queue",
+      "Returning patients: AI has their history, confirms and updates",
+      "AI adapts per clinic specialty via custom instructions",
+    ],
+    lines: [
+      "Watch how it follows up. It does not stop at 'my knee hurts.' It asks which knee, how long, what makes it worse.",
+      "Patients can also speak their answers instead of typing. Huge for elderly patients or anyone not comfortable with a keyboard.",
+      "You can customize what the AI asks per location. A dermatology clinic gets skin focused questions. A pediatrics clinic gets age appropriate ones.",
+    ],
+  },
+  5: {
     keyPoints: [
       "Summary is patient verified, not a guess",
       "AI diagnostic is doctor eyes only, patient never sees it",
       "Nurse vitals and vaccines show up here (if enabled)",
       "Care instructions go straight to patient by text",
       "Follow up instructions carry to the next visit via AI",
+      "Focus mode auto claims the next patient after completion",
     ],
     lines: [
       "That summary was verified by the patient before the doctor saw it. Not a guess, a confirmed record.",
       "The diagnostic suggestion at the bottom? She never sees that. Doctor eyes only.",
       "When they complete, they can write care instructions. 'Rest 48 hours, take ibuprofen twice daily.' Goes straight to the patient by text.",
+      "In a busy clinic, the doctor turns on Focus Mode. After completing one patient, the next one loads automatically. No going back to the queue.",
     ],
   },
-  5: {
+  6: {
     keyPoints: [
       "Patient gets permanent visit summary link by SMS",
       "5 stars route to Google/Yelp, below 5 stays internal",
@@ -58,7 +75,7 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "Five stars go to your Google page. Below that stays internal. Your public rating only goes up.",
     ],
   },
-  6: {
+  7: {
     keyPoints: [
       "AI scans patient clinical data to find exact matches",
       "Describe who you want in plain English",
@@ -71,7 +88,15 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
   },
 };
 
-const STEP_LABELS = ["", "Check In", "Approve", "AI Screening", "Diagnose", "Review", "Outreach"];
+const STEP_LABELS = ["", "Check In", "Approve", "Nurse Triage", "AI Screening", "Diagnose", "Feedback", "Outreach"];
+
+interface DemoFeatures {
+  nurseEnabled?: boolean;
+  vitalsEnabled?: boolean;
+  vaccinesEnabled?: boolean;
+  skipAi?: boolean;
+  reviewCollection?: boolean;
+}
 
 interface Session {
   visitId: string;
@@ -80,8 +105,20 @@ interface Session {
   step: number;
   stepLabel: string;
   messageCount: number;
+  demoFeatures: DemoFeatures | null;
   startedAt: string;
 }
+
+// Which steps map to which feature gate (null = always shown)
+const STEP_FEATURE_GATES: Record<number, keyof DemoFeatures | null> = {
+  1: null,           // Check In
+  2: null,           // Approve
+  3: "nurseEnabled", // Nurse Triage
+  4: null,           // AI Screening (skipAi handled separately)
+  5: null,           // Diagnose
+  6: "reviewCollection", // Feedback
+  7: null,           // Outreach
+};
 
 export default function DemoTrackPage() {
   const [code, setCode] = useState("");
@@ -200,31 +237,58 @@ function SessionCard({ session }: { session: Session }) {
         </div>
       </div>
 
-      {/* Step indicator */}
+      {/* Demo features badges */}
+      {session.demoFeatures && (
+        <div className="px-4 pt-3 flex flex-wrap gap-1">
+          {Object.entries(session.demoFeatures).map(([key, val]) => {
+            const label = key === "skipAi" ? "AI Intake" : key === "nurseEnabled" ? "Nurse" : key === "vitalsEnabled" ? "Vitals" : key === "vaccinesEnabled" ? "Vaccines" : key === "reviewCollection" ? "Reviews" : key;
+            const isOn = key === "skipAi" ? !val : val;
+            return (
+              <span key={key} className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${isOn ? "bg-green-50 text-green-600" : "bg-red-50 text-red-400"}`}>
+                {label}: {isOn ? "On" : "Off"}
+              </span>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Step indicator — 7 steps with red skipped */}
       <div className="px-4 py-3">
         <div className="flex items-center gap-1 mb-3">
-          {[1, 2, 3, 4, 5, 6].map((n) => (
-            <div key={n} className="flex items-center">
-              <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                  n < session.step
-                    ? "bg-green-500 text-white"
-                    : n === session.step
-                      ? "bg-blue-600 text-white ring-2 ring-blue-200"
-                      : "bg-gray-100 text-gray-400"
-                }`}
-              >
-                {n < session.step ? "✓" : n}
+          {[1, 2, 3, 4, 5, 6, 7].map((n) => {
+            const featureGate = STEP_FEATURE_GATES[n];
+            const isSkipped = featureGate !== null && session.demoFeatures && !session.demoFeatures[featureGate];
+            const isAiSkipped = n === 4 && session.demoFeatures?.skipAi;
+            const skipped = isSkipped || isAiSkipped;
+
+            return (
+              <div key={n} className="flex items-center">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                      skipped
+                        ? "bg-red-100 text-red-400 border border-red-200"
+                        : n < session.step
+                          ? "bg-green-500 text-white"
+                          : n === session.step
+                            ? "bg-blue-600 text-white ring-2 ring-blue-200"
+                            : "bg-gray-100 text-gray-400"
+                    }`}
+                  >
+                    {!skipped && n < session.step ? "✓" : n}
+                  </div>
+                  {skipped && <span className="text-[7px] text-red-400 mt-0.5">Skipped</span>}
+                </div>
+                {n < 7 && (
+                  <div className={`w-3 h-0.5 ${n < session.step && !skipped ? "bg-green-400" : "bg-gray-200"}`} />
+                )}
               </div>
-              {n < 6 && (
-                <div className={`w-3 h-0.5 ${n < session.step ? "bg-green-400" : "bg-gray-200"}`} />
-              )}
-            </div>
-          ))}
+            );
+          })}
           <span className="ml-2 text-sm font-medium text-gray-700">{STEP_LABELS[session.step]}</span>
         </div>
 
-        {session.step === 3 && (
+        {session.step === 4 && (
           <p className="text-xs text-gray-400 mb-3">{session.messageCount} messages in AI conversation</p>
         )}
 

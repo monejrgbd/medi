@@ -130,7 +130,7 @@ BEGIN
   UPDATE public.sms_campaigns
   SET status = 'sending',
       send_started_at = now(),
-      credits_charged = v_total_cost
+      credits_charged = credits_charged + v_total_cost
   WHERE id = p_campaign_id;
 
   -- Audit trail

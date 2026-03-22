@@ -154,13 +154,13 @@ export default function OrgSettingsForm({
           <h3 className="text-sm font-semibold text-ink mb-3">AI Settings</h3>
           <label className="flex items-center justify-between">
             <div>
-              <span className="text-sm text-ink">Skip AI for All Locations</span>
-              <p className="text-xs text-ash">When enabled, no patients at any location will go through AI intake. This overrides individual location settings.</p>
+              <span className="text-sm text-ink">AI Intake (All Locations)</span>
+              <p className="text-xs text-ash">AI screens patients before the doctor at every location. Turn off to disable AI intake across all locations.</p>
             </div>
             <input
               type="checkbox"
-              checked={skipAi}
-              onChange={(e) => setSkipAi(e.target.checked)}
+              checked={!skipAi}
+              onChange={(e) => setSkipAi(!e.target.checked)}
               className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
             />
           </label>

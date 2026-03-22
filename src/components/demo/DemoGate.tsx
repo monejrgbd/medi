@@ -12,7 +12,15 @@ interface DemoGateProps {
 export default function DemoGate({ existingSession }: DemoGateProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const teamCode = searchParams.get("team") || undefined;
+  const [teamCode, setTeamCode] = useState(() => {
+    const fromUrl = searchParams.get("team");
+    if (fromUrl) return fromUrl.toUpperCase();
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("demo_team_code") || "";
+    }
+    return "";
+  });
+  const [showCodeInput, setShowCodeInput] = useState(false);
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState<string[]>(["", "", "", "", "", ""]);
@@ -43,7 +51,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     setError("");
     setLoading(true);
 
-    const result = await requestDemoOtp(email, teamCode);
+    const result = await requestDemoOtp(email, teamCode || undefined);
     setLoading(false);
 
     if (result.success) {
@@ -120,15 +128,55 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
   return (
     <div className="min-h-screen bg-snow flex items-start justify-center pt-20 px-4">
       <div className="w-full max-w-md">
-        <a
-          href="/"
-          className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors mb-6"
-        >
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
-          </svg>
-          Back
-        </a>
+        <div className="flex items-center justify-between mb-6">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors"
+          >
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+            Back
+          </a>
+          {teamCode ? (
+            <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-md font-mono">
+              {teamCode.toUpperCase()}
+            </span>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowCodeInput(!showCodeInput)}
+              className="p-1.5 rounded-md text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+              title="Enter team code"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" />
+              </svg>
+            </button>
+          )}
+        </div>
+        {/* Team code input */}
+        {showCodeInput && (
+          <div className="mb-4 flex items-center gap-2">
+            <input
+              type="text"
+              value={teamCode}
+              onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
+              placeholder="Team code"
+              className="flex-1 px-3 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 font-mono tracking-wider"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => { if (teamCode) setShowCodeInput(false); }}
+              disabled={!teamCode}
+              className="px-3 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
+            >
+              Save
+            </button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-8">
           <p className="text-2xl font-bold text-hilt-blue mb-2">Hilt Health</p>
@@ -141,7 +189,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
         {/* Intro note */}
         <div className="mb-4 rounded-lg bg-blue-50 border border-blue-100 p-3">
           <p className="text-xs text-blue-700">
-            Every clinic is different. Features are enabled per location, and we build custom workflows for clients who need them. What you will be doing is the default flow.
+            Every clinic is different. Features are enabled per location, and we build custom workflows for clients who need them.
           </p>
         </div>
 
@@ -240,7 +288,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
                     if (resendCooldown > 0) return;
                     setError("");
                     setOtp(["", "", "", "", "", ""]);
-                    const result = await requestDemoOtp(email, teamCode);
+                    const result = await requestDemoOtp(email, teamCode || undefined);
                     if (!result.success) {
                       setError(result.error ?? "Failed to resend.");
                     } else {

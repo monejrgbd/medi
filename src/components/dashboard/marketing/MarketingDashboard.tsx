@@ -20,6 +20,7 @@ interface Campaign {
   sent_count: number;
   failed_count: number;
   credits_charged: number;
+  created_by_name?: string;
 }
 
 interface CampaignListData {
@@ -40,10 +41,12 @@ export default function MarketingDashboard({
   initialData,
   onCampaignSelect,
   demoScanLimitReached,
+  demoCampaignIds,
 }: {
   initialData: CampaignListData | null;
   onCampaignSelect?: (campaignId: string) => void;
   demoScanLimitReached?: boolean;
+  demoCampaignIds?: string[];
 }) {
   const { org, roles, isOwner } = useRole();
   const router = useRouter();
@@ -53,9 +56,8 @@ export default function MarketingDashboard({
     !!(org as unknown as Record<string, unknown>).marketing_sms_addon
   );
   const [enabling, setEnabling] = useState(false);
-  const [campaigns, setCampaigns] = useState<Campaign[]>(
-    initialData?.campaigns ?? []
-  );
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialData?.campaigns ?? []);
+  const displayCampaigns = demoCampaignIds ? campaigns.filter(c => demoCampaignIds.includes(c.id)) : campaigns;
   const [hasMore, setHasMore] = useState(initialData?.has_more ?? false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -181,7 +183,7 @@ export default function MarketingDashboard({
         </button>
       </div>
 
-      {campaigns.length === 0 ? (
+      {displayCampaigns.length === 0 ? (
         <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-12 text-center">
           <Megaphone className="w-10 h-10 text-ash mx-auto mb-3" />
           <p className="text-sm font-medium text-ink mb-1">No campaigns yet</p>
@@ -201,7 +203,7 @@ export default function MarketingDashboard({
         <>
           {/* Mobile: card layout */}
           <div className="sm:hidden space-y-3">
-            {campaigns.map((c) => {
+            {displayCampaigns.map((c) => {
               const colors = STATUS_COLORS[c.status] ?? STATUS_COLORS.cancelled;
               return (
                 <div
@@ -210,7 +212,9 @@ export default function MarketingDashboard({
                   className="rounded-xl border border-gray-100 bg-white p-4 cursor-pointer hover:shadow-sm transition-shadow"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-ash">{new Date(c.created_at).toLocaleDateString()}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-ash">{new Date(c.created_at).toLocaleDateString()}</span>
+                    </div>
                     <span className={`rounded-full ${colors.bg} px-2 py-0.5 text-[10px] font-medium ${colors.text}`}>
                       {c.status}
                     </span>
@@ -222,6 +226,7 @@ export default function MarketingDashboard({
                     <span>{c.matched_count} matched</span>
                     <span>{c.sent_count} sent</span>
                     {c.credits_charged > 0 && <span>{c.credits_charged.toFixed(1)} credits</span>}
+                    {c.created_by_name && <span>by {demoCampaignIds ? "You" : c.created_by_name}</span>}
                   </div>
                 </div>
               );
@@ -239,10 +244,11 @@ export default function MarketingDashboard({
                   <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Matched</th>
                   <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Sent</th>
                   <th className="text-right py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Credits</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-ash uppercase tracking-wide">Created By</th>
                 </tr>
               </thead>
               <tbody>
-                {campaigns.map((c) => {
+                {displayCampaigns.map((c) => {
                   const colors = STATUS_COLORS[c.status] ?? STATUS_COLORS.cancelled;
                   return (
                     <tr
@@ -266,6 +272,7 @@ export default function MarketingDashboard({
                       <td className="py-3 px-4 text-right text-ink">
                         {c.credits_charged > 0 ? c.credits_charged.toFixed(1) : "\u2014"}
                       </td>
+                      <td className="py-3 px-4 text-slate">{demoCampaignIds ? "You" : (c.created_by_name || "\u2014")}</td>
                     </tr>
                   );
                 })}

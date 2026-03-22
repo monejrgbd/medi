@@ -93,7 +93,7 @@ BEGIN
   RETURN jsonb_build_object(
     'success', true,
     'count', v_patient_count,
-    'scan_credits', GREATEST(1, CEIL(v_patient_count / 1000.0))
+    'scan_credits', ROUND(v_patient_count / 1000.0, 1)
   );
 END;
 $$;

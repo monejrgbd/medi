@@ -10,6 +10,8 @@ import DemoTimeline from "@/components/demo/DemoTimeline";
 import DemoComplete from "@/components/demo/DemoComplete";
 import DemoFAQ from "@/components/demo/DemoFAQ";
 import { DemoIntroCard, DemoGearButton } from "@/components/demo/DemoCustomizePanel";
+import { setVisitDemoFeatures } from "@/app/demo/_actions/demo-features";
+import { skipAiToQueue } from "@/app/(dashboard)/d/_actions/receptionist";
 import NurseDemoMockup from "@/components/demo/NurseDemoMockup";
 import CheckinFlow from "@/app/checkin/[locationId]/CheckinFlow";
 import ReceptionistDashboard from "@/app/(dashboard)/d/receptionist/ReceptionistDashboard";
@@ -93,7 +95,12 @@ function DemoShellInner({
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
   const [selectedCampaignData, setSelectedCampaignData] = useState<any>(null);
-  const [demoScanCount, setDemoScanCount] = useState(0);
+  const [demoCampaignIds, setDemoCampaignIds] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try { return JSON.parse(localStorage.getItem("demo_campaign_ids") || "[]"); } catch { return []; }
+    }
+    return [];
+  });
   const DEMO_SCAN_LIMIT = 3;
 
   // Build tabs array based on features
@@ -201,6 +208,9 @@ function DemoShellInner({
   const demoStepRef = useRef(demoStep);
   useEffect(() => { demoStepRef.current = demoStep; }, [demoStep]);
 
+  const featuresRef = useRef(features);
+  useEffect(() => { featuresRef.current = features; }, [features]);
+
   // Persist visit ID to sessionStorage
   useEffect(() => {
     if (demoVisitId) {
@@ -223,6 +233,12 @@ function DemoShellInner({
       }
       // Set visit ID only after we know the status — prevents FocusMode from auto-claiming during restore
       setDemoVisitId(stored);
+      // Re-write demo features on session recovery (ensures features are set even for visits created before fixes)
+      setVisitDemoFeatures(stored, { ...featuresRef.current });
+      // If visit is stuck in still_answering_ai and skipAi is on, advance it past AI
+      if (data.status === "still_answering_ai" && featuresRef.current.skipAi) {
+        skipAiToQueue(stored);
+      }
       const statusToStep: Record<string, number> = {
         pending_approval: 2,
         still_answering_ai: 3,
@@ -232,8 +248,10 @@ function DemoShellInner({
       };
       const step = statusToStep[data.status];
       if (step) {
-        setDemoStep(step);
-        if (step === 5) { setVisitCompleted(true); setActiveTab("reviews"); }
+        // If campaign was already done, show step 7 (all complete)
+        const campaignDone = localStorage.getItem("demo_campaign_done") === "true";
+        setDemoStep(campaignDone && step >= 5 ? 7 : step);
+        if (step === 5) { setVisitCompleted(true); setActiveTab(featuresRef.current.reviewCollection ? "reviews" : "marketing"); }
         if (step === 4) { setVisitClaimed(true); setActiveTab("doctor"); }
         if (step === 3) setActiveTab("patient");
         if (step === 2) setActiveTab("receptionist");
@@ -282,7 +300,11 @@ function DemoShellInner({
             const visitId = (payload.new as { id?: string }).id;
             // Ignore if this is a different session's visit
             if (demoVisitIdRef.current && visitId !== demoVisitIdRef.current) return;
-            if (visitId) setDemoVisitId((prev) => prev ?? visitId);
+            if (visitId) {
+              setDemoVisitId((prev) => prev ?? visitId);
+              // Write demo features to visit (ensures features are set even if this fires before onVisitCreated)
+              setVisitDemoFeatures(visitId, { ...featuresRef.current });
+            }
 
             setDemoStep(2);
             setPulsingTab("receptionist");
@@ -309,6 +331,11 @@ function DemoShellInner({
           const status = payload.new?.status;
 
           if (status === "still_answering_ai" && demoStepRef.current < 3) {
+            // If skipAi is on, advance past AI immediately
+            if (featuresRef.current.skipAi && visitId) {
+              skipAiToQueue(visitId);
+              return;
+            }
             setDemoStep(3);
             setPulsingTab("patient");
             setTimeout(() => {
@@ -425,6 +452,8 @@ function DemoShellInner({
 
   const handleVisitCreated = useCallback((visitId: string) => {
     setDemoVisitId(visitId);
+    // Write demo features to visit
+    setVisitDemoFeatures(visitId, { ...featuresRef.current });
     if (demoStepRef.current > 1) return;
     setDemoStep(2);
     setPulsingTab("receptionist");
@@ -443,6 +472,8 @@ function DemoShellInner({
     if (typeof window !== "undefined") {
       localStorage.removeItem("hilt_session_token");
       localStorage.removeItem("hilt_session_phone");
+      localStorage.removeItem("demo_campaign_done");
+      localStorage.removeItem("demo_campaign_ids");
       sessionStorage.removeItem("demo_visit_id");
     }
     setDemoVisitId(null);
@@ -454,6 +485,7 @@ function DemoShellInner({
     setReviewToken(null);
     setReviewSubmitted(false);
     setDemoComplete(false);
+    setDemoCampaignIds([]);
     setActiveTab("patient");
     // Force CheckinFlow remount with fresh state
     setDemoKey((prev) => prev + 1);
@@ -482,16 +514,7 @@ function DemoShellInner({
         <span className="font-semibold text-hilt-blue text-sm">
           Hilt Health Demo
         </span>
-        <div className="w-[130px] flex justify-end">
-          {demoStep >= 6 && (
-            <button
-              onClick={() => setDemoComplete(true)}
-              className="rounded-lg bg-hilt-blue px-4 py-1.5 text-sm font-medium text-white hover:bg-hilt-blue/90 transition-colors"
-            >
-              Finish Demo
-            </button>
-          )}
-        </div>
+        <div className="w-[130px]" />
       </div>
 
       {/* Tab bar */}
@@ -503,7 +526,7 @@ function DemoShellInner({
       />
 
       {/* Timeline */}
-      <DemoTimeline currentStep={demoStep} features={features} />
+      <DemoTimeline currentStep={demoStep} features={features} onFinish={() => setDemoComplete(true)} />
 
 
 
@@ -550,6 +573,7 @@ function DemoShellInner({
             initialCounts={receptionistInitial.counts}
             demoMode={true}
             demoVisitId={demoVisitId}
+            aiAutoSkipped={features.skipAi}
           />
         </div>
 
@@ -623,11 +647,11 @@ function DemoShellInner({
         <div style={{ display: activeTab === "marketing" ? "block" : "none" }}>
           <div className="p-6">
             <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-              This demo uses 200 AI generated fake patients. No real SMS messages are sent. ({DEMO_SCAN_LIMIT - demoScanCount} scans remaining)
+              This demo uses 200 AI generated fake patients. No real SMS messages are sent.
             </div>
-            {demoScanCount >= DEMO_SCAN_LIMIT && (
+            {demoCampaignIds.length >= DEMO_SCAN_LIMIT && (
               <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                You have used all {DEMO_SCAN_LIMIT} demo scans. Sign up to create unlimited campaigns.
+                You have reached the demo scan limit. Sign up to create unlimited campaigns.
               </div>
             )}
             <RoleProvider value={{
@@ -657,14 +681,21 @@ function DemoShellInner({
                 <MarketingDashboard
                   initialData={marketingInitial}
                   onCampaignSelect={async (id) => {
-                    setDemoScanCount((c) => c + 1);
                     const data = await getCampaignDetail(id);
                     if (data && !("error" in data)) {
                       setSelectedCampaignId(id);
                       setSelectedCampaignData(data);
+                      setDemoStep(7);
+                      setDemoCampaignIds(prev => {
+                        const next = prev.includes(id) ? prev : [...prev, id];
+                        localStorage.setItem("demo_campaign_ids", JSON.stringify(next));
+                        localStorage.setItem("demo_campaign_done", "true");
+                        return next;
+                      });
                     }
                   }}
-                  demoScanLimitReached={demoScanCount >= DEMO_SCAN_LIMIT}
+                  demoCampaignIds={demoCampaignIds}
+                  demoScanLimitReached={demoCampaignIds.length >= DEMO_SCAN_LIMIT}
                 />
               )}
             </RoleProvider>

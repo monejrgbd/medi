@@ -4,11 +4,11 @@ import { useState } from "react";
 import { Settings, X } from "lucide-react";
 import { useDemoFeatures, type DemoFeatures } from "@/contexts/DemoFeatureContext";
 
-const TOGGLES: { key: keyof DemoFeatures; label: string; desc: string }[] = [
+const TOGGLES: { key: keyof DemoFeatures; label: string; desc: string; inverted?: boolean }[] = [
   { key: "nurseEnabled", label: "Nurse Triage", desc: "Nurses screen patients before the doctor" },
   { key: "vitalsEnabled", label: "Vitals Tracking", desc: "Record weight, height, blood pressure, and more" },
   { key: "vaccinesEnabled", label: "Vaccine Management", desc: "Track administered vaccines and schedules" },
-  { key: "skipAi", label: "Skip AI Intake", desc: "Bypass AI conversation, straight to queue" },
+  { key: "skipAi", label: "AI Intake", desc: "AI screens patients before the doctor. Turn off to skip.", inverted: true },
   { key: "reviewCollection", label: "Review Collection", desc: "Collect patient feedback after visits" },
 ];
 
@@ -43,15 +43,15 @@ function ToggleList() {
 
   return (
     <div className="space-y-4">
-      {TOGGLES.map(({ key, label, desc }) => (
+      {TOGGLES.map(({ key, label, desc, inverted }) => (
         <div key={key} className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="text-sm font-medium text-ink">{label}</p>
             <p className="text-xs text-slate mt-0.5">{desc}</p>
           </div>
           <ToggleSwitch
-            checked={features[key]}
-            onChange={(val) => setFeature(key, val)}
+            checked={inverted ? !features[key] : features[key]}
+            onChange={(val) => setFeature(key, inverted ? !val : val)}
           />
         </div>
       ))}

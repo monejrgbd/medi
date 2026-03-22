@@ -25,8 +25,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
   END IF;
 
-  IF v_visit.status <> 'pending_approval' THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Visit is not pending approval');
+  IF v_visit.status NOT IN ('pending_approval', 'still_answering_ai') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not in a skippable state');
   END IF;
 
   -- Get caller staff id

@@ -71,13 +71,19 @@ const ALL_STEPS = [
 interface DemoTimelineProps {
   currentStep: number;
   features: DemoFeatures;
+  onFinish?: () => void;
 }
 
-export default function DemoTimeline({ currentStep, features }: DemoTimelineProps) {
+export default function DemoTimeline({ currentStep, features, onFinish }: DemoTimelineProps) {
   // Determine status of each step
   const steps = ALL_STEPS.map((step) => {
     const featureKey = step.featureGate as keyof DemoFeatures | null;
     const isGatedOff = featureKey !== null && !features[featureKey];
+
+    // AI step: disabled when skipAi is on
+    if (step.key === "ai" && features.skipAi) {
+      return { ...step, status: "disabled" as const };
+    }
 
     // Nurse step (no mapsToDemoStep)
     if (step.mapsToDemoStep === null) {
@@ -98,36 +104,31 @@ export default function DemoTimeline({ currentStep, features }: DemoTimelineProp
   // Find the active step for the description box (skip disabled/simulated)
   const activeStep = steps.find((s) => s.status === "active") || steps.find((s) => s.status === "pending");
 
-  // Modify AI step label if skipAi is on
-  const displaySteps = steps.map((s) => {
-    if (s.key === "ai" && features.skipAi) {
-      return { ...s, label: "AI Screening (skipped)" };
-    }
-    return s;
-  });
+  const displaySteps = steps;
 
-  // Filter out disabled steps from the visual count for rendering
-  const visibleSteps = displaySteps.filter((s) => s.status !== "disabled");
-
+  // Show ALL steps (no filtering) — disabled ones are greyed with "Skipped" label
   return (
     <div className="border-b border-gray-100 bg-gradient-to-b from-white to-gray-50/50 px-4 py-3">
       {/* Step circles + connectors */}
       <div className="flex items-center justify-center max-w-2xl mx-auto">
-        {visibleSteps.map((step, i) => {
+        {displaySteps.map((step, i) => {
           const isDone = step.status === "done";
           const isActive = step.status === "active";
+          const isDisabled = step.status === "disabled";
           const simulated = "simulated" in step && (step as { simulated?: boolean }).simulated === true;
 
           return (
-            <div key={step.key} className="flex items-center">
-              <div className="flex flex-col items-center w-14 sm:w-16">
+            <div key={step.key} className="flex items-start">
+              <div className="flex flex-col items-center w-14 sm:w-16 h-16">
                 <div
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all duration-300 ${
-                    isDone
-                      ? "bg-green-500 text-white shadow-sm"
-                      : isActive
-                        ? "bg-hilt-blue text-white ring-[3px] ring-blue-100 shadow-md shadow-blue-200/50"
-                        : "bg-gray-100 text-gray-400 border border-gray-200"
+                    isDisabled
+                      ? "bg-red-100 text-red-400 border border-red-200"
+                      : isDone
+                        ? "bg-green-500 text-white shadow-sm"
+                        : isActive
+                          ? "bg-hilt-blue text-white ring-[3px] ring-blue-100 shadow-md shadow-blue-200/50"
+                          : "bg-gray-100 text-gray-400 border border-gray-200"
                   }`}
                 >
                   {isDone ? (
@@ -140,22 +141,25 @@ export default function DemoTimeline({ currentStep, features }: DemoTimelineProp
                 </div>
                 <span
                   className={`mt-1.5 text-[10px] leading-tight text-center whitespace-nowrap ${
-                    isActive
-                      ? "font-bold text-hilt-blue"
-                      : isDone
-                        ? "font-medium text-green-600"
-                        : "text-gray-400"
+                    isDisabled
+                      ? "text-red-400"
+                      : isActive
+                        ? "font-bold text-hilt-blue"
+                        : isDone
+                          ? "font-medium text-green-600"
+                          : "text-gray-400"
                   }`}
                 >
                   {step.label}
+                  {isDisabled && <span className="block text-[8px] text-red-400">Skipped</span>}
                   {simulated && <span className="block text-[8px] text-teal-500">(simulated)</span>}
                 </span>
               </div>
 
               {/* Connector */}
-              {i < visibleSteps.length - 1 && (
+              {i < displaySteps.length - 1 && (
                 <div
-                  className={`h-0.5 w-4 sm:w-6 -mx-1 rounded-full transition-colors duration-300 ${
+                  className={`h-0.5 w-4 sm:w-6 -mx-1 mt-[13px] rounded-full transition-colors duration-300 ${
                     isDone ? "bg-green-400" : "bg-gray-200"
                   }`}
                 />
@@ -165,8 +169,8 @@ export default function DemoTimeline({ currentStep, features }: DemoTimelineProp
         })}
       </div>
 
-      {/* Current step explanation */}
-      {activeStep && (
+      {/* Current step explanation OR finish button */}
+      {activeStep ? (
         <div className="mt-2.5 mx-auto max-w-md rounded-lg bg-blue-50/80 border border-blue-100 px-3.5 py-2">
           <p className="text-xs text-center">
             <span className="font-semibold text-hilt-blue">
@@ -180,7 +184,17 @@ export default function DemoTimeline({ currentStep, features }: DemoTimelineProp
             {activeStep.info}
           </p>
         </div>
-      )}
+      ) : onFinish && currentStep >= 7 ? (
+        <div className="mt-2.5 mx-auto max-w-md rounded-lg bg-green-50 border border-green-200 px-3.5 py-2.5 text-center">
+          <p className="text-xs text-green-700 mb-2">Click your campaign to view results, then finish when ready.</p>
+          <button
+            onClick={onFinish}
+            className="rounded-lg bg-green-600 px-5 py-1.5 text-sm font-medium text-white hover:bg-green-700 transition-colors"
+          >
+            Finish Demo
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

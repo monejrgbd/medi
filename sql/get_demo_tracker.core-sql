@@ -34,6 +34,7 @@ BEGIN
       'step', sub.step,
       'stepLabel', sub.step_label,
       'messageCount', sub.msg_count,
+      'demoFeatures', sub.demo_features,
       'startedAt', sub.created_at
     ) ORDER BY sub.created_at DESC
   ), '[]'::jsonb)
@@ -45,22 +46,23 @@ BEGIN
       v.created_at,
       COALESCE(p.first_name, '') || ' ' || COALESCE(p.last_name, '') AS patient_name,
       CASE
-        WHEN v.status = 'completed' AND EXISTS(SELECT 1 FROM public.reviews r WHERE r.visit_id = v.id) THEN 6
-        WHEN v.status = 'completed' THEN 5
-        WHEN v.status = 'claimed_by_doctor' THEN 4
-        WHEN v.status IN ('still_answering_ai', 'waiting_doctor_claim') THEN 3
+        WHEN v.status = 'completed' AND EXISTS(SELECT 1 FROM public.reviews r WHERE r.visit_id = v.id) THEN 7
+        WHEN v.status = 'completed' THEN 6
+        WHEN v.status = 'claimed_by_doctor' THEN 5
+        WHEN v.status IN ('still_answering_ai', 'waiting_doctor_claim') THEN 4
         WHEN v.status = 'pending_approval' THEN 2
         ELSE 1
       END AS step,
       CASE
         WHEN v.status = 'completed' AND EXISTS(SELECT 1 FROM public.reviews r WHERE r.visit_id = v.id) THEN 'Outreach'
-        WHEN v.status = 'completed' THEN 'Review'
+        WHEN v.status = 'completed' THEN 'Feedback'
         WHEN v.status = 'claimed_by_doctor' THEN 'Diagnose'
         WHEN v.status IN ('still_answering_ai', 'waiting_doctor_claim') THEN 'AI Screening'
         WHEN v.status = 'pending_approval' THEN 'Approve'
         ELSE 'Check In'
       END AS step_label,
-      (SELECT count(*) FROM public.visit_messages vm WHERE vm.visit_id = v.id) AS msg_count
+      (SELECT count(*) FROM public.visit_messages vm WHERE vm.visit_id = v.id) AS msg_count,
+      v.demo_features
     FROM public.visits v
     JOIN public.patients p ON p.id = v.patient_id
     WHERE v.org_id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'

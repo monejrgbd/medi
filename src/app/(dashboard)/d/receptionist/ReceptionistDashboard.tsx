@@ -117,6 +117,7 @@ interface ReceptionistDashboardProps {
   initialCounts: Counts | null;
   demoMode?: boolean;
   demoVisitId?: string | null;
+  aiAutoSkipped?: boolean;
 }
 
 const DEFAULT_COUNTS: Counts = {
@@ -144,6 +145,7 @@ export default function ReceptionistDashboard({
   initialCounts,
   demoMode = false,
   demoVisitId,
+  aiAutoSkipped = false,
 }: ReceptionistDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
@@ -551,6 +553,7 @@ export default function ReceptionistDashboard({
             pending={pending}
             orgId={orgId}
             onActionComplete={handleApprovalComplete}
+            aiAutoSkipped={aiAutoSkipped}
           />
         )}
 
