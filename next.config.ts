@@ -22,6 +22,9 @@ const cspDefault = [...cspBase, "frame-ancestors 'none'"].join("; ");
 const cspEmbed = [...cspBase, "frame-ancestors *"].join("; ");
 
 const nextConfig: NextConfig = {
+  experimental: {
+    serverActionsBodySizeLimit: "3mb",
+  },
   headers: async () => [
     {
       source: "/((?!checkin).*)",
