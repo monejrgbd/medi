@@ -10,13 +10,11 @@ import OveragePurchase from "@/components/billing/OveragePurchase";
 import RechargeConfig from "@/components/billing/RechargeConfig";
 import PaymentHistory from "@/components/billing/PaymentHistory";
 import CancelSubscription from "@/components/billing/CancelSubscription";
-import FollowUpSmsConfig from "@/components/billing/FollowUpSmsConfig";
 
 interface LocationWithAddons {
   id: string;
   name: string;
   review_sms_enabled: boolean;
-  followup_sms_enabled: boolean;
   diagnostic_enabled: boolean;
 }
 
@@ -43,7 +41,6 @@ export default function BillingPage() {
               id: l.id,
               name: l.name,
               review_sms_enabled: l.review_sms_enabled ?? false,
-              followup_sms_enabled: l.followup_sms_enabled ?? false,
               diagnostic_enabled: l.diagnostic_enabled ?? false,
             }))
           );
@@ -74,8 +71,6 @@ export default function BillingPage() {
     setRefreshKey((k) => k + 1);
   }
 
-  const hasFollowupSms = locations.some((l) => l.followup_sms_enabled);
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <CreditDashboard key={refreshKey} />
@@ -98,10 +93,6 @@ export default function BillingPage() {
         subscriptionPlan={org.subscription_plan}
         onChanged={handleRefresh}
       />
-
-      {hasFollowupSms && (
-        <FollowUpSmsConfig orgId={org.id} />
-      )}
 
       <OveragePurchase
         onPurchased={handleRefresh}

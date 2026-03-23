@@ -15,11 +15,17 @@ export default function ContactLink({
 
   function handleClick(e: React.MouseEvent) {
     e.preventDefault();
-    sessionStorage.setItem("scrollToContact", "1");
     if (preselect) {
       sessionStorage.setItem("preselectInterest", preselect);
     }
-    router.push("/");
+    if (window.location.pathname === "/") {
+      window.dispatchEvent(new CustomEvent("preselectInterest"));
+      const el = document.getElementById("contact");
+      if (el) el.scrollIntoView({ behavior: "smooth" });
+    } else {
+      sessionStorage.setItem("scrollToContact", "1");
+      router.push("/");
+    }
   }
 
   return (

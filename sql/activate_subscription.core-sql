@@ -2,7 +2,8 @@
 CREATE OR REPLACE FUNCTION private.activate_subscription(
   p_org_id uuid,
   p_paypal_subscription_id text,
-  p_plan text
+  p_plan text,
+  p_billing_interval text DEFAULT 'monthly'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -15,16 +16,15 @@ DECLARE
   v_remaining numeric;
 BEGIN
   -- Validate plan
-  IF p_plan NOT IN ('starter', 'standard', 'plus', 'enterprise', 'pay_as_you_go') THEN
+  IF p_plan NOT IN ('starter', 'professional', 'business', 'pay_as_you_go') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid plan');
   END IF;
 
   -- Map plan to credit allocation
   CASE p_plan
     WHEN 'starter' THEN v_allocation := 125;
-    WHEN 'standard' THEN v_allocation := 500;
-    WHEN 'plus' THEN v_allocation := 1500;
-    WHEN 'enterprise' THEN v_allocation := 5000;
+    WHEN 'professional' THEN v_allocation := 600;
+    WHEN 'business' THEN v_allocation := 1800;
     WHEN 'pay_as_you_go' THEN v_allocation := 0;
   END CASE;
 
@@ -46,12 +46,17 @@ BEGIN
       payment_failure_count = 0,
       payment_first_failed_at = NULL,
       cancel_at_period_end = NULL,
-      recharge_used = 0
+      recharge_used = 0,
+      billing_interval = COALESCE(p_billing_interval, 'monthly'),
+      current_period_end = CASE
+        WHEN COALESCE(p_billing_interval, 'monthly') = 'annual' THEN now() + interval '1 year'
+        ELSE now() + interval '1 month'
+      END
   WHERE id = p_org_id;
 
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
   VALUES (p_org_id, NULL, 'system', 'subscription_activated', 'organization', p_org_id,
-    jsonb_build_object('plan', p_plan, 'paypal_subscription_id', p_paypal_subscription_id, 'credits', v_allocation));
+    jsonb_build_object('plan', p_plan, 'paypal_subscription_id', p_paypal_subscription_id, 'credits', v_allocation, 'billing_interval', COALESCE(p_billing_interval, 'monthly')));
 
   RETURN jsonb_build_object('success', true);
 END;
@@ -61,7 +66,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.activate_subscription(
   p_org_id uuid,
   p_paypal_subscription_id text,
-  p_plan text
+  p_plan text,
+  p_billing_interval text DEFAULT 'monthly'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -74,6 +80,6 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
   END IF;
 
-  RETURN private.activate_subscription(p_org_id, p_paypal_subscription_id, p_plan);
+  RETURN private.activate_subscription(p_org_id, p_paypal_subscription_id, p_plan, p_billing_interval);
 END;
 $$;

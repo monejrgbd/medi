@@ -1,0 +1,125 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.admin_set_enterprise_plan(
+  p_caller_auth_uid uuid,
+  p_org_id uuid,
+  p_credits_total int,
+  p_action text DEFAULT 'activate',
+  p_paypal_subscription_id text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+BEGIN
+  -- Auth: must be platform admin
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean
+     FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Validate action
+  IF p_action NOT IN ('activate', 'adjust_credits', 'revoke') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid action');
+  END IF;
+
+  -- Lock org
+  SELECT id, name, subscription_plan, credits_total, credits_used
+  INTO v_org
+  FROM public.organizations
+  WHERE id = p_org_id
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  IF p_action = 'activate' THEN
+    -- Validate credits
+    IF p_credits_total < 1 OR p_credits_total > 100000 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Credits must be between 1 and 100,000');
+    END IF;
+
+    UPDATE public.organizations
+    SET subscription_plan = 'enterprise',
+        credits_total = p_credits_total,
+        credits_used = 0,
+        recharge_used = 0,
+        billing_cycle_start = now(),
+        cancelled_at = NULL,
+        data_retention_until = NULL,
+        payment_failure_count = 0,
+        payment_first_failed_at = NULL,
+        cancel_at_period_end = NULL,
+        paypal_subscription_id = COALESCE(p_paypal_subscription_id, paypal_subscription_id)
+    WHERE id = p_org_id;
+
+  ELSIF p_action = 'adjust_credits' THEN
+    IF v_org.subscription_plan <> 'enterprise' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Organization is not on enterprise plan');
+    END IF;
+
+    IF p_credits_total < 1 OR p_credits_total > 100000 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Credits must be between 1 and 100,000');
+    END IF;
+
+    UPDATE public.organizations
+    SET credits_total = p_credits_total
+    WHERE id = p_org_id;
+
+  ELSIF p_action = 'revoke' THEN
+    IF v_org.subscription_plan <> 'enterprise' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Organization is not on enterprise plan');
+    END IF;
+
+    UPDATE public.organizations
+    SET subscription_plan = 'expired',
+        cancelled_at = now(),
+        data_retention_until = now() + interval '90 days'
+    WHERE id = p_org_id;
+  END IF;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (p_org_id, p_caller_auth_uid, 'platform_admin', 'enterprise_' || p_action, 'organization', p_org_id,
+    jsonb_build_object(
+      'action', p_action,
+      'credits_total', p_credits_total,
+      'old_plan', v_org.subscription_plan,
+      'old_credits', v_org.credits_total,
+      'paypal_subscription_id', p_paypal_subscription_id
+    ));
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'action', p_action,
+    'org_name', v_org.name
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.admin_set_enterprise_plan(
+  p_org_id uuid,
+  p_credits_total int DEFAULT 0,
+  p_action text DEFAULT 'activate',
+  p_paypal_subscription_id text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_set_enterprise_plan(auth.uid(), p_org_id, p_credits_total, p_action, p_paypal_subscription_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_set_enterprise_plan(uuid, int, text, text) TO authenticated;

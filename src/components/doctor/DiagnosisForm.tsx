@@ -33,10 +33,7 @@ export default function DiagnosisForm({
   }, []);
 
   const [followUpEnabled, setFollowUpEnabled] = useState(demoMode);
-  const [followUpDays, setFollowUpDays] = useState<number | null>(demoMode ? 7 : 14);
-  const [followUpInstructions, setFollowUpInstructions] = useState(
-    ""
-  );
+  const [followUpInstructions, setFollowUpInstructions] = useState("");
 
   const [showCareInstructions, setShowCareInstructions] = useState(false);
   const [careInstructions, setCareInstructions] = useState("");
@@ -60,11 +57,8 @@ export default function DiagnosisForm({
     setShowDiagnosis(allow);
     setShowConfirm(false);
     startTransition(async () => {
-      const followUp = followUpEnabled && followUpDays
-        ? {
-            timeframe_days: followUpDays,
-            ai_instructions: followUpInstructions.trim() || undefined,
-          }
+      const followUp = followUpEnabled
+        ? { ai_instructions: followUpInstructions.trim() || undefined }
         : undefined;
 
       const result = await completeVisit(visitId, diagnosis.trim(), followUp, allow, careInstructions.trim() || undefined);
@@ -136,8 +130,6 @@ export default function DiagnosisForm({
         <FollowUpForm
           enabled={followUpEnabled}
           onEnabledChange={setFollowUpEnabled}
-          days={followUpDays}
-          onDaysChange={setFollowUpDays}
           instructions={followUpInstructions}
           onInstructionsChange={setFollowUpInstructions}
         />

@@ -8,7 +8,6 @@ interface Location {
   id: string;
   name: string;
   review_sms_enabled: boolean;
-  followup_sms_enabled: boolean;
   diagnostic_enabled: boolean;
 }
 
@@ -32,7 +31,7 @@ export default function AddOnToggles({
 
   async function handleToggle(
     locationId: string,
-    addon: "review_sms" | "followup_sms" | "diagnostic",
+    addon: "review_sms" | "diagnostic",
     enabled: boolean
   ) {
     const key = `${locationId}-${addon}`;
@@ -48,14 +47,12 @@ export default function AddOnToggles({
                 ...l,
                 [addon === "review_sms"
                   ? "review_sms_enabled"
-                  : addon === "followup_sms"
-                    ? "followup_sms_enabled"
-                    : "diagnostic_enabled"]: enabled,
+                  : "diagnostic_enabled"]: enabled,
               }
             : l
         )
       );
-      const label = addon === "review_sms" ? "Review SMS" : addon === "followup_sms" ? "Follow up SMS" : "AI Diagnostic";
+      const label = addon === "review_sms" ? "Review SMS" : "AI Diagnostic";
       toast.success(`${label} ${enabled ? "enabled" : "disabled"}`);
       onChanged();
     } else {
@@ -79,15 +76,9 @@ export default function AddOnToggles({
       description: "Send review request texts after visits",
       field: "review_sms_enabled" as const,
     },
-    {
-      key: "followup_sms" as const,
-      label: "Follow up SMS",
-      description: "Send follow up appointment reminders",
-      field: "followup_sms_enabled" as const,
-    },
   ];
 
-  function renderToggle(location: Location, addon: { key: "review_sms" | "followup_sms" | "diagnostic"; label: string; description: string; field: "review_sms_enabled" | "followup_sms_enabled" | "diagnostic_enabled" }) {
+  function renderToggle(location: Location, addon: { key: "review_sms" | "diagnostic"; label: string; description: string; field: "review_sms_enabled" | "diagnostic_enabled" }) {
     const enabled = location[addon.field];
     const toggleKey = `${location.id}-${addon.key}`;
     return (
@@ -118,11 +109,11 @@ export default function AddOnToggles({
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-6">
-      <h2 className="text-lg font-semibold text-ink mb-4">Add-ons</h2>
+      <h2 className="text-lg font-semibold text-ink mb-4">Add ons</h2>
 
       {isDisabled && (
         <p className="text-xs text-red-500 mb-4">
-          Add-ons are unavailable while your plan is {subscriptionPlan}.
+          Add ons are unavailable while your plan is {subscriptionPlan}.
         </p>
       )}
 

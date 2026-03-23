@@ -264,16 +264,17 @@ Two trial tiers. No credit card required for either.
 - **Platform Admin panel** — accessible to designated Hilt Health staff (identified by `is_platform_admin` claim in `app_metadata`). Admin logs in with their real email, auto redirected to `/d/admin`. Features: quick create codes (one click, no identifiers), create codes with identifiers (email, phone, domain, optional approval email), view all codes with status (available, used, expired), copy codes to clipboard. Auth: double gated (server action + SQL function both verify admin claim). Admin accounts are set via a one time SQL update on `auth.users.raw_app_meta_data`.
 - 7 days before trial ends, we contact them with pricing based on the plan they choose
 
-### Post-Trial Pricing (from existing site)
+### Post-Trial Pricing
 
-| Plan | Price | Credits/mo | Cost/Patient (Standard AI) | Cost/Patient (Advanced AI) |
-|------|-------|-----------|--------------------------|--------------------------|
-| Starter | $99/mo | 125 | ~$1.19 | ~$3.19 |
-| Standard | $349/mo | 500 | ~$1.05 | ~$2.79 |
-| Plus | $899/mo | 1,500 | ~$0.90 | ~$2.40 |
-| Enterprise | Custom | Custom | Negotiable | Negotiable |
+| Plan | Monthly | Annual (20% off) | Credits/mo | $/Credit | Savings vs PAYG | Cost/Patient (Standard AI) | Cost/Patient (Advanced AI) |
+|------|---------|-------------------|-----------|----------|-----------------|--------------------------|--------------------------|
+| Starter | $99/mo | $79/mo | 125 | $0.79 | ~20% | ~$1.19 | ~$3.17 |
+| Professional | $349/mo | $279/mo | 600 | $0.58 | ~42% | ~$0.87 | ~$2.33 |
+| Business | $899/mo | $719/mo | 1,800 | $0.50 | 50% | ~$0.75 | ~$2.00 |
+| Enterprise | Contact us | Contact us | Custom | Negotiated | 60%+ | Negotiable | Negotiable |
 
 - **Pay-as-you-go:** $1 per credit (no commitment)
+- **Annual billing:** 20% off all plans, billed yearly
 - **AI models:** Standard AI = 1.5 credits/patient, Advanced AI = 4 credits/patient
 - Overage credits at $1/credit on all plans
 - **Credits deducted when AI conversation begins** — credits are deducted when the first AI message is sent, not at QR scan or approval. Denial or abandonment before the AI conversation starts = no credit used. If the clinic has no credits remaining, new AI conversations cannot start (active sessions finish normally)
@@ -287,7 +288,9 @@ Two trial tiers. No credit card required for either.
 ### Credit-Based Features (per location toggle, pay per use, available to all clinics automatically)
 - **AI Diagnostic** — 0.5 credits per use. AI powered clinical assessment shown to doctors as a suggestion. Enable or disable per location. No addon required.
 - **Review request SMS** — 0.1 credits per SMS. Post visit review collection. Enable or disable per location. No addon required.
-- **Follow up reminder SMS** — 0.1 credits per SMS. Automated return visit reminders. Enable or disable per location. No addon required.
+
+### Included Free (no credit cost)
+- **Follow up tracking** — Doctors tag follow ups with AI instructions. When the patient returns, the receptionist confirms the follow up and the AI picks up where the last visit left off. No credit cost. Included in every plan.
 
 ### Add-On (org level gate, only feature that requires enabling)
 - **AI Targeted Marketing** — 0.3 credits per SMS sent, 1 credit per 1,000 AI scans. Filter patients by demographics and visit history, AI scans clinical data. Simple filtering by age, sex, and visit history is always free. Gated by `marketing_sms_addon` on organization. This is the ONLY feature that requires an org level toggle to activate.
@@ -296,12 +299,17 @@ Two trial tiers. No credit card required for either.
 - **Payment processor**: PayPal for subscription billing and overage charges.
 - **Payment failure**: 3 retry attempts over 7 days. After 7 days unpaid, service enters read-only mode (staff can view existing data, no new AI conversations). After 30 days, account suspended. Owner notified at each stage via email.
 - **Cancellation**: Owner can cancel anytime. Data retained for 90 days post-cancellation, then permanently deleted. Owner can request immediate deletion.
-- **Annual pricing**: Not offered in V1. Evaluate post-launch based on demand.
+- **Annual pricing**: 20% off all plans, billed yearly. Toggle on pricing page and billing dashboard.
 
-### What's Included (Both Tiers)
+### What's Included (All Plans)
 - AI pre-screening (Standard + Advanced models)
 - Doctor summary + full transcript
 - Analytics dashboard
+- Follow up reminders (email, free)
+- 130+ language support
+- Referral system
+- Multi location support
+- Kiosk and tablet mode
 
 ---
 

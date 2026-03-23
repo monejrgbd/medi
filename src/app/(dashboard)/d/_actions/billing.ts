@@ -8,14 +8,13 @@ const UUID_RE =
 
 const VALID_PLANS = [
   "starter",
-  "standard",
-  "plus",
-  "enterprise",
+  "professional",
+  "business",
   "pay_as_you_go",
 ];
 const PAYPAL_API_BASE =
   process.env.PAYPAL_API_BASE || "https://api-m.paypal.com";
-const VALID_ADDONS = ["review_sms", "followup_sms", "diagnostic"];
+const VALID_ADDONS = ["review_sms", "diagnostic"];
 
 export async function fetchCreditDashboard() {
   await requireAuth();
@@ -178,43 +177,3 @@ export async function fetchPatientFullProfile(patientId: string) {
   return data;
 }
 
-export async function fetchFollowUpSmsConfig(orgId: string) {
-  await requireAuth();
-
-  if (!UUID_RE.test(orgId))
-    return { success: false, error: "Invalid org ID" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("followup_sms_config")
-    .select("*")
-    .eq("org_id", orgId);
-  if (error) return { success: false, error: error.message };
-  return { success: true, configs: data };
-}
-
-export async function saveFollowUpSmsConfig(
-  orgId: string,
-  config: {
-    max_reminders: number;
-    first_reminder_days: number;
-    second_reminder_days: number;
-    template?: string;
-  }
-) {
-  await requireAuth();
-
-  if (!UUID_RE.test(orgId))
-    return { success: false, error: "Invalid org ID" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("save_followup_sms_config", {
-    p_org_id: orgId,
-    p_max_reminders: config.max_reminders,
-    p_first_reminder_days: config.first_reminder_days,
-    p_second_reminder_days: config.second_reminder_days,
-    p_template: config.template || null,
-  });
-  if (error) return { success: false, error: error.message };
-  return data;
-}

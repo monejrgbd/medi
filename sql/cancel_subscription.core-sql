@@ -14,7 +14,7 @@ DECLARE
   v_end_date timestamptz;
 BEGIN
   -- Lock org and verify ownership
-  SELECT id, subscription_plan, name, owner_id, billing_cycle_start, cancel_at_period_end
+  SELECT id, subscription_plan, name, owner_id, billing_cycle_start, cancel_at_period_end, current_period_end
   INTO v_org
   FROM public.organizations
   WHERE owner_id = p_caller_auth_uid
@@ -34,8 +34,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Cancellation already scheduled');
   END IF;
 
-  -- Calculate period end date
-  v_end_date := COALESCE(v_org.billing_cycle_start + interval '30 days', now());
+  -- Calculate period end date (use current_period_end for correct annual handling)
+  v_end_date := COALESCE(v_org.current_period_end, v_org.billing_cycle_start + interval '30 days', now());
 
   -- Set cancel flag — keep plan active until period ends
   UPDATE public.organizations

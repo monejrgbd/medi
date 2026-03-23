@@ -31,7 +31,6 @@ export default function NurseCompleteDialog({
   }, []);
 
   const [followUpEnabled, setFollowUpEnabled] = useState(false);
-  const [followUpDays, setFollowUpDays] = useState<number | null>(14);
   const [followUpInstructions, setFollowUpInstructions] = useState("");
 
   const [showCareInstructions, setShowCareInstructions] = useState(false);
@@ -55,11 +54,8 @@ export default function NurseCompleteDialog({
     setShowDiagnosis(allow);
     setShowConfirm(false);
     startTransition(async () => {
-      const followUp = followUpEnabled && followUpDays
-        ? {
-            timeframe_days: followUpDays,
-            ai_instructions: followUpInstructions.trim() || "",
-          }
+      const followUp = followUpEnabled
+        ? { ai_instructions: followUpInstructions.trim() || undefined }
         : undefined;
 
       const result = await completeVisitAsNurse(
@@ -137,8 +133,6 @@ export default function NurseCompleteDialog({
         <FollowUpForm
           enabled={followUpEnabled}
           onEnabledChange={setFollowUpEnabled}
-          days={followUpDays}
-          onDaysChange={setFollowUpDays}
           instructions={followUpInstructions}
           onInstructionsChange={setFollowUpInstructions}
         />

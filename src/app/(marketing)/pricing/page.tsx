@@ -5,6 +5,8 @@ import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 import CustomPlanModal from "@/components/CustomPlanModal";
 
+type BillingCycle = "monthly" | "annual";
+
 /* ── Data ──────────────────────────────────────────────── */
 
 type AIModel = "standard" | "advanced";
@@ -22,24 +24,13 @@ const CREDIT_COSTS = [
     ),
   },
   {
-    action: "Review request SMS",
+    action: "Reviews System",
     credits: 0.1,
-    desc: "Post visit review collection",
+    desc: "Post visit review collection via SMS",
     tag: "Enable or disable per location",
     icon: (
       <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
         <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-      </svg>
-    ),
-  },
-  {
-    action: "Follow up reminder SMS",
-    credits: 0.1,
-    desc: "Automated return visit reminders",
-    tag: "Enable or disable per location",
-    icon: (
-      <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
       </svg>
     ),
   },
@@ -57,10 +48,9 @@ const CREDIT_COSTS = [
 ];
 
 const PLANS = [
-  { name: "Starter", price: 99, credits: 125, savings: "21%", highlight: false },
-  { name: "Standard", price: 349, credits: 500, savings: "30%", highlight: true },
-  { name: "Plus", price: 899, credits: 1500, savings: "40%", highlight: false },
-  { name: "Enterprise", price: 3999, credits: 8000, savings: "50%", highlight: false },
+  { name: "Starter", price: 99, credits: 125, savings: "20%", highlight: false },
+  { name: "Professional", price: 349, credits: 600, savings: "42%", highlight: true },
+  { name: "Business", price: 899, credits: 1800, savings: "50%", highlight: false },
 ];
 
 const CREDITS_PER_PATIENT: Record<AIModel, number> = { standard: 1.5, advanced: 4 };
@@ -106,6 +96,11 @@ const INCLUDED_FEATURES = [
     desc: "Patients without phones use a clinic tablet. Full screen kiosk mode with auto clear between patients.",
     icon: "M10.5 19.5h3m-6.75 2.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-15a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 4.5v15a2.25 2.25 0 0 0 2.25 2.25Z",
   },
+  {
+    title: "Follow up tracking",
+    desc: "Doctors tag follow ups with AI instructions. When the patient returns, the AI picks up where the last visit left off.",
+    icon: "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5",
+  },
 ];
 
 const TRUST_BADGES = [
@@ -130,11 +125,11 @@ const FAQS = [
   },
   {
     q: "Is there a setup fee or long term contract?",
-    a: "No setup fees and no long term contracts. All plans are month to month. Cancel anytime from your dashboard.",
+    a: "No setup fees and no long term contracts. Choose monthly or annual billing. Annual plans save 20%. Cancel anytime from your dashboard.",
   },
   {
     q: "How does SMS pricing work?",
-    a: "Review requests and follow up reminders use 0.1 credits per SMS, drawn from your credit pool. Enable them per location in your dashboard. No separate subscription needed.",
+    a: "Review request SMS uses 0.1 credits per message, drawn from your credit pool. Enable it per location in your dashboard.",
   },
   {
     q: "Do unused credits roll over?",
@@ -230,7 +225,7 @@ function CreditCostsSection() {
             </div>
           </div>
 
-          {/* SMS items */}
+          {/* Non-marketing items */}
           {CREDIT_COSTS.filter((item) => item.action !== "Marketing SMS").map((item) => (
             <div
               key={item.action}
@@ -283,7 +278,7 @@ function CreditCostsSection() {
           </div>
         </div>
         <p className="mt-4 text-center text-sm text-ash">
-          Credits only cover AI conversations, diagnostics, and SMS. The rest of the platform, including summaries, analytics, referrals, review management, 130+ languages, and multi location support, is yours from day one.
+          The rest of the platform, including summaries, analytics, referrals, follow up reminders, review management, 130+ languages, and multi location support, is yours from day one.
         </p>
       </div>
     </FadeIn>
@@ -291,21 +286,53 @@ function CreditCostsSection() {
 }
 
 function PlanCards({ onContactSales }: { onContactSales: () => void }) {
+  const [billing, setBilling] = useState<BillingCycle>("monthly");
+
   return (
     <div className="mx-auto mt-16 max-w-[1100px]">
       <FadeIn>
         <h2 className="mb-2 text-center text-2xl font-bold text-ink">Choose your plan</h2>
-        <p className="mb-8 text-center text-slate">
+        <p className="mb-6 text-center text-slate">
           Credits are $1 each on pay as you go. Monthly plans save up to 50%.
         </p>
+
+        {/* Billing toggle */}
+        <div className="mb-8 flex justify-center">
+          <div className="inline-flex rounded-xl border border-gray-200 bg-snow p-1">
+            <button
+              onClick={() => setBilling("monthly")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                billing === "monthly"
+                  ? "bg-white text-ink shadow-sm"
+                  : "text-ash hover:text-slate"
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBilling("annual")}
+              className={`rounded-lg px-4 py-2 text-sm font-medium transition-all ${
+                billing === "annual"
+                  ? "bg-white text-ink shadow-sm"
+                  : "text-ash hover:text-slate"
+              }`}
+            >
+              Annual
+              <span className="ml-1.5 rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+                Save 20%
+              </span>
+            </button>
+          </div>
+        </div>
       </FadeIn>
 
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {PLANS.map((plan, i) => {
-          const perCredit = (plan.price / plan.credits).toFixed(2);
+          const annualMonthly = Math.round(plan.price * 12 * 0.8 / 12);
+          const displayPrice = billing === "annual" ? annualMonthly : plan.price;
+          const perCredit = (displayPrice / plan.credits).toFixed(2);
           const patientCount = patients(plan.credits, "standard");
-          const perPatient = (plan.price / patientCount).toFixed(2);
-          const isEnterprise = plan.name === "Enterprise";
+          const perPatient = (displayPrice / patientCount).toFixed(2);
 
           return (
             <FadeIn key={plan.name} delay={i * 0.08}>
@@ -324,11 +351,14 @@ function PlanCards({ onContactSales }: { onContactSales: () => void }) {
 
                 <h3 className="mb-1 text-lg font-semibold text-ink">{plan.name}</h3>
 
-                {/* Price — the hero number */}
+                {/* Price */}
                 <div className="mb-1">
-                  <span className="text-4xl font-bold text-ink">${plan.price.toLocaleString()}</span>
+                  <span className="text-4xl font-bold text-ink">${displayPrice.toLocaleString()}</span>
                   <span className="text-slate">/mo</span>
                 </div>
+                {billing === "annual" && (
+                  <p className="mb-1 text-xs text-ash line-through">${plan.price}/mo</p>
+                )}
 
                 {/* Credits + savings */}
                 <p className="mb-1 text-sm text-slate">
@@ -336,7 +366,7 @@ function PlanCards({ onContactSales }: { onContactSales: () => void }) {
                 </p>
                 <div className="mb-5">
                   <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                    Save {plan.savings}
+                    Save {plan.savings}{billing === "annual" ? " + 20% annual" : ""}
                   </span>
                 </div>
 
@@ -348,35 +378,56 @@ function PlanCards({ onContactSales }: { onContactSales: () => void }) {
                 </div>
 
                 {/* CTA */}
-                <div className="mt-auto space-y-2">
+                <div className="mt-auto">
                   <Link
-                    href="/start-trial"
+                    href="/d/owner/billing"
                     className={`block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                       plan.highlight
                         ? "bg-hilt-blue text-white hover:bg-hilt-blue-dark"
                         : "border-2 border-hilt-blue text-hilt-blue hover:bg-hilt-blue/5"
                     }`}
                   >
-                    Start Free Trial
+                    Upgrade
                   </Link>
-                  {isEnterprise && (
-                    <a
-                      href="https://calendar.app.google/1Lmd2eT35zScoj4K8"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block w-full rounded-xl border border-gray-300 py-2.5 text-center text-sm font-medium text-slate transition-colors hover:border-ink hover:text-ink"
-                    >
-                      Talk to Sales
-                    </a>
-                  )}
                 </div>
               </div>
             </FadeIn>
           );
         })}
+
+        {/* Enterprise card */}
+        <FadeIn delay={PLANS.length * 0.08}>
+          <div className="relative flex h-full flex-col rounded-2xl border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md">
+            <h3 className="mb-1 text-lg font-semibold text-ink">Enterprise</h3>
+            <div className="mb-1">
+              <span className="text-4xl font-bold text-ink">Custom</span>
+            </div>
+            <p className="mb-1 text-sm text-slate">Custom credit allocation</p>
+            <div className="mb-5">
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-semibold text-blue-700">
+                Volume pricing
+              </span>
+            </div>
+            <div className="mb-6 rounded-lg bg-snow p-3">
+              <p className="text-sm text-slate">
+                Dedicated support, custom SLAs, and volume discounts for large organizations.
+              </p>
+            </div>
+            <div className="mt-auto">
+              <a
+                href="https://calendar.app.google/1Lmd2eT35zScoj4K8"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block rounded-xl border-2 border-hilt-blue py-3 text-center text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
+              >
+                Talk to Sales
+              </a>
+            </div>
+          </div>
+        </FadeIn>
       </div>
 
-      {/* Custom + PAYG */}
+      {/* PAYG */}
       <FadeIn>
         <div className="mt-8 text-center">
           <p className="text-slate">

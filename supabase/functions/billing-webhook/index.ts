@@ -193,17 +193,21 @@ Deno.serve(async (req) => {
     // Route by event type
     switch (eventType) {
       case "BILLING.SUBSCRIPTION.ACTIVATED": {
-        // Extract plan from custom_id (format: "orgId:plan") or env-configured plan map
+        // Extract plan + interval from custom_id (format: "orgId:plan:interval") or env-configured plan map
         const planMapJson = Deno.env.get("PAYPAL_PLAN_MAP") || "{}";
         let planMap: Record<string, string> = {};
         try { planMap = JSON.parse(planMapJson); } catch { /* use empty */ }
         const planId = resource.plan_id || "";
-        let plan = planMap[planId] || "standard";
+        let plan = planMap[planId] || "starter";
+        let billingInterval = "monthly";
 
-        // Override from custom_id if plan info embedded (format: "orgId:plan")
+        // Override from custom_id if plan info embedded (format: "orgId:plan:interval")
         if (customId && customId.includes(":")) {
           const parts = customId.split(":");
           if (parts[1]) plan = parts[1];
+          if (parts[2] && (parts[2] === "monthly" || parts[2] === "annual")) {
+            billingInterval = parts[2];
+          }
         }
 
         // Cancel old PayPal subscription if switching plans
@@ -239,6 +243,7 @@ Deno.serve(async (req) => {
           p_org_id: orgId,
           p_paypal_subscription_id: subscriptionId || "",
           p_plan: plan,
+          p_billing_interval: billingInterval,
         });
         break;
       }
@@ -248,7 +253,7 @@ Deno.serve(async (req) => {
         // (initial activation is handled by BILLING.SUBSCRIPTION.ACTIVATED)
         const { data: orgData } = await supabase
           .from("organizations")
-          .select("billing_cycle_start")
+          .select("billing_cycle_start, billing_interval")
           .eq("id", orgId)
           .single();
 
@@ -262,6 +267,17 @@ Deno.serve(async (req) => {
               p_org_id: orgId,
             });
           }
+
+          // Extend current_period_end based on billing interval
+          const intervalMs = orgData.billing_interval === "annual"
+            ? 365 * 24 * 60 * 60 * 1000
+            : 30 * 24 * 60 * 60 * 1000;
+          await supabase
+            .from("organizations")
+            .update({
+              current_period_end: new Date(Date.now() + intervalMs).toISOString(),
+            })
+            .eq("id", orgId);
         }
         break;
       }

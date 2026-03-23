@@ -1,11 +1,10 @@
 -- private.create_follow_up
 -- Creates a follow-up record for a completed visit
--- Called by: public.create_follow_up (wrapper)
+-- No date scheduling or SMS — just a flag with AI instructions
 
 CREATE OR REPLACE FUNCTION private.create_follow_up(
   p_caller_auth_uid uuid,
   p_visit_id uuid,
-  p_timeframe_days int,
   p_ai_instructions text DEFAULT NULL
 )
 RETURNS jsonb
@@ -18,19 +17,9 @@ DECLARE
   v_visit record;
   v_caller_staff_id uuid;
   v_owner_id uuid;
-  v_due_at timestamptz;
   v_clean_instructions text;
   v_follow_up_id uuid;
-  v_location_followup_enabled boolean;
-  v_org record;
-  v_remaining numeric;
-  v_sms_charged boolean := false;
 BEGIN
-  -- Validate timeframe_days (NULL = receptionist will schedule later)
-  IF p_timeframe_days IS NOT NULL AND p_timeframe_days NOT BETWEEN 1 AND 365 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'timeframe_days must be between 1 and 365');
-  END IF;
-
   -- Clean and validate ai_instructions if provided
   IF p_ai_instructions IS NOT NULL THEN
     v_clean_instructions := regexp_replace(trim(p_ai_instructions), '<[^>]*>', '', 'g');
@@ -71,51 +60,14 @@ BEGIN
 
   -- Auth: must be owner or the claiming doctor
   IF v_owner_id = p_caller_auth_uid THEN
-    -- owner is authorized
     NULL;
   ELSIF v_caller_staff_id IS NOT NULL AND v_caller_staff_id = v_visit.claimed_by THEN
-    -- claiming doctor is authorized
     NULL;
   ELSE
     RETURN jsonb_build_object('success', false, 'error', 'not authorized');
   END IF;
 
-  -- Only charge credits and compute due_at if timeframe is set
-  -- NULL timeframe = receptionist will schedule later (credits charged at scheduling time)
-  IF p_timeframe_days IS NOT NULL THEN
-    -- Check if location has followup SMS enabled
-    SELECT followup_sms_enabled INTO v_location_followup_enabled
-    FROM public.locations
-    WHERE id = v_visit.location_id;
-
-    -- If location has followup SMS enabled, try to deduct 0.1 credits
-    IF v_location_followup_enabled THEN
-      SELECT o.credits_total, o.credits_used, o.subscription_plan
-      INTO v_org
-      FROM public.organizations o
-      WHERE o.id = v_visit.org_id
-      FOR UPDATE;
-
-      IF v_org.subscription_plan NOT IN ('expired', 'suspended', 'read_only') THEN
-        v_remaining := v_org.credits_total - v_org.credits_used;
-        IF v_remaining >= 0.1 THEN
-          UPDATE public.organizations
-          SET credits_used = credits_used + 0.1
-          WHERE id = v_visit.org_id;
-
-          INSERT INTO public.credits_log (org_id, credits_amount, description)
-          VALUES (v_visit.org_id, -0.1, 'Follow-up SMS — visit ' || p_visit_id::text);
-
-          v_sms_charged := true;
-        END IF;
-      END IF;
-    END IF;
-
-    -- Compute due_at (preserves time component)
-    v_due_at := v_visit.completed_at + (p_timeframe_days || ' days')::interval;
-  END IF;
-
-  -- Insert follow-up
+  -- Insert follow-up (no date, no SMS)
   INSERT INTO public.follow_ups (
     visit_id, patient_id, doctor_id, org_id, location_id,
     timeframe_days, due_at, ai_instructions, sms_charged
@@ -125,10 +77,10 @@ BEGIN
     COALESCE(v_caller_staff_id, v_visit.claimed_by),
     v_visit.org_id,
     v_visit.location_id,
-    p_timeframe_days,
-    v_due_at,
+    NULL,
+    NULL,
     v_clean_instructions,
-    v_sms_charged
+    false
   )
   RETURNING id INTO v_follow_up_id;
 
@@ -144,22 +96,17 @@ BEGIN
     'created',
     jsonb_build_object(
       'visit_id', p_visit_id,
-      'timeframe_days', p_timeframe_days,
-      'due_at', v_due_at,
-      'sms_charged', v_sms_charged
+      'ai_instructions', v_clean_instructions
     )
   );
 
-  RETURN jsonb_build_object('success', true, 'follow_up_id', v_follow_up_id, 'sms_charged', v_sms_charged);
+  RETURN jsonb_build_object('success', true, 'follow_up_id', v_follow_up_id);
 END;
 $$;
 
 -- public.create_follow_up (wrapper)
--- Thin public wrapper that captures auth context
-
 CREATE OR REPLACE FUNCTION public.create_follow_up(
   p_visit_id uuid,
-  p_timeframe_days int,
   p_ai_instructions text DEFAULT NULL
 )
 RETURNS jsonb
@@ -176,10 +123,10 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'not authenticated');
   END IF;
 
-  RETURN private.create_follow_up(v_auth_uid, p_visit_id, p_timeframe_days, p_ai_instructions);
+  RETURN private.create_follow_up(v_auth_uid, p_visit_id, p_ai_instructions);
 END;
 $$;
 
 -- Permissions
-REVOKE ALL ON FUNCTION public.create_follow_up(uuid, int, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_follow_up(uuid, int, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_follow_up(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_follow_up(uuid, text) TO authenticated;

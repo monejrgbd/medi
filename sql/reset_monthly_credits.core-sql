@@ -24,12 +24,15 @@ BEGIN
   -- Map plan to credit allocation
   CASE v_plan
     WHEN 'starter' THEN v_allocation := 125;
-    WHEN 'standard' THEN v_allocation := 500;
-    WHEN 'plus' THEN v_allocation := 1500;
-    WHEN 'enterprise' THEN v_allocation := 5000;
+    WHEN 'professional' THEN v_allocation := 600;
+    WHEN 'business' THEN v_allocation := 1800;
     WHEN 'pay_as_you_go' THEN v_allocation := 0;
+    WHEN 'enterprise' THEN
+      -- Enterprise: keep manually-set credits_total, just reset usage
+      SELECT credits_total INTO v_allocation
+      FROM public.organizations WHERE id = p_org_id;
     ELSE
-      -- Non-resettable plans (pay_as_you_go, trial, etc.) — log and skip
+      -- Non-resettable plans (trial, etc.) — log and skip
       INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
       VALUES (p_org_id, NULL, 'system', 'credit_reset_skipped', 'organization', p_org_id,
         jsonb_build_object('plan', v_plan, 'reason', 'Plan does not have monthly credit allocation'));

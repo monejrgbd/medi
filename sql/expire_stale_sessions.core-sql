@@ -40,15 +40,20 @@ BEGIN
     AND trial_end_date IS NOT NULL
     AND trial_end_date < now();
 
-  -- 6. Zero credits for orgs past their cancel date
+  -- 6. Expire orgs past their cancel date
   UPDATE public.organizations
-  SET credits_total = 0,
+  SET subscription_plan = 'expired',
+      credits_total = 0,
       credits_used = 0,
+      recharge_used = 0,
       billing_cycle_start = NULL,
       paypal_subscription_id = NULL,
-      cancel_at_period_end = NULL
+      cancel_at_period_end = NULL,
+      cancelled_at = COALESCE(cancelled_at, now()),
+      data_retention_until = COALESCE(data_retention_until, now() + interval '90 days')
   WHERE cancel_at_period_end IS NOT NULL
-    AND cancel_at_period_end < now();
+    AND cancel_at_period_end < now()
+    AND subscription_plan NOT IN ('expired', 'suspended');
 
   -- 7. Owner alerts (trial expiry + daily digest)
   PERFORM private.send_trial_expiry_alert();

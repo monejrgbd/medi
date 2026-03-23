@@ -57,13 +57,18 @@ export default function SignUpForm() {
     });
   }, []);
 
-  // Auto-select "meet" when signalled via sessionStorage
+  // Auto-select "meet" when signalled via sessionStorage or custom event
   useEffect(() => {
-    const val = sessionStorage.getItem("preselectInterest");
-    if (val === "meet") {
-      sessionStorage.removeItem("preselectInterest");
-      setInterest("meet");
+    function applyPreselect() {
+      const val = sessionStorage.getItem("preselectInterest");
+      if (val === "meet") {
+        sessionStorage.removeItem("preselectInterest");
+        setInterest("meet");
+      }
     }
+    applyPreselect();
+    window.addEventListener("preselectInterest", applyPreselect);
+    return () => window.removeEventListener("preselectInterest", applyPreselect);
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {

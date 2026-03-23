@@ -3,10 +3,11 @@
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TicketCheck, LogOut } from "lucide-react";
+import { TicketCheck, Building2, LogOut } from "lucide-react";
 
 const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
   { href: "/d/admin", label: "Premium Codes", icon: <TicketCheck className="h-4 w-4" /> },
+  { href: "/d/admin/enterprise", label: "Enterprise", icon: <Building2 className="h-4 w-4" /> },
 ];
 
 export default function AdminSidebar() {

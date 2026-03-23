@@ -1,16 +1,20 @@
 export const PLAN_CREDITS: Record<string, number> = {
   starter: 125,
-  standard: 500,
-  plus: 1500,
-  enterprise: 5000,
+  professional: 600,
+  business: 1800,
   pay_as_you_go: 0,
 };
 
 export const PLAN_PRICING: Record<string, number> = {
   starter: 99,
-  standard: 349,
-  plus: 899,
-  enterprise: 0, // Custom pricing
+  professional: 349,
+  business: 899,
+};
+
+export const PLAN_ANNUAL_PRICING: Record<string, number> = {
+  starter: Math.round(99 * 12 * 0.8),     // $950/yr ($79.17/mo)
+  professional: Math.round(349 * 12 * 0.8), // $3,350/yr ($279.17/mo)
+  business: Math.round(899 * 12 * 0.8),     // $8,630/yr ($719.17/mo)
 };
 
 export const REVIEW_PLATFORMS = [

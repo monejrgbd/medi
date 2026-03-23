@@ -1,0 +1,71 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.admin_list_organizations(
+  p_caller_auth_uid uuid,
+  p_search text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  -- Auth: must be platform admin
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean
+     FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY t.created_at DESC), '[]'::jsonb)
+  INTO v_result
+  FROM (
+    SELECT
+      o.id,
+      o.name,
+      o.slug,
+      o.subscription_plan,
+      o.credits_total,
+      o.credits_used,
+      o.recharge_limit,
+      o.recharge_used,
+      o.billing_cycle_start,
+      o.created_at,
+      o.cancelled_at,
+      u.email AS owner_email
+    FROM public.organizations o
+    JOIN auth.users u ON u.id = o.owner_id
+    WHERE (
+      p_search IS NULL
+      OR o.name ILIKE '%' || replace(replace(p_search, '%', '\%'), '_', '\_') || '%'
+      OR o.slug ILIKE '%' || replace(replace(p_search, '%', '\%'), '_', '\_') || '%'
+      OR u.email ILIKE '%' || replace(replace(p_search, '%', '\%'), '_', '\_') || '%'
+    )
+    ORDER BY o.created_at DESC
+    LIMIT 100
+  ) t;
+
+  RETURN v_result;
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.admin_list_organizations(
+  p_search text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_list_organizations(auth.uid(), p_search);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.admin_list_organizations(text) TO authenticated;

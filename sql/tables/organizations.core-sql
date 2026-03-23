@@ -5,7 +5,7 @@ CREATE TABLE public.organizations (
   owner_id              uuid NOT NULL REFERENCES auth.users(id),
   subscription_plan     text DEFAULT 'standard_trial'
     CHECK (subscription_plan = ANY (ARRAY[
-      'standard_trial', 'premium_trial', 'starter', 'standard', 'plus',
+      'standard_trial', 'premium_trial', 'starter', 'professional', 'business',
       'enterprise', 'pay_as_you_go', 'expired', 'read_only', 'suspended'
     ])),
   credits_total         int DEFAULT 20,
@@ -25,6 +25,8 @@ CREATE TABLE public.organizations (
   data_retention_until  timestamptz,
   recharge_limit        int DEFAULT NULL CHECK (recharge_limit IS NULL OR recharge_limit BETWEEN 1 AND 10000),
   recharge_used         numeric DEFAULT 0,
+  billing_interval      text DEFAULT 'monthly' CHECK (billing_interval IN ('monthly', 'annual')),
+  current_period_end    timestamptz,
   skip_ai               boolean DEFAULT false,
   created_at            timestamptz DEFAULT now()
 );

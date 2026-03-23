@@ -110,7 +110,6 @@ BEGIN
       v_follow_up_result := private.create_follow_up(
         p_caller_auth_uid,
         p_visit_id,
-        (p_follow_up->>'timeframe_days')::int,
         p_follow_up->>'ai_instructions'
       );
       IF NOT (v_follow_up_result->>'success')::boolean THEN

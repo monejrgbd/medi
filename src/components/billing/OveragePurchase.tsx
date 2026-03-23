@@ -4,7 +4,7 @@ import { useState } from "react";
 import { purchaseOverageCredits } from "@/app/(dashboard)/d/_actions/billing";
 import { toast } from "sonner";
 
-const RESETTING_PLANS = ["starter", "standard", "plus", "enterprise"];
+const RESETTING_PLANS = ["starter", "professional", "business"];
 
 interface OveragePurchaseProps {
   onPurchased: () => void;

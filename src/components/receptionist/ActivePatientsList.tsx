@@ -3,7 +3,6 @@
 import { useState } from "react";
 import PatientStatusBadge from "@/components/patient/PatientStatusBadge";
 import PatientRecordEditor from "./PatientRecordEditor";
-import { scheduleFollowUp } from "@/app/(dashboard)/d/_actions/receptionist";
 import {
   markPatientLeft,
   toggleGaveTablet,
@@ -273,25 +272,7 @@ function CompletedVisitCard({
   unscheduledFollowUp: FollowUpRecord | null;
   scheduledFollowUp: FollowUpRecord | null;
 }) {
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
-  const [scheduling, setScheduling] = useState(false);
-  const [scheduled, setScheduled] = useState(false);
-  const [scheduledDate, setScheduledDate] = useState<string | null>(null);
-
-  async function handleSchedule() {
-    if (!unscheduledFollowUp || !selectedDate) return;
-    setScheduling(true);
-    const res = await scheduleFollowUp(unscheduledFollowUp.id, selectedDate);
-    setScheduling(false);
-    if (res.success) {
-      setScheduled(true);
-      setScheduledDate(selectedDate);
-      setShowDatePicker(false);
-    }
-  }
-
-  const today = new Date().toISOString().split("T")[0];
+  const followUp = unscheduledFollowUp || scheduledFollowUp;
 
   return (
     <div className="rounded-lg border border-gray-100 bg-white p-3">
@@ -314,55 +295,13 @@ function CompletedVisitCard({
               Tablet not returned
             </span>
           )}
-          {scheduledFollowUp && !scheduled && (
-            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-              Follow up: {new Date(scheduledFollowUp.due_at!).toLocaleDateString()}
+          {followUp && (
+            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
+              Follow up tagged
             </span>
-          )}
-          {scheduled && scheduledDate && (
-            <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-              Follow up: {new Date(scheduledDate).toLocaleDateString()}
-            </span>
-          )}
-          {unscheduledFollowUp && !scheduled && !showDatePicker && (
-            <button
-              onClick={() => setShowDatePicker(true)}
-              className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-medium text-amber-700 hover:bg-amber-200 transition-colors animate-pulse"
-            >
-              Schedule follow up
-            </button>
           )}
         </div>
       </div>
-      {showDatePicker && unscheduledFollowUp && (
-        <div className="mt-3 flex items-center gap-2 border-t border-gray-100 pt-3">
-          <input
-            type="date"
-            min={today}
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-ink focus:border-hilt-blue focus:outline-none"
-          />
-          <button
-            onClick={handleSchedule}
-            disabled={!selectedDate || scheduling}
-            className="rounded-lg bg-hilt-blue px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-          >
-            {scheduling ? "Saving..." : "Confirm"}
-          </button>
-          <button
-            onClick={() => setShowDatePicker(false)}
-            className="text-xs text-ash hover:text-slate"
-          >
-            Cancel
-          </button>
-          {unscheduledFollowUp.ai_instructions && (
-            <p className="text-[10px] text-slate ml-2 truncate max-w-[200px]" title={unscheduledFollowUp.ai_instructions}>
-              Dr. notes: {unscheduledFollowUp.ai_instructions}
-            </p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -469,41 +469,6 @@ export type Database = {
           },
         ]
       }
-      followup_sms_config: {
-        Row: {
-          created_at: string | null
-          first_reminder_days: number | null
-          max_reminders: number | null
-          org_id: string
-          reminder_template: string | null
-          second_reminder_days: number | null
-        }
-        Insert: {
-          created_at?: string | null
-          first_reminder_days?: number | null
-          max_reminders?: number | null
-          org_id: string
-          reminder_template?: string | null
-          second_reminder_days?: number | null
-        }
-        Update: {
-          created_at?: string | null
-          first_reminder_days?: number | null
-          max_reminders?: number | null
-          org_id?: string
-          reminder_template?: string | null
-          second_reminder_days?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "followup_sms_config_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: true
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       locations: {
         Row: {
           address: string | null
@@ -514,7 +479,6 @@ export type Database = {
           diagnostic_enabled: boolean | null
           display_format: string | null
           estimated_wait_minutes: number | null
-          followup_sms_enabled: boolean | null
           id: string
           logo_url: string | null
           name: string
@@ -540,7 +504,6 @@ export type Database = {
           diagnostic_enabled?: boolean | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
-          followup_sms_enabled?: boolean | null
           id?: string
           logo_url?: string | null
           name: string
@@ -566,7 +529,6 @@ export type Database = {
           diagnostic_enabled?: boolean | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
-          followup_sms_enabled?: boolean | null
           id?: string
           logo_url?: string | null
           name?: string
@@ -687,7 +649,6 @@ export type Database = {
           credits_used: number | null
           data_retention_until: string | null
           diagnostic_addon: boolean | null
-          followup_sms_addon: boolean | null
           id: string
           last_credit_alert_at: string | null
           marketing_sms_addon: boolean | null
@@ -716,7 +677,6 @@ export type Database = {
           credits_used?: number | null
           data_retention_until?: string | null
           diagnostic_addon?: boolean | null
-          followup_sms_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
           marketing_sms_addon?: boolean | null
@@ -745,7 +705,6 @@ export type Database = {
           credits_used?: number | null
           data_retention_until?: string | null
           diagnostic_addon?: boolean | null
-          followup_sms_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
           marketing_sms_addon?: boolean | null
@@ -2298,6 +2257,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           credits_charged: number | null
+          demo_features: Json | null
           doctor_diagnosis: string | null
           entered_queue_at: string | null
           follow_up_of: string | null
@@ -2344,6 +2304,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           credits_charged?: number | null
+          demo_features?: Json | null
           doctor_diagnosis?: string | null
           entered_queue_at?: string | null
           follow_up_of?: string | null
@@ -2390,6 +2351,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           credits_charged?: number | null
+          demo_features?: Json | null
           doctor_diagnosis?: string | null
           entered_queue_at?: string | null
           follow_up_of?: string | null
@@ -2539,7 +2501,17 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_list_organizations: { Args: { p_search?: string }; Returns: Json }
       admin_list_premium_codes: { Args: never; Returns: Json }
+      admin_set_enterprise_plan: {
+        Args: {
+          p_action?: string
+          p_credits_total?: number
+          p_org_id: string
+          p_paypal_subscription_id?: string
+        }
+        Returns: Json
+      }
       approve_patient: {
         Args: {
           p_follow_up_id?: string
@@ -2621,14 +2593,19 @@ export type Database = {
         Args: { p_location_id: string; p_platforms: Json }
         Returns: Json
       }
-      create_follow_up: {
-        Args: {
-          p_ai_instructions?: string
-          p_timeframe_days: number
-          p_visit_id: string
-        }
-        Returns: Json
-      }
+      create_follow_up:
+        | {
+            Args: { p_ai_instructions?: string; p_visit_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_ai_instructions?: string
+              p_timeframe_days: number
+              p_visit_id: string
+            }
+            Returns: Json
+          }
       create_location: {
         Args: {
           p_address?: string
@@ -3005,17 +2982,6 @@ export type Database = {
         Args: { p_campaign_id: string; p_matches: Json }
         Returns: Json
       }
-      save_followup_sms_config: {
-        Args: {
-          p_first_reminder_days: number
-          p_location_id: string
-          p_max_reminders: number
-          p_org_id: string
-          p_second_reminder_days: number
-          p_template?: string
-        }
-        Returns: Json
-      }
       save_summary: {
         Args: {
           p_diagnostic?: string
@@ -3023,10 +2989,6 @@ export type Database = {
           p_summary: string
           p_visit_id: string
         }
-        Returns: Json
-      }
-      schedule_follow_up: {
-        Args: { p_due_at: string; p_follow_up_id: string }
         Returns: Json
       }
       search_locations_public: {
@@ -3070,6 +3032,10 @@ export type Database = {
             Returns: Json
           }
       set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
+      set_visit_demo_features: {
+        Args: { p_features: Json; p_visit_id: string }
+        Returns: Json
+      }
       setup_onboarding_demo: { Args: { p_location_id: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

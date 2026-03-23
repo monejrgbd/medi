@@ -12,7 +12,7 @@ SELECT cron.schedule(
       WHERE billing_cycle_start IS NOT NULL
         AND cancel_at_period_end IS NULL
         AND (
-          (subscription_plan IN ('starter', 'standard', 'plus', 'enterprise')
+          (subscription_plan IN ('starter', 'professional', 'business', 'enterprise')
            AND billing_cycle_start + interval '1 month' <= now())
           OR
           (subscription_plan = 'pay_as_you_go' AND recharge_limit IS NOT NULL

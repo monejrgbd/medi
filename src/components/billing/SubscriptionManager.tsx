@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PLAN_CREDITS, PLAN_PRICING } from "@/lib/constants";
+import { PLAN_CREDITS, PLAN_PRICING, PLAN_ANNUAL_PRICING } from "@/lib/constants";
 import { toast } from "sonner";
 
 declare global {
@@ -21,6 +21,8 @@ interface SubscriptionManagerProps {
   onPlanChanged: () => void;
 }
 
+type BillingCycle = "monthly" | "annual";
+
 const PLANS = [
   {
     key: "starter",
@@ -28,14 +30,14 @@ const PLANS = [
     description: "For small practices just getting started",
   },
   {
-    key: "standard",
-    name: "Standard",
+    key: "professional",
+    name: "Professional",
     description: "For growing practices with moderate volume",
   },
   {
-    key: "plus",
-    name: "Plus",
-    description: "For high-volume practices",
+    key: "business",
+    name: "Business",
+    description: "For high volume and multi location practices",
   },
 ];
 
@@ -53,6 +55,7 @@ export default function SubscriptionManager({
   orgId,
   onPlanChanged,
 }: SubscriptionManagerProps) {
+  const [billing, setBilling] = useState<BillingCycle>("monthly");
   const [sdkReady, setSdkReady] = useState(false);
   const buttonRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const renderedButtons = useRef<
@@ -87,7 +90,8 @@ export default function SubscriptionManager({
 
     for (const plan of PLANS) {
       if (plan.key === currentPlan) continue;
-      const planId = PLAN_IDS[plan.key];
+      const planIdKey = `${plan.key}_${billing}`;
+      const planId = PLAN_IDS[planIdKey] || PLAN_IDS[plan.key];
       if (!planId) continue;
 
       const container = buttonRefs.current[plan.key];
@@ -112,7 +116,7 @@ export default function SubscriptionManager({
         ) => {
           return actions.subscription.create({
             plan_id: planId,
-            custom_id: `${orgId}:${plan.key}`,
+            custom_id: `${orgId}:${plan.key}:${billing}`,
           });
         },
         onApprove: () => {
@@ -133,7 +137,7 @@ export default function SubscriptionManager({
       }
       renderedButtons.current = {};
     };
-  }, [sdkReady, currentPlan, orgId, onPlanChanged]);
+  }, [sdkReady, currentPlan, orgId, onPlanChanged, billing]);
 
   const isTrial = currentPlan?.includes("trial");
   const isExpired = ["expired", "suspended"].includes(currentPlan);
@@ -155,6 +159,31 @@ export default function SubscriptionManager({
         )}
       </p>
 
+      {/* Billing cycle toggle */}
+      <div className="flex items-center justify-center gap-1 rounded-lg bg-gray-100 p-1 mb-4 max-w-xs mx-auto">
+        <button
+          onClick={() => setBilling("monthly")}
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            billing === "monthly"
+              ? "bg-white text-ink shadow-sm"
+              : "text-slate hover:text-ink"
+          }`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setBilling("annual")}
+          className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            billing === "annual"
+              ? "bg-white text-ink shadow-sm"
+              : "text-slate hover:text-ink"
+          }`}
+        >
+          Annual
+          <span className="ml-1 text-xs text-green-600 font-semibold">Save 20%</span>
+        </button>
+      </div>
+
       {!isExpired && (
         <p className="text-xs text-slate mb-4">
           Remaining credits are carried over when switching plans.
@@ -172,7 +201,11 @@ export default function SubscriptionManager({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {PLANS.map((plan) => {
           const isActive = currentPlan === plan.key;
-          const hasPlanId = !!PLAN_IDS[plan.key];
+          const planIdKey = `${plan.key}_${billing}`;
+          const hasPlanId = !!(PLAN_IDS[planIdKey] || PLAN_IDS[plan.key]);
+          const monthlyPrice = PLAN_PRICING[plan.key];
+          const annualMonthly = Math.round(PLAN_ANNUAL_PRICING[plan.key] / 12);
+          const displayPrice = billing === "annual" ? annualMonthly : monthlyPrice;
           return (
             <div
               key={plan.key}
@@ -184,9 +217,14 @@ export default function SubscriptionManager({
             >
               <h3 className="font-semibold text-ink">{plan.name}</h3>
               <p className="text-2xl font-bold text-ink mt-1">
-                ${PLAN_PRICING[plan.key]}
+                ${displayPrice}
                 <span className="text-sm font-normal text-slate">/mo</span>
               </p>
+              {billing === "annual" && (
+                <p className="text-xs text-green-600 font-medium">
+                  ${PLAN_ANNUAL_PRICING[plan.key]}/yr (save ${monthlyPrice * 12 - PLAN_ANNUAL_PRICING[plan.key]}/yr)
+                </p>
+              )}
               <p className="text-xs text-slate mt-1">
                 {PLAN_CREDITS[plan.key]} credits/month
               </p>

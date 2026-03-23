@@ -60,7 +60,7 @@ export async function releaseToDoctor(visitId: string, nurseNotes: string) {
 export async function completeVisitAsNurse(
   visitId: string,
   diagnosis: string,
-  followUp?: { timeframe_days: number; ai_instructions: string },
+  followUp?: { ai_instructions?: string },
   showDiagnosis?: boolean,
   careInstructions?: string
 ) {
@@ -82,7 +82,6 @@ export async function completeVisitAsNurse(
   };
   if (followUp) {
     rpcParams.p_follow_up = {
-      timeframe_days: Math.min(365, Math.max(1, followUp.timeframe_days)),
       ai_instructions: followUp.ai_instructions
         ? stripHtml(followUp.ai_instructions).slice(0, 2000)
         : undefined,

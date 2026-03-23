@@ -54,7 +54,7 @@ export async function cancelClaim(visitId: string) {
 export async function completeVisit(
   visitId: string,
   diagnosis: string,
-  followUp?: { timeframe_days: number | null; ai_instructions?: string },
+  followUp?: { ai_instructions?: string },
   showDiagnosis: boolean = true,
   careInstructions?: string
 ) {
@@ -76,9 +76,6 @@ export async function completeVisit(
   };
   if (followUp) {
     rpcParams.p_follow_up = {
-      timeframe_days: followUp.timeframe_days !== null
-        ? Math.min(365, Math.max(1, followUp.timeframe_days))
-        : null,
       ai_instructions: followUp.ai_instructions
         ? stripHtml(followUp.ai_instructions).slice(0, 2000)
         : undefined,
