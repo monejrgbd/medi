@@ -29,16 +29,22 @@ export default function LocationCard({ location }: { location: LocationData }) {
     setUploading(true);
     setError("");
 
-    const fd = new FormData();
-    fd.append("file", file);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
 
-    const result = await uploadLocationLogo(location.id, fd);
-    setUploading(false);
+      const result = await uploadLocationLogo(location.id, fd);
 
-    if (result.success) {
-      router.refresh();
-    } else {
-      setError(result.error || "Upload failed");
+      if (result.success) {
+        router.refresh();
+      } else {
+        setError(result.error || "Upload failed");
+      }
+    } catch {
+      setError("Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 

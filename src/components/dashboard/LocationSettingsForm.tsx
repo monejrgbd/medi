@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
+import { updateLocation, uploadLocationLogo } from "@/app/(dashboard)/d/_actions/locations";
 import { ALLOWED_SPECIALTIES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import { Upload, Loader2 } from "lucide-react";
 
 interface LocationData {
   id: string;
@@ -23,6 +24,7 @@ interface LocationData {
   ai_custom_instructions?: string | null;
   ai_message_limit?: number | null;
   skip_ai?: boolean;
+  logo_url?: string | null;
 }
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -92,6 +94,34 @@ export default function LocationSettingsForm({
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage(null);
+
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+
+      const result = await uploadLocationLogo(location.id, fd);
+
+      if (result.success) {
+        router.refresh();
+      } else {
+        setMessage({ type: "error", text: result.error || "Upload failed" });
+      }
+    } catch {
+      setMessage({ type: "error", text: "Upload failed" });
+    } finally {
+      setUploading(false);
+      if (logoFileRef.current) logoFileRef.current.value = "";
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -184,6 +214,39 @@ export default function LocationSettingsForm({
           placeholder="Search specialties..."
           emptyLabel="None"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-ink mb-1">Logo</label>
+        <div className="flex items-center gap-3">
+          {location.logo_url ? (
+            <img
+              src={location.logo_url}
+              alt=""
+              className="h-10 w-10 rounded-lg object-cover"
+            />
+          ) : null}
+          <input
+            ref={logoFileRef}
+            type="file"
+            accept="image/*"
+            onChange={handleLogoUpload}
+            className="hidden"
+          />
+          <button
+            type="button"
+            onClick={() => logoFileRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-ink hover:bg-gray-50 disabled:opacity-50"
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            {uploading ? "Uploading..." : location.logo_url ? "Change Logo" : "Upload Logo"}
+          </button>
+        </div>
       </div>
 
       <div>

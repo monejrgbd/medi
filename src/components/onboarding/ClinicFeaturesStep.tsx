@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HeartPulse, Activity, Syringe, FastForward } from "lucide-react";
+import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope } from "lucide-react";
 import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
 import { initializeOrgDefaultVitals } from "@/app/(dashboard)/d/_actions/nurse";
 
@@ -12,6 +12,8 @@ interface ClinicFeaturesStepProps {
     vitals: boolean;
     vaccines: boolean;
     skipAi: boolean;
+    reviewSms: boolean;
+    diagnostic: boolean;
   }) => void;
 }
 
@@ -20,9 +22,11 @@ export default function ClinicFeaturesStep({
   onComplete,
 }: ClinicFeaturesStepProps) {
   const [nurseEnabled, setNurseEnabled] = useState(false);
-  const [vitalsEnabled, setVitalsEnabled] = useState(false);
+  const [vitalsEnabled, setVitalsEnabled] = useState(true);
   const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
   const [skipAi, setSkipAi] = useState(false); // inverted in UI: "AI Intake" ON = skipAi false
+  const [reviewSmsEnabled, setReviewSmsEnabled] = useState(true);
+  const [diagnosticEnabled, setDiagnosticEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -44,6 +48,8 @@ export default function ClinicFeaturesStep({
         vitalsEnabled,
         vaccinesEnabled,
         skipAi,
+        reviewSmsEnabled,
+        diagnosticEnabled,
       });
 
       if (!result.success) {
@@ -61,6 +67,8 @@ export default function ClinicFeaturesStep({
         vitals: vitalsEnabled,
         vaccines: vaccinesEnabled,
         skipAi,
+        reviewSms: reviewSmsEnabled,
+        diagnostic: diagnosticEnabled,
       });
     } catch {
       setError("Something went wrong. Please try again.");
@@ -173,6 +181,72 @@ export default function ClinicFeaturesStep({
           </div>
         </label>
 
+        {/* Review SMS */}
+        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-amber-300 transition-colors">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50">
+            <MessageSquare className="h-5 w-5 text-amber-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ink">Review SMS</p>
+            <p className="text-xs text-slate mt-0.5">
+              Automatically text patients after visits to collect reviews.
+            </p>
+            <p className="text-xs text-amber-600 mt-1 font-medium">
+              0.1 credits per SMS
+            </p>
+          </div>
+          <div className="shrink-0 pt-0.5">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={reviewSmsEnabled}
+              onClick={() => setReviewSmsEnabled(!reviewSmsEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                reviewSmsEnabled ? "bg-amber-500" : "bg-gray-200"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                  reviewSmsEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        </label>
+
+        {/* Diagnostic AI */}
+        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-rose-300 transition-colors">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50">
+            <Stethoscope className="h-5 w-5 text-rose-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-ink">Diagnostic AI</p>
+            <p className="text-xs text-slate mt-0.5">
+              AI suggests possible diagnoses based on patient symptoms.
+            </p>
+            <p className="text-xs text-rose-600 mt-1 font-medium">
+              0.5 credits per use
+            </p>
+          </div>
+          <div className="shrink-0 pt-0.5">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={diagnosticEnabled}
+              onClick={() => setDiagnosticEnabled(!diagnosticEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                diagnosticEnabled ? "bg-rose-500" : "bg-gray-200"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
+                  diagnosticEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+        </label>
+
         {/* AI Intake (inverted: ON = skip_ai false, OFF = skip_ai true) */}
         <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-violet-300 transition-colors">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50">
@@ -221,7 +295,7 @@ export default function ClinicFeaturesStep({
 
       <button
         onClick={() =>
-          onComplete({ nurse: false, vitals: false, vaccines: false, skipAi: false })
+          onComplete({ nurse: false, vitals: true, vaccines: false, skipAi: false, reviewSms: true, diagnostic: true })
         }
         disabled={saving}
         className="w-full text-sm text-slate hover:text-ink transition-colors py-2 mt-2"

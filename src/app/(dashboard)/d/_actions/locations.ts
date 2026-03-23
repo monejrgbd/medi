@@ -53,6 +53,8 @@ export async function updateLocation(formData: {
   aiCustomInstructions?: string;
   aiMessageLimit?: number | null;
   skipAi?: boolean;
+  reviewSmsEnabled?: boolean;
+  diagnosticEnabled?: boolean;
 }) {
   await requireAuth();
   const supabase = await createClient();
@@ -81,6 +83,8 @@ export async function updateLocation(formData: {
   if (formData.aiCustomInstructions !== undefined) params.p_ai_custom_instructions = formData.aiCustomInstructions;
   if (formData.aiMessageLimit !== undefined) params.p_ai_message_limit = formData.aiMessageLimit === null ? 0 : formData.aiMessageLimit;
   if (formData.skipAi !== undefined) params.p_skip_ai = formData.skipAi;
+  if (formData.reviewSmsEnabled !== undefined) params.p_review_sms_enabled = formData.reviewSmsEnabled;
+  if (formData.diagnosticEnabled !== undefined) params.p_diagnostic_enabled = formData.diagnosticEnabled;
 
   const { data, error } = await supabase.rpc("update_location", params);
 

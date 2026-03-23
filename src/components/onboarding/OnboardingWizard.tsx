@@ -43,7 +43,7 @@ export default function OnboardingWizard({
 
   // Step 2 state (Customize Clinic)
   const [nurseEnabled, setNurseEnabled] = useState(false);
-  const [vitalsEnabled, setVitalsEnabled] = useState(false);
+  const [vitalsEnabled, setVitalsEnabled] = useState(true);
   const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
 
   // Step 1 state
