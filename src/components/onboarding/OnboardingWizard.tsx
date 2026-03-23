@@ -268,10 +268,10 @@ export default function OnboardingWizard({
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Real time analytics
+                  Analytics and referral tracking
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Wait times, patient volume, referrals, and staff performance across every location.
+                  Wait times, patient volume, and staff performance across every location. Refer patients digitally and track incoming referrals from other clinics.
                 </p>
               </div>
             </div>
@@ -454,6 +454,12 @@ export default function OnboardingWizard({
               </p>
               <p className="text-xs text-green-700">
                 They will answer symptom questions, and the doctor will get a structured summary.
+              </p>
+              <p className="text-xs text-green-700 mt-2">
+                This shows the patient side. To see the full patient to doctor flow, try the{" "}
+                <a href="/demo" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-green-900">
+                  live demo on the homepage
+                </a>.
               </p>
             </div>
           )}
