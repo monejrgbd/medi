@@ -26,6 +26,22 @@ interface DashboardData {
   recharge_remaining: number;
 }
 
+function fillDailyUsage(usage: { date: string; credits: number }[]) {
+  if (usage.length === 0) return [];
+  const map = new Map(usage.map((u) => [u.date, u.credits]));
+  const start = new Date(usage[0].date + "T12:00:00");
+  const end = new Date();
+  end.setHours(12, 0, 0, 0);
+  const result: { date: string; credits: number }[] = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    const dateStr = cur.toISOString().split("T")[0];
+    result.push({ date: dateStr, credits: map.get(dateStr) ?? 0 });
+    cur.setDate(cur.getDate() + 1);
+  }
+  return result;
+}
+
 export default function CreditDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -140,38 +156,44 @@ export default function CreditDashboard() {
         {/* Daily usage chart */}
         <div>
           <h3 className="text-sm font-medium text-ink mb-2">Daily Usage</h3>
-          {data.daily_usage.length > 0 ? (
-            <ResponsiveContainer width="100%" height={160}>
-              <LineChart data={data.daily_usage.map((d: { date: string; credits: number }) => ({ ...d, credits: Math.max(0, d.credits) }))}>
-                <XAxis
-                  dataKey="date"
-                  tickFormatter={(d) =>
-                    new Date(d).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  }
-                  tick={{ fontSize: 10 }}
-                />
-                <YAxis tick={{ fontSize: 10 }} width={30} />
-                <Tooltip
-                  labelFormatter={(d) => new Date(d as string).toLocaleDateString()}
-                  formatter={(v) => [String(v), "Credits"]}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="credits"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-sm text-slate text-center py-8">
-              No usage data yet this cycle.
-            </p>
-          )}
+          {(() => {
+            const chartData = fillDailyUsage(data.daily_usage);
+            const hasUsage = chartData.some((d) => d.credits > 0);
+            return hasUsage ? (
+              <ResponsiveContainer width="100%" height={160}>
+                <LineChart data={chartData}>
+                  <XAxis
+                    dataKey="date"
+                    tickFormatter={(d) =>
+                      new Date(d + "T12:00:00").toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                    tick={{ fontSize: 10 }}
+                  />
+                  <YAxis tick={{ fontSize: 10 }} width={30} />
+                  <Tooltip
+                    labelFormatter={(d) =>
+                      new Date((d as string) + "T12:00:00").toLocaleDateString()
+                    }
+                    formatter={(v) => [Number((v as number).toFixed(1)), "Credits"]}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="credits"
+                    stroke="#3b82f6"
+                    strokeWidth={2}
+                    dot={chartData.filter((d) => d.credits > 0).length <= 3}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <p className="text-sm text-slate text-center py-8">
+                No usage data yet this cycle.
+              </p>
+            );
+          })()}
         </div>
       </div>
     </div>

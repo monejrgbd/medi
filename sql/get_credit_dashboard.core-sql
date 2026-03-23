@@ -38,9 +38,10 @@ BEGIN
   INTO v_daily_usage
   FROM (
     SELECT date_trunc('day', cl.created_at)::date AS day,
-           SUM(cl.credits_amount) AS total
+           SUM(-cl.credits_amount) AS total
     FROM public.credits_log cl
     WHERE cl.org_id = v_org.id
+      AND cl.credits_amount < 0
       AND cl.created_at >= GREATEST(
         COALESCE(v_org.billing_cycle_start, now() - interval '30 days'),
         now() - interval '30 days'
