@@ -127,15 +127,21 @@ export default function OwnerSignUpForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error: resendError } = await supabase.auth.resend({
-      type: "signup",
+    const { data, error: resendError } = await supabase.auth.signUp({
       email,
+      password,
+      options: { data: { full_name: fullName } },
     });
 
     setLoading(false);
 
     if (resendError) {
       setError(resendError.message);
+      return;
+    }
+
+    if (data?.user?.identities?.length === 0) {
+      setError("This email is already confirmed. Try logging in instead.");
       return;
     }
 
