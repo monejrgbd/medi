@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
-import { uploadLocationLogo } from "@/app/(dashboard)/d/_actions/locations";
 
 export default function QRCodeManager({
   locationId,
@@ -14,15 +12,12 @@ export default function QRCodeManager({
   locationName: string;
   logoUrl: string | null;
 }) {
-  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [brandedQR, setBrandedQR] = useState(!!logoUrl);
-  const [uploading, setUploading] = useState(false);
   const [kioskMode, setKioskMode] = useState(false);
   const [instructionText, setInstructionText] = useState(
     `Please scan this QR code to begin your check-in at ${locationName}.`
   );
-  const [uploadError, setUploadError] = useState("");
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com";
   const checkinUrl = kioskMode
@@ -76,27 +71,6 @@ export default function QRCodeManager({
         ctx.drawImage(img, sx, sy, side, side, x, y, size, size);
       };
       img.src = logoUrl;
-    }
-  }
-
-  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploading(true);
-    setUploadError("");
-
-    const fd = new FormData();
-    fd.append("file", file);
-
-    const result = await uploadLocationLogo(locationId, fd);
-    setUploading(false);
-
-    if (result.success) {
-      setBrandedQR(true);
-      router.refresh();
-    } else {
-      setUploadError(result.error || "Upload failed");
     }
   }
 
@@ -187,23 +161,6 @@ export default function QRCodeManager({
       )}
 
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">
-            Upload Logo
-          </label>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleLogoUpload}
-            disabled={uploading}
-            className="block w-full text-sm text-slate file:mr-3 file:rounded-lg file:border-0 file:bg-gray-100 file:px-3 file:py-2 file:text-sm file:font-medium file:text-ink hover:file:bg-gray-200"
-          />
-          {uploading && <p className="mt-1 text-xs text-slate">Uploading...</p>}
-          {uploadError && (
-            <p className="mt-1 text-xs text-red-600">{uploadError}</p>
-          )}
-        </div>
-
         <div>
           <label className="block text-sm font-medium text-ink mb-1">
             Instruction Text (for PDF)
