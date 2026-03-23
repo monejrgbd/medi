@@ -4,13 +4,13 @@
 
 ## Overview
 
-Clinics operate differently. Some run strict walk-in order; others want the AI to bump critical patients ahead. This feature adds a per-location `queue_type` setting with two modes — Priority and FCFS — and surfaces the choice during onboarding so owners configure it before their first patient walks in.
+Clinics operate differently. Some run strict walk in order, others want the AI to bump critical patients ahead. This feature adds a per-location `queue_type` setting with two modes, Priority and FCFS, and surfaces the choice during onboarding so owners configure it before their first patient walks in.
 
 ## Background
 
-The current system has one queue model: priority-based. The AI conversation engine auto-assigns urgency (priority 1–3) based on keywords. `get_queue` orders by `priority DESC, entered_queue_at ASC`. `get_patient_session` counts position using the same logic.
+The current system has one queue model: priority-based. The AI conversation engine auto-assigns urgency (priority 1-3) based on keywords. `get_queue` orders by `priority DESC, created_at ASC` (where `created_at` is the alias for `entered_queue_at` inside the subquery). `get_patient_session` counts position using `priority > mine OR (equal priority AND earlier arrival)`.
 
-FCFS mode works by keeping all visits at priority 1. Since the ordering SQL already breaks ties by arrival time, no queue SQL changes are needed — the behavior degrades naturally to pure FCFS when all priorities are equal.
+FCFS mode works by keeping all visits at priority 1. Since the ordering SQL already breaks ties by arrival time, no queue SQL changes are needed. The behavior degrades naturally to pure FCFS when all priorities are equal.
 
 ## Modes
 
@@ -28,34 +28,43 @@ ALTER TABLE public.locations
   CHECK (queue_type IN ('priority', 'fcfs'));
 ```
 
-All existing locations inherit `'priority'` — no data migration needed.
+All existing locations inherit `'priority'`. No data migration needed.
 
 ## SQL Functions
 
 ### `create_location`
-Add parameter `p_queue_type text DEFAULT 'priority'`. Pass to INSERT.
+Add parameter `p_queue_type text DEFAULT 'priority'`. Pass to INSERT. Invalid values are caught by the column CHECK constraint, which raises a Postgres exception, consistent with how other constraint violations surface in this function (no pre-validation guard needed).
+
+**Important:** `create_location` has a public wrapper whose parameter list changes with every new parameter. Adding `p_queue_type` requires:
+1. A `DROP FUNCTION IF EXISTS public.create_location(...)` for the current signature before the new `CREATE OR REPLACE`.
+2. Updating the `REVOKE`/`GRANT` lines at the bottom to reference the new parameter-count signature.
 
 ### `update_location`
-Add parameter `p_queue_type text`. Include in UPDATE SET clause.
+Add parameter `p_queue_type text DEFAULT NULL`. Include in UPDATE SET clause as `COALESCE(p_queue_type, queue_type)` to match the established null-means-no-change pattern used by all other optional parameters in this function.
+
+**Important:** `update_location` has a public wrapper whose parameter list changes with every new parameter. Adding `p_queue_type` requires:
+1. A `DROP FUNCTION IF EXISTS public.update_location(...)` for the current signature before the new `CREATE OR REPLACE`.
+2. Updating the `REVOKE`/`GRANT` lines at the bottom to reference the new parameter-count signature.
+
+Invalid values surface via the column CHECK constraint (same as `create_location`).
 
 ### `get_location_detail`
 Include `queue_type` in the returned JSON object.
 
 ### `get_queue` — no change
-Orders by `priority DESC, created_at ASC`. In FCFS mode, all visits have priority 1, so this naturally becomes pure arrival order.
+Orders by `priority DESC, created_at ASC` (alias for `entered_queue_at`). In FCFS mode, all visits have priority 1, so this naturally becomes pure arrival order.
 
 ### `get_patient_session` — no change
-Queue position counts visits where `priority > mine OR (equal priority AND earlier arrival)`. When all priorities are 1, this collapses to pure FCFS.
+Queue position counts visits where `priority > mine OR (equal priority AND earlier arrival)`. When all priorities are 1, the first branch never fires and position is determined purely by `entered_queue_at`. This is correct FCFS behavior.
 
 ## Edge Function: `ai-conversation`
 
 The urgency keyword block currently calls `update_visit_priority` unconditionally. Change:
 
-1. After establishing the visit context (where `location_id` is already in scope), fetch `queue_type` from `locations`.
-2. Wrap the `update_visit_priority` calls in a guard: only execute if `queue_type === 'priority'`.
-3. In FCFS mode, skip the call entirely. Priority stays at 1.
-
-One extra SELECT per conversation (location data is small and cacheable at the function level if needed).
+1. At session start, the function already queries the `locations` table (selecting `ai_model` and `ai_message_limit`). Add `queue_type` to that existing select — do not issue a second query.
+2. Store the result in a local variable before the message loop.
+3. Inside the urgency keyword block (which runs per-message), wrap the `update_visit_priority` calls in a guard: only execute if `queue_type === 'priority'`.
+4. In FCFS mode, skip the call entirely. Priority stays at 1.
 
 ## Onboarding — Step 1
 
@@ -101,9 +110,9 @@ npx supabase gen types typescript --project-id sdzeoeturtpkqlagobwj > src/lib/da
 |------|--------|
 | `sql/tables/locations.core-sql` | Add `queue_type` column |
 | `sql/create_location.core-sql` | Add `p_queue_type` param |
-| `sql/update_location.core-sql` | Add `p_queue_type` param |
+| `sql/update_location.core-sql` | Add `p_queue_type` param + DROP old signature + update REVOKE/GRANT |
 | `sql/get_location_detail.core-sql` | Return `queue_type` in JSON |
-| `supabase/functions/ai-conversation/index.ts` | Gate priority update on `queue_type` |
+| `supabase/functions/ai-conversation/index.ts` | Fetch `queue_type` at session start, gate priority update |
 | `src/app/(dashboard)/d/_actions/locations.ts` | Add `queueType` to create + update |
 | `src/components/onboarding/OnboardingWizard.tsx` | Queue type selector in Step 1 + note |
 | `src/components/dashboard/LocationDetail.tsx` | Queue type selector in settings form |
