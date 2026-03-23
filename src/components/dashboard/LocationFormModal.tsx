@@ -170,9 +170,9 @@ export default function LocationFormModal({
               <FeatureRow
                 icon={<HeartPulse className="h-4 w-4 text-teal-600" />}
                 bg="bg-teal-50"
+                activeClass="bg-teal-500"
                 label="Nurse Triage"
                 description="Nurses screen patients before doctors."
-                color="teal"
                 enabled={nurseEnabled}
                 onToggle={(v) => handleNurseToggle(v)}
               />
@@ -180,9 +180,9 @@ export default function LocationFormModal({
               <FeatureRow
                 icon={<Activity className="h-4 w-4 text-blue-600" />}
                 bg="bg-blue-50"
+                activeClass="bg-blue-500"
                 label="Vitals Tracking"
                 description="Record weight, blood pressure, and more."
-                color="blue"
                 enabled={vitalsEnabled}
                 onToggle={setVitalsEnabled}
               />
@@ -190,9 +190,9 @@ export default function LocationFormModal({
               <FeatureRow
                 icon={<Syringe className="h-4 w-4 text-green-600" />}
                 bg="bg-green-50"
+                activeClass="bg-green-500"
                 label="Vaccine Management"
                 description="Track administered vaccines and schedules."
-                color="green"
                 enabled={vaccinesEnabled}
                 onToggle={setVaccinesEnabled}
               />
@@ -200,9 +200,9 @@ export default function LocationFormModal({
               <FeatureRow
                 icon={<FastForward className="h-4 w-4 text-violet-600" />}
                 bg="bg-violet-50"
+                activeClass="bg-violet-500"
                 label="AI Intake"
                 description="AI screens patients before the doctor."
-                color="violet"
                 enabled={!skipAi}
                 onToggle={(v) => setSkipAi(!v)}
               />
@@ -210,23 +210,23 @@ export default function LocationFormModal({
               <FeatureRow
                 icon={<MessageSquare className="h-4 w-4 text-amber-600" />}
                 bg="bg-amber-50"
+                activeClass="bg-amber-500"
                 label="Review SMS"
                 description="Text patients after visits to collect reviews."
-                color="amber"
                 enabled={reviewSmsEnabled}
                 onToggle={setReviewSmsEnabled}
-                cost="0.1 credits per SMS"
+                cost={{ text: "0.1 credits per SMS", className: "text-amber-600" }}
               />
 
               <FeatureRow
                 icon={<Stethoscope className="h-4 w-4 text-rose-600" />}
                 bg="bg-rose-50"
+                activeClass="bg-rose-500"
                 label="Diagnostic AI"
                 description="AI suggests diagnoses based on symptoms."
-                color="rose"
                 enabled={diagnosticEnabled}
                 onToggle={setDiagnosticEnabled}
-                cost="0.5 credits per use"
+                cost={{ text: "0.5 credits per use", className: "text-rose-600" }}
               />
             </div>
 
@@ -255,28 +255,18 @@ export default function LocationFormModal({
   );
 }
 
-const colorMap: Record<string, { on: string; knob: string }> = {
-  teal:   { on: "bg-teal-500",   knob: "translate-x-5" },
-  blue:   { on: "bg-blue-500",   knob: "translate-x-5" },
-  green:  { on: "bg-green-500",  knob: "translate-x-5" },
-  violet: { on: "bg-violet-500", knob: "translate-x-5" },
-  amber:  { on: "bg-amber-500",  knob: "translate-x-5" },
-  rose:   { on: "bg-rose-500",   knob: "translate-x-5" },
-};
-
 function FeatureRow({
-  icon, bg, label, description, color, enabled, onToggle, cost,
+  icon, bg, activeClass, label, description, enabled, onToggle, cost,
 }: {
   icon: React.ReactNode;
   bg: string;
+  activeClass: string;
   label: string;
   description: string;
-  color: string;
   enabled: boolean;
   onToggle: (v: boolean) => void;
-  cost?: string;
+  cost?: { text: string; className: string };
 }) {
-  const c = colorMap[color];
   return (
     <div className="flex items-center gap-3 rounded-xl border border-gray-100 px-3 py-2.5">
       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${bg}`}>
@@ -285,14 +275,14 @@ function FeatureRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-ink leading-tight">{label}</p>
         <p className="text-xs text-slate">{description}</p>
-        {cost && <p className={`text-xs font-medium text-${color}-600 mt-0.5`}>{cost}</p>}
+        {cost && <p className={`text-xs font-medium mt-0.5 ${cost.className}`}>{cost.text}</p>}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={enabled}
         onClick={() => onToggle(!enabled)}
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${enabled ? c.on : "bg-gray-200"}`}
+        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${enabled ? activeClass : "bg-gray-200"}`}
       >
         <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${enabled ? "translate-x-6" : "translate-x-1"}`} />
       </button>

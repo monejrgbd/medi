@@ -12,7 +12,7 @@ import {
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Tablet, Star, CreditCard, ArrowRight } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight, Users } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
@@ -540,6 +540,18 @@ export default function OnboardingWizard({
               </h3>
               <p className="text-xs text-slate mt-1">
                 View your plan, usage, and credit balance
+              </p>
+            </button>
+            <button
+              onClick={async () => { await completeOnboarding(); router.push("/d/owner/staff"); }}
+              className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
+            >
+              <Users className="h-5 w-5 text-hilt-blue mb-1" />
+              <h3 className="text-sm font-semibold text-ink">
+                Invite your team
+              </h3>
+              <p className="text-xs text-slate mt-1">
+                Add doctors, receptionists, and nurses
               </p>
             </button>
           </div>
