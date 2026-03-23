@@ -16,13 +16,12 @@ DECLARE
   v_org_id uuid;
   v_owner_id uuid;
   v_caller_staff_id uuid;
-  v_addon_enabled boolean;
   v_funnel jsonb;
   v_per_doctor jsonb;
 BEGIN
   -- Get org info for location
-  SELECT l.org_id, o.owner_id, l.followup_sms_enabled
-  INTO v_org_id, v_owner_id, v_addon_enabled
+  SELECT l.org_id, o.owner_id
+  INTO v_org_id, v_owner_id
   FROM public.locations l
   JOIN public.organizations o ON o.id = l.org_id
   WHERE l.id = p_location_id;
@@ -61,12 +60,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 90 days');
   END IF;
 
-  -- Check addon
-  IF NOT COALESCE(v_addon_enabled, false) THEN
-    RETURN jsonb_build_object('success', true, 'addon_enabled', false);
-  END IF;
-
-  -- Funnel stats
+  -- Funnel stats (follow-ups are always available, no addon gate)
   SELECT jsonb_build_object(
     'tagged', count(*),
     'returned', count(*) FILTER (WHERE f.status = 'completed'),

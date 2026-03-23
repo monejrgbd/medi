@@ -32,7 +32,7 @@ BEGIN
   SELECT COALESCE(jsonb_agg(loc_row ORDER BY l.name), '[]'::jsonb)
   INTO v_result
   FROM public.locations l
-  CROSS JOIN LATERAL (
+  LEFT JOIN LATERAL (
     SELECT
       count(DISTINCT su.id) FILTER (WHERE su.is_active AND NOT su.is_deleted) AS staff_count,
       count(DISTINCT su.id) FILTER (WHERE sc.id IS NOT NULL) AS checked_in_count
@@ -44,7 +44,7 @@ BEGIN
       AND sc.checked_out_at IS NULL
     WHERE sr.location_id = l.id
       AND su.is_deleted = false
-  ) agg
+  ) agg ON true
   CROSS JOIN LATERAL (
     SELECT jsonb_build_object(
       'id', l.id,
@@ -52,10 +52,9 @@ BEGIN
       'address', l.address,
       'specialty', l.specialty,
       'logo_url', l.logo_url,
-      'staff_count', agg.staff_count,
-      'checked_in_count', agg.checked_in_count,
+      'staff_count', COALESCE(agg.staff_count, 0),
+      'checked_in_count', COALESCE(agg.checked_in_count, 0),
       'review_sms_enabled', l.review_sms_enabled,
-      'followup_sms_enabled', l.followup_sms_enabled,
       'diagnostic_enabled', l.diagnostic_enabled
     ) AS loc_row
   ) lr

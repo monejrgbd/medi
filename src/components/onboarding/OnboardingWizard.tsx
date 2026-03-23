@@ -213,10 +213,10 @@ export default function OnboardingWizard({
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Save 5 to 10 minutes per patient on intake
+                  AI intake in 130+ languages
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  AI collects symptoms, medications, allergies, and chronic conditions before the doctor walks in
+                  Patients describe symptoms by text or voice. Doctors read a structured summary before walking in.
                 </p>
               </div>
             </div>
@@ -224,10 +224,10 @@ export default function OnboardingWizard({
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Doctors start every visit already informed
+                  Returning patients are remembered
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Structured summary approved by the patient, plus an AI diagnostic visible only to doctors
+                  AI references past visits and picks up where the doctor left off.
                 </p>
               </div>
             </div>
@@ -235,10 +235,10 @@ export default function OnboardingWizard({
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Works in 130+ languages with voice input
+                  Reviews collected automatically
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Patients type or speak in their own language, doctors always see everything in English
+                  Happy patients guided to Google or Yelp. Low ratings come to you privately first.
                 </p>
               </div>
             </div>
@@ -246,10 +246,10 @@ export default function OnboardingWizard({
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Urgent patients are seen first, automatically
+                  Follow ups that carry doctor instructions
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  AI detects severity during the conversation and sorts the queue by priority
+                  Doctors tag what to ask next time. AI continues with full memory on the return visit.
                 </p>
               </div>
             </div>
@@ -257,10 +257,10 @@ export default function OnboardingWizard({
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  Summaries, referrals, reviews, and follow ups built in
+                  Marketing that reads every chart
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Patients get an SMS visit summary, you can refer between clinics, and collect reviews automatically
+                  Describe who you want to reach in plain English. AI scans visit histories, medications, and conditions to find them.
                 </p>
               </div>
             </div>
@@ -268,10 +268,10 @@ export default function OnboardingWizard({
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
               <div>
                 <p className="text-sm font-medium text-ink">
-                  No new hardware needed
+                  Real time analytics
                 </p>
                 <p className="text-xs text-slate mt-0.5">
-                  Patients scan a QR code on their own phone to check in, add a waiting room tablet later if you want
+                  Wait times, patient volume, referrals, and staff performance across every location.
                 </p>
               </div>
             </div>

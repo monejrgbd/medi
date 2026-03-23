@@ -14,7 +14,7 @@ DECLARE
   v_org record;
 BEGIN
   -- Validate addon type
-  IF p_addon_type NOT IN ('review_sms', 'followup_sms', 'diagnostic', 'marketing_sms') THEN
+  IF p_addon_type NOT IN ('review_sms', 'diagnostic', 'marketing_sms') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid addon type');
   END IF;
 
