@@ -93,202 +93,80 @@ export default function ClinicFeaturesStep({
       <h2 className="text-xl font-bold text-ink mb-1 text-center">
         Customize Your Clinic
       </h2>
-      <p className="text-sm text-slate mb-6 text-center">
+      <p className="text-sm text-slate mb-4 text-center">
         Enable the features your workflow needs. You can change these later.
       </p>
 
-      <div className="space-y-3 mb-6">
+      <div className="grid grid-cols-2 gap-2 mb-5">
         {/* Nurse Triage */}
-        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-teal-300 transition-colors">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50">
-            <HeartPulse className="h-5 w-5 text-teal-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-ink">Nurse Triage</p>
-            <p className="text-xs text-slate mt-0.5">
-              Nurses screen patients before doctors see them. Record vitals,
-              vaccines, and notes.
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={nurseEnabled}
-              onClick={() => handleNurseToggle(!nurseEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                nurseEnabled ? "bg-teal-500" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  nurseEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-        </label>
+        <FeatureTile
+          icon={<HeartPulse className="h-4 w-4 text-teal-600" />}
+          bg="bg-teal-50"
+          activeClass="bg-teal-500"
+          label="Nurse Triage"
+          description="Nurses screen patients first."
+          enabled={nurseEnabled}
+          onToggle={(v) => handleNurseToggle(v)}
+        />
 
         {/* Vitals Tracking */}
-        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-blue-300 transition-colors">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-            <Activity className="h-5 w-5 text-blue-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-ink">Vitals Tracking</p>
-            <p className="text-xs text-slate mt-0.5">
-              Record weight, height, blood pressure, and more per visit. Choose
-              which vitals to track.
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={vitalsEnabled}
-              onClick={() => setVitalsEnabled(!vitalsEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                vitalsEnabled ? "bg-blue-500" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  vitalsEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-        </label>
+        <FeatureTile
+          icon={<Activity className="h-4 w-4 text-blue-600" />}
+          bg="bg-blue-50"
+          activeClass="bg-blue-500"
+          label="Vitals Tracking"
+          description="Weight, BP, and more."
+          enabled={vitalsEnabled}
+          onToggle={setVitalsEnabled}
+        />
 
         {/* Vaccine Management */}
-        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-green-300 transition-colors">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50">
-            <Syringe className="h-5 w-5 text-green-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-ink">
-              Vaccine Management
-            </p>
-            <p className="text-xs text-slate mt-0.5">
-              Track administered vaccines, schedule due dates, and manage
-              refusals.
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={vaccinesEnabled}
-              onClick={() => setVaccinesEnabled(!vaccinesEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                vaccinesEnabled ? "bg-green-500" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  vaccinesEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-        </label>
+        <FeatureTile
+          icon={<Syringe className="h-4 w-4 text-green-600" />}
+          bg="bg-green-50"
+          activeClass="bg-green-500"
+          label="Vaccines"
+          description="Track shots and schedules."
+          enabled={vaccinesEnabled}
+          onToggle={setVaccinesEnabled}
+        />
+
+        {/* AI Intake */}
+        <FeatureTile
+          icon={<FastForward className="h-4 w-4 text-violet-600" />}
+          bg="bg-violet-50"
+          activeClass="bg-violet-500"
+          label="AI Intake"
+          description="AI screens before the doctor."
+          enabled={!skipAi}
+          onToggle={(v) => setSkipAi(!v)}
+        />
 
         {/* Review SMS */}
-        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-amber-300 transition-colors">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-50">
-            <MessageSquare className="h-5 w-5 text-amber-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-ink">Review SMS</p>
-            <p className="text-xs text-slate mt-0.5">
-              Automatically text patients after visits to collect reviews.
-            </p>
-            <p className="text-xs text-amber-600 mt-1 font-medium">
-              0.1 credits per SMS
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={reviewSmsEnabled}
-              onClick={() => setReviewSmsEnabled(!reviewSmsEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                reviewSmsEnabled ? "bg-amber-500" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  reviewSmsEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-        </label>
+        <FeatureTile
+          icon={<MessageSquare className="h-4 w-4 text-amber-600" />}
+          bg="bg-amber-50"
+          activeClass="bg-amber-500"
+          label="Review SMS"
+          description="Text patients for reviews."
+          cost="0.1 credits/SMS"
+          costClass="text-amber-600"
+          enabled={reviewSmsEnabled}
+          onToggle={setReviewSmsEnabled}
+        />
 
         {/* Diagnostic AI */}
-        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-rose-300 transition-colors">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-50">
-            <Stethoscope className="h-5 w-5 text-rose-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-ink">Diagnostic AI</p>
-            <p className="text-xs text-slate mt-0.5">
-              AI suggests possible diagnoses based on patient symptoms.
-            </p>
-            <p className="text-xs text-rose-600 mt-1 font-medium">
-              0.5 credits per use
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={diagnosticEnabled}
-              onClick={() => setDiagnosticEnabled(!diagnosticEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                diagnosticEnabled ? "bg-rose-500" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  diagnosticEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-        </label>
-
-        {/* AI Intake (inverted: ON = skip_ai false, OFF = skip_ai true) */}
-        <label className="flex items-start gap-4 rounded-xl border border-gray-200 p-4 cursor-pointer hover:border-violet-300 transition-colors">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50">
-            <FastForward className="h-5 w-5 text-violet-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-ink">AI Intake</p>
-            <p className="text-xs text-slate mt-0.5">
-              AI screens patients before the doctor. Turn off to send patients
-              straight to the queue without an AI conversation.
-            </p>
-          </div>
-          <div className="shrink-0 pt-0.5">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={!skipAi}
-              onClick={() => setSkipAi(!skipAi)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                !skipAi ? "bg-violet-500" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${
-                  !skipAi ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-        </label>
+        <FeatureTile
+          icon={<Stethoscope className="h-4 w-4 text-rose-600" />}
+          bg="bg-rose-50"
+          activeClass="bg-rose-500"
+          label="Diagnostic AI"
+          description="AI suggests diagnoses."
+          cost="0.5 credits/use"
+          costClass="text-rose-600"
+          enabled={diagnosticEnabled}
+          onToggle={setDiagnosticEnabled}
+        />
       </div>
 
       {error && (
@@ -312,6 +190,47 @@ export default function ClinicFeaturesStep({
       >
         Skip this step
       </button>
+    </div>
+  );
+}
+
+function FeatureTile({
+  icon, bg, activeClass, label, description, enabled, onToggle, cost, costClass,
+}: {
+  icon: React.ReactNode;
+  bg: string;
+  activeClass: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  cost?: string;
+  costClass?: string;
+}) {
+  return (
+    <div
+      className="flex flex-col gap-2 rounded-xl border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors"
+      onClick={() => onToggle(!enabled)}
+    >
+      <div className="flex items-center justify-between">
+        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${bg}`}>
+          {icon}
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enabled}
+          onClick={(e) => { e.stopPropagation(); onToggle(!enabled); }}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enabled ? activeClass : "bg-gray-200"}`}
+        >
+          <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${enabled ? "translate-x-5" : "translate-x-1"}`} />
+        </button>
+      </div>
+      <div>
+        <p className="text-xs font-semibold text-ink leading-tight">{label}</p>
+        <p className="text-xs text-slate leading-tight">{description}</p>
+        {cost && <p className={`text-xs font-medium mt-0.5 ${costClass}`}>{cost}</p>}
+      </div>
     </div>
   );
 }
