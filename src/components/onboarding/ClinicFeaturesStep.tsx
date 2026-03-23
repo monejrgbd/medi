@@ -208,10 +208,7 @@ function FeatureTile({
   costClass?: string;
 }) {
   return (
-    <div
-      className="flex flex-col gap-2 rounded-xl border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors"
-      onClick={() => onToggle(!enabled)}
-    >
+    <label className="flex flex-col gap-2 rounded-xl border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors select-none">
       <div className="flex items-center justify-between">
         <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${bg}`}>
           {icon}
@@ -220,7 +217,7 @@ function FeatureTile({
           type="button"
           role="switch"
           aria-checked={enabled}
-          onClick={(e) => { e.stopPropagation(); onToggle(!enabled); }}
+          onClick={() => onToggle(!enabled)}
           className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${enabled ? activeClass : "bg-gray-200"}`}
         >
           <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${enabled ? "translate-x-5" : "translate-x-1"}`} />
@@ -231,6 +228,6 @@ function FeatureTile({
         <p className="text-xs text-slate leading-tight">{description}</p>
         {cost && <p className={`text-xs font-medium mt-0.5 ${costClass}`}>{cost}</p>}
       </div>
-    </div>
+    </label>
   );
 }
