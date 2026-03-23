@@ -103,7 +103,7 @@ export default function CreditDashboard() {
 
           <div className="mt-3 text-center space-y-1">
             <p className="text-sm text-slate">
-              {Math.round(data.credits_used)} / {data.credits_total} used
+              {Number(data.credits_used.toFixed(1))} / {data.credits_total} used
             </p>
             {data.projected_runout_date && (
               <p className="text-xs text-amber-600">
