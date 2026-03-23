@@ -24,7 +24,7 @@ export async function setupOnboardingDemo(locationId: string) {
 export async function approveOnboardingVisit(visitId: string) {
   await requireAuth();
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("approve_visit", {
+  const { data, error } = await supabase.rpc("approve_patient", {
     p_visit_id: visitId,
   });
   if (error) return { success: false, error: "Failed to approve visit" };
