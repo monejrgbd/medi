@@ -19,7 +19,7 @@ BEGIN
   -- Verify caller is org owner
   SELECT id, name, credits_total, credits_used, subscription_plan,
          billing_cycle_start, trial_end_date, payment_failure_count,
-         review_sms_addon, followup_sms_addon, diagnostic_addon, paypal_subscription_id,
+         review_sms_addon, diagnostic_addon, paypal_subscription_id,
          cancelled_at, data_retention_until, cancel_at_period_end,
          recharge_limit, recharge_used
   INTO v_org
@@ -73,7 +73,6 @@ BEGIN
     'daily_usage', v_daily_usage,
     'projected_runout_date', v_projected_runout,
     'review_sms_addon', v_org.review_sms_addon,
-    'followup_sms_addon', v_org.followup_sms_addon,
     'diagnostic_addon', v_org.diagnostic_addon,
     'paypal_subscription_id', v_org.paypal_subscription_id,
     'cancelled_at', v_org.cancelled_at,

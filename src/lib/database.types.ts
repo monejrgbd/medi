@@ -642,11 +642,13 @@ export type Database = {
       organizations: {
         Row: {
           billing_cycle_start: string | null
+          billing_interval: string | null
           cancel_at_period_end: string | null
           cancelled_at: string | null
           created_at: string | null
           credits_total: number | null
           credits_used: number | null
+          current_period_end: string | null
           data_retention_until: string | null
           diagnostic_addon: boolean | null
           id: string
@@ -670,11 +672,13 @@ export type Database = {
         }
         Insert: {
           billing_cycle_start?: string | null
+          billing_interval?: string | null
           cancel_at_period_end?: string | null
           cancelled_at?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
+          current_period_end?: string | null
           data_retention_until?: string | null
           diagnostic_addon?: boolean | null
           id?: string
@@ -698,11 +702,13 @@ export type Database = {
         }
         Update: {
           billing_cycle_start?: string | null
+          billing_interval?: string | null
           cancel_at_period_end?: string | null
           cancelled_at?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
+          current_period_end?: string | null
           data_retention_until?: string | null
           diagnostic_addon?: boolean | null
           id?: string
@@ -2461,6 +2467,7 @@ export type Database = {
     Functions: {
       activate_subscription: {
         Args: {
+          p_billing_interval?: string
           p_org_id: string
           p_paypal_subscription_id: string
           p_plan: string

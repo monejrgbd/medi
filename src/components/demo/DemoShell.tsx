@@ -665,7 +665,6 @@ function DemoShellInner({
                 credits_used: 0,
                 trial_end_date: "",
                 review_sms_addon: true,
-                followup_sms_addon: false,
                 onboarding_completed_at: null,
                 cancel_at_period_end: null,
                 created_at: "",

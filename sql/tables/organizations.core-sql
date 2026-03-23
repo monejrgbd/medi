@@ -14,7 +14,6 @@ CREATE TABLE public.organizations (
   billing_cycle_start   timestamptz,
   paypal_subscription_id text,
   review_sms_addon      boolean DEFAULT false,
-  followup_sms_addon    boolean DEFAULT false,
   diagnostic_addon      boolean DEFAULT false,
   marketing_sms_addon   boolean DEFAULT false,
   last_credit_alert_at  timestamptz,

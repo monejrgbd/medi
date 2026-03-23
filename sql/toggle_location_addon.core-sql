@@ -18,7 +18,7 @@ DECLARE
   v_is_manager boolean := false;
 BEGIN
   -- Validate addon type
-  IF p_addon_type NOT IN ('review_sms', 'followup_sms', 'diagnostic') THEN
+  IF p_addon_type NOT IN ('review_sms', 'diagnostic') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid addon type');
   END IF;
 
@@ -72,17 +72,6 @@ BEGIN
   -- Toggle the addon on the location
   IF p_addon_type = 'review_sms' THEN
     UPDATE public.locations SET review_sms_enabled = p_enabled WHERE id = p_location_id;
-  ELSIF p_addon_type = 'followup_sms' THEN
-    UPDATE public.locations SET followup_sms_enabled = p_enabled WHERE id = p_location_id;
-
-    -- If enabling followup_sms and no config exists, insert default
-    IF p_enabled AND NOT EXISTS (
-      SELECT 1 FROM public.followup_sms_config WHERE org_id = v_org_id
-    ) THEN
-      INSERT INTO public.followup_sms_config (org_id, max_reminders, first_reminder_days, second_reminder_days)
-      VALUES (v_org_id, 2, 3, 7)
-      ON CONFLICT (org_id) DO NOTHING;
-    END IF;
   ELSIF p_addon_type = 'diagnostic' THEN
     UPDATE public.locations SET diagnostic_enabled = p_enabled WHERE id = p_location_id;
   END IF;

@@ -62,7 +62,6 @@ BEGIN
     DELETE FROM public.credits_log WHERE org_id = v_org.id;
     DELETE FROM public.sms_log WHERE org_id = v_org.id;
     DELETE FROM public.audit_trail WHERE org_id = v_org.id;
-    DELETE FROM public.followup_sms_config WHERE org_id = v_org.id;
     DELETE FROM public.processed_webhook_events WHERE org_id = v_org.id;
     DELETE FROM public.feature_requests WHERE org_id = v_org.id;
 

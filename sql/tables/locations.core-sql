@@ -16,7 +16,6 @@ CREATE TABLE public.locations (
   timezone              text DEFAULT 'America/Toronto',
   estimated_wait_minutes numeric DEFAULT NULL,
   review_sms_enabled    boolean DEFAULT false,
-  followup_sms_enabled  boolean DEFAULT false,
   diagnostic_enabled    boolean DEFAULT false,
   nurse_enabled         boolean DEFAULT false,
   vaccines_enabled      boolean DEFAULT false,
