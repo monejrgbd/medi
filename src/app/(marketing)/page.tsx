@@ -25,7 +25,7 @@ function ChatMockup() {
   const chatMessages = [
     { role: "ai", text: "Hi Sarah, welcome back to Riverside Family Medicine! What brings you in today?", time: "9:03 AM", delay: "0.5s" },
     { role: "patient", text: "My hands have been really stiff every morning and my knuckles are swollen", time: "9:04 AM", delay: "1.8s" },
-    { role: "ai", text: "I see you came in for knee pain on March 1. Could the hand stiffness be related?", time: "9:05 AM", delay: "3.2s" },
+    { role: "ai", text: "You came in for knee pain on March 1. Could the hand stiffness be related?", time: "9:05 AM", delay: "3.2s" },
     { role: "patient", text: "Actually yes, my knee has been worse too", time: "9:06 AM", delay: "4.6s" },
   ];
 
@@ -150,18 +150,14 @@ function HeroSection() {
           {/* Left column */}
           <div className="sm:flex-1 sm:min-w-0">
             <h1 className="mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
-              Patients describe
+              AI for your clinic.
               <br />
-              symptoms to AI.
+              <span className="text-hilt-blue">Before, during, and
               <br />
-              In 130+ languages.
-              <br />
-              <span className="text-hilt-blue">Doctors read
-              <br />
-              the summary.</span>
+              after every visit.</span>
             </h1>
             <p className="mb-8 text-lg text-slate sm:text-sm md:text-base lg:text-xl">
-              Doctors save 5 minutes per patient, patients feel heard from the start.
+              Intake in 130+ languages. Follow ups that remember. Reviews that grow. Marketing that knows. Analytics that show.
             </p>
             {/* Start Trial CTA */}
             <Link
