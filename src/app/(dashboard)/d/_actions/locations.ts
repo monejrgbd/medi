@@ -11,6 +11,12 @@ export async function createLocation(formData: {
   address?: string;
   specialty?: string;
   operatingHours?: Record<string, unknown>;
+  nurseEnabled?: boolean;
+  vitalsEnabled?: boolean;
+  vaccinesEnabled?: boolean;
+  skipAi?: boolean;
+  reviewSmsEnabled?: boolean;
+  diagnosticEnabled?: boolean;
 }) {
   await requireAuth();
   const name = stripHtml(formData.name).slice(0, 100);
@@ -26,6 +32,12 @@ export async function createLocation(formData: {
     p_address: formData.address ? stripHtml(formData.address).slice(0, 200) : null,
     p_specialty: formData.specialty || null,
     p_operating_hours: formData.operatingHours || null,
+    p_nurse_enabled: formData.nurseEnabled ?? false,
+    p_vitals_enabled: formData.vitalsEnabled ?? true,
+    p_vaccines_enabled: formData.vaccinesEnabled ?? false,
+    p_skip_ai: formData.skipAi ?? false,
+    p_review_sms_enabled: formData.reviewSmsEnabled ?? true,
+    p_diagnostic_enabled: formData.diagnosticEnabled ?? true,
   });
 
   if (error) return { success: false, error: "Failed to create location" };

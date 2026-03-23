@@ -37,6 +37,18 @@ export default function ClinicFeaturesStep({
     }
   }
 
+  async function handleSkip() {
+    setSaving(true);
+    await updateLocation({
+      locationId,
+      vitalsEnabled: true,
+      reviewSmsEnabled: true,
+      diagnosticEnabled: true,
+    });
+    setSaving(false);
+    onComplete({ nurse: false, vitals: true, vaccines: false, skipAi: false, reviewSms: true, diagnostic: true });
+  }
+
   async function handleContinue() {
     setSaving(true);
     setError("");
@@ -294,9 +306,7 @@ export default function ClinicFeaturesStep({
       </button>
 
       <button
-        onClick={() =>
-          onComplete({ nurse: false, vitals: true, vaccines: false, skipAi: false, reviewSms: true, diagnostic: true })
-        }
+        onClick={handleSkip}
         disabled={saving}
         className="w-full text-sm text-slate hover:text-ink transition-colors py-2 mt-2"
       >

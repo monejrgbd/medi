@@ -5,23 +5,14 @@ import { useRole } from "@/contexts/RoleContext";
 import { fetchCreditDashboard } from "@/app/(dashboard)/d/_actions/billing";
 import CreditDashboard from "@/components/billing/CreditDashboard";
 import SubscriptionManager from "@/components/billing/SubscriptionManager";
-import AddOnToggles from "@/components/billing/AddOnToggles";
 import OveragePurchase from "@/components/billing/OveragePurchase";
 import RechargeConfig from "@/components/billing/RechargeConfig";
 import PaymentHistory from "@/components/billing/PaymentHistory";
 import CancelSubscription from "@/components/billing/CancelSubscription";
 
-interface LocationWithAddons {
-  id: string;
-  name: string;
-  review_sms_enabled: boolean;
-  diagnostic_enabled: boolean;
-}
-
 export default function BillingPage() {
   const { org, isOwner } = useRole();
   const [dashData, setDashData] = useState<Record<string, unknown> | null>(null);
-  const [locations, setLocations] = useState<LocationWithAddons[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadData = useCallback(async () => {
@@ -31,31 +22,9 @@ export default function BillingPage() {
     }
   }, []);
 
-  const loadLocations = useCallback(() => {
-    import("@/lib/supabase/client").then(({ createClient }) => {
-      const supabase = createClient();
-      supabase.rpc("get_locations").then(({ data }) => {
-        if (data) {
-          setLocations(
-            data.map((l: LocationWithAddons) => ({
-              id: l.id,
-              name: l.name,
-              review_sms_enabled: l.review_sms_enabled ?? false,
-              diagnostic_enabled: l.diagnostic_enabled ?? false,
-            }))
-          );
-        }
-      });
-    });
-  }, []);
-
   useEffect(() => {
     loadData();
   }, [loadData, refreshKey]);
-
-  useEffect(() => {
-    loadLocations();
-  }, [loadLocations, refreshKey]);
 
   if (!isOwner) {
     return (
@@ -86,12 +55,6 @@ export default function BillingPage() {
         currentPlan={org.subscription_plan}
         orgId={org.id}
         onPlanChanged={handleRefresh}
-      />
-
-      <AddOnToggles
-        locations={locations}
-        subscriptionPlan={org.subscription_plan}
-        onChanged={handleRefresh}
       />
 
       <OveragePurchase

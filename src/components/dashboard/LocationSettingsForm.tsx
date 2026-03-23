@@ -24,6 +24,8 @@ interface LocationData {
   ai_custom_instructions?: string | null;
   ai_message_limit?: number | null;
   skip_ai?: boolean;
+  review_sms_enabled?: boolean;
+  diagnostic_enabled?: boolean;
   logo_url?: string | null;
 }
 
@@ -91,6 +93,8 @@ export default function LocationSettingsForm({
     aiCustomInstructions: location.ai_custom_instructions || "",
     aiMessageLimit: location.ai_message_limit ?? null as number | null,
     skipAi: location.skip_ai ?? false,
+    reviewSmsEnabled: location.review_sms_enabled ?? true,
+    diagnosticEnabled: location.diagnostic_enabled ?? true,
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -151,6 +155,8 @@ export default function LocationSettingsForm({
       aiCustomInstructions: form.aiCustomInstructions,
       aiMessageLimit: form.aiMessageLimit,
       skipAi: form.skipAi,
+      reviewSmsEnabled: form.reviewSmsEnabled,
+      diagnosticEnabled: form.diagnosticEnabled,
     });
 
     setLoading(false);
@@ -378,6 +384,32 @@ export default function LocationSettingsForm({
             type="checkbox"
             checked={!form.skipAi}
             onChange={(e) => setForm((prev) => ({ ...prev, skipAi: !e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Review SMS</span>
+            <p className="text-xs text-ash">Text patients after visits to collect reviews. Uses 0.1 credits per SMS.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.reviewSmsEnabled}
+            onChange={(e) => setForm((prev) => ({ ...prev, reviewSmsEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Diagnostic AI</span>
+            <p className="text-xs text-ash">AI suggests possible diagnoses based on patient symptoms. Uses 0.5 credits per use.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.diagnosticEnabled}
+            onChange={(e) => setForm((prev) => ({ ...prev, diagnosticEnabled: e.target.checked }))}
             className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
           />
         </label>

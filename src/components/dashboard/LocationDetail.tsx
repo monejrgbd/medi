@@ -22,8 +22,11 @@ interface LocationData {
   nurse_enabled?: boolean;
   vitals_enabled?: boolean;
   vaccines_enabled?: boolean;
+  skip_ai?: boolean;
   ai_custom_instructions?: string | null;
   ai_message_limit?: number | null;
+  review_sms_enabled?: boolean;
+  diagnostic_enabled?: boolean;
   created_at: string;
 }
 

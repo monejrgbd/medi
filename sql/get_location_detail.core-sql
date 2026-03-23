@@ -64,6 +64,14 @@ BEGIN
       'referral_email', l.referral_email,
       'tablet_count', l.tablet_count,
       'timezone', l.timezone,
+      'nurse_enabled', l.nurse_enabled,
+      'vitals_enabled', l.vitals_enabled,
+      'vaccines_enabled', l.vaccines_enabled,
+      'skip_ai', l.skip_ai,
+      'ai_custom_instructions', l.ai_custom_instructions,
+      'ai_message_limit', l.ai_message_limit,
+      'review_sms_enabled', l.review_sms_enabled,
+      'diagnostic_enabled', l.diagnostic_enabled,
       'created_at', l.created_at
     )
   )

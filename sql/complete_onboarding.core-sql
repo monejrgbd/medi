@@ -23,6 +23,15 @@ BEGIN
   WHERE id = v_org_id
     AND onboarding_completed_at IS NULL;
 
+  -- Check out the owner from any open staff check-ins left over from the onboarding demo
+  UPDATE public.staff_checkins sc
+  SET checked_out_at = now()
+  FROM public.staff_users su
+  WHERE su.id = sc.staff_user_id
+    AND su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_org_id
+    AND sc.checked_out_at IS NULL;
+
   RETURN jsonb_build_object('success', true);
 END;
 $$;
