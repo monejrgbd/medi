@@ -122,14 +122,17 @@ export default function OwnerSignUpForm() {
   }
 
   async function handleResendOtp() {
-    if (resendCooldown > 0) return;
+    if (resendCooldown > 0 || loading) return;
     setError("");
+    setLoading(true);
 
     const supabase = createClient();
     const { error: resendError } = await supabase.auth.resend({
       type: "signup",
       email,
     });
+
+    setLoading(false);
 
     if (resendError) {
       setError(resendError.message);
@@ -183,10 +186,10 @@ export default function OwnerSignUpForm() {
           <button
             type="button"
             onClick={handleResendOtp}
-            disabled={resendCooldown > 0}
+            disabled={resendCooldown > 0 || loading}
             className="font-medium text-hilt-blue hover:underline disabled:text-ash disabled:no-underline"
           >
-            {resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : "Resend code"}
+            {loading ? "Sending..." : resendCooldown > 0 ? `Resend code (${resendCooldown}s)` : "Resend code"}
           </button>
           <button
             type="button"
