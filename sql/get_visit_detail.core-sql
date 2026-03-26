@@ -248,10 +248,9 @@ BEGIN
       'nurse_notes', v.nurse_notes,
       'ai_skipped', v.ai_skipped,
       'diagnostic_enabled', (
-        SELECT (o2.diagnostic_addon = true AND l2.diagnostic_enabled = true)
-        FROM public.organizations o2
-        JOIN public.locations l2 ON l2.id = v.location_id
-        WHERE o2.id = v.org_id
+        SELECT l2.diagnostic_enabled
+        FROM public.locations l2
+        WHERE l2.id = v.location_id
       )
     ),
     'patient', jsonb_build_object(

@@ -17,7 +17,6 @@ interface OrgData {
   credits_total: number;
   credits_used: number;
   trial_end_date: string;
-  review_sms_addon: boolean;
   onboarding_completed_at: string | null;
   cancel_at_period_end: string | null;
   created_at: string;

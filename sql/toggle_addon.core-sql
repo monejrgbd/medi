@@ -14,12 +14,12 @@ DECLARE
   v_org record;
 BEGIN
   -- Validate addon type
-  IF p_addon_type NOT IN ('review_sms', 'diagnostic', 'marketing_sms') THEN
+  IF p_addon_type NOT IN ('marketing_sms') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid addon type');
   END IF;
 
   -- Lock org and verify ownership
-  SELECT id, subscription_plan, diagnostic_addon, marketing_sms_addon
+  SELECT id, subscription_plan, marketing_sms_addon
   INTO v_org
   FROM public.organizations
   WHERE owner_id = p_caller_auth_uid
@@ -34,15 +34,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Cannot modify addons while account is ' || v_org.subscription_plan);
   END IF;
 
-  -- Trial orgs get addons free — skip any charge logic
-  -- (non-trial orgs may be billed via subscription webhook)
-
   -- Toggle the addon
-  IF p_addon_type = 'review_sms' THEN
-    UPDATE public.organizations SET review_sms_addon = p_enabled WHERE id = v_org.id;
-  ELSIF p_addon_type = 'diagnostic' THEN
-    UPDATE public.organizations SET diagnostic_addon = p_enabled WHERE id = v_org.id;
-  ELSIF p_addon_type = 'marketing_sms' THEN
+  IF p_addon_type = 'marketing_sms' THEN
     UPDATE public.organizations SET marketing_sms_addon = p_enabled WHERE id = v_org.id;
   END IF;
 

@@ -71,12 +71,6 @@ export default async function ReceptionistPage({
     }
   }
 
-  // Also check org-level skip_ai (overrides location)
-  if (!aiAutoSkipped && orgId) {
-    const { data: orgRow } = await supabase.from("organizations").select("skip_ai").eq("id", orgId).single();
-    if (orgRow?.skip_ai) aiAutoSkipped = true;
-  }
-
   // Owner direct access: only if explicitly skipping check-in
   let suggestedLocationId: string | null = null;
   if (!checkedInLocationId && ownerCheck) {

@@ -39,8 +39,6 @@ BEGIN
       'credits_used', o.credits_used,
       'credits_remaining', o.credits_total - o.credits_used,
       'trial_end_date', o.trial_end_date,
-      'review_sms_addon', o.review_sms_addon,
-      'skip_ai', o.skip_ai,
       'created_at', o.created_at
     ),
     'location_count', (SELECT count(*) FROM public.locations WHERE org_id = v_org_id),

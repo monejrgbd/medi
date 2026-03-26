@@ -16,7 +16,6 @@ interface OrgOverview {
     credits_used: number;
     credits_remaining: number;
     trial_end_date: string | null;
-    skip_ai?: boolean;
   };
 }
 
@@ -27,7 +26,6 @@ export default function OrgSettingsForm({
 }) {
   const router = useRouter();
   const [name, setName] = useState(overview.org.name);
-  const [skipAi, setSkipAi] = useState(overview.org.skip_ai ?? false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [deactivateStep, setDeactivateStep] = useState<"idle" | "confirm">("idle");
@@ -43,7 +41,7 @@ export default function OrgSettingsForm({
     setLoading(true);
     setMessage(null);
 
-    const result = await updateOrganization({ name, skipAi });
+    const result = await updateOrganization({ name });
     setLoading(false);
 
     if (result.success) {
@@ -149,22 +147,6 @@ export default function OrgSettingsForm({
             />
           </div>
         )}
-
-        <div className="pt-5 border-t border-gray-100">
-          <h3 className="text-sm font-semibold text-ink mb-3">AI Settings</h3>
-          <label className="flex items-center justify-between">
-            <div>
-              <span className="text-sm text-ink">AI Intake (All Locations)</span>
-              <p className="text-xs text-ash">AI screens patients before the doctor at every location. Turn off to disable AI intake across all locations.</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={!skipAi}
-              onChange={(e) => setSkipAi(!e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
-            />
-          </label>
-        </div>
 
         {overview.org.subscription_plan !== "expired" && (
           <div className="mt-10 pt-6 border-t border-red-200">

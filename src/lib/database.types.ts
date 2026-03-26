@@ -650,7 +650,6 @@ export type Database = {
           credits_used: number | null
           current_period_end: string | null
           data_retention_until: string | null
-          diagnostic_addon: boolean | null
           id: string
           last_credit_alert_at: string | null
           marketing_sms_addon: boolean | null
@@ -663,8 +662,6 @@ export type Database = {
           purged: boolean | null
           recharge_limit: number | null
           recharge_used: number | null
-          review_sms_addon: boolean | null
-          skip_ai: boolean | null
           slug: string
           subscription_plan: string | null
           trial_alert_sent: boolean | null
@@ -680,7 +677,6 @@ export type Database = {
           credits_used?: number | null
           current_period_end?: string | null
           data_retention_until?: string | null
-          diagnostic_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
           marketing_sms_addon?: boolean | null
@@ -693,8 +689,6 @@ export type Database = {
           purged?: boolean | null
           recharge_limit?: number | null
           recharge_used?: number | null
-          review_sms_addon?: boolean | null
-          skip_ai?: boolean | null
           slug: string
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
@@ -710,7 +704,6 @@ export type Database = {
           credits_used?: number | null
           current_period_end?: string | null
           data_retention_until?: string | null
-          diagnostic_addon?: boolean | null
           id?: string
           last_credit_alert_at?: string | null
           marketing_sms_addon?: boolean | null
@@ -723,8 +716,6 @@ export type Database = {
           purged?: boolean | null
           recharge_limit?: number | null
           recharge_used?: number | null
-          review_sms_addon?: boolean | null
-          skip_ai?: boolean | null
           slug?: string
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
@@ -2551,28 +2542,17 @@ export type Database = {
         Returns: Json
       }
       check_location_active: { Args: { p_location_id: string }; Returns: Json }
-      checkin_patient:
-        | {
-            Args: {
-              p_birthday: string
-              p_first_name: string
-              p_last_name: string
-              p_location_id: string
-              p_phone?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_birthday: string
-              p_first_name: string
-              p_last_name: string
-              p_location_id: string
-              p_phone?: string
-              p_sex?: string
-            }
-            Returns: Json
-          }
+      checkin_patient: {
+        Args: {
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
+          p_phone?: string
+          p_sex?: string
+        }
+        Returns: Json
+      }
       claim_patient: { Args: { p_visit_id: string }; Returns: Json }
       cleanup_demo_data: { Args: never; Returns: undefined }
       collect_phone_post_ai: {
@@ -2600,29 +2580,37 @@ export type Database = {
         Args: { p_location_id: string; p_platforms: Json }
         Returns: Json
       }
-      create_follow_up:
+      create_follow_up: {
+        Args: { p_ai_instructions?: string; p_visit_id: string }
+        Returns: Json
+      }
+      create_location:
         | {
-            Args: { p_ai_instructions?: string; p_visit_id: string }
+            Args: {
+              p_address?: string
+              p_name: string
+              p_operating_hours?: Json
+              p_org_id: string
+              p_specialty?: string
+            }
             Returns: Json
           }
         | {
             Args: {
-              p_ai_instructions?: string
-              p_timeframe_days: number
-              p_visit_id: string
+              p_address?: string
+              p_diagnostic_enabled?: boolean
+              p_name: string
+              p_nurse_enabled?: boolean
+              p_operating_hours?: Json
+              p_org_id: string
+              p_review_sms_enabled?: boolean
+              p_skip_ai?: boolean
+              p_specialty?: string
+              p_vaccines_enabled?: boolean
+              p_vitals_enabled?: boolean
             }
             Returns: Json
           }
-      create_location: {
-        Args: {
-          p_address?: string
-          p_name: string
-          p_operating_hours?: Json
-          p_org_id: string
-          p_specialty?: string
-        }
-        Returns: Json
-      }
       create_organization: {
         Args: {
           p_approval_code?: string
@@ -2678,26 +2666,16 @@ export type Database = {
       }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       deny_patient: { Args: { p_visit_id: string }; Returns: Json }
-      edit_patient_record:
-        | {
-            Args: {
-              p_birthday?: string
-              p_first_name?: string
-              p_last_name?: string
-              p_patient_id: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_birthday?: string
-              p_first_name?: string
-              p_last_name?: string
-              p_patient_id: string
-              p_sex?: string
-            }
-            Returns: Json
-          }
+      edit_patient_record: {
+        Args: {
+          p_birthday?: string
+          p_first_name?: string
+          p_last_name?: string
+          p_patient_id: string
+          p_sex?: string
+        }
+        Returns: Json
+      }
       exclude_campaign_recipient: {
         Args: {
           p_campaign_id: string
@@ -2966,9 +2944,10 @@ export type Database = {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
         Returns: Json
       }
-      request_demo_otp:
-        | { Args: { p_email: string }; Returns: Json }
-        | { Args: { p_email: string; p_team_code?: string }; Returns: Json }
+      request_demo_otp: {
+        Args: { p_email: string; p_team_code?: string }
+        Returns: Json
+      }
       request_premium_code: {
         Args: {
           p_domain?: string
@@ -3025,19 +3004,14 @@ export type Database = {
         Returns: Json
       }
       set_recharge_limit: { Args: { p_limit: number }; Returns: Json }
-      set_review_cycle:
-        | {
-            Args: { p_cycle_days: number; p_location_id: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_cycle_days: number
-              p_location_id: string
-              p_redirect_min_rating?: number
-            }
-            Returns: Json
-          }
+      set_review_cycle: {
+        Args: {
+          p_cycle_days: number
+          p_location_id: string
+          p_redirect_min_rating?: number
+        }
+        Returns: Json
+      }
       set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
       set_visit_demo_features: {
         Args: { p_features: Json; p_visit_id: string }
@@ -3129,6 +3103,7 @@ export type Database = {
           p_ai_custom_instructions?: string
           p_ai_message_limit?: number
           p_ai_model?: string
+          p_diagnostic_enabled?: boolean
           p_display_format?: string
           p_location_id: string
           p_logo_url?: string
@@ -3136,6 +3111,7 @@ export type Database = {
           p_nurse_enabled?: boolean
           p_operating_hours?: Json
           p_referral_email?: string
+          p_review_sms_enabled?: boolean
           p_skip_ai?: boolean
           p_specialty?: string
           p_tablet_count?: number
@@ -3153,10 +3129,7 @@ export type Database = {
         Args: { p_default_private: boolean; p_patient_id: string }
         Returns: Json
       }
-      update_organization: {
-        Args: { p_name: string; p_skip_ai?: boolean }
-        Returns: Json
-      }
+      update_organization: { Args: { p_name: string }; Returns: Json }
       update_pets: {
         Args: { p_patient_id: string; p_pets: string[] }
         Returns: Json

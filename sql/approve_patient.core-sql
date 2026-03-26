@@ -18,7 +18,6 @@ DECLARE
   v_owner_id uuid;
   v_caller_staff_id uuid;
   v_is_receptionist boolean := false;
-  v_org_skip_ai boolean;
   v_loc_skip_ai boolean;
 BEGIN
   -- Get visit details
@@ -60,11 +59,10 @@ BEGIN
     END IF;
   END IF;
 
-  -- Check if AI should be skipped (org overrides location)
-  SELECT o.skip_ai INTO v_org_skip_ai FROM public.organizations o WHERE o.id = v_visit.org_id;
+  -- Check if AI should be skipped at location level
   SELECT l.skip_ai INTO v_loc_skip_ai FROM public.locations l WHERE l.id = v_visit.location_id;
 
-  IF COALESCE(v_org_skip_ai, false) = true OR COALESCE(v_loc_skip_ai, false) = true THEN
+  IF COALESCE(v_loc_skip_ai, false) = true THEN
     UPDATE public.visits
     SET status = 'waiting_doctor_claim',
         entered_queue_at = now(),

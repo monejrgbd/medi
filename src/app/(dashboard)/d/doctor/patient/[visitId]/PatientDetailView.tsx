@@ -56,6 +56,8 @@ interface VisitDetail {
     is_follow_up: boolean;
     follow_up_of: string | null;
     diagnostic_enabled: boolean;
+    nurse_reviewed?: boolean;
+    nurse_notes?: string;
   };
   patient: {
     id: string;
@@ -228,6 +230,14 @@ export default function PatientDetailView({
             <p className="text-sm text-green-900 whitespace-pre-wrap">
               {visit.doctor_diagnosis}
             </p>
+          </div>
+        )}
+
+        {/* Nurse notes */}
+        {visit.nurse_notes && (
+          <div className="mt-4 rounded-lg bg-teal-50 border border-teal-200 p-4">
+            <h4 className="text-sm font-semibold text-teal-800 mb-1">Nurse Notes</h4>
+            <p className="text-sm text-ink whitespace-pre-wrap">{visit.nurse_notes}</p>
           </div>
         )}
 

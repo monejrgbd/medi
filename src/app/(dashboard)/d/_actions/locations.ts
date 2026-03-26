@@ -108,7 +108,7 @@ export async function updateLocation(formData: {
   return { success: true };
 }
 
-export async function updateOrganization(formData: { name: string; skipAi?: boolean }) {
+export async function updateOrganization(formData: { name: string }) {
   await requireAuth();
   const name = stripHtml(formData.name).slice(0, 100);
   if (!name) {
@@ -117,10 +117,7 @@ export async function updateOrganization(formData: { name: string; skipAi?: bool
 
   const supabase = await createClient();
 
-  const rpcParams: Record<string, unknown> = { p_name: name };
-  if (formData.skipAi !== undefined) rpcParams.p_skip_ai = formData.skipAi;
-
-  const { data, error } = await supabase.rpc("update_organization", rpcParams);
+  const { data, error } = await supabase.rpc("update_organization", { p_name: name });
 
   if (error) return { success: false, error: "Failed to update organization" };
   if (data && !data.success) return { success: false, error: data.error };

@@ -263,19 +263,13 @@ Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
 
     // --- Diagnostic addon: separate Opus call if enabled ---
     try {
-      const { data: orgRow } = await supabase
-        .from("organizations")
-        .select("diagnostic_addon")
-        .eq("id", visitRow.org_id)
-        .single();
-
       const { data: locDiag } = await supabase
         .from("locations")
         .select("diagnostic_enabled, specialty")
         .eq("id", visitRow.location_id)
         .single();
 
-      if (orgRow?.diagnostic_addon && locDiag?.diagnostic_enabled) {
+      if (locDiag?.diagnostic_enabled) {
         // Deduct 0.5 credits for diagnostic
         const { data: deductResult } = await supabase.rpc("deduct_diagnostic_credits", {
           p_org_id: visitRow.org_id,

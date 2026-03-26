@@ -13,8 +13,6 @@ CREATE TABLE public.organizations (
   trial_end_date        timestamptz,
   billing_cycle_start   timestamptz,
   paypal_subscription_id text,
-  review_sms_addon      boolean DEFAULT false,
-  diagnostic_addon      boolean DEFAULT false,
   marketing_sms_addon   boolean DEFAULT false,
   last_credit_alert_at  timestamptz,
   trial_alert_sent      boolean DEFAULT false,
@@ -26,7 +24,6 @@ CREATE TABLE public.organizations (
   recharge_used         numeric DEFAULT 0,
   billing_interval      text DEFAULT 'monthly' CHECK (billing_interval IN ('monthly', 'annual')),
   current_period_end    timestamptz,
-  skip_ai               boolean DEFAULT false,
   created_at            timestamptz DEFAULT now()
 );
 
