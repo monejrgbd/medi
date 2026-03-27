@@ -1,0 +1,77 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.purchase_feature_topup(
+  p_caller_auth_uid uuid,
+  p_feature text,
+  p_credits numeric
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+BEGIN
+  -- Validate
+  IF p_feature NOT IN ('marketing_sms', 'marketing_scan', 'premium_ai', 'general') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid feature');
+  END IF;
+
+  IF p_credits < 1 OR p_credits > 10000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Amount must be between 1 and 10000');
+  END IF;
+
+  -- Verify ownership
+  SELECT id, name, subscription_plan
+  INTO v_org
+  FROM public.organizations
+  WHERE owner_id = p_caller_auth_uid
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  IF v_org.subscription_plan IN ('expired', 'suspended', 'read_only') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Cannot purchase while account is ' || v_org.subscription_plan);
+  END IF;
+
+  -- Insert top-up
+  INSERT INTO public.budget_topups (org_id, feature, credits)
+  VALUES (v_org.id, p_feature, p_credits);
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+  VALUES (v_org.id, p_caller_auth_uid, 'owner', 'purchase_topup', 'organization', v_org.id,
+    jsonb_build_object('feature', p_feature, 'credits', p_credits));
+
+  RETURN jsonb_build_object('success', true, 'feature', p_feature, 'credits', p_credits);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.purchase_feature_topup(
+  p_feature text,
+  p_credits numeric
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.purchase_feature_topup(v_uid, p_feature, p_credits);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.purchase_feature_topup(text, numeric) FROM anon;
+GRANT EXECUTE ON FUNCTION public.purchase_feature_topup(text, numeric) TO authenticated;

@@ -1,0 +1,15 @@
+CREATE TABLE public.budget_topups (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id      uuid NOT NULL REFERENCES public.organizations(id),
+  feature     text NOT NULL CHECK (feature IN ('marketing_sms', 'marketing_scan', 'premium_ai', 'general')),
+  credits     numeric NOT NULL,
+  used        numeric DEFAULT 0,
+  created_at  timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.budget_topups ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "owner_read" ON public.budget_topups FOR SELECT
+  USING (org_id IN (SELECT o.id FROM public.organizations o WHERE o.owner_id = auth.uid()));
+
+CREATE INDEX idx_budget_topups_org ON public.budget_topups (org_id, created_at);

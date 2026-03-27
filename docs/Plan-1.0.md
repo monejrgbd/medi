@@ -264,46 +264,42 @@ Two trial tiers. No credit card required for either.
 - **Platform Admin panel** — accessible to designated Hilt Health staff (identified by `is_platform_admin` claim in `app_metadata`). Admin logs in with their real email, auto redirected to `/d/admin`. Features: quick create codes (one click, no identifiers), create codes with identifiers (email, phone, domain, optional approval email), view all codes with status (available, used, expired), copy codes to clipboard. Auth: double gated (server action + SQL function both verify admin claim). Admin accounts are set via a one time SQL update on `auth.users.raw_app_meta_data`.
 - 7 days before trial ends, we contact them with pricing based on the plan they choose
 
-### Post-Trial Pricing
+### Post-Trial Pricing (Per Provider)
 
-| Plan | Monthly | Annual (20% off) | Credits/mo | $/Credit | Savings vs PAYG | Cost/Patient (Standard AI) | Cost/Patient (Advanced AI) |
-|------|---------|-------------------|-----------|----------|-----------------|--------------------------|--------------------------|
-| Starter | $99/mo | $79/mo | 125 | $0.79 | ~20% | ~$1.19 | ~$3.17 |
-| Professional | $349/mo | $279/mo | 600 | $0.58 | ~42% | ~$0.87 | ~$2.33 |
-| Business | $899/mo | $719/mo | 1,800 | $0.50 | 50% | ~$0.75 | ~$2.00 |
-| Enterprise | Contact us | Contact us | Custom | Negotiated | 60%+ | Negotiable | Negotiable |
+| | Starter | Professional | Business |
+|---|---|---|---|
+| **Monthly** | $79/provider | $149/provider | $249/provider |
+| **Annual (20% off)** | $63/provider | $119/provider | $199/provider |
+| **AI Conversations** | Haiku (unlimited) | Sonnet (unlimited) | Sonnet (unlimited) + Opus (4 credits/use) |
+| **Summaries** | Sonnet | Sonnet | Sonnet (Opus if location set to advanced) |
+| **Diagnostics** | Sonnet (free) | Opus (free) | Opus (free) |
+| **Message Limit** | 20/conversation | 35/conversation | 50/conversation |
+| **Marketing Budget** | 20/month (~200 SMS) | 100/month (~1K SMS) | 300/month (~1K SMS + 25 Premium AI) |
+| **Embeddable Widget** | No | No | Yes |
 
-- **Pay-as-you-go:** $1 per credit (no commitment)
-- **Annual billing:** 20% off all plans, billed yearly
-- **AI models:** Standard AI = 1.5 credits/patient, Advanced AI = 4 credits/patient
-- Overage credits at $1/credit on all plans
-- **Credits deducted when AI conversation begins** — credits are deducted when the first AI message is sent, not at QR scan or approval. Denial or abandonment before the AI conversation starts = no credit used. If the clinic has no credits remaining, new AI conversations cannot start (active sessions finish normally)
-- **Credits expire at the end of each billing cycle** — no rollover. Unused credits from the current month do not carry to the next. This keeps pricing simple and predictable. Overage credits ($1/credit) are one-time purchases consumed immediately.
+- **Providers** = doctors + nurses (paid seats). **Admin staff** (receptionists, managers, marketers, reviews role) = free
+- **Enterprise**: custom pricing, managed via admin panel
+- **Pay as you go**: $1 per credit (credit based for everything, legacy system). Conversation: 1.5 credits (standard) or 4 credits (advanced). Diagnostic: 0.5 credits per visit. SMS: 0.1 credits each.
+- **Annual billing**: 20% off, billed yearly. Toggle on pricing page and billing dashboard
+- **All plans include every feature**: nurse workflow, vitals, vaccines, referrals, full analytics, custom AI per location, marketing (credit based), all roles, all SMS. No feature gating.
+- **Marketing budget** (internally "credits"): used for Premium AI conversations (Starter $3.50, Professional $3.00, Business $2.50, PAyG $4.00), Marketing SMS (0.1, all plans), Marketing AI scans (1 per 1K, all plans). Subscription plans show "marketing budget" to users, not "credits." PAyG shows "credits."
+- **Included marketing budget resets each billing cycle** — no rollover. Purchased top-ups persist until consumed (do not expire at cycle reset). PAyG purchased overage expires at reset.
+- **PayPal billing**: quantity based subscriptions. Each provider is a unit. Adding/removing providers revises the PayPal subscription quantity automatically.
 
 ### Credit Usage Dashboard (Owner)
 - Real-time credit consumption: credits used this month, credits remaining
-- Projected run-out date based on current usage pace
-- Helps owners decide when to upgrade their plan before hitting overages
-
-### Credit-Based Features (per location toggle, pay per use, available to all clinics automatically)
-- **AI Diagnostic** — 0.5 credits per use. AI powered clinical assessment shown to doctors as a suggestion. Enable or disable per location. No addon required.
-- **Review request SMS** — 0.1 credits per SMS. Post visit review collection. Enable or disable per location. No addon required.
-
-### Included Free (no credit cost)
-- **Follow up tracking** — Doctors tag follow ups with AI instructions. When the patient returns, the receptionist confirms the follow up and the AI picks up where the last visit left off. No credit cost. Included in every plan.
-
-### Add-On (org level gate, only feature that requires enabling)
-- **AI Targeted Marketing** — 0.3 credits per SMS sent, 1 credit per 1,000 AI scans. Filter patients by demographics and visit history, AI scans clinical data. Simple filtering by age, sex, and visit history is always free. Gated by `marketing_sms_addon` on organization. This is the ONLY feature that requires an org level toggle to activate.
+- Projected run out date based on current usage pace
+- Available on all plans (credits used for marketing + Opus)
 
 ### Payment & Billing
-- **Payment processor**: PayPal for subscription billing and overage charges.
-- **Payment failure**: 3 retry attempts over 7 days. After 7 days unpaid, service enters read-only mode (staff can view existing data, no new AI conversations). After 30 days, account suspended. Owner notified at each stage via email.
-- **Cancellation**: Owner can cancel anytime. Data retained for 90 days post-cancellation, then permanently deleted. Owner can request immediate deletion.
+- **Payment processor**: PayPal for subscription billing and overage charges. Quantity based per provider.
+- **Payment failure**: 3 retry attempts over 7 days. After 7 days unpaid, service enters read only mode (staff can view existing data, no new AI conversations). After 30 days, account suspended. Owner notified at each stage via email.
+- **Cancellation**: Owner can cancel anytime. Access continues until current period end (monthly or annual). Data retained for 90 days post cancellation, then permanently deleted. Owner can request immediate deletion.
 - **Annual pricing**: 20% off all plans, billed yearly. Toggle on pricing page and billing dashboard.
 
 ### What's Included (All Plans)
-- AI pre-screening (Standard + Advanced models)
-- Doctor summary + full transcript
+- AI pre-screening (Haiku, Sonnet, or Opus depending on plan)
+- Doctor summary (always Sonnet) + full transcript
 - Analytics dashboard
 - Follow up reminders (email, free)
 - 130+ language support
@@ -399,7 +395,7 @@ These are confirmed for v1 beyond the core flow:
 48. **Concurrent session guard** — one active session per patient per org at a time. Second scan resumes existing session, doesn't create a new one.
 49. **Referral status tracking** — referral lifecycle: sent → viewed → patient arrived → completed. Referring doctor can see current status.
 50. **Platform Admin panel** — internal admin dashboard at `/d/admin` for designated Hilt Health staff. Create and manage premium trial approval codes (quick create or with email/phone/domain identifiers). View all codes with status tracking. Admin identity stored as `is_platform_admin` claim in `auth.users.app_metadata`, auto redirect on login. Double gated auth (server action + SQL SECURITY DEFINER).
-51. **AI targeted marketing SMS** — owner defines targeting criteria via structured form filters (age range, sex, visit recency, visit count) and/or a free text AI criteria box (e.g. "patients with joint pain"). Structured filters run instantly in SQL, AI criteria triggers Claude evaluation of patient clinical profiles (visit summaries, diagnoses, medications, allergies, chronic conditions) in batches. Compose together: structure narrows pool, AI evaluates what passes. Owner reviews matched patients with reasons, excludes individuals, writes message body with `{first_name}` and `{clinic_name}` variables, and sends. "Reply STOP to opt out" appended to every message. SMS delivery uses queue pattern: `process-campaign-sms` cron runs every minute, picks up 50 pending per campaign, sends via existing `send-sms` edge function. No timeout risk at any scale. Credits: 0.3 per SMS sent, 1 credit per 1K patients for AI scans (structure only scans are free). Gated by `marketing_sms_addon` on organizations (toggled from the marketing page itself). Cancellation mid send refunds credits for unsent recipients. New tables: `sms_campaigns`, `sms_campaign_recipients`. New edge functions: `ai-scan-campaign`, `process-campaign-sms`. New pg_cron: `process_campaign_sms` (every minute). Owner only, audit trailed.
+51. **AI targeted marketing SMS** — owner defines targeting criteria via structured form filters (age range, sex, visit recency, visit count) and/or a free text AI criteria box (e.g. "patients with joint pain"). Structured filters run instantly in SQL, AI criteria triggers Claude evaluation of patient clinical profiles (visit summaries, diagnoses, medications, allergies, chronic conditions) in batches. Compose together: structure narrows pool, AI evaluates what passes. Owner reviews matched patients with reasons, excludes individuals, writes message body with `{first_name}` and `{clinic_name}` variables, and sends. "Reply STOP to opt out" appended to every message. SMS delivery uses queue pattern: `process-campaign-sms` cron runs every minute, picks up 50 pending per campaign, sends via existing `send-sms` edge function. No timeout risk at any scale. Credits: 0.1 per SMS sent, 1 credit per 1K patients for AI scans (structure only scans are free). Gated by `marketing_sms_addon` on organizations (toggled from the marketing page itself). Cancellation mid send refunds credits for unsent recipients. New tables: `sms_campaigns`, `sms_campaign_recipients`. New edge functions: `ai-scan-campaign`, `process-campaign-sms`. New pg_cron: `process_campaign_sms` (every minute). Owner only, audit trailed.
 
 52. **Nurse role** — new staff role with its own dashboard at `/d/nurse`. Nurses claim patients from the same queue as doctors, then either complete the visit or release back to the doctor queue with a "nurse reviewed" tag and nurse notes. Doctors see a "Nurse Reviewed" badge in queue and a nurse notes section in the visit detail. Nurse workflow: claim patient, record vitals, administer/record vaccines, write notes, then "Complete Visit" or "Continue to Doctor". Gated by `nurse_enabled` per location. Nurses who release a patient back to queue cannot re-claim nurse reviewed patients (prevents double review). Nurse check in/check out works like doctors. Receptionist sees nurses checked in count and whether a patient was claimed by a nurse or doctor.
 53. **Patient vitals tracking** — generic measurement model supporting any vital type. Ships with 11 predefined vitals (Weight, Height, Blood Pressure Systolic/Diastolic, Heart Rate, Temperature, Oxygen Saturation, Respiratory Rate, Blood Glucose, BMI, Head Circumference) in a global `vital_types` master table. Each org configures which vitals to track via `org_vital_configs` (toggle predefined vitals on/off, add custom vitals with name/unit/min/max). `patient_vitals` stores one row per measurement (vital_config_id + value), not fixed columns. When an org first enables vitals, 6 defaults are auto seeded (Weight, Height, BP, Heart Rate, Temperature). Nurses and doctors record vitals via a dynamic form that adapts to the org's enabled configs. Weight and Height get trend sparkline charts in the history view. Blood Pressure Systolic + Diastolic are paired as "120/80 mmHg" in session displays. Vitals history is accessible from three places: nurse claimed patient view, doctor visit detail (as a tab), and patient search profile. Owner or manager configures vital types at `/d/vitals-config`. Gated by `vitals_enabled` per location.

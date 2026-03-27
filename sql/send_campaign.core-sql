@@ -75,40 +75,21 @@ BEGIN
   END IF;
 
   -- Calculate total cost
-  v_total_cost := v_recipient_count * 0.3;
+  v_total_cost := v_recipient_count * 0.1;
 
-  -- Credit deduction logic (same pattern as deduct_credits)
-  v_remaining := v_org.credits_total - v_org.credits_used;
-
-  IF v_remaining >= v_total_cost THEN
-    v_from_regular := v_total_cost;
-  ELSIF v_org.recharge_limit IS NOT NULL THEN
-    v_from_regular := GREATEST(v_remaining, 0);
-    v_from_recharge := v_total_cost - v_from_regular;
-    v_recharge_remaining := v_org.recharge_limit - v_org.recharge_used;
-
-    IF v_from_recharge > v_recharge_remaining THEN
-      RETURN jsonb_build_object('success', false, 'error', 'Insufficient credits. This campaign requires ' || v_total_cost || ' credits.');
+  -- Deduct via per-feature budget system (handles PAyG vs subscription plans internally)
+  DECLARE
+    v_budget_result jsonb;
+  BEGIN
+    v_budget_result := private.check_and_deduct_feature_budget(
+      v_org.id, 'marketing_sms', v_total_cost,
+      'Marketing campaign: ' || LEFT(COALESCE(v_campaign.ai_criteria, 'Structured filters'), 100)
+    );
+    IF NOT (v_budget_result->>'success')::boolean THEN
+      RETURN jsonb_build_object('success', false, 'error',
+        COALESCE(v_budget_result->>'error', 'Insufficient marketing SMS budget. This campaign requires ' || v_recipient_count || ' SMS.'));
     END IF;
-  ELSE
-    RETURN jsonb_build_object('success', false, 'error', 'Insufficient credits. This campaign requires ' || v_total_cost || ' credits.');
-  END IF;
-
-  -- Deduct credits
-  UPDATE public.organizations
-  SET credits_used = credits_used + v_from_regular,
-      recharge_used = recharge_used + v_from_recharge
-  WHERE id = v_org.id;
-
-  -- Log credit deduction
-  INSERT INTO public.credits_log (org_id, visit_id, credits_amount, credit_type, description)
-  VALUES (
-    v_org.id,
-    NULL,
-    -v_total_cost,
-    'marketing_sms',
-    'Marketing campaign: ' || LEFT(COALESCE(v_campaign.ai_criteria, 'Structured filters'), 100)
-  );
+  END;
 
   -- Create sms_log entries and link to recipients
   FOR v_rec IN

@@ -1,0 +1,160 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.check_and_deduct_feature_budget(
+  p_org_id uuid,
+  p_feature text,
+  p_amount numeric,
+  p_description text DEFAULT NULL,
+  p_visit_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+  v_cap numeric;
+  v_net_usage numeric;
+  v_topup record;
+BEGIN
+  -- Lock org row (serializes ALL feature deductions for this org)
+  SELECT subscription_plan, billing_cycle_start
+  INTO v_org
+  FROM public.organizations
+  WHERE id = p_org_id
+  FOR UPDATE;
+
+  IF v_org IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  -- PAyG and trials: use existing credits_total/credits_used system
+  IF v_org.subscription_plan IN ('pay_as_you_go', 'standard_trial', 'premium_trial') THEN
+    DECLARE
+      v_remaining numeric;
+    BEGIN
+      SELECT credits_total - credits_used INTO v_remaining
+      FROM public.organizations WHERE id = p_org_id;
+
+      IF v_remaining < p_amount THEN
+        RETURN jsonb_build_object('success', false, 'error', 'no_credits');
+      END IF;
+
+      UPDATE public.organizations
+      SET credits_used = credits_used + p_amount
+      WHERE id = p_org_id;
+
+      INSERT INTO public.credits_log (org_id, credits_amount, credit_type, description)
+      VALUES (p_org_id, -p_amount, p_feature, COALESCE(p_description, p_feature));
+
+      RETURN jsonb_build_object('success', true, 'source', 'credits');
+    END;
+  END IF;
+
+  -- Subscription plans: per-feature budget check
+
+  -- Compute included cap for this feature based on plan
+  CASE v_org.subscription_plan
+    WHEN 'starter' THEN
+      CASE p_feature
+        WHEN 'marketing_sms' THEN v_cap := 10;
+        WHEN 'marketing_scan' THEN v_cap := 10;
+        WHEN 'premium_ai' THEN v_cap := 3.5;  -- 1 conversation at $3.50
+        ELSE v_cap := 0;
+      END CASE;
+    WHEN 'professional' THEN
+      CASE p_feature
+        WHEN 'marketing_sms' THEN v_cap := 50;
+        WHEN 'marketing_scan' THEN v_cap := 50;
+        WHEN 'premium_ai' THEN v_cap := 15;  -- 5 conversations at $3.00
+        ELSE v_cap := 0;
+      END CASE;
+    WHEN 'business' THEN
+      CASE p_feature
+        WHEN 'marketing_sms' THEN v_cap := 100;
+        WHEN 'marketing_scan' THEN v_cap := 100;
+        WHEN 'premium_ai' THEN v_cap := 62.5;  -- 25 conversations at $2.50
+        ELSE v_cap := 0;
+      END CASE;
+    WHEN 'enterprise' THEN
+      -- Enterprise: generous caps (admin-managed)
+      v_cap := 10000;
+    ELSE
+      v_cap := 0;
+  END CASE;
+
+  -- Adjust Premium AI cost per plan (subscription plans get discounted rates)
+  IF p_feature = 'premium_ai' THEN
+    CASE v_org.subscription_plan
+      WHEN 'starter' THEN p_amount := 3.5;
+      WHEN 'professional' THEN p_amount := 3;
+      WHEN 'business' THEN p_amount := 2.5;
+      ELSE NULL; -- PAyG/trial/enterprise: keep original amount (4)
+    END CASE;
+  END IF;
+
+  -- Count net feature usage this cycle (deductions - refunds)
+  SELECT GREATEST(COALESCE(-SUM(credits_amount), 0), 0)
+  INTO v_net_usage
+  FROM public.credits_log
+  WHERE org_id = p_org_id
+    AND credit_type = p_feature
+    AND created_at >= COALESCE(v_org.billing_cycle_start, now() - interval '30 days');
+
+  -- Check 1: included budget
+  IF v_net_usage + p_amount <= v_cap THEN
+    INSERT INTO public.credits_log (org_id, visit_id, credits_amount, credit_type, description)
+    VALUES (p_org_id, p_visit_id, -p_amount, p_feature, COALESCE(p_description, p_feature));
+
+    RETURN jsonb_build_object('success', true, 'source', 'included');
+  END IF;
+
+  -- Check 2: feature-specific top-ups, then general (FIFO, oldest first)
+  SELECT id, credits - used AS remaining
+  INTO v_topup
+  FROM public.budget_topups
+  WHERE org_id = p_org_id
+    AND feature IN (p_feature, 'general')
+    AND credits - used >= p_amount
+  ORDER BY CASE WHEN feature = p_feature THEN 0 ELSE 1 END, created_at
+  LIMIT 1;
+
+  IF v_topup IS NOT NULL THEN
+    UPDATE public.budget_topups
+    SET used = used + p_amount
+    WHERE id = v_topup.id;
+
+    INSERT INTO public.credits_log (org_id, visit_id, credits_amount, credit_type, description)
+    VALUES (p_org_id, p_visit_id, -p_amount, p_feature, COALESCE(p_description, p_feature) || ' (top up)');
+
+    RETURN jsonb_build_object('success', true, 'source', 'topup');
+  END IF;
+
+  -- All exhausted
+  RETURN jsonb_build_object('success', false, 'error', 'budget_exhausted');
+END;
+$$;
+
+-- Public wrapper (service_role only)
+CREATE OR REPLACE FUNCTION public.check_and_deduct_feature_budget(
+  p_org_id uuid,
+  p_feature text,
+  p_amount numeric,
+  p_description text DEFAULT NULL,
+  p_visit_id uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.check_and_deduct_feature_budget(p_org_id, p_feature, p_amount, p_description, p_visit_id);
+END;
+$$;

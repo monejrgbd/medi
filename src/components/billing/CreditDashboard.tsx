@@ -65,6 +65,10 @@ export default function CreditDashboard() {
 
   if (!data) return null;
 
+  const isPAyG = data.subscription_plan === "pay_as_you_go";
+  const isTrial = data.subscription_plan?.includes("trial");
+  const isCreditsMode = isPAyG || isTrial;
+
   const usedPct = data.credits_total > 0 ? data.credits_used / data.credits_total : 0;
   const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference * (1 - usedPct);
@@ -72,6 +76,87 @@ export default function CreditDashboard() {
   const gaugeColor =
     usedPct >= 0.9 ? "#ef4444" : usedPct >= 0.7 ? "#f59e0b" : "#22c55e";
 
+  const planLabels: Record<string, { name: string; ai: string; msgLimit: number }> = {
+    starter: { name: "Starter", ai: "Standard AI", msgLimit: 20 },
+    professional: { name: "Professional", ai: "Advanced AI", msgLimit: 35 },
+    business: { name: "Business", ai: "Advanced + Premium AI", msgLimit: 50 },
+    enterprise: { name: "Enterprise", ai: "Custom", msgLimit: 50 },
+  };
+  const planInfo = planLabels[data.subscription_plan] || null;
+
+  // For subscription plans: show plan overview + per-feature usage
+  if (!isCreditsMode && planInfo) {
+    const featureCaps: Record<string, { sms: number; scan: number; opus: number; opusCost: number }> = {
+      starter: { sms: 100, scan: 10000, opus: 1, opusCost: 3.5 },
+      professional: { sms: 500, scan: 50000, opus: 5, opusCost: 3 },
+      business: { sms: 1000, scan: 100000, opus: 25, opusCost: 2.5 },
+      enterprise: { sms: 10000, scan: 1000000, opus: 1000, opusCost: 4 },
+    };
+    const caps = featureCaps[data.subscription_plan] || { sms: 0, scan: 0, opus: 0 };
+    const fu = (data as unknown as { feature_usage?: { sms_used: number; scan_used: number; opus_used: number } }).feature_usage;
+    const smsUsed = Math.round((fu?.sms_used || 0) / 0.1); // credits → SMS count
+    const scanUsed = Math.round((fu?.scan_used || 0) * 1000); // credits → patient count
+    const opusCost = caps.opusCost || 4;
+    const opusUsed = Math.round((fu?.opus_used || 0) / opusCost); // credits → conversation count
+    const topupsRemaining = Math.round((data as unknown as { topups_remaining?: number }).topups_remaining || 0);
+
+    function UsageBar({ label, used, cap }: { label: string; used: number; cap: number }) {
+      if (cap === 0) return null;
+      const pct = Math.min((used / cap) * 100, 100);
+      const color = pct >= 90 ? "bg-red-500" : pct >= 70 ? "bg-amber-500" : "bg-hilt-blue";
+      return (
+        <div>
+          <div className="flex justify-between text-xs mb-1">
+            <span className="text-slate">{label}</span>
+            <span className="text-ink font-medium">{used.toLocaleString()} / {cap.toLocaleString()}</span>
+          </div>
+          <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="rounded-xl border border-gray-100 bg-white p-6">
+        <h2 className="text-lg font-semibold text-ink mb-4">Your Plan</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+          <div className="rounded-lg bg-blue-50 p-3">
+            <p className="text-xs text-slate">Plan</p>
+            <p className="text-lg font-bold text-ink">{planInfo.name}</p>
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-hilt-blue">
+              {planInfo.ai}
+            </span>
+          </div>
+          <div className="rounded-lg bg-green-50 p-3">
+            <p className="text-xs text-slate">AI Screening</p>
+            <p className="text-lg font-bold text-green-700">Unlimited</p>
+            <p className="text-xs text-slate">Up to {planInfo.msgLimit} messages per conversation</p>
+          </div>
+          <div className="rounded-lg bg-snow p-3">
+            <p className="text-xs text-slate">Top Ups</p>
+            <p className="text-lg font-bold text-ink">{topupsRemaining}</p>
+            <p className="text-xs text-slate">remaining (works for any service)</p>
+          </div>
+        </div>
+
+        <h3 className="text-sm font-medium text-ink mb-3">Marketing Budget Usage</h3>
+        <div className="space-y-3">
+          <UsageBar label="Marketing SMS" used={smsUsed} cap={caps.sms} />
+          <UsageBar label="AI Patient Scans" used={scanUsed} cap={caps.scan} />
+          {caps.opus > 0 && <UsageBar label="Premium AI Conversations" used={opusUsed} cap={caps.opus} />}
+        </div>
+
+        {data.billing_cycle_start && (
+          <p className="text-xs text-slate mt-3">
+            Cycle started {new Date(data.billing_cycle_start).toLocaleDateString()}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // PAyG / Trial: show credit gauge (existing behavior)
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-6">
       <h2 className="text-lg font-semibold text-ink mb-4">Credit Usage</h2>

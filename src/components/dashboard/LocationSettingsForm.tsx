@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { updateLocation, uploadLocationLogo } from "@/app/(dashboard)/d/_actions/locations";
 import { ALLOWED_SPECIALTIES } from "@/lib/constants";
+import { useRole } from "@/contexts/RoleContext";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { Upload, Loader2 } from "lucide-react";
 
@@ -74,6 +75,8 @@ export default function LocationSettingsForm({
   location: LocationData;
 }) {
   const router = useRouter();
+  const { org } = useRole();
+  const isBusiness = org?.subscription_plan === "business" || org?.subscription_plan === "enterprise";
   const [form, setForm] = useState({
     name: location.name,
     address: location.address || "",
@@ -281,17 +284,27 @@ export default function LocationSettingsForm({
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">AI Model</label>
-          <select
-            value={form.aiModel}
-            onChange={(e) => update("aiModel", e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-          >
-            <option value="standard">Standard</option>
-            <option value="advanced">Advanced</option>
-          </select>
-        </div>
+        {(() => {
+          const plan = org?.subscription_plan;
+          const defaultLabel = plan === "starter" ? "Standard AI (included)" : "Advanced AI (included)";
+          const tasteNote = plan === "starter" ? "1 free/month" : plan === "professional" ? "5 free/month" : "";
+          const premiumLabel = isBusiness
+            ? "Premium AI (4 credits per conversation)"
+            : `Premium AI (${tasteNote}, then 4 credits each)`;
+          return (
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">AI Model</label>
+              <select
+                value={form.aiModel}
+                onChange={(e) => update("aiModel", e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+              >
+                <option value="standard">{defaultLabel}</option>
+                <option value="advanced">{premiumLabel}</option>
+              </select>
+            </div>
+          );
+        })()}
 
         <div>
           <label className="block text-sm font-medium text-ink mb-1">Display Format</label>

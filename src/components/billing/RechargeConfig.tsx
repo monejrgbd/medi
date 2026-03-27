@@ -143,14 +143,16 @@ export default function RechargeConfig({
           <p className="text-xs text-slate">
             {isPAyG
               ? "Credits are added automatically at $1 each up to your recharge limit. Unused credits expire every 30 days."
-              : "When your plan credits run out, screening continues at $1 per credit up to your recharge limit. Resets each billing cycle."}
+              : "When your marketing budget runs out, additional marketing actions are covered at $1 each up to your recharge limit. Resets each billing cycle."}
           </p>
         </>
       )}
 
       {!enabled && (
         <p className="text-xs text-slate">
-          Enable auto recharge to keep screening active when credits run out. Credits are billed at $1 each.
+          {isPAyG
+            ? "Enable auto recharge to keep screening active when credits run out. Credits are billed at $1 each."
+            : "Enable auto recharge to keep marketing running when your included budget runs out. Billed at $1 each."}
         </p>
       )}
     </div>

@@ -8,6 +8,7 @@ import {
   type ReceptionistNotification,
 } from "@/hooks/useReceptionistRealtime";
 import { unlockAudio } from "@/lib/notificationSound";
+import { useRole } from "@/contexts/RoleContext";
 import {
   fetchNotificationPreference,
   toggleNotificationSound,
@@ -148,6 +149,7 @@ export default function ReceptionistDashboard({
   aiAutoSkipped = false,
 }: ReceptionistDashboardProps) {
   const router = useRouter();
+  const { org } = useRole();
   const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
   const [pending, setPending] = useState<PendingVisit[]>(
     demoMode ? (demoVisitId ? initialPending.filter((p) => p.visit_id === demoVisitId) : []) : initialPending
@@ -552,6 +554,7 @@ export default function ReceptionistDashboard({
           <ApprovalQueue
             pending={pending}
             orgId={orgId}
+            subscriptionPlan={org?.subscription_plan}
             onActionComplete={handleApprovalComplete}
             aiAutoSkipped={aiAutoSkipped}
           />

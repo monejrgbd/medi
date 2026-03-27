@@ -4,6 +4,49 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { stripHtml } from "@/lib/utils";
 import { requireAuth } from "@/lib/auth";
+import { PROVIDER_ROLES } from "@/lib/constants";
+
+const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || "https://api-m.paypal.com";
+
+async function reviseSubscriptionQuantity(orgId: string) {
+  try {
+    const supabase = await createClient();
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("paypal_subscription_id")
+      .eq("id", orgId)
+      .single();
+    if (!org?.paypal_subscription_id) return;
+
+    // Count active providers (doctors + nurses) via RPC to bypass RLS
+    const { data: countResult } = await supabase.rpc("count_active_providers", { p_org_id: orgId });
+    const providerCount = typeof countResult === "number" ? countResult : 0;
+
+    // quantity = 1 (owner) + provider count
+    const quantity = providerCount + 1;
+
+    if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) return;
+
+    const auth = Buffer.from(
+      `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+    ).toString("base64");
+
+    const tokenRes = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+      method: "POST",
+      headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: "grant_type=client_credentials",
+    });
+    const tokenData = await tokenRes.json();
+
+    await fetch(`${PAYPAL_API_BASE}/v1/billing/subscriptions/${org.paypal_subscription_id}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${tokenData.access_token}`, "Content-Type": "application/json" },
+      body: JSON.stringify([{ op: "replace", path: "/quantity", value: String(quantity) }]),
+    });
+  } catch (err) {
+    console.error("PayPal quantity revision failed:", err);
+  }
+}
 
 export async function createStaffUser(formData: {
   orgId: string;
@@ -51,11 +94,16 @@ export async function createStaffUser(formData: {
   }
   if (data && !data.success) return { success: false, error: data.error };
 
+  // Revise PayPal quantity if a provider role was assigned
+  if (formData.roles.some((r) => (PROVIDER_ROLES as readonly string[]).includes(r))) {
+    reviseSubscriptionQuantity(formData.orgId).catch(() => {});
+  }
+
   revalidatePath("/d/owner");
   return { success: true, staffUserId: data?.staff_user_id };
 }
 
-export async function deactivateStaff(staffUserId: string) {
+export async function deactivateStaff(staffUserId: string, orgId?: string) {
   await requireAuth();
   const supabase = await createClient();
 
@@ -66,11 +114,13 @@ export async function deactivateStaff(staffUserId: string) {
   if (error) return { success: false, error: "Failed to deactivate staff" };
   if (data && !data.success) return { success: false, error: data.error };
 
+  if (orgId) reviseSubscriptionQuantity(orgId).catch(() => {});
+
   revalidatePath("/d/owner");
   return { success: true };
 }
 
-export async function deleteStaff(staffUserId: string) {
+export async function deleteStaff(staffUserId: string, orgId?: string) {
   await requireAuth();
   const supabase = await createClient();
 
@@ -80,6 +130,8 @@ export async function deleteStaff(staffUserId: string) {
 
   if (error) return { success: false, error: "Failed to delete staff" };
   if (data && !data.success) return { success: false, error: data.error };
+
+  if (orgId) reviseSubscriptionQuantity(orgId).catch(() => {});
 
   revalidatePath("/d/owner");
   return { success: true };

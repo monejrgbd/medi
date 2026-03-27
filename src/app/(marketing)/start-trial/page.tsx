@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CheckCircle } from "lucide-react";
 import ContactLink from "@/components/marketing/ContactLink";
 
 export const metadata = {
@@ -8,15 +7,6 @@ export const metadata = {
 };
 
 export default function StartTrialPage() {
-  const features = [
-    "AI patient pre-screening",
-    "130+ language support",
-    "Real-time doctor dashboard",
-    "SMS notifications & summaries",
-    "Referral management",
-    "Analytics & reporting",
-  ];
-
   return (
     <div className="mx-auto max-w-3xl px-6 pt-24 pb-20 lg:pt-32">
       <div className="text-center mb-12">
@@ -35,20 +25,12 @@ export default function StartTrialPage() {
           <p className="mt-1 text-3xl font-bold text-ink">
             $20 <span className="text-base font-normal text-slate">in credits</span>
           </p>
-          <p className="text-sm text-slate mt-1">14-day trial</p>
-
-          <ul className="mt-6 space-y-2.5">
-            {features.map((f) => (
-              <li key={f} className="flex items-center gap-2 text-sm text-ink">
-                <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                {f}
-              </li>
-            ))}
-          </ul>
+          <p className="text-sm text-slate mt-1">14 day trial</p>
+          <p className="text-xs text-ash mt-2">Credits work like having no plan (pay as you go). Use them for AI intake, diagnostics, marketing, and more.</p>
 
           <Link
             href="/signup"
-            className="mt-6 block rounded-lg bg-hilt-blue py-3 text-center text-sm font-semibold text-white shadow-md shadow-hilt-blue/20 transition-all hover:shadow-lg hover:-translate-y-0.5"
+            className="mt-4 block rounded-lg bg-hilt-blue py-3 text-center text-sm font-semibold text-white shadow-md shadow-hilt-blue/20 transition-all hover:shadow-lg hover:-translate-y-0.5"
           >
             Start Standard Trial
           </Link>
@@ -63,20 +45,8 @@ export default function StartTrialPage() {
           <p className="mt-1 text-3xl font-bold text-ink">
             $200 <span className="text-base font-normal text-slate">in credits</span>
           </p>
-          <p className="text-sm text-slate mt-1">30-day trial</p>
-
-          <ul className="mt-6 space-y-2.5">
-            {features.map((f) => (
-              <li key={f} className="flex items-center gap-2 text-sm text-ink">
-                <CheckCircle className="w-4 h-4 text-green-500 shrink-0" />
-                {f}
-              </li>
-            ))}
-            <li className="flex items-center gap-2 text-sm font-medium text-hilt-blue">
-              <CheckCircle className="w-4 h-4 text-hilt-blue shrink-0" />
-              10x more credits to evaluate
-            </li>
-          </ul>
+          <p className="text-sm text-slate mt-1">30 day trial</p>
+          <p className="text-xs text-ash mt-2">Credits work like having no plan (pay as you go). Use them for AI intake, diagnostics, marketing, and more.</p>
 
           <ContactLink
             className="mt-6 block rounded-lg border-2 border-hilt-blue py-3 text-center text-sm font-semibold text-hilt-blue transition-all hover:bg-hilt-blue hover:text-white"

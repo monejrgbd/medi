@@ -1,20 +1,31 @@
+// Per-provider pricing with AI model differentiation
+export const PLAN_CONFIG = {
+  starter:      { ai: "haiku" as const,  price: 79,  annual: 63,  credits: 20,  label: "Starter" },
+  professional: { ai: "sonnet" as const, price: 149, annual: 119, credits: 100, label: "Professional" },
+  business:     { ai: "sonnet" as const, price: 249, annual: 199, credits: 300, label: "Business" },
+} as const;
+
+export const PROVIDER_ROLES = ["doctor", "nurse"] as const;
+export const ADMIN_ROLES = ["receptionist", "manager", "marketer", "reviews"] as const;
+
+// Legacy aliases (used by existing components until migrated)
 export const PLAN_CREDITS: Record<string, number> = {
-  starter: 125,
-  professional: 600,
-  business: 1800,
+  starter: PLAN_CONFIG.starter.credits,
+  professional: PLAN_CONFIG.professional.credits,
+  business: PLAN_CONFIG.business.credits,
   pay_as_you_go: 0,
 };
 
 export const PLAN_PRICING: Record<string, number> = {
-  starter: 99,
-  professional: 349,
-  business: 899,
+  starter: PLAN_CONFIG.starter.price,
+  professional: PLAN_CONFIG.professional.price,
+  business: PLAN_CONFIG.business.price,
 };
 
 export const PLAN_ANNUAL_PRICING: Record<string, number> = {
-  starter: Math.round(99 * 12 * 0.8),     // $950/yr ($79.17/mo)
-  professional: Math.round(349 * 12 * 0.8), // $3,350/yr ($279.17/mo)
-  business: Math.round(899 * 12 * 0.8),     // $8,630/yr ($719.17/mo)
+  starter: Math.round(PLAN_CONFIG.starter.price * 12 * 0.8),
+  professional: Math.round(PLAN_CONFIG.professional.price * 12 * 0.8),
+  business: Math.round(PLAN_CONFIG.business.price * 12 * 0.8),
 };
 
 export const REVIEW_PLATFORMS = [
@@ -65,7 +76,7 @@ export const INJECTION_SITES = [
   'left_gluteal', 'right_gluteal', 'subcutaneous', 'intranasal', 'oral',
 ] as const;
 
-export const MARKETING_SMS_CREDIT_COST = 0.3;
+export const MARKETING_SMS_CREDIT_COST = 0.1;
 
 export const MARKETING_SCAN_EXAMPLES = [
   "Patients with diabetes or high blood sugar",

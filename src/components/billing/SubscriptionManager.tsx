@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { PLAN_CREDITS, PLAN_PRICING, PLAN_ANNUAL_PRICING } from "@/lib/constants";
+import { PLAN_CONFIG, PLAN_CREDITS, PLAN_PRICING, PLAN_ANNUAL_PRICING } from "@/lib/constants";
 import { toast } from "sonner";
 
 declare global {
@@ -27,17 +27,20 @@ const PLANS = [
   {
     key: "starter",
     name: "Starter",
-    description: "For small practices just getting started",
+    description: "Standard AI, unlimited screening",
+    aiLabel: "Standard AI",
   },
   {
     key: "professional",
     name: "Professional",
-    description: "For growing practices with moderate volume",
+    description: "Advanced AI, unlimited screening",
+    aiLabel: "Advanced AI",
   },
   {
     key: "business",
     name: "Business",
-    description: "For high volume and multi location practices",
+    description: "Advanced + Premium AI, embeddable widget",
+    aiLabel: "Advanced + Premium AI",
   },
 ];
 
@@ -218,17 +221,16 @@ export default function SubscriptionManager({
               <h3 className="font-semibold text-ink">{plan.name}</h3>
               <p className="text-2xl font-bold text-ink mt-1">
                 ${displayPrice}
-                <span className="text-sm font-normal text-slate">/mo</span>
+                <span className="text-sm font-normal text-slate">/provider/mo</span>
               </p>
+              <p className="text-xs text-slate">{plan.aiLabel} · {PLAN_CREDITS[plan.key]} credits/mo</p>
               {billing === "annual" && (
                 <p className="text-xs text-green-600 font-medium">
-                  ${PLAN_ANNUAL_PRICING[plan.key]}/yr (save ${monthlyPrice * 12 - PLAN_ANNUAL_PRICING[plan.key]}/yr)
+                  Save ${monthlyPrice * 12 - PLAN_ANNUAL_PRICING[plan.key]}/yr
                 </p>
               )}
-              <p className="text-xs text-slate mt-1">
-                {PLAN_CREDITS[plan.key]} credits/month
-              </p>
               <p className="text-xs text-slate mt-2">{plan.description}</p>
+              <p className="text-xs text-slate">Admin staff included free</p>
 
               <div className="mt-3">
                 {isActive ? (

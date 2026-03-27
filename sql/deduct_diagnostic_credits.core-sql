@@ -72,6 +72,70 @@ BEGIN
   SET credits_charged = credits_charged + v_amount
   WHERE id = p_visit_id;
 
+  -- Check if credits are running low (>= 80% used) and alert owner
+  DECLARE
+    v_updated_used numeric;
+    v_credits_total numeric;
+    v_recharge_used_now numeric;
+    v_recharge_limit_now int;
+    v_effective_total numeric;
+    v_effective_used numeric;
+    v_usage_pct numeric;
+    v_owner_email text;
+    v_org_name text;
+    v_last_alert timestamptz;
+    v_billing_start timestamptz;
+    v_unsub_token text;
+    v_edge_url text;
+  BEGIN
+    SELECT credits_used, credits_total, recharge_used, recharge_limit,
+           name, last_credit_alert_at, billing_cycle_start
+    INTO v_updated_used, v_credits_total, v_recharge_used_now, v_recharge_limit_now,
+         v_org_name, v_last_alert, v_billing_start
+    FROM public.organizations WHERE id = p_org_id;
+
+    -- Use effective capacity (regular + recharge) for alert calculation
+    v_effective_total := v_credits_total + COALESCE(v_recharge_limit_now, 0);
+    v_effective_used := v_updated_used + v_recharge_used_now;
+    v_usage_pct := v_effective_used / NULLIF(v_effective_total, 0);
+
+    IF v_usage_pct >= 0.80 THEN
+      -- Only alert once per billing cycle
+      IF v_last_alert IS NULL OR v_last_alert < COALESCE(v_billing_start, now() - interval '30 days') THEN
+        SELECT email INTO v_owner_email
+        FROM auth.users
+        WHERE id = (SELECT owner_id FROM public.organizations WHERE id = p_org_id);
+
+        IF v_owner_email IS NOT NULL THEN
+          v_unsub_token := private.generate_unsubscribe_token(v_owner_email, 'credit_alerts');
+          SELECT decrypted_secret INTO v_edge_url
+          FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+          INSERT INTO public.pending_emails (to_email, subject, html_body, priority, metadata)
+          VALUES (
+            v_owner_email,
+            'Credits Running Low, ' || v_org_name,
+            '<h2>Credits Alert</h2><p>Your organization <strong>' || replace(replace(v_org_name, '&', '&amp;'), '<', '&lt;') ||
+              '</strong> has used ' || round(v_usage_pct * 100) || '% of its available credits this cycle.</p>' ||
+              '<p>Please review your usage in the billing dashboard to ensure uninterrupted AI pre-screening.</p>' ||
+              CASE WHEN v_unsub_token IS NOT NULL AND v_edge_url IS NOT NULL
+                THEN '<p style="color:#94a3b8;font-size:12px;margin-top:24px;"><a href="' || v_edge_url || '/unsubscribe?pref=' || v_unsub_token || '" style="color:#94a3b8;">Unsubscribe from credit alerts</a></p>'
+                ELSE ''
+              END,
+            2,
+            jsonb_build_object('type', 'credit_alert', 'pref_key', 'credit_alerts', 'org_id', p_org_id)
+          );
+        END IF;
+
+        UPDATE public.organizations
+        SET last_credit_alert_at = now()
+        WHERE id = p_org_id;
+      END IF;
+    END IF;
+  EXCEPTION WHEN undefined_column THEN
+    NULL;
+  END;
+
   RETURN jsonb_build_object('success', true, 'credits_deducted', v_amount);
 END;
 $$;

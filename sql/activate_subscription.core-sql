@@ -22,9 +22,9 @@ BEGIN
 
   -- Map plan to credit allocation
   CASE p_plan
-    WHEN 'starter' THEN v_allocation := 125;
-    WHEN 'professional' THEN v_allocation := 600;
-    WHEN 'business' THEN v_allocation := 1800;
+    WHEN 'starter' THEN v_allocation := 0;
+    WHEN 'professional' THEN v_allocation := 0;
+    WHEN 'business' THEN v_allocation := 0;
     WHEN 'pay_as_you_go' THEN v_allocation := 0;
   END CASE;
 

@@ -39,6 +39,25 @@ export async function purchaseOverageCredits(amount: number) {
   return data;
 }
 
+const VALID_FEATURES = ["marketing_sms", "marketing_scan", "premium_ai", "general"];
+
+export async function purchaseFeatureTopup(feature: string, credits: number) {
+  await requireAuth();
+
+  if (!VALID_FEATURES.includes(feature))
+    return { success: false, error: "Invalid feature" };
+  if (!Number.isInteger(credits) || credits < 1 || credits > 10000)
+    return { success: false, error: "Amount must be between 1 and 10000" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("purchase_feature_topup", {
+    p_feature: feature,
+    p_credits: credits,
+  });
+  if (error) return { success: false, error: error.message };
+  return data;
+}
+
 export async function toggleLocationAddon(
   locationId: string,
   addonType: string,

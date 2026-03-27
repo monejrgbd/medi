@@ -340,3 +340,18 @@ export async function fetchAuditTrail(
     next_cursor_id: data.next_cursor_id,
   };
 }
+
+export async function setVisitAiOverride(visitId: string, aiModel: string | null) {
+  await requireAuth();
+  if (!validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+  if (aiModel !== null && aiModel !== "standard" && aiModel !== "advanced")
+    return { success: false, error: "Invalid AI model" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_visit_ai_override", {
+    p_visit_id: visitId,
+    p_ai_model: aiModel,
+  });
+  if (error) return { success: false, error: error.message };
+  return data;
+}

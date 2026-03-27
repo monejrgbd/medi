@@ -35,7 +35,7 @@ BEGIN
   -- Look up visit with joins
   SELECT v.id, v.status, v.session_token, v.patient_id, v.location_id,
          v.org_id, v.has_previous_visits, v.created_at,
-         v.is_follow_up, v.follow_up_of
+         v.is_follow_up, v.follow_up_of, v.ai_model_override
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -91,10 +91,13 @@ BEGIN
     END IF;
   END IF;
 
-  -- Check credits
-  v_remaining := private.check_credits(v_visit.org_id);
-  IF v_remaining <= 0 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'no_credits');
+  -- Credit check: PAyG + trials only (they use credits_total/credits_used)
+  -- Subscription plans: no pre-check here. Per-feature budget check happens in deduct_credits on first message.
+  IF v_org.subscription_plan IN ('pay_as_you_go', 'standard_trial', 'premium_trial') THEN
+    v_remaining := private.check_credits(v_visit.org_id);
+    IF v_remaining <= 0 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'no_credits');
+    END IF;
   END IF;
 
   IF v_existing_messages > 0 THEN
@@ -111,7 +114,8 @@ BEGIN
       'location_name', v_location.name,
       'specialty', v_location.specialty,
       'org_name', v_org.name,
-      'ai_model', v_location.ai_model,
+      'ai_model', COALESCE(v_visit.ai_model_override, v_location.ai_model),
+      'subscription_plan', v_org.subscription_plan,
       'display_format', v_location.display_format,
       'already_initialized', true,
       'is_follow_up', COALESCE(v_visit.is_follow_up, false),
@@ -305,6 +309,7 @@ BEGIN
     'specialty', v_location.specialty,
     'org_name', v_org.name,
     'ai_model', v_location.ai_model,
+    'subscription_plan', v_org.subscription_plan,
     'display_format', v_location.display_format,
     'already_initialized', false,
     'is_follow_up', COALESCE(v_visit.is_follow_up, false),

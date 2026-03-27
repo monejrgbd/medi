@@ -139,7 +139,7 @@ Deno.serve(async (req) => {
     // Fetch visit + location data once (reused for credits + model selection)
     const { data: visitRow } = await supabase
       .from("visits")
-      .select("org_id, location_id")
+      .select("org_id, location_id, ai_model_override")
       .eq("id", visit_id)
       .single();
 
@@ -156,8 +156,31 @@ Deno.serve(async (req) => {
       .eq("id", visitRow.location_id)
       .single();
 
-    const aiModel = locationRow?.ai_model || "standard";
-    const messageLimit = locationRow?.ai_message_limit ?? 30;
+    // Visit-level override takes priority (receptionist can set per-patient)
+    const aiModel = visitRow?.ai_model_override || locationRow?.ai_model || "standard";
+
+    // Get subscription plan for model selection + message limit
+    const { data: orgRow } = await supabase
+      .from("organizations")
+      .select("subscription_plan")
+      .eq("id", visitRow.org_id)
+      .single();
+    const subscriptionPlan = orgRow?.subscription_plan || "starter";
+
+    // Message limit: per-location override (capped by plan max) > plan default > 30
+    const planMsgConfig: Record<string, { def: number; max: number }> = {
+      starter: { def: 20, max: 20 },
+      professional: { def: 35, max: 35 },
+      business: { def: 50, max: 50 },
+      enterprise: { def: 50, max: 50 },
+      pay_as_you_go: { def: 30, max: 50 },
+      standard_trial: { def: 30, max: 30 },
+      premium_trial: { def: 30, max: 50 },
+    };
+    const msgConfig = planMsgConfig[subscriptionPlan] ?? { def: 30, max: 30 };
+    const messageLimit = locationRow?.ai_message_limit
+      ? Math.min(locationRow.ai_message_limit, msgConfig.max)
+      : msgConfig.def;
 
     // Load conversation before storing message (for credit check + rate limit)
     const { data: convData } = await supabase.rpc("get_conversation", {
@@ -185,8 +208,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Credit deduction on first patient message — before storing to avoid dangling messages
-    if (existingPatientCount === 0) {
+    // Model selection based on subscription plan (must be before credit deduction)
+    let claudeModel: string;
+    let shouldDeductCredits = false;
+
+    if (subscriptionPlan === "starter" && aiModel !== "advanced") {
+      claudeModel = "claude-haiku-4-5-20251001";
+    } else if (subscriptionPlan === "starter" && aiModel === "advanced") {
+      // Premium AI taste: 1 conversation included
+      claudeModel = "claude-opus-4-20250514";
+      shouldDeductCredits = true;
+    } else if (subscriptionPlan === "professional" && aiModel === "advanced") {
+      // Premium AI taste: 5 conversations included
+      claudeModel = "claude-opus-4-20250514";
+      shouldDeductCredits = true;
+    } else if ((subscriptionPlan === "business" || subscriptionPlan === "enterprise") && aiModel === "advanced") {
+      claudeModel = "claude-opus-4-20250514";
+      shouldDeductCredits = subscriptionPlan === "business";
+    } else if (subscriptionPlan === "pay_as_you_go" || subscriptionPlan === "standard_trial" || subscriptionPlan === "premium_trial") {
+      claudeModel = aiModel === "advanced" ? "claude-opus-4-20250514" : "claude-sonnet-4-20250514";
+      shouldDeductCredits = true;
+    } else {
+      // professional (standard location), business (standard location), enterprise (standard)
+      claudeModel = subscriptionPlan === "starter" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-20250514";
+    }
+
+    // Credit deduction: only for PAyG, trials, and Business+Opus
+    if (shouldDeductCredits && existingPatientCount === 0) {
       const { data: creditResult } = await supabase.rpc("deduct_credits", {
         p_org_id: visitRow.org_id,
         p_visit_id: visit_id,
@@ -284,10 +332,6 @@ Deno.serve(async (req) => {
     if (messagesRemaining <= 4 && messagesRemaining >= 0) {
       systemPrompt += `\n\nURGENT PACING NOTICE: The patient has approximately ${messagesRemaining} messages remaining. If you have not yet covered current medications, known allergies, chronic conditions, or pets at home, ask about ALL remaining uncovered items in your NEXT response. Move toward wrapping up the conversation.`;
     }
-
-    const claudeModel = aiModel === "advanced"
-      ? "claude-opus-4-20250514"
-      : "claude-sonnet-4-20250514";
 
     // Call Claude API with streaming
     let claudeResponse: Response | null = null;

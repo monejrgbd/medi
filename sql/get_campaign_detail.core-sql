@@ -59,8 +59,8 @@ BEGIN
   JOIN public.patients p ON p.id = r.patient_id
   WHERE r.campaign_id = p_campaign_id;
 
-  -- Calculate credit cost preview: non-excluded pending recipients * 0.3
-  SELECT count(*) * 0.3 INTO v_credit_cost
+  -- Calculate credit cost preview: non-excluded pending recipients * 0.1
+  SELECT count(*) * 0.1 INTO v_credit_cost
   FROM public.sms_campaign_recipients
   WHERE campaign_id = p_campaign_id
     AND NOT excluded

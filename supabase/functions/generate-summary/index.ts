@@ -84,6 +84,14 @@ Deno.serve(async (req) => {
     const aiModel = locationRow?.ai_model || "standard";
     const displayFormat = locationRow?.display_format || "summary";
 
+    // Get subscription plan for model selection
+    const { data: orgRow } = await supabase
+      .from("organizations")
+      .select("subscription_plan")
+      .eq("id", visitRow.org_id)
+      .single();
+    const subscriptionPlan = orgRow?.subscription_plan || "starter";
+
     // Build the structured output prompt
     const includeStructuredCard = displayFormat === "structured_card";
 
@@ -117,8 +125,9 @@ Produce a JSON object with these fields:
 
 Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
 
-    // Single Claude API call for all outputs
-    const claudeModel = aiModel === "advanced"
+    // Summary model: Opus only when conversation also uses Opus (Business/Enterprise + advanced location)
+    const summaryUsesOpus = ["business", "enterprise", "pay_as_you_go", "standard_trial", "premium_trial"].includes(subscriptionPlan) && aiModel === "advanced";
+    const claudeModel = summaryUsesOpus
       ? "claude-opus-4-20250514"
       : "claude-sonnet-4-20250514";
 
@@ -270,13 +279,24 @@ Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
         .single();
 
       if (locDiag?.diagnostic_enabled) {
-        // Deduct 0.5 credits for diagnostic
-        const { data: deductResult } = await supabase.rpc("deduct_diagnostic_credits", {
-          p_org_id: visitRow.org_id,
-          p_visit_id: visit_id,
-        });
+        // PAYG + trials: charge 0.5 credits for diagnostic
+        const isPAyG = ["pay_as_you_go", "standard_trial", "premium_trial"].includes(subscriptionPlan);
+        let diagnosticAllowed = true;
 
-        if (deductResult?.success) {
+        if (isPAyG) {
+          const { data: diagCreditResult } = await supabase.rpc("deduct_diagnostic_credits", {
+            p_org_id: visitRow.org_id,
+            p_visit_id: visit_id,
+          });
+
+          if (!diagCreditResult?.success && !diagCreditResult?.already_deducted) {
+            console.error("Diagnostic credit deduction failed for visit:", visit_id, diagCreditResult?.error);
+            diagnosticAllowed = false;
+          }
+        }
+        // Subscription plans: diagnostic included (no charge)
+
+        if (diagnosticAllowed) {
           // Load full patient context for diagnostic
           const { data: patientCtx } = await supabase
             .from("patients")
@@ -345,7 +365,9 @@ Doctor reference only. Not shown to patients.`;
                   "anthropic-version": "2023-06-01",
                 },
                 body: JSON.stringify({
-                  model: "claude-opus-4-20250514",
+                  model: ["professional", "business", "enterprise", "pay_as_you_go", "standard_trial", "premium_trial"].includes(subscriptionPlan)
+                    ? "claude-opus-4-20250514"
+                    : "claude-sonnet-4-20250514",
                   max_tokens: 256,
                   messages: [{ role: "user", content: diagnosticPrompt }],
                 }),
@@ -371,7 +393,6 @@ Doctor reference only. Not shown to patients.`;
             console.error("Diagnostic Opus call failed for visit:", visit_id);
           }
         }
-        // If deduction failed (no_credits), silently skip diagnostic
       }
     } catch (diagErr) {
       console.error("Diagnostic generation error (non-blocking):", diagErr);

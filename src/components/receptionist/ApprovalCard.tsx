@@ -55,12 +55,14 @@ interface ApprovalCardProps {
   onVerifyPhone?: (visitId: string) => void;
   onConfirmReturning?: (visitId: string) => void;
   onCollisionResolved?: (visitId: string) => void;
+  onTogglePremiumAi?: (visitId: string) => void;
   approving: boolean;
   denying: boolean;
   verifying?: boolean;
   confirming?: boolean;
   showCollisionDialog?: boolean;
   aiAutoSkipped?: boolean;
+  premiumAi?: boolean;
 }
 
 export default function ApprovalCard({
@@ -70,12 +72,14 @@ export default function ApprovalCard({
   onDeny,
   onVerifyPhone,
   onConfirmReturning,
+  onTogglePremiumAi,
   approving,
   denying,
   verifying,
   confirming,
   showCollisionDialog,
   aiAutoSkipped,
+  premiumAi,
 }: ApprovalCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [similarPatients, setSimilarPatients] = useState<SimilarPatient[]>([]);
@@ -461,13 +465,31 @@ export default function ApprovalCard({
           </>
         ) : (
           // Default: standard approve/skip AI/deny + optional verify phone
+          <>
+          {onTogglePremiumAi && (
+            <button
+              onClick={() => onTogglePremiumAi(visit.visit_id)}
+              disabled={busy}
+              className={`mb-2 w-full rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                premiumAi
+                  ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
+                  : "bg-gray-50 text-slate hover:bg-gray-100"
+              }`}
+            >
+              {premiumAi ? "Premium AI enabled for this patient" : "Use Premium AI for this patient"}
+            </button>
+          )}
           <div className="flex gap-2">
             <button
               onClick={() => onApprove(visit.visit_id)}
               disabled={busy}
-              className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+              className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
+                premiumAi
+                  ? "bg-purple-600 hover:bg-purple-700"
+                  : "bg-green-600 hover:bg-green-700"
+              }`}
             >
-              {approving ? "Approving..." : "Approve"}
+              {approving ? "Approving..." : premiumAi ? "Approve (Premium AI)" : "Approve"}
             </button>
             {!aiAutoSkipped && (
               <button
@@ -486,6 +508,7 @@ export default function ApprovalCard({
               {denying ? "Denying..." : "Deny"}
             </button>
           </div>
+          </>
         )}
 
         {/* Secondary verify phone button for returning non-flagged patients */}

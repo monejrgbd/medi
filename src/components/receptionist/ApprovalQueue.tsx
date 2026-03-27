@@ -8,6 +8,7 @@ import {
   denyPatient,
   verifyPhonePrompt,
   confirmReturning,
+  setVisitAiOverride,
 } from "@/app/(dashboard)/d/_actions/receptionist";
 import { linkReferralToVisit } from "@/app/(dashboard)/d/_actions/referral";
 import ReferralAutoMatch from "./ReferralAutoMatch";
@@ -45,6 +46,7 @@ interface PendingVisit {
 interface ApprovalQueueProps {
   pending: PendingVisit[];
   orgId: string;
+  subscriptionPlan?: string;
   onActionComplete: (visitId: string, action: "approve" | "deny") => void;
   aiAutoSkipped?: boolean;
 }
@@ -52,12 +54,17 @@ interface ApprovalQueueProps {
 export default function ApprovalQueue({
   pending,
   orgId,
+  subscriptionPlan,
   onActionComplete,
   aiAutoSkipped,
 }: ApprovalQueueProps) {
   const [actionState, setActionState] = useState<
     Record<string, "approving" | "denying" | "verifying" | "confirming">
   >({});
+  const [premiumAiVisits, setPremiumAiVisits] = useState<Set<string>>(new Set());
+
+  // Plans that have Premium AI taste
+  const hasPremiumAi = ["starter", "professional", "business", "enterprise"].includes(subscriptionPlan || "");
   const [error, setError] = useState<string | null>(null);
   const [collisionDialogVisitId, setCollisionDialogVisitId] = useState<string | null>(null);
   const [referralMatchPending, setReferralMatchPending] = useState<{
@@ -97,6 +104,18 @@ export default function ApprovalQueue({
 
     setError(null);
     setActionState((prev) => ({ ...prev, [visitId]: "approving" }));
+
+    // Set Premium AI override BEFORE approval (so it's active when AI conversation starts)
+    if (premiumAiVisits.has(visitId)) {
+      const overrideResult = await setVisitAiOverride(visitId, "advanced");
+      if (!overrideResult?.success) {
+        setActionState((prev) => { const next = { ...prev }; delete next[visitId]; return next; });
+        setError(overrideResult?.error ?? "Premium AI not available. Budget may be exhausted.");
+        setPremiumAiVisits((prev) => { const next = new Set(prev); next.delete(visitId); return next; });
+        return;
+      }
+    }
+
     const result = await approvePatient(visitId, followUpInfo);
     setActionState((prev) => {
       const next = { ...prev };
@@ -104,6 +123,9 @@ export default function ApprovalQueue({
       return next;
     });
     if (result.success) {
+      if (premiumAiVisits.has(visitId)) {
+        setPremiumAiVisits((prev) => { const next = new Set(prev); next.delete(visitId); return next; });
+      }
       // If there was a confirmed referral link, do it now
       if (visit?.referral_match && referralMatchPending) {
         await linkReferralToVisit(visit.referral_match.referral_id, visitId);
@@ -243,6 +265,14 @@ export default function ApprovalQueue({
           verifying={actionState[visit.visit_id] === "verifying"}
           confirming={actionState[visit.visit_id] === "confirming"}
           aiAutoSkipped={aiAutoSkipped}
+          premiumAi={premiumAiVisits.has(visit.visit_id)}
+          onTogglePremiumAi={hasPremiumAi ? (visitId) => {
+            setPremiumAiVisits((prev) => {
+              const next = new Set(prev);
+              if (next.has(visitId)) next.delete(visitId); else next.add(visitId);
+              return next;
+            });
+          } : undefined}
         />
       ))}
       </div>

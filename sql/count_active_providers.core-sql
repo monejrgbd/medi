@@ -1,0 +1,27 @@
+-- Counts active staff users with doctor or nurse role assignments in an org
+-- Used by PayPal quantity revision
+CREATE OR REPLACE FUNCTION public.count_active_providers(
+  p_org_id uuid
+)
+RETURNS int
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_count int;
+BEGIN
+  SELECT COUNT(DISTINCT su.id) INTO v_count
+  FROM public.staff_users su
+  JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+  WHERE su.org_id = p_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false
+    AND sr.role IN ('doctor', 'nurse');
+
+  RETURN COALESCE(v_count, 0);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.count_active_providers(uuid) TO authenticated;
