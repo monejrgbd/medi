@@ -19,7 +19,9 @@ CREATE OR REPLACE FUNCTION private.update_location(
   p_ai_message_limit integer DEFAULT NULL,
   p_skip_ai boolean DEFAULT NULL,
   p_review_sms_enabled boolean DEFAULT NULL,
-  p_diagnostic_enabled boolean DEFAULT NULL
+  p_diagnostic_enabled boolean DEFAULT NULL,
+  p_queue_type text DEFAULT NULL,
+  p_raven_api_key text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -84,7 +86,9 @@ BEGIN
     ai_message_limit = CASE WHEN p_ai_message_limit = 0 THEN NULL WHEN p_ai_message_limit IS NOT NULL THEN p_ai_message_limit ELSE ai_message_limit END,
     skip_ai = COALESCE(p_skip_ai, skip_ai),
     review_sms_enabled = COALESCE(p_review_sms_enabled, review_sms_enabled),
-    diagnostic_enabled = COALESCE(p_diagnostic_enabled, diagnostic_enabled)
+    diagnostic_enabled = COALESCE(p_diagnostic_enabled, diagnostic_enabled),
+    queue_type = COALESCE(p_queue_type, queue_type),
+    raven_api_key = CASE WHEN p_raven_api_key IS NOT NULL THEN NULLIF(trim(p_raven_api_key), '') ELSE raven_api_key END
   WHERE id = p_location_id;
 
   -- Auto-initialize org vitals when vitals_enabled is turned on
@@ -99,9 +103,10 @@ END;
 $$;
 
 -- Public wrapper
--- Drop old signature before creating new one (parameter count changed)
+-- Drop old signatures before creating new one (parameter count changed)
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer);
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean);
+DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean);
 
 CREATE OR REPLACE FUNCTION public.update_location(
   p_location_id uuid,
@@ -122,7 +127,9 @@ CREATE OR REPLACE FUNCTION public.update_location(
   p_ai_message_limit integer DEFAULT NULL,
   p_skip_ai boolean DEFAULT NULL,
   p_review_sms_enabled boolean DEFAULT NULL,
-  p_diagnostic_enabled boolean DEFAULT NULL
+  p_diagnostic_enabled boolean DEFAULT NULL,
+  p_queue_type text DEFAULT NULL,
+  p_raven_api_key text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -133,9 +140,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url, p_nurse_enabled, p_vaccines_enabled, p_vitals_enabled, p_ai_custom_instructions, p_ai_message_limit, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled);
+  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url, p_nurse_enabled, p_vaccines_enabled, p_vitals_enabled, p_ai_custom_instructions, p_ai_message_limit, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled, p_queue_type, p_raven_api_key);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean) FROM anon;
-GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text) TO authenticated;

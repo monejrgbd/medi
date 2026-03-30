@@ -76,6 +76,14 @@ export const INJECTION_SITES = [
   'left_gluteal', 'right_gluteal', 'subcutaneous', 'intranasal', 'oral',
 ] as const;
 
+export const QUEUE_TYPES = [
+  { value: "fifo", label: "FIFO", description: "Strict arrival order. Every patient waits their turn.", requiresRaven: false },
+  { value: "priority", label: "Priority", description: "AI detects urgency and moves critical patients ahead.", requiresRaven: false },
+  { value: "appointment_priority", label: "Appointment then Priority", description: "Scheduled patients first, then priority for walk ins.", requiresRaven: true },
+  { value: "appointment_fifo", label: "Appointment then FIFO", description: "Scheduled patients first, then arrival order for walk ins.", requiresRaven: true },
+  { value: "critical_appointment_fifo", label: "Critical, Appointment, then FIFO", description: "AI flagged critical patients first, then appointments, then arrival order.", requiresRaven: true },
+] as const;
+
 export const MARKETING_SMS_CREDIT_COST = 0.1;
 
 export const MARKETING_SCAN_EXAMPLES = [

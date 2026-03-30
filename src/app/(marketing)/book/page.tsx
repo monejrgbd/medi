@@ -41,7 +41,7 @@ export default function BookPage() {
               Choose a 15-minute slot that works for you. We&apos;ll send a confirmation with a meeting link.
             </p>
             <a
-              href="https://calendar.google.com/calendar/appointments/PLACEHOLDER"
+              href="https://cal.com/102937474/hilt-health-meeting"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"

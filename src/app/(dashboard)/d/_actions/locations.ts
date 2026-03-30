@@ -17,6 +17,8 @@ export async function createLocation(formData: {
   skipAi?: boolean;
   reviewSmsEnabled?: boolean;
   diagnosticEnabled?: boolean;
+  queueType?: string;
+  ravenApiKey?: string;
 }) {
   await requireAuth();
   const name = stripHtml(formData.name).slice(0, 100);
@@ -38,6 +40,8 @@ export async function createLocation(formData: {
     p_skip_ai: formData.skipAi ?? false,
     p_review_sms_enabled: formData.reviewSmsEnabled ?? true,
     p_diagnostic_enabled: formData.diagnosticEnabled ?? true,
+    p_queue_type: formData.queueType ?? "fifo",
+    p_raven_api_key: formData.ravenApiKey || null,
   });
 
   if (error) return { success: false, error: "Failed to create location" };
@@ -67,6 +71,8 @@ export async function updateLocation(formData: {
   skipAi?: boolean;
   reviewSmsEnabled?: boolean;
   diagnosticEnabled?: boolean;
+  queueType?: string;
+  ravenApiKey?: string;
 }) {
   await requireAuth();
   const supabase = await createClient();
@@ -97,6 +103,8 @@ export async function updateLocation(formData: {
   if (formData.skipAi !== undefined) params.p_skip_ai = formData.skipAi;
   if (formData.reviewSmsEnabled !== undefined) params.p_review_sms_enabled = formData.reviewSmsEnabled;
   if (formData.diagnosticEnabled !== undefined) params.p_diagnostic_enabled = formData.diagnosticEnabled;
+  if (formData.queueType !== undefined) params.p_queue_type = formData.queueType;
+  if (formData.ravenApiKey !== undefined) params.p_raven_api_key = formData.ravenApiKey;
 
   const { data, error } = await supabase.rpc("update_location", params);
 

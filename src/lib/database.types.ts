@@ -118,6 +118,41 @@ export type Database = {
           },
         ]
       }
+      budget_topups: {
+        Row: {
+          created_at: string | null
+          credits: number
+          feature: string
+          id: string
+          org_id: string
+          used: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          credits: number
+          feature: string
+          id?: string
+          org_id: string
+          used?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          credits?: number
+          feature?: string
+          id?: string
+          org_id?: string
+          used?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_topups_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_prospects: {
         Row: {
           address: string | null
@@ -486,6 +521,8 @@ export type Database = {
           operating_hours: Json | null
           org_id: string
           qr_code_url: string | null
+          queue_type: string
+          raven_api_key: string | null
           referral_email: string | null
           review_sms_enabled: boolean | null
           skip_ai: boolean | null
@@ -511,6 +548,8 @@ export type Database = {
           operating_hours?: Json | null
           org_id: string
           qr_code_url?: string | null
+          queue_type?: string
+          raven_api_key?: string | null
           referral_email?: string | null
           review_sms_enabled?: boolean | null
           skip_ai?: boolean | null
@@ -536,6 +575,8 @@ export type Database = {
           operating_hours?: Json | null
           org_id?: string
           qr_code_url?: string | null
+          queue_type?: string
+          raven_api_key?: string | null
           referral_email?: string | null
           review_sms_enabled?: boolean | null
           skip_ai?: boolean | null
@@ -2242,6 +2283,7 @@ export type Database = {
         Row: {
           ai_completed_at: string | null
           ai_diagnostic: string | null
+          ai_model_override: string | null
           ai_model_used: string | null
           ai_skipped: boolean | null
           ai_started_at: string | null
@@ -2289,6 +2331,7 @@ export type Database = {
         Insert: {
           ai_completed_at?: string | null
           ai_diagnostic?: string | null
+          ai_model_override?: string | null
           ai_model_used?: string | null
           ai_skipped?: boolean | null
           ai_started_at?: string | null
@@ -2336,6 +2379,7 @@ export type Database = {
         Update: {
           ai_completed_at?: string | null
           ai_diagnostic?: string | null
+          ai_model_override?: string | null
           ai_model_used?: string | null
           ai_skipped?: boolean | null
           ai_started_at?: string | null
@@ -2531,6 +2575,16 @@ export type Database = {
       cancel_claim: { Args: { p_visit_id: string }; Returns: Json }
       cancel_subscription: { Args: never; Returns: Json }
       change_subscription_plan: { Args: { p_new_plan: string }; Returns: Json }
+      check_and_deduct_feature_budget: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_feature: string
+          p_org_id: string
+          p_visit_id?: string
+        }
+        Returns: Json
+      }
       check_credits: { Args: { p_org_id: string }; Returns: number }
       check_incoming_referral: {
         Args: {
@@ -2580,37 +2634,29 @@ export type Database = {
         Args: { p_location_id: string; p_platforms: Json }
         Returns: Json
       }
+      count_active_providers: { Args: { p_org_id: string }; Returns: number }
       create_follow_up: {
         Args: { p_ai_instructions?: string; p_visit_id: string }
         Returns: Json
       }
-      create_location:
-        | {
-            Args: {
-              p_address?: string
-              p_name: string
-              p_operating_hours?: Json
-              p_org_id: string
-              p_specialty?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_address?: string
-              p_diagnostic_enabled?: boolean
-              p_name: string
-              p_nurse_enabled?: boolean
-              p_operating_hours?: Json
-              p_org_id: string
-              p_review_sms_enabled?: boolean
-              p_skip_ai?: boolean
-              p_specialty?: string
-              p_vaccines_enabled?: boolean
-              p_vitals_enabled?: boolean
-            }
-            Returns: Json
-          }
+      create_location: {
+        Args: {
+          p_address?: string
+          p_diagnostic_enabled?: boolean
+          p_name: string
+          p_nurse_enabled?: boolean
+          p_operating_hours?: Json
+          p_org_id: string
+          p_queue_type?: string
+          p_raven_api_key?: string
+          p_review_sms_enabled?: boolean
+          p_skip_ai?: boolean
+          p_specialty?: string
+          p_vaccines_enabled?: boolean
+          p_vitals_enabled?: boolean
+        }
+        Returns: Json
+      }
       create_organization: {
         Args: {
           p_approval_code?: string
@@ -2914,6 +2960,10 @@ export type Database = {
         Args: { p_nurse_notes: string; p_visit_id: string }
         Returns: Json
       }
+      purchase_feature_topup: {
+        Args: { p_credits: number; p_feature: string }
+        Returns: Json
+      }
       purchase_overage_credits: { Args: { p_amount: number }; Returns: Json }
       purge_expired_orgs: { Args: never; Returns: Json }
       reactivate_referral: { Args: { p_referral_id: string }; Returns: Json }
@@ -3013,6 +3063,10 @@ export type Database = {
         Returns: Json
       }
       set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
+      set_visit_ai_override: {
+        Args: { p_ai_model?: string; p_visit_id: string }
+        Returns: Json
+      }
       set_visit_demo_features: {
         Args: { p_features: Json; p_visit_id: string }
         Returns: Json
@@ -3110,6 +3164,8 @@ export type Database = {
           p_name?: string
           p_nurse_enabled?: boolean
           p_operating_hours?: Json
+          p_queue_type?: string
+          p_raven_api_key?: string
           p_referral_email?: string
           p_review_sms_enabled?: boolean
           p_skip_ai?: boolean

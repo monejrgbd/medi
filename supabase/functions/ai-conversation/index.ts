@@ -152,12 +152,13 @@ Deno.serve(async (req) => {
 
     const { data: locationRow } = await supabase
       .from("locations")
-      .select("ai_model, ai_message_limit")
+      .select("ai_model, ai_message_limit, queue_type")
       .eq("id", visitRow.location_id)
       .single();
 
     // Visit-level override takes priority (receptionist can set per-patient)
     const aiModel = visitRow?.ai_model_override || locationRow?.ai_model || "standard";
+    const queueType = locationRow?.queue_type || "fifo";
 
     // Get subscription plan for model selection + message limit
     const { data: orgRow } = await supabase
@@ -489,16 +490,21 @@ Deno.serve(async (req) => {
         const isHigh = HIGH_URGENCY.some((kw) => combinedText.includes(kw));
         const isMedium = !isHigh && MEDIUM_URGENCY.some((kw) => combinedText.includes(kw));
 
-        if (isHigh) {
-          await supabase.rpc("update_visit_priority", {
-            p_visit_id: visit_id,
-            p_priority: 3,
-          });
-        } else if (isMedium) {
-          await supabase.rpc("update_visit_priority", {
-            p_visit_id: visit_id,
-            p_priority: 2,
-          });
+        const skipAllPriority = ["fifo", "appointment_fifo"].includes(queueType);
+        const criticalOnly = queueType === "critical_appointment_fifo";
+
+        if (!skipAllPriority) {
+          if (isHigh) {
+            await supabase.rpc("update_visit_priority", {
+              p_visit_id: visit_id,
+              p_priority: 3,
+            });
+          } else if (isMedium && !criticalOnly) {
+            await supabase.rpc("update_visit_priority", {
+              p_visit_id: visit_id,
+              p_priority: 2,
+            });
+          }
         }
 
         // Sensitivity detection

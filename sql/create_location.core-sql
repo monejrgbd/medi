@@ -11,7 +11,9 @@ CREATE OR REPLACE FUNCTION private.create_location(
   p_vaccines_enabled boolean DEFAULT false,
   p_skip_ai boolean DEFAULT false,
   p_review_sms_enabled boolean DEFAULT true,
-  p_diagnostic_enabled boolean DEFAULT true
+  p_diagnostic_enabled boolean DEFAULT true,
+  p_queue_type text DEFAULT 'fifo',
+  p_raven_api_key text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -32,8 +34,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Only the organization owner can create locations');
   END IF;
 
-  INSERT INTO public.locations (org_id, name, address, specialty, operating_hours, nurse_enabled, vitals_enabled, vaccines_enabled, skip_ai, review_sms_enabled, diagnostic_enabled)
-  VALUES (p_org_id, p_name, p_address, p_specialty, p_operating_hours, p_nurse_enabled, p_vitals_enabled, p_vaccines_enabled, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled)
+  INSERT INTO public.locations (org_id, name, address, specialty, operating_hours, nurse_enabled, vitals_enabled, vaccines_enabled, skip_ai, review_sms_enabled, diagnostic_enabled, queue_type, raven_api_key)
+  VALUES (p_org_id, p_name, p_address, p_specialty, p_operating_hours, p_nurse_enabled, p_vitals_enabled, p_vaccines_enabled, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled, p_queue_type, p_raven_api_key)
   RETURNING id INTO v_location_id;
 
   -- Auto-initialize org vitals if vitals enabled
@@ -52,6 +54,10 @@ BEGIN
 END;
 $$;
 
+-- Drop old public signature before creating new one (parameter count changed)
+DROP FUNCTION IF EXISTS public.create_location(uuid, text, text, text, jsonb);
+DROP FUNCTION IF EXISTS public.create_location(uuid, text, text, text, jsonb, boolean, boolean, boolean, boolean, boolean, boolean);
+
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.create_location(
   p_org_id uuid,
@@ -64,7 +70,9 @@ CREATE OR REPLACE FUNCTION public.create_location(
   p_vaccines_enabled boolean DEFAULT false,
   p_skip_ai boolean DEFAULT false,
   p_review_sms_enabled boolean DEFAULT true,
-  p_diagnostic_enabled boolean DEFAULT true
+  p_diagnostic_enabled boolean DEFAULT true,
+  p_queue_type text DEFAULT 'fifo',
+  p_raven_api_key text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -75,10 +83,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.create_location(v_auth_uid, p_org_id, p_name, p_address, p_specialty, p_operating_hours, p_nurse_enabled, p_vitals_enabled, p_vaccines_enabled, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled);
+  RETURN private.create_location(v_auth_uid, p_org_id, p_name, p_address, p_specialty, p_operating_hours, p_nurse_enabled, p_vitals_enabled, p_vaccines_enabled, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled, p_queue_type, p_raven_api_key);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.create_location(uuid, text, text, text, jsonb) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.create_location(uuid, text, text, text, jsonb, boolean, boolean, boolean, boolean, boolean, boolean) FROM anon;
-GRANT EXECUTE ON FUNCTION public.create_location(uuid, text, text, text, jsonb, boolean, boolean, boolean, boolean, boolean, boolean) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.create_location(uuid, text, text, text, jsonb, boolean, boolean, boolean, boolean, boolean, boolean, text, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_location(uuid, text, text, text, jsonb, boolean, boolean, boolean, boolean, boolean, boolean, text, text) TO authenticated;

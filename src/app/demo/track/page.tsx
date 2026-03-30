@@ -13,13 +13,12 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
   2: {
     keyPoints: [
       "No app install, works on any phone",
-      "130+ languages, doctor still sees English",
-      "Skip AI button for simple visits (no credits)",
+      "Configure AI button on each patient card",
+      "Premium AI or Skip AI, decided per patient before approval",
       "Returning patients auto matched",
     ],
     lines: [
-      "That form they just filled out works in 130 plus languages. The doctor still reads everything in English.",
-      "Notice the Skip AI button. If this patient is here for a flu shot, skip the conversation entirely. Straight to the doctor, no credits used.",
+      "So the patient did not have to download anything. That was just their phone browser. Now look over at the receptionist side. See that Configure AI button on the card? That is how the receptionist decides what happens next. If this patient is just here for a flu shot, they skip the AI, straight to the doctor, no credits used. But if it is a new patient with something more involved, they hit Use Premium AI and let the screening do its job. That decision happens right here, per patient, before they even click Approve. And notice if this person has been here before, they are already matched by name and date of birth.",
     ],
   },
   3: {
@@ -30,8 +29,7 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "Custom vitals per clinic, not just weight and height",
     ],
     lines: [
-      "The nurse screens the patient first. Vitals, vaccines, initial observations. All of that shows up on the doctor's screen before they walk in.",
-      "Each clinic picks which vitals to track. Weight and height are defaults. Cardiology adds blood pressure. Pediatrics adds head circumference.",
+      "So before anyone sees the doctor, the nurse gets them first. They record vitals, vaccines, triage notes. And everything they put in here shows up on the doctor's screen before the doctor even walks in the room. The nurse can also complete the visit on their own if the doctor is not needed. And each clinic picks which vitals they want to track. Weight and height are the defaults, but a cardiology clinic adds blood pressure, pediatrics adds head circumference. You set that up once and it just stays.",
     ],
   },
   4: {
@@ -43,9 +41,7 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "AI adapts per clinic specialty via custom instructions",
     ],
     lines: [
-      "Watch how it follows up. It does not stop at 'my knee hurts.' It asks which knee, how long, what makes it worse.",
-      "Patients can also speak their answers instead of typing. Huge for elderly patients or anyone not comfortable with a keyboard.",
-      "You can customize what the AI asks per location. A dermatology clinic gets skin focused questions. A pediatrics clinic gets age appropriate ones.",
+      "Watch what happens here. The patient says my knee hurts, and it does not just accept that. It asks which knee, how long, what makes it worse. It keeps going until it has a full picture. Patients can also speak their answers instead of typing, which is huge for elderly patients or anyone who is not comfortable with a keyboard. And if the AI picks up something urgent, that patient gets flagged and moved ahead in the queue automatically. For returning patients, the AI already has their history from previous visits. It confirms what it knows and only asks about what is new. You can also customize what the AI asks per location. A dermatology clinic gets skin focused questions, a pediatrics clinic gets age appropriate ones.",
     ],
   },
   5: {
@@ -58,10 +54,7 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "Focus mode auto claims the next patient after completion",
     ],
     lines: [
-      "That summary was verified by the patient before the doctor saw it. Not a guess, a confirmed record.",
-      "The diagnostic suggestion at the bottom? She never sees that. Doctor eyes only.",
-      "When they complete, they can write care instructions. 'Rest 48 hours, take ibuprofen twice daily.' Goes straight to the patient by text.",
-      "In a busy clinic, the doctor turns on Focus Mode. After completing one patient, the next one loads automatically. No going back to the queue.",
+      "So everything the doctor is reading right now, the patient already confirmed that before it got here. It is not a guess, it is a verified record. And that diagnostic suggestion at the bottom? The patient never sees that. That is doctor eyes only. If you have the nurse step enabled, vitals and vaccine records show up here too. When the doctor finishes, they can write care instructions and those go straight to the patient by text. Any follow up instructions carry forward to the next visit, the AI will reference them automatically. And in a busy clinic, the doctor turns on Focus Mode. After completing one patient, the next one loads right away. They do not go back to the queue.",
     ],
   },
   6: {
@@ -71,8 +64,7 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "Platform rotation is automatic",
     ],
     lines: [
-      "She gets a permanent link to her visit summary. She keeps that forever. She can show it to any doctor.",
-      "Five stars go to your Google page. Below that stays internal. Your public rating only goes up.",
+      "So the patient just got a text with a permanent link to their visit summary. They keep that forever, they can show it to any other doctor. Now here is the smart part. If they give five stars, they get routed to your Google or Yelp page. Anything below five stays internal. So your public rating only ever goes up. And the platform rotation is automatic, you do not have to think about it.",
     ],
   },
   7: {
@@ -82,8 +74,7 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "Simple filtering is free, AI scan is 1 credit per 1K patients",
     ],
     lines: [
-      "Type what you are looking for. 'Patients over 65 who missed their flu shot.' The AI scans their records and builds the list.",
-      "Simple filtering by age and visit date is always free. The AI scan costs 1 credit per thousand patients.",
+      "So this is where it gets really interesting. You just describe who you want to reach. Patients over 65 who missed their flu shot. Diabetics who have not been in for six months. The AI goes through their actual clinical data, visit summaries, diagnoses, medications, and builds the list for you. Simple filtering by age and visit date is always free. The AI scan is one credit per thousand patients.",
     ],
   },
 };

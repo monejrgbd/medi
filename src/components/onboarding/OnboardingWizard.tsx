@@ -4,15 +4,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
-import { createLocation } from "@/app/(dashboard)/d/_actions/locations";
+import { createLocation, updateLocation } from "@/app/(dashboard)/d/_actions/locations";
 import {
   completeOnboarding,
   setupOnboardingDemo,
   approveOnboardingVisit,
 } from "@/app/(dashboard)/d/_actions/onboarding";
-import { ALLOWED_SPECIALTIES } from "@/lib/constants";
+import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Tablet, Star, CreditCard, ArrowRight, Users } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
@@ -39,9 +39,17 @@ export default function OnboardingWizard({
   existingLocations: ExistingLocation[];
 }) {
   const router = useRouter();
-  const [step, setStep] = useState(existingLocations.length > 0 ? 3 : 0);
+  const [step, setStep] = useState(existingLocations.length > 0 ? 6 : 0);
 
-  // Step 2 state (Customize Clinic)
+  // Step 2 state (Raven Scheduler)
+  const [ravenApiKey, setRavenApiKey] = useState("");
+  const [savingRaven, setSavingRaven] = useState(false);
+
+  // Step 3 state (Queue Type)
+  const [queueType, setQueueType] = useState("fifo");
+  const [savingQueue, setSavingQueue] = useState(false);
+
+  // Step 4 state (Customize Clinic)
   const [nurseEnabled, setNurseEnabled] = useState(false);
   const [vitalsEnabled, setVitalsEnabled] = useState(true);
   const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
@@ -60,7 +68,7 @@ export default function OnboardingWizard({
     existingLocations[0]?.name ?? ""
   );
 
-  // Step 4 (Try It) state
+  // Step 6 (Try It) state
   const [demoReady, setDemoReady] = useState(false);
   const [demoError, setDemoError] = useState("");
   type TryItPhase = "ready" | "detected" | "success";
@@ -74,7 +82,7 @@ export default function OnboardingWizard({
 
   // Set up demo (create owner staff account + check in as receptionist)
   useEffect(() => {
-    if (step !== 4 || !locationId || demoReady) return;
+    if (step !== 6 || !locationId || demoReady) return;
 
     let cancelled = false;
     setupOnboardingDemo(locationId).then((result) => {
@@ -91,7 +99,7 @@ export default function OnboardingWizard({
 
   // QR rendering
   useEffect(() => {
-    if (step === 4 && locationId && demoReady && canvasRef.current) {
+    if (step === 6 && locationId && demoReady && canvasRef.current) {
       QRCode.toCanvas(
         canvasRef.current,
         `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
@@ -100,9 +108,9 @@ export default function OnboardingWizard({
     }
   }, [step, locationId, demoReady, tryPhase]);
 
-  // Realtime subscription — starts immediately when step 4 is ready
+  // Realtime subscription — starts immediately when step 6 is ready
   useEffect(() => {
-    if (step !== 4 || !locationId || !demoReady || tryPhase !== "ready") return;
+    if (step !== 6 || !locationId || !demoReady || tryPhase !== "ready") return;
 
     const supabase = createClient();
     const channel = supabase
@@ -158,11 +166,27 @@ export default function OnboardingWizard({
     if (result.success && result.locationId) {
       setLocationId(result.locationId);
       setCreatedLocationName(locationName.trim());
-      setStep(2);
+      setStep(2); // Raven step
     } else {
       setCreateError(result.error || "Failed to create location");
     }
   }, [locationName, specialty, org.id]);
+
+  const handleSaveRaven = useCallback(async () => {
+    if (ravenApiKey.trim()) {
+      setSavingRaven(true);
+      await updateLocation({ locationId, ravenApiKey: ravenApiKey.trim() });
+      setSavingRaven(false);
+    }
+    setStep(3); // Queue step
+  }, [locationId, ravenApiKey]);
+
+  const handleSaveQueue = useCallback(async () => {
+    setSavingQueue(true);
+    await updateLocation({ locationId, queueType });
+    setSavingQueue(false);
+    setStep(4); // Features step
+  }, [locationId, queueType]);
 
   const handleApprove = useCallback(async () => {
     if (!detectedVisit) return;
@@ -347,33 +371,172 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 2: Customize Clinic */}
+      {/* Step 2: Raven Scheduler */}
       {step === 2 && locationId && (
+        <div className="max-w-md mx-auto">
+          <h2 className="text-xl font-bold text-ink mb-1 text-center">
+            Connect Raven Scheduler
+          </h2>
+          <p className="text-sm text-slate mb-5 text-center">
+            Raven Scheduler enables appointment based queue modes for{" "}
+            <span className="font-medium">{createdLocationName}</span>.
+            This is optional.
+          </p>
+
+          <div className="rounded-xl border border-gray-200 bg-white p-4 mb-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <CalendarClock className="h-5 w-5 text-hilt-blue mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-ink">Appointment aware queues</p>
+                <p className="text-xs text-slate mt-0.5">
+                  Scheduled patients are prioritized over walk ins automatically.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <CalendarClock className="h-5 w-5 text-hilt-blue mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-ink">Multiple queue strategies</p>
+                <p className="text-xs text-slate mt-0.5">
+                  Combine appointments with FIFO or AI priority ordering.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-5">
+            <label className="mb-1 block text-sm font-medium text-ink">
+              Raven Scheduler API Key
+            </label>
+            <input
+              type="text"
+              value={ravenApiKey}
+              onChange={(e) => setRavenApiKey(e.target.value)}
+              placeholder="Enter your Raven API key"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+            />
+            <p className="text-xs text-ash mt-1">
+              You can add this later in location settings if you do not have it yet.
+            </p>
+          </div>
+
+          <button
+            onClick={handleSaveRaven}
+            disabled={savingRaven}
+            className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
+          >
+            {savingRaven ? "Saving..." : "Continue"}
+          </button>
+
+          <button
+            onClick={() => setStep(3)}
+            disabled={savingRaven}
+            className="w-full text-sm text-slate hover:text-ink transition-colors py-2 mt-2"
+          >
+            Skip
+          </button>
+        </div>
+      )}
+
+      {/* Step 3: Queue Type */}
+      {step === 3 && locationId && (
+        <div className="max-w-md mx-auto">
+          <h2 className="text-xl font-bold text-ink mb-1 text-center">
+            Choose Your Queue Type
+          </h2>
+          <p className="text-sm text-slate mb-5 text-center">
+            This applies to <span className="font-medium">{createdLocationName}</span>. You can change it later in location settings.
+          </p>
+
+          <div className="space-y-2 mb-5">
+            {QUEUE_TYPES.map((qt) => {
+              const isLocked = qt.requiresRaven && !ravenApiKey.trim();
+              const isSelected = queueType === qt.value;
+              return (
+                <button
+                  key={qt.value}
+                  type="button"
+                  disabled={isLocked}
+                  onClick={() => setQueueType(qt.value)}
+                  className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                    isLocked
+                      ? "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                      : isSelected
+                      ? "border-hilt-blue bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-semibold ${isLocked ? "text-ash" : "text-ink"}`}>
+                      {qt.label}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {qt.requiresRaven && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-ash">
+                          {isLocked ? <Lock className="h-3 w-3" /> : <CalendarClock className="h-3 w-3" />}
+                          Raven Scheduler
+                        </span>
+                      )}
+                      <div className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                        isSelected ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"
+                      }`}>
+                        {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                      </div>
+                    </div>
+                  </div>
+                  <p className={`text-xs mt-1 ${isLocked ? "text-ash" : "text-slate"}`}>
+                    {qt.description}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={handleSaveQueue}
+            disabled={savingQueue}
+            className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
+          >
+            {savingQueue ? "Saving..." : "Continue"}
+          </button>
+
+          <button
+            onClick={() => setStep(4)}
+            disabled={savingQueue}
+            className="w-full text-sm text-slate hover:text-ink transition-colors py-2 mt-2"
+          >
+            Skip
+          </button>
+        </div>
+      )}
+
+      {/* Step 4: Customize Clinic */}
+      {step === 4 && locationId && (
         <ClinicFeaturesStep
           locationId={locationId}
           onComplete={(features) => {
             setNurseEnabled(features.nurse);
             setVitalsEnabled(features.vitals);
             setVaccinesEnabled(features.vaccines);
-            setStep(3);
+            setStep(5);
           }}
         />
       )}
 
-      {/* Step 3: Add Staff */}
-      {step === 3 && locationId && (
+      {/* Step 5: Add Staff */}
+      {step === 5 && locationId && (
         <AddStaffStep
           orgId={org.id}
           orgSlug={org.slug}
           locationId={locationId}
           locationName={createdLocationName}
           nurseEnabled={nurseEnabled}
-          onContinue={() => setStep(4)}
+          onContinue={() => setStep(6)}
         />
       )}
 
-      {/* Step 4: Try the Check-in */}
-      {step === 4 && (
+      {/* Step 6: Try the Check-in */}
+      {step === 6 && (
         <div className="max-w-md mx-auto text-center">
           <h2 className="text-xl font-bold text-ink mb-1">
             Try the Check in
@@ -467,7 +630,7 @@ export default function OnboardingWizard({
           <div className="mt-6 space-y-3">
             {demoReady && (
               <button
-                onClick={() => setStep(5)}
+                onClick={() => setStep(7)}
                 className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white ${
                   tryPhase === "success"
                     ? "bg-hilt-blue hover:bg-hilt-blue-dark"
@@ -481,8 +644,8 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 5: All Set */}
-      {step === 5 && (
+      {/* Step 7: All Set */}
+      {step === 7 && (
         <div className="max-w-lg mx-auto text-center">
           <div className="mb-3 flex justify-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">

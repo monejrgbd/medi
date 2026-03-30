@@ -3,7 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { updateLocation, uploadLocationLogo } from "@/app/(dashboard)/d/_actions/locations";
-import { ALLOWED_SPECIALTIES } from "@/lib/constants";
+import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
 import { useRole } from "@/contexts/RoleContext";
 import SearchableSelect from "@/components/ui/SearchableSelect";
 import { Upload, Loader2 } from "lucide-react";
@@ -27,6 +27,8 @@ interface LocationData {
   skip_ai?: boolean;
   review_sms_enabled?: boolean;
   diagnostic_enabled?: boolean;
+  queue_type?: string;
+  raven_api_key?: string | null;
   logo_url?: string | null;
 }
 
@@ -98,6 +100,8 @@ export default function LocationSettingsForm({
     skipAi: location.skip_ai ?? false,
     reviewSmsEnabled: location.review_sms_enabled ?? true,
     diagnosticEnabled: location.diagnostic_enabled ?? true,
+    queueType: location.queue_type || "fifo",
+    ravenApiKey: location.raven_api_key || "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -160,6 +164,8 @@ export default function LocationSettingsForm({
       skipAi: form.skipAi,
       reviewSmsEnabled: form.reviewSmsEnabled,
       diagnosticEnabled: form.diagnosticEnabled,
+      queueType: form.queueType,
+      ravenApiKey: form.ravenApiKey,
     });
 
     setLoading(false);
@@ -352,6 +358,78 @@ export default function LocationSettingsForm({
           max={100}
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
         />
+      </div>
+
+      {/* Queue Configuration */}
+      <div className="space-y-4 border-t border-gray-100 pt-5">
+        <h3 className="text-sm font-semibold text-ink">Queue Configuration</h3>
+
+        <div className="space-y-2">
+          {QUEUE_TYPES.map((qt) => {
+            const isLocked = qt.requiresRaven && !form.ravenApiKey.trim();
+            const isSelected = form.queueType === qt.value;
+            return (
+              <button
+                key={qt.value}
+                type="button"
+                disabled={isLocked}
+                onClick={() => {
+                  setForm((prev) => ({ ...prev, queueType: qt.value }));
+                  setMessage(null);
+                }}
+                className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                  isLocked
+                    ? "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                    : isSelected
+                    ? "border-hilt-blue bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-sm font-semibold ${isLocked ? "text-ash" : "text-ink"}`}>
+                    {qt.label}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {qt.requiresRaven && (
+                      <span className="text-xs text-ash">Raven Scheduler</span>
+                    )}
+                    <div className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                      isSelected ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"
+                    }`}>
+                      {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                </div>
+                <p className={`text-xs mt-1 ${isLocked ? "text-ash" : "text-slate"}`}>
+                  {qt.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        <div>
+          <label className="block text-sm text-ink mb-1">Raven Scheduler API Key</label>
+          <input
+            type="text"
+            value={form.ravenApiKey}
+            onChange={(e) => {
+              const val = e.target.value;
+              setForm((prev) => {
+                const updated = { ...prev, ravenApiKey: val };
+                if (!val.trim()) {
+                  const selected = QUEUE_TYPES.find((q) => q.value === prev.queueType);
+                  if (selected?.requiresRaven) updated.queueType = "fifo";
+                }
+                return updated;
+              });
+              setMessage(null);
+            }}
+            placeholder="Enter your Raven API key"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+          />
+          <p className="text-xs text-ash mt-1">Optional. Required for appointment based queue modes.</p>
+        </div>
       </div>
 
       {/* Clinic Features */}

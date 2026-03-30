@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { fetchSimilarPatients, editPatientRecord, skipAiToQueue } from "@/app/(dashboard)/d/_actions/receptionist";
+import { useState } from "react";
+import { fetchSimilarPatients, editPatientRecord } from "@/app/(dashboard)/d/_actions/receptionist";
 import FollowUpIndicator from "./FollowUpIndicator";
 
 interface FollowUpInfo {
@@ -47,22 +47,23 @@ interface SimilarPatient {
   similarity_score: number;
 }
 
+type AiConfig = "standard" | "skip" | "premium";
+
 interface ApprovalCardProps {
   visit: PendingVisit;
   orgId: string;
-  onApprove: (visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }) => void;
+  onApprove: (visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }, aiConfig?: AiConfig) => void;
   onDeny: (visitId: string) => void;
   onVerifyPhone?: (visitId: string) => void;
   onConfirmReturning?: (visitId: string) => void;
   onCollisionResolved?: (visitId: string) => void;
-  onTogglePremiumAi?: (visitId: string) => void;
   approving: boolean;
   denying: boolean;
   verifying?: boolean;
   confirming?: boolean;
   showCollisionDialog?: boolean;
   aiAutoSkipped?: boolean;
-  premiumAi?: boolean;
+  hasPremiumAi?: boolean;
 }
 
 export default function ApprovalCard({
@@ -72,20 +73,20 @@ export default function ApprovalCard({
   onDeny,
   onVerifyPhone,
   onConfirmReturning,
-  onTogglePremiumAi,
   approving,
   denying,
   verifying,
   confirming,
   showCollisionDialog,
   aiAutoSkipped,
-  premiumAi,
+  hasPremiumAi,
 }: ApprovalCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [similarPatients, setSimilarPatients] = useState<SimilarPatient[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
 
-  const [skippingAi, startSkipTransition] = useTransition();
+  const [aiConfig, setAiConfig] = useState<AiConfig>("standard");
+  const [showAiOptions, setShowAiOptions] = useState(false);
 
   // Edit mode state
   const [editing, setEditing] = useState(false);
@@ -189,14 +190,8 @@ export default function ApprovalCard({
     setEditing(false);
   }
 
-  function handleSkipAi() {
-    startSkipTransition(async () => {
-      await skipAiToQueue(visit.visit_id);
-    });
-  }
-
   const isReturning = visit.match_type === "returning";
-  const busy = approving || denying || !!verifying || !!confirming || editing || skippingAi;
+  const busy = approving || denying || !!verifying || !!confirming || editing;
   const isPending = visit.phone_verification_pending;
   const isCollision = visit.collision_flag;
   const isPhoneVerified = visit.phone_verified;
@@ -464,42 +459,91 @@ export default function ApprovalCard({
             </div>
           </>
         ) : (
-          // Default: standard approve/skip AI/deny + optional verify phone
+          // Default: configure AI + approve/deny
           <>
-          {onTogglePremiumAi && (
-            <button
-              onClick={() => onTogglePremiumAi(visit.visit_id)}
-              disabled={busy}
-              className={`mb-2 w-full rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                premiumAi
-                  ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
-                  : "bg-gray-50 text-slate hover:bg-gray-100"
-              }`}
-            >
-              {premiumAi ? "Premium AI enabled for this patient" : "Use Premium AI for this patient"}
-            </button>
+          {!aiAutoSkipped && (
+            <div className="mb-2">
+              <button
+                onClick={() => setShowAiOptions((prev) => !prev)}
+                disabled={busy}
+                className="text-xs text-slate hover:text-ink transition-colors disabled:opacity-50 flex items-center gap-1"
+              >
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Configure AI
+                {aiConfig !== "standard" && (
+                  <span className={`ml-1 inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                    aiConfig === "skip" ? "bg-gray-100 text-gray-600" : "bg-purple-100 text-purple-700"
+                  }`}>
+                    {aiConfig === "skip" ? "Skipping" : "Premium"}
+                  </span>
+                )}
+              </button>
+
+              {showAiOptions && (
+                <div className="mt-1.5 flex gap-1.5">
+                  <button
+                    onClick={() => setAiConfig("standard")}
+                    disabled={busy}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                      aiConfig === "standard"
+                        ? "bg-green-100 text-green-700 ring-1 ring-green-300"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    Standard AI
+                  </button>
+                  <button
+                    onClick={() => setAiConfig("skip")}
+                    disabled={busy}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                      aiConfig === "skip"
+                        ? "bg-gray-200 text-gray-700 ring-1 ring-gray-400"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    Skip AI
+                  </button>
+                  {hasPremiumAi && (
+                    <button
+                      onClick={() => setAiConfig("premium")}
+                      disabled={busy}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                        aiConfig === "premium"
+                          ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
+                          : "bg-gray-50 text-slate hover:bg-gray-100"
+                      }`}
+                    >
+                      Premium AI
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
+
           <div className="flex gap-2">
             <button
-              onClick={() => onApprove(visit.visit_id)}
+              onClick={() => onApprove(visit.visit_id, undefined, aiConfig)}
               disabled={busy}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
-                premiumAi
+                aiConfig === "premium"
                   ? "bg-purple-600 hover:bg-purple-700"
-                  : "bg-green-600 hover:bg-green-700"
+                  : aiConfig === "skip"
+                    ? "bg-amber-500 hover:bg-amber-600"
+                    : "bg-green-600 hover:bg-green-700"
               }`}
             >
-              {approving ? "Approving..." : premiumAi ? "Approve (Premium AI)" : "Approve"}
+              {approving
+                ? "Approving..."
+                : aiConfig === "premium"
+                  ? "Approve (Premium AI)"
+                  : aiConfig === "skip"
+                    ? "Approve (No AI)"
+                    : "Approve"}
             </button>
-            {!aiAutoSkipped && (
-              <button
-                onClick={handleSkipAi}
-                disabled={busy}
-                className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-slate transition-colors hover:bg-gray-50 disabled:opacity-50"
-              >
-                {skippingAi ? "Skipping..." : "Skip AI"}
-              </button>
-            )}
             <button
               onClick={() => onDeny(visit.visit_id)}
               disabled={busy}

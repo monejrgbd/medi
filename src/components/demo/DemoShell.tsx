@@ -81,6 +81,26 @@ function DemoShellInner({
   marketingInitial,
 }: DemoShellProps) {
   const { features, isCustomized } = useDemoFeatures();
+
+  const receptionistRoleValue = useMemo(() => ({
+    org: {
+      id: orgId,
+      name: locationData.org_name || "Smith Family Clinic",
+      slug: "smith-family-clinic",
+      owner_id: "",
+      subscription_plan: "professional",
+      credits_total: 10000,
+      credits_used: 0,
+      trial_end_date: "",
+      onboarding_completed_at: null,
+      cancel_at_period_end: null,
+      created_at: "",
+    } as any,
+    roles: [{ role: "receptionist", location_id: locationId, location_name: locationName }],
+    isOwner: false,
+    currentStaffUser: { id: staffUserId, org_id: orgId, auth_uid: "", full_name: "Demo User", username: "demo" },
+  }), [orgId, locationData.org_name, locationId, locationName, staffUserId]);
+
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
   const [demoComplete, setDemoComplete] = useState(false);
@@ -558,23 +578,25 @@ function DemoShellInner({
             display: activeTab === "receptionist" ? "block" : "none",
           }}
         >
-          <ReceptionistDashboard
-            key={demoKey}
-            mode="dashboard"
-            locations={[]}
-            staffUserId={staffUserId}
-            isOwner={false}
-            orgId={orgId}
-            locationId={locationId}
-            locationName={locationName}
-            initialPending={receptionistInitial.pending}
-            initialActive={receptionistInitial.active}
-            initialCompleted={receptionistInitial.completed}
-            initialCounts={receptionistInitial.counts}
-            demoMode={true}
-            demoVisitId={demoVisitId}
-            aiAutoSkipped={features.skipAi}
-          />
+          <RoleProvider value={receptionistRoleValue}>
+            <ReceptionistDashboard
+              key={demoKey}
+              mode="dashboard"
+              locations={[]}
+              staffUserId={staffUserId}
+              isOwner={false}
+              orgId={orgId}
+              locationId={locationId}
+              locationName={locationName}
+              initialPending={receptionistInitial.pending}
+              initialActive={receptionistInitial.active}
+              initialCompleted={receptionistInitial.completed}
+              initialCounts={receptionistInitial.counts}
+              demoMode={true}
+              demoVisitId={demoVisitId}
+              aiAutoSkipped={features.skipAi}
+            />
+          </RoleProvider>
         </div>
 
         <div

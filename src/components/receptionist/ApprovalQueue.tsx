@@ -9,6 +9,7 @@ import {
   verifyPhonePrompt,
   confirmReturning,
   setVisitAiOverride,
+  skipAiToQueue,
 } from "@/app/(dashboard)/d/_actions/receptionist";
 import { linkReferralToVisit } from "@/app/(dashboard)/d/_actions/referral";
 import ReferralAutoMatch from "./ReferralAutoMatch";
@@ -58,12 +59,12 @@ export default function ApprovalQueue({
   onActionComplete,
   aiAutoSkipped,
 }: ApprovalQueueProps) {
+  type AiConfig = "standard" | "skip" | "premium";
+
   const [actionState, setActionState] = useState<
     Record<string, "approving" | "denying" | "verifying" | "confirming">
   >({});
-  const [premiumAiVisits, setPremiumAiVisits] = useState<Set<string>>(new Set());
 
-  // Plans that have Premium AI taste
   const hasPremiumAi = ["starter", "professional", "business", "enterprise"].includes(subscriptionPlan || "");
   const [error, setError] = useState<string | null>(null);
   const [collisionDialogVisitId, setCollisionDialogVisitId] = useState<string | null>(null);
@@ -94,7 +95,7 @@ export default function ApprovalQueue({
     prevPendingRef.current = map;
   }, [pending, collisionDialogVisitId]);
 
-  async function handleApprove(visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }) {
+  async function handleApprove(visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }, aiConfig?: AiConfig) {
     // Check if visit has referral match — show dialog before approving
     const visit = pending.find((v) => v.visit_id === visitId);
     if (visit?.referral_match && !followUpInfo) {
@@ -105,13 +106,26 @@ export default function ApprovalQueue({
     setError(null);
     setActionState((prev) => ({ ...prev, [visitId]: "approving" }));
 
-    // Set Premium AI override BEFORE approval (so it's active when AI conversation starts)
-    if (premiumAiVisits.has(visitId)) {
+    const effectiveAiConfig = aiConfig ?? "standard";
+
+    // Skip AI: bypass AI conversation entirely
+    if (effectiveAiConfig === "skip") {
+      const result = await skipAiToQueue(visitId);
+      setActionState((prev) => { const next = { ...prev }; delete next[visitId]; return next; });
+      if (result.success) {
+        onActionComplete(visitId, "approve");
+      } else {
+        setError(result.error ?? "Failed to skip AI.");
+      }
+      return;
+    }
+
+    // Premium AI: set override before approval
+    if (effectiveAiConfig === "premium") {
       const overrideResult = await setVisitAiOverride(visitId, "advanced");
       if (!overrideResult?.success) {
         setActionState((prev) => { const next = { ...prev }; delete next[visitId]; return next; });
         setError(overrideResult?.error ?? "Premium AI not available. Budget may be exhausted.");
-        setPremiumAiVisits((prev) => { const next = new Set(prev); next.delete(visitId); return next; });
         return;
       }
     }
@@ -123,10 +137,6 @@ export default function ApprovalQueue({
       return next;
     });
     if (result.success) {
-      if (premiumAiVisits.has(visitId)) {
-        setPremiumAiVisits((prev) => { const next = new Set(prev); next.delete(visitId); return next; });
-      }
-      // If there was a confirmed referral link, do it now
       if (visit?.referral_match && referralMatchPending) {
         await linkReferralToVisit(visit.referral_match.referral_id, visitId);
       }
@@ -265,14 +275,7 @@ export default function ApprovalQueue({
           verifying={actionState[visit.visit_id] === "verifying"}
           confirming={actionState[visit.visit_id] === "confirming"}
           aiAutoSkipped={aiAutoSkipped}
-          premiumAi={premiumAiVisits.has(visit.visit_id)}
-          onTogglePremiumAi={hasPremiumAi ? (visitId) => {
-            setPremiumAiVisits((prev) => {
-              const next = new Set(prev);
-              if (next.has(visitId)) next.delete(visitId); else next.add(visitId);
-              return next;
-            });
-          } : undefined}
+          hasPremiumAi={hasPremiumAi}
         />
       ))}
       </div>

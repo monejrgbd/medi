@@ -151,9 +151,10 @@ export default function FocusMode({
   const [updateNotice, setUpdateNotice] = useState(false);
   const [focusNurseOnly, setFocusNurseOnly] = useState(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('focus_nurse_only') === 'true';
+      const stored = localStorage.getItem('focus_nurse_only');
+      if (stored !== null) return stored === 'true';
     }
-    return false;
+    return !!nurseEnabled;
   });
   const supabaseRef = useRef(createClient());
   const updatedAtRef = useRef<string | null>(null);

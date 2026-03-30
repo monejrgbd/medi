@@ -72,6 +72,8 @@ BEGIN
       'ai_message_limit', l.ai_message_limit,
       'review_sms_enabled', l.review_sms_enabled,
       'diagnostic_enabled', l.diagnostic_enabled,
+      'queue_type', l.queue_type,
+      'raven_api_key', l.raven_api_key,
       'created_at', l.created_at
     )
   )
