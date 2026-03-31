@@ -12,7 +12,7 @@ import {
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
@@ -44,6 +44,7 @@ export default function OnboardingWizard({
   // Step 2 state (Raven Scheduler)
   const [ravenApiKey, setRavenApiKey] = useState("");
   const [savingRaven, setSavingRaven] = useState(false);
+  const [showRavenInput, setShowRavenInput] = useState(false);
 
   // Step 3 state (Queue Type)
   const [queueType, setQueueType] = useState("fifo");
@@ -373,68 +374,128 @@ export default function OnboardingWizard({
 
       {/* Step 2: Raven Scheduler */}
       {step === 2 && locationId && (
-        <div className="max-w-md mx-auto">
-          <h2 className="text-xl font-bold text-ink mb-1 text-center">
-            Connect Raven Scheduler
-          </h2>
-          <p className="text-sm text-slate mb-5 text-center">
-            Raven Scheduler enables appointment based queue modes for{" "}
-            <span className="font-medium">{createdLocationName}</span>.
-            This is optional.
-          </p>
-
-          <div className="rounded-xl border border-gray-200 bg-white p-4 mb-5 space-y-3">
-            <div className="flex items-start gap-3">
-              <CalendarClock className="h-5 w-5 text-hilt-blue mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-ink">Appointment aware queues</p>
-                <p className="text-xs text-slate mt-0.5">
-                  Scheduled patients are prioritized over walk ins automatically.
-                </p>
-              </div>
+        <div className="max-w-lg mx-auto">
+          <div className="text-center mb-6">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-violet-50 border border-violet-200 px-3 py-1">
+              <Phone className="h-3.5 w-3.5 text-violet-600" />
+              <span className="text-xs font-medium text-violet-700">Recommended integration</span>
             </div>
-            <div className="flex items-start gap-3">
-              <CalendarClock className="h-5 w-5 text-hilt-blue mt-0.5 shrink-0" />
-              <div>
-                <p className="text-sm font-medium text-ink">Multiple queue strategies</p>
-                <p className="text-xs text-slate mt-0.5">
-                  Combine appointments with FIFO or AI priority ordering.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-5">
-            <label className="mb-1 block text-sm font-medium text-ink">
-              Raven Scheduler API Key
-            </label>
-            <input
-              type="text"
-              value={ravenApiKey}
-              onChange={(e) => setRavenApiKey(e.target.value)}
-              placeholder="Enter your Raven API key"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
-            />
-            <p className="text-xs text-ash mt-1">
-              You can add this later in location settings if you do not have it yet.
+            <h2 className="text-xl font-bold text-ink mb-1">
+              Add an AI Receptionist
+            </h2>
+            <p className="text-sm text-slate">
+              Raven Scheduler gives {createdLocationName} an AI phone line that books appointments, sends reminders, and recovers no shows, all without staff lifting a finger.
             </p>
           </div>
 
-          <button
-            onClick={handleSaveRaven}
-            disabled={savingRaven}
-            className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
-          >
-            {savingRaven ? "Saving..." : "Continue"}
-          </button>
+          <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-5 mb-5">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                  <Phone className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-ink">24/7 call answering</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    AI answers every call and books appointments in natural conversation.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                  <MessageSquare className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-ink">SMS automation</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    Confirmations, reminders, and two way replies. All automatic.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                  <PhoneForwarded className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-ink">No show recovery</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    AI calls back missed patients and reschedules them automatically.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                  <ListChecks className="h-3.5 w-3.5 text-violet-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-ink">Waitlist management</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    Cancellations get filled from the waitlist without any manual work.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 mb-5 flex items-start gap-3">
+            <CalendarClock className="h-5 w-5 text-hilt-blue mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-ink">Works directly with Hilt queues</p>
+              <p className="text-xs text-slate mt-0.5">
+                When connected, Hilt knows who is coming before they walk in. Scheduled patients are prioritized in your queue automatically and the AI pre screen starts with full appointment context.
+              </p>
+            </div>
+          </div>
+
+          {showRavenInput ? (
+            <div className="rounded-xl border border-violet-200 bg-white p-4 mb-4">
+              <label className="mb-1.5 block text-sm font-medium text-ink">
+                Raven Scheduler API Key
+              </label>
+              <input
+                type="text"
+                value={ravenApiKey}
+                onChange={(e) => setRavenApiKey(e.target.value)}
+                placeholder="Paste your API key from Raven dashboard"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 mb-3"
+                autoFocus
+              />
+              <button
+                onClick={handleSaveRaven}
+                disabled={savingRaven || !ravenApiKey.trim()}
+                className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+              >
+                {savingRaven ? "Connecting..." : "Connect and Continue"}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowRavenInput(true)}
+              className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 mb-4"
+            >
+              I have a Raven API Key
+            </button>
+          )}
 
           <button
             onClick={() => setStep(3)}
             disabled={savingRaven}
-            className="w-full text-sm text-slate hover:text-ink transition-colors py-2 mt-2"
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors mb-3"
           >
-            Skip
+            Continue without Raven
           </button>
+
+          <div className="flex items-center justify-center gap-1.5">
+            <a
+              href="https://ravenscheduler.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-violet-600 hover:text-violet-800 font-medium inline-flex items-center gap-1"
+            >
+              Learn more at ravenscheduler.com
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
         </div>
       )}
 
