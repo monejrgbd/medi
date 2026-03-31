@@ -1,0 +1,26 @@
+-- Anon-callable: checks if an approval code is valid (exists, unused, not expired)
+CREATE OR REPLACE FUNCTION public.validate_approval_code(
+  p_code text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM public.approval_codes
+    WHERE code = p_code
+      AND used_by_org_id IS NULL
+      AND (expires_at IS NULL OR expires_at > now())
+  ) THEN
+    RETURN jsonb_build_object('valid', true);
+  ELSE
+    RETURN jsonb_build_object('valid', false);
+  END IF;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.validate_approval_code(text) TO anon;
+GRANT EXECUTE ON FUNCTION public.validate_approval_code(text) TO authenticated;

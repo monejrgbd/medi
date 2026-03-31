@@ -41,6 +41,11 @@ export default function OwnerSignUpForm() {
   const [trialType, setTrialType] = useState<TrialType>(
     trialParam === "plans" ? "starter" : "payg"
   );
+  const [paygTier, setPaygTier] = useState<"standard" | "premium">("standard");
+  const [codeVerified, setCodeVerified] = useState(false);
+  const [codeChecking, setCodeChecking] = useState(false);
+  const [codeError, setCodeError] = useState("");
+  const [showCodeEntry, setShowCodeEntry] = useState<"premium" | "professional" | null>(null);
 
   // Steps: form → otp → paypal (subscription trials only)
   const [step, setStep] = useState<"form" | "otp" | "paypal">("form");
@@ -58,6 +63,46 @@ export default function OwnerSignUpForm() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
+  async function handleVerifyCode() {
+    if (!approvalCode.trim() || codeChecking) return;
+    setCodeError("");
+    setCodeChecking(true);
+
+    const supabase = createClient();
+    const { data } = await supabase.rpc("validate_approval_code", {
+      p_code: approvalCode.trim(),
+    });
+
+    setCodeChecking(false);
+
+    if (data?.valid) {
+      setCodeVerified(true);
+      setCodeError("");
+      if (showCodeEntry === "premium") { setPaygTier("premium"); }
+      if (showCodeEntry === "professional") { setTrialType("professional"); }
+      setShowCodeEntry(null);
+    } else {
+      setCodeVerified(false);
+      setCodeError("Invalid or already used code");
+    }
+  }
+
+  // When code changes, reset verification
+  function handleCodeChange(val: string) {
+    setApprovalCode(val);
+    setCodeVerified(false);
+    setCodeError("");
+  }
+
+  // When clicking a code-required option, only allow if verified
+  function handleCodeRequiredClick(target: "professional" | "premium") {
+    if (codeVerified) {
+      if (target === "professional") setTrialType("professional");
+      else { setTrialType("payg"); setPaygTier("premium"); }
+    }
+    // Always show the code entry area regardless
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -70,8 +115,8 @@ export default function OwnerSignUpForm() {
       setError("Password must be at least 8 characters");
       return;
     }
-    if (trialType === "professional" && !approvalCode.trim()) {
-      setError("Approval code is required for the Professional trial");
+    if ((trialType === "professional" || (trialType === "payg" && paygTier === "premium")) && !codeVerified) {
+      setError("Please verify your approval code first");
       return;
     }
 
@@ -125,7 +170,7 @@ export default function OwnerSignUpForm() {
       {
         p_owner_auth_uid: userId,
         p_name: orgName,
-        p_approval_code: (trialType === "payg" || trialType === "professional") ? (approvalCode || null) : null,
+        p_approval_code: (trialType === "professional" || (trialType === "payg" && approvalCode.trim())) ? (approvalCode || null) : null,
       }
     );
 
@@ -402,87 +447,128 @@ export default function OwnerSignUpForm() {
           placeholder="Smith Family Clinic" />
       </div>
 
-      {/* Trial type selector */}
+      {/* Trial type selector — two boxes */}
       <div>
         <label className="mb-3 block text-sm font-medium text-ink">Choose your trial</label>
+        <div className="grid grid-cols-2 gap-3 items-stretch">
 
-        {/* PAyG */}
-        <button type="button" onClick={() => setTrialType("payg")}
-          className={`w-full rounded-xl border p-4 text-left transition-colors mb-3 ${
-            trialType === "payg" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
-          }`}>
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-ink">Pay As You Go</p>
-              <p className="text-xs text-slate mt-1">No credit card required</p>
-              <div className="flex gap-3 mt-2">
-                <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">$20 free</span>
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">Up to $200 with code</span>
-              </div>
-            </div>
-            <div className={`mt-1 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "payg" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
-              {trialType === "payg" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
-            </div>
-          </div>
-        </button>
-
-        {/* Subscription plans header */}
-        <p className="text-xs font-medium text-ash uppercase tracking-wider mb-2 mt-4">Subscription Plans</p>
-
-        <div className="grid grid-cols-2 gap-2 items-stretch">
-          {/* Starter */}
-          <button type="button" onClick={() => setTrialType("starter")}
+          {/* Pay As You Go */}
+          <button type="button" onClick={() => setTrialType("payg")}
             className={`flex flex-col rounded-xl border p-4 text-left transition-colors ${
-              trialType === "starter" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
+              trialType === "payg" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
             }`}>
             <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-ink">Starter</p>
-              <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "starter" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
-                {trialType === "starter" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
+              <p className="text-sm font-semibold text-ink">Pay As You Go</p>
+              <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "payg" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
+                {trialType === "payg" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
               </div>
             </div>
-            <p className="text-xs text-slate mt-1">Standard AI</p>
-            <p className="text-xs text-slate">50 screenings</p>
-            <p className="text-xs font-medium text-ink mt-2">14 days free</p>
-            <p className="text-[11px] text-ash">then $79/doctor and nurse/mo</p>
+            <p className="text-lg font-bold text-ink mt-2">Up to $200</p>
+            <p className="text-[11px] text-ash">in credits · no card required</p>
+            <div className="mt-3 space-y-1">
+              <p className="text-xs text-slate">✓ $20 to start, $200 with code</p>
+              <p className="text-xs text-slate">✓ Every feature included</p>
+            </div>
           </button>
 
-          {/* Professional */}
-          <button type="button" onClick={() => setTrialType("professional")}
+          {/* Subscription Plans */}
+          <button type="button" onClick={() => setTrialType(trialType === "professional" ? "professional" : "starter")}
             className={`flex flex-col rounded-xl border p-4 text-left transition-colors ${
-              trialType === "professional" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
+              trialType === "starter" || trialType === "professional" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
             }`}>
             <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-semibold text-ink">Professional</p>
-              <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "professional" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
-                {trialType === "professional" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
+              <p className="text-sm font-semibold text-ink">Subscription</p>
+              <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "starter" || trialType === "professional" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
+                {(trialType === "starter" || trialType === "professional") && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
               </div>
             </div>
-            <p className="text-xs text-slate mt-1">Advanced AI</p>
-            <p className="text-xs text-slate">50 screenings</p>
-            <p className="text-xs font-medium text-ink mt-2">14 days free</p>
-            <p className="text-[11px] text-ash">then $149/doctor and nurse/mo</p>
-            <span className="mt-2 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200">Code required</span>
+            <p className="text-lg font-bold text-ink mt-2">14 days</p>
+            <p className="text-[11px] text-ash">50 screenings included</p>
+            <div className="mt-3 space-y-1">
+              <p className="text-xs text-slate">✓ Starter or Professional</p>
+              <p className="text-xs text-slate">✓ Every feature included</p>
+            </div>
           </button>
         </div>
+
+        {/* PAyG sub-picker */}
+        {trialType === "payg" && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => { setPaygTier("standard"); }}
+              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                paygTier === "standard" ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <p className="text-xs font-semibold text-ink">$20 Credits</p>
+              <p className="text-[11px] text-slate">14 day trial</p>
+            </button>
+            <button type="button" onClick={() => { if (codeVerified) { setPaygTier("premium"); } else { setShowCodeEntry("premium"); } }}
+              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                paygTier === "premium" && codeVerified ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <p className="text-xs font-semibold text-ink">$200 Credits</p>
+              <p className="text-[11px] text-slate">30 day trial</p>
+              {codeVerified
+                ? <span className="inline-block rounded-full bg-green-50 px-1.5 py-0.5 text-[9px] font-medium text-green-700 mt-1">Verified</span>
+                : <span className="inline-block rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-700 mt-1">Code required</span>}
+            </button>
+          </div>
+        )}
+
+        {/* Subscription sub-picker */}
+        {(trialType === "starter" || trialType === "professional") && (
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setTrialType("starter")}
+              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                trialType === "starter" ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <p className="text-xs font-semibold text-ink">Starter</p>
+              <p className="text-[11px] text-slate">Standard AI · $79/doctor and nurse/mo</p>
+            </button>
+            <button type="button" onClick={() => { if (codeVerified) { setTrialType("professional"); } else { setShowCodeEntry("professional"); } }}
+              className={`rounded-lg border px-3 py-2 text-left transition-colors ${
+                trialType === "professional" && codeVerified ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
+              }`}>
+              <p className="text-xs font-semibold text-ink">Professional</p>
+              <p className="text-[11px] text-slate">Advanced AI · $149/doctor and nurse/mo</p>
+              {codeVerified
+                ? <span className="inline-block rounded-full bg-green-50 px-1.5 py-0.5 text-[9px] font-medium text-green-700 mt-1">Verified</span>
+                : <span className="inline-block rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-700 mt-1">Code required</span>}
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Approval code — show for PAyG (optional) and Professional (required) */}
-      {(trialType === "payg" || trialType === "professional") && (
-        <div>
-          <label className="mb-1 block text-sm font-medium text-ink">
-            Approval Code{trialType === "payg" ? " " : ""}
-            {trialType === "payg" && <span className="font-normal text-ash">(optional)</span>}
-          </label>
-          <input type="text" value={approvalCode} onChange={(e) => setApprovalCode(e.target.value)}
-            required={trialType === "professional"}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
-            placeholder={trialType === "professional" ? "Required for Professional trial" : "Enter code for premium trial"} />
-          <p className="mt-1 text-xs text-ash">
-            {trialType === "professional"
-              ? <>A valid approval code is required for the Professional trial. <ContactLink className="text-hilt-blue hover:underline font-medium">Apply for a code</ContactLink></>
-              : <>Have an approval code? Enter it for $200 in credits and a 30 day trial. <ContactLink className="text-hilt-blue hover:underline font-medium">Apply for a code</ContactLink></>}
-          </p>
+      {/* Code verification modal */}
+      {showCodeEntry && !codeVerified && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl mx-4">
+            <h3 className="text-lg font-semibold text-ink mb-1">Enter Approval Code</h3>
+            <p className="text-sm text-slate mb-4">
+              {showCodeEntry === "premium"
+                ? "A valid code is required for the $200 credit trial."
+                : "A valid code is required for the Professional plan trial."}
+            </p>
+
+            <input type="text" value={approvalCode} onChange={(e) => handleCodeChange(e.target.value)}
+              autoFocus
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-center font-mono tracking-wider focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+              placeholder="Enter code" />
+
+            {codeError && <p className="text-xs text-red-500 mt-2 text-center">{codeError}</p>}
+
+            <button type="button" onClick={handleVerifyCode}
+              disabled={!approvalCode.trim() || codeChecking}
+              className="mt-4 w-full rounded-lg bg-hilt-blue py-2.5 text-sm font-semibold text-white disabled:opacity-50 transition-colors hover:bg-hilt-blue-dark">
+              {codeChecking ? "Verifying..." : "Verify Code"}
+            </button>
+
+            <div className="mt-3 flex items-center justify-between">
+              <ContactLink className="text-xs text-hilt-blue hover:underline font-medium">Apply for a code</ContactLink>
+              <button type="button" onClick={() => setShowCodeEntry(null)} className="text-xs text-slate hover:text-ink">
+                Cancel
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
