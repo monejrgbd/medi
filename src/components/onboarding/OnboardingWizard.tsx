@@ -39,6 +39,9 @@ export default function OnboardingWizard({
   existingLocations: ExistingLocation[];
 }) {
   const router = useRouter();
+  const storageKey = `hilt_onboarding_${org.id}`;
+  const [hydrated, setHydrated] = useState(false);
+
   const [step, setStep] = useState(existingLocations.length > 0 ? 6 : 0);
 
   // Step 2 state (Raven Scheduler)
@@ -68,6 +71,36 @@ export default function OnboardingWizard({
   const [createdLocationName, setCreatedLocationName] = useState(
     existingLocations[0]?.name ?? ""
   );
+
+  // Restore wizard state from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const s = JSON.parse(saved);
+        // Only restore if the saved location still exists on the server
+        const locationValid = s.locationId && existingLocations.some((l) => l.id === s.locationId);
+        if (locationValid) {
+          if (typeof s.step === "number") setStep(s.step);
+          setLocationId(s.locationId);
+          if (s.locationName) setCreatedLocationName(s.locationName);
+          if (s.ravenApiKey) setRavenApiKey(s.ravenApiKey);
+        }
+      }
+    } catch {}
+    setHydrated(true);
+  }, [storageKey, existingLocations]);
+
+  // Persist wizard state on changes (skip until hydrated to avoid overwriting with defaults)
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({ step, locationId, locationName: createdLocationName, ravenApiKey })
+      );
+    } catch {}
+  }, [hydrated, step, locationId, createdLocationName, ravenApiKey, storageKey]);
 
   // Step 6 (Try It) state
   const [demoReady, setDemoReady] = useState(false);
@@ -199,10 +232,15 @@ export default function OnboardingWizard({
     }
   }, [detectedVisit]);
 
+  const clearWizardState = useCallback(() => {
+    try { localStorage.removeItem(storageKey); } catch {}
+  }, [storageKey]);
+
   const handleFinish = useCallback(async () => {
+    clearWizardState();
     await completeOnboarding();
     router.push("/d/owner");
-  }, [router]);
+  }, [router, clearWizardState]);
 
   const daysRemaining = Math.max(
     0,
@@ -214,6 +252,14 @@ export default function OnboardingWizard({
   const checkinUrl = locationId
     ? `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`
     : "";
+
+  if (!hydrated) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-hilt-blue" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -731,7 +777,7 @@ export default function OnboardingWizard({
 
           <div className="grid gap-3 sm:grid-cols-2 mb-4">
             <button
-              onClick={async () => { await completeOnboarding(); router.push("/d/owner/kiosk"); }}
+              onClick={async () => { clearWizardState(); await completeOnboarding(); router.push("/d/owner/kiosk"); }}
               className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
               <Tablet className="h-5 w-5 text-hilt-blue mb-1" />
@@ -743,7 +789,7 @@ export default function OnboardingWizard({
               </p>
             </button>
             <button
-              onClick={async () => { await completeOnboarding(); router.push("/d/reviews"); }}
+              onClick={async () => { clearWizardState(); await completeOnboarding(); router.push("/d/reviews"); }}
               className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
               <Star className="h-5 w-5 text-hilt-blue mb-1" />
@@ -755,7 +801,7 @@ export default function OnboardingWizard({
               </p>
             </button>
             <button
-              onClick={async () => { await completeOnboarding(); router.push("/d/owner/billing"); }}
+              onClick={async () => { clearWizardState(); await completeOnboarding(); router.push("/d/owner/billing"); }}
               className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
               <CreditCard className="h-5 w-5 text-hilt-blue mb-1" />
@@ -767,7 +813,7 @@ export default function OnboardingWizard({
               </p>
             </button>
             <button
-              onClick={async () => { await completeOnboarding(); router.push("/d/owner/staff"); }}
+              onClick={async () => { clearWizardState(); await completeOnboarding(); router.push("/d/owner/staff"); }}
               className="rounded-xl border border-gray-100 bg-white p-4 text-left hover:border-hilt-blue transition-colors"
             >
               <Users className="h-5 w-5 text-hilt-blue mb-1" />

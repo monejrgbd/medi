@@ -17,6 +17,10 @@ export default async function OnboardingPage() {
 
   const org = await getMyOrg();
 
+  if (org.onboarding_completed_at) {
+    redirect("/d/owner");
+  }
+
   const supabase = await createClient();
   const { data: locations } = await supabase.rpc("get_locations");
   const existingLocations = (locations ?? []).map(

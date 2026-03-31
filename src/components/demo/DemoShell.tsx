@@ -113,6 +113,20 @@ function DemoShellInner({
   const [activeTab, setActiveTab] = useState<Tab>("patient");
   const [pulsingTab, setPulsingTab] = useState<string | null>(null);
   const [demoComplete, setDemoComplete] = useState(false);
+
+  // Auto-zoom content area to fit without scrolling
+  const [contentZoom, setContentZoom] = useState(1);
+  useEffect(() => {
+    function updateZoom() {
+      const chromeHeight = 250; // top bar (~44) + tab bar (~48) + timeline (~160)
+      const available = window.innerHeight - chromeHeight;
+      const target = 700; // tallest content (check-in form with all fields)
+      setContentZoom(Math.min(1, Math.max(0.75, available / target)));
+    }
+    updateZoom();
+    window.addEventListener("resize", updateZoom);
+    return () => window.removeEventListener("resize", updateZoom);
+  }, []);
   const [demoVisitId, setDemoVisitId] = useState<string | null>(null);
   const [demoKey, setDemoKey] = useState(0);
   const [waitingForDoctor, setWaitingForDoctor] = useState(false);
@@ -613,7 +627,9 @@ function DemoShellInner({
 
 
       {/* Content area — all tabs mounted, toggled via display */}
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative" style={{ zoom: contentZoom }}>
+        {/* Bottom fade — hints there is more content below if overflow occurs */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-snow to-transparent z-10" />
         <div className="absolute inset-0 bg-snow" style={{ display: activeTab === "patient" ? "flex" : "none" }}>
           <div className="h-full w-full flex flex-col items-center px-4 pt-6">
             {/* Skip AI banner */}
@@ -640,6 +656,7 @@ function DemoShellInner({
         </div>
 
         <div
+          className="absolute inset-0 overflow-y-auto"
           style={{
             display: activeTab === "receptionist" ? "block" : "none",
           }}
@@ -665,7 +682,7 @@ function DemoShellInner({
           </RoleProvider>
         </div>
 
-        <div style={{ display: activeTab === "nurse" ? "block" : "none" }}>
+        <div className="absolute inset-0 overflow-y-auto" style={{ display: activeTab === "nurse" ? "block" : "none" }}>
           <NurseDashboard
             key={demoKey}
             mode="dashboard"
@@ -687,6 +704,7 @@ function DemoShellInner({
         </div>
 
         <div
+          className="absolute inset-0 overflow-y-auto"
           style={{ display: activeTab === "doctor" ? "block" : "none" }}
         >
           <DoctorDashboard
@@ -711,7 +729,7 @@ function DemoShellInner({
           />
         </div>
 
-        <div style={{ display: activeTab === "reviews" ? "block" : "none" }}>
+        <div className="absolute inset-0 overflow-y-auto" style={{ display: activeTab === "reviews" ? "block" : "none" }}>
           <div className="mx-auto max-w-6xl">
             {/* Review submission guidance */}
             {visitCompleted && !reviewSubmitted && reviewToken && (
@@ -746,7 +764,7 @@ function DemoShellInner({
           </div>
         </div>
 
-        <div style={{ display: activeTab === "marketing" ? "block" : "none" }}>
+        <div className="absolute inset-0 overflow-y-auto" style={{ display: activeTab === "marketing" ? "block" : "none" }}>
           <div className="p-6">
             <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
               This demo uses 200 AI generated fake patients. No real SMS messages are sent.
@@ -802,7 +820,7 @@ function DemoShellInner({
           </div>
         </div>
 
-        <div style={{ display: activeTab === "faq" ? "block" : "none" }}>
+        <div className="absolute inset-0 overflow-y-auto" style={{ display: activeTab === "faq" ? "block" : "none" }}>
           <DemoFAQ />
         </div>
       </div>

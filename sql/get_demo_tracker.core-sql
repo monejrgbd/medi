@@ -40,7 +40,7 @@ BEGIN
   ), '[]'::jsonb)
   INTO v_sessions
   FROM (
-    SELECT
+    SELECT DISTINCT ON (v.patient_id)
       v.id,
       v.status,
       v.created_at,
@@ -69,8 +69,7 @@ BEGIN
     JOIN public.patients p ON p.id = v.patient_id
     WHERE v.org_id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'
       AND v.created_at > now() - interval '3 hours'
-    ORDER BY v.created_at DESC
-    LIMIT 10
+    ORDER BY v.patient_id, v.created_at DESC
   ) sub;
 
   RETURN jsonb_build_object('sessions', v_sessions, 'emails', v_emails);
