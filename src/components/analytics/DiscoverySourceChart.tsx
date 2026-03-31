@@ -31,11 +31,6 @@ export default function DiscoverySourceChart({ data }: DiscoverySourceChartProps
       <h3 className="text-sm font-semibold text-ink mb-1">Where New Patients Find You</h3>
       <p className="text-xs text-ash mb-4">
         {data.total_new_patients} new patients, {responseRate}% responded
-        {data.referral_count > 0 && (
-          <span className="ml-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-            {data.referral_count} reported being referred
-          </span>
-        )}
       </p>
 
       {sources.length === 0 ? (

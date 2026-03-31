@@ -100,6 +100,31 @@ function PatientsTab() {
           <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-sm bg-red-500" />Denied</span>
         </div>
       </div>
+      {/* Discovery source */}
+      <div className="rounded-lg border border-gray-200 bg-white p-4">
+        <p className="text-sm font-semibold text-ink mb-1">Where New Patients Find You</p>
+        <p className="text-xs text-ash mb-3">68 new patients, 79% responded</p>
+        <div className="space-y-2">
+          {[
+            { source: "Google Search", count: 19, pct: 100 },
+            { source: "Friend or Family", count: 14, pct: 74 },
+            { source: "Doctor Referral", count: 12, pct: 63 },
+            { source: "Social Media", count: 5, pct: 26 },
+            { source: "Insurance Directory", count: 3, pct: 16 },
+            { source: "Walk in", count: 1, pct: 5 },
+          ].map(s => (
+            <div key={s.source}>
+              <div className="flex items-center justify-between mb-0.5">
+                <span className="text-xs font-medium text-ink">{s.source}</span>
+                <span className="text-xs text-ash">{s.count} ({Math.round((s.count / 68) * 100)}%)</span>
+              </div>
+              <div className="h-2 w-full rounded-full bg-gray-100">
+                <div className="h-2 rounded-full bg-hilt-blue" style={{ width: `${s.pct}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </>
   );
 }
@@ -272,6 +297,13 @@ function ReferralsTab() {
         <StatCard label="By status" value="5" unit=" types" />
         <StatCard label="Top specialty" value="Rheum." />
       </div>
+      {/* Referral sources */}
+      <div className="flex items-center gap-3 mb-4">
+        <span className="text-xs font-medium text-slate">Referral Sources:</span>
+        <span className="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Hilt: 21</span>
+        <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Self Reported: 17</span>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2">
         {/* By status */}
         <div className="rounded-lg border border-gray-200 bg-white p-4">

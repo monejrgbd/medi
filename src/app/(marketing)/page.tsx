@@ -709,6 +709,8 @@ function BuiltForYourClinicSection() {
                   { label: "Smart follow ups", desc: "AI linked cross session care", on: true },
                   { label: "Review collection", desc: "Post visit feedback routing", on: false },
                   { label: "AI intake", desc: "AI screens patients before doctor", on: true },
+                  { label: "Referral tracking", desc: "Ask patients who referred them", on: true },
+                  { label: "Discovery source", desc: "Learn how new patients find you", on: false },
                 ].map(f => (
                   <div key={f.label} className="flex items-center justify-between">
                     <div>
