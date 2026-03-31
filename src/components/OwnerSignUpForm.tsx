@@ -116,7 +116,7 @@ export default function OwnerSignUpForm() {
       return;
     }
     if ((trialType === "professional" || (trialType === "payg" && paygTier === "premium")) && !codeVerified) {
-      setError("Please verify your approval code first");
+      setError("Please verify your premium code first");
       return;
     }
 
@@ -542,7 +542,7 @@ export default function OwnerSignUpForm() {
       {showCodeEntry && !codeVerified && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl mx-4">
-            <h3 className="text-lg font-semibold text-ink mb-1">Enter Approval Code</h3>
+            <h3 className="text-lg font-semibold text-ink mb-1">Enter Premium Code</h3>
             <p className="text-sm text-slate mb-4">
               {showCodeEntry === "premium"
                 ? "A valid code is required for the $200 credit trial."
@@ -563,7 +563,7 @@ export default function OwnerSignUpForm() {
             </button>
 
             <div className="mt-3 flex items-center justify-between">
-              <ContactLink className="text-xs text-hilt-blue hover:underline font-medium">Apply for a code</ContactLink>
+              <ContactLink className="text-xs text-hilt-blue hover:underline font-medium">Apply for a premium code</ContactLink>
               <button type="button" onClick={() => setShowCodeEntry(null)} className="text-xs text-slate hover:text-ink">
                 Cancel
               </button>
