@@ -17,18 +17,9 @@ const ALL_STEPS = [
     label: "Approve",
     role: "You are the receptionist",
     todo: "Review the patient details and click Approve.",
-    info: "This triggers the AI pre screening conversation. Returning patients are automatically identified by name and date of birth. You can edit their info using the edit icon, and configure the AI (skipping it or using Premium AI) before approving.",
+    info: "This triggers the AI pre screening conversation. Returning patients are automatically identified by name and date of birth. You can edit their info using the edit icon. You can also skip the AI or switch to Premium AI before approving by clicking on configure AI.",
     featureGate: null,
     mapsToDemoStep: 2,
-  },
-  {
-    key: "nurse",
-    label: "Nurse Triage",
-    role: "You are the nurse",
-    todo: "Record vitals, add triage notes, then release the patient to the doctor.",
-    info: "The nurse reviews the AI intake, records vitals and vaccines, writes observations, then releases the patient to the doctor queue.",
-    featureGate: "nurseEnabled",
-    mapsToDemoStep: null as number | null,
   },
   {
     key: "ai",
@@ -38,6 +29,15 @@ const ALL_STEPS = [
     info: "The AI builds a structured symptom profile automatically, saving the doctor time. Afterward, you will verify a phone number.",
     featureGate: null,
     mapsToDemoStep: 3,
+  },
+  {
+    key: "nurse",
+    label: "Nurse Triage",
+    role: "You are the nurse",
+    todo: "Record vitals, add triage notes, then release the patient to the doctor.",
+    info: "The nurse reviews the AI intake, records vitals and vaccines, writes observations, then releases the patient to the doctor queue.",
+    featureGate: "nurseEnabled",
+    mapsToDemoStep: null as number | null,
   },
   {
     key: "diagnose",
@@ -82,9 +82,12 @@ export default function DemoTimeline({ currentStep, features, nurseActive, nurse
     const featureKey = step.featureGate as keyof DemoFeatures | null;
     const isGatedOff = featureKey !== null && !features[featureKey];
 
-    // AI step: disabled when skipAi is on
+    // AI step: disabled when skipAi is on, done when nurse is triaging
     if (step.key === "ai" && features.skipAi) {
       return { ...step, status: "disabled" as const };
+    }
+    if (step.key === "ai" && (nurseActive || nurseDone)) {
+      return { ...step, status: "done" as const };
     }
 
     // Nurse step (no mapsToDemoStep)
@@ -92,7 +95,7 @@ export default function DemoTimeline({ currentStep, features, nurseActive, nurse
       if (isGatedOff) return { ...step, status: "disabled" as const };
       if (nurseDone) return { ...step, status: "done" as const };
       if (nurseActive) return { ...step, status: "active" as const };
-      if (currentStep >= 3) return { ...step, status: "pending" as const };
+      if (currentStep >= 4) return { ...step, status: "pending" as const };
       return { ...step, status: "pending" as const };
     }
 

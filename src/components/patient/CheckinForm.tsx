@@ -103,7 +103,11 @@ export default function CheckinForm({
 
     // Build phone in E.164 format or null
     let phone: string | null = null;
-    if (!noPhone && phoneNumber.trim()) {
+    if (!noPhone) {
+      if (!phoneNumber.trim()) {
+        setValidationError("Please enter your phone number or check \"I do not have a phone number\" to continue.");
+        return;
+      }
       const digits = phoneNumber.replace(/\D/g, "");
       const fullPhone = `${countryCode}${digits}`;
       if (!/^\+[1-9]\d{6,14}$/.test(fullPhone)) {

@@ -14,9 +14,11 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "No app to install, this is just their phone browser",
       "Works in 130 plus languages, doctor still reads English",
       "Replaces the paper clipboard at your front desk",
+      "If referral tracking is on, patients can mark who referred them right on the form",
+      "New patients get asked how they found you, that data feeds into your analytics",
     ],
     lines: [
-      "So the patient did not download anything for this. This is just their phone browser. They scan a QR code in your waiting room and this comes up. Works in 130 plus languages, but your doctor still reads everything in English. This is what replaces the clipboard at your front desk.",
+      "So the patient did not download anything for this. This is just their phone browser. They scan a QR code in your waiting room and this comes up. Works in 130 plus languages, but your doctor still reads everything in English. This is what replaces the clipboard at your front desk. See the referral checkbox at the bottom? If someone was sent here by another doctor, they check that and type who sent them. And for new patients, right after check in, they get asked how they found you. Google, friend, social media. All of that goes straight into your dashboard.",
     ],
   },
   2: {
@@ -24,22 +26,13 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
       "Your receptionist controls AI cost per patient",
       "Simple visits skip AI and cost zero credits",
       "Returning patients auto matched, no duplicate charts",
+      "If a patient said they were referred, a badge shows right on the approval card",
     ],
     lines: [
-      "OK so now you are the receptionist. That button right there is how your front desk controls cost. Patient here for a flu shot? No reason to burn a credit on AI screening. Skip it. But this next patient has been having chest pains for a week? That is when you want the full screening. Your receptionist makes that call before they even approve the patient. And see how it already matched this person as returning? No one had to look anything up.",
+      "OK so now you are the receptionist. That button right there is how your front desk controls cost. Patient here for a flu shot? No reason to burn a credit on AI screening. Skip it. But this next patient has been having chest pains for a week? That is when you want the full screening. Your receptionist makes that call before they even approve the patient. And see how it already matched this person as returning? No one had to look anything up. If the patient checked the referral box, your receptionist sees it right here. No asking, who sent you. It is already on the card.",
     ],
   },
   3: {
-    keyPoints: [
-      "Your doctor walks in already informed, not starting cold",
-      "Nurses handle vaccine only visits without pulling a doctor in",
-      "Vitals are customized per specialty, set up once",
-    ],
-    lines: [
-      "So your doctor walks in already knowing what the nurse found. They are not asking the same questions the nurse already covered. For something simple like a vaccine visit, the nurse finishes it without pulling a doctor in at all. And the vitals are customized per clinic. Your cardiology location tracks blood pressure. Your pediatrics location tracks head circumference. You set that up once.",
-    ],
-  },
-  4: {
     keyPoints: [
       "This replaces the first ten minutes the doctor spends on intake",
       "Urgent symptoms jump the queue automatically",
@@ -48,6 +41,16 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
     ],
     lines: [
       "So this conversation right here is the first ten minutes of the doctor's day with every patient. Except now the doctor is not doing it. By the time they open this chart, the symptom profile is already built. They can speak instead of type, which matters for your elderly patients. If something urgent comes up, that patient jumps the queue. Your staff did not have to make that call. For someone who was here last month, the AI already knows their history. It picks up where it left off. And your orthopedic location gets different questions than your family practice.",
+    ],
+  },
+  4: {
+    keyPoints: [
+      "Your doctor walks in already informed, not starting cold",
+      "Nurses handle vaccine only visits without pulling a doctor in",
+      "Vitals are customized per specialty, set up once",
+    ],
+    lines: [
+      "So your doctor walks in already knowing what the nurse found. They are not asking the same questions the nurse already covered. For something simple like a vaccine visit, the nurse finishes it without pulling a doctor in at all. And the vitals are customized per clinic. Your cardiology location tracks blood pressure. Your pediatrics location tracks head circumference. You set that up once.",
     ],
   },
   5: {
@@ -84,7 +87,7 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
   },
 };
 
-const STEP_LABELS = ["", "Check In", "Approve", "Nurse Triage", "AI Screening", "Diagnose", "Feedback", "Outreach"];
+const STEP_LABELS = ["", "Check In", "Approve", "AI Screening", "Nurse Triage", "Diagnose", "Feedback", "Outreach"];
 
 interface DemoFeatures {
   nurseEnabled?: boolean;
@@ -92,6 +95,8 @@ interface DemoFeatures {
   vaccinesEnabled?: boolean;
   skipAi?: boolean;
   reviewCollection?: boolean;
+  askReferralSource?: boolean;
+  askDiscoverySource?: boolean;
 }
 
 interface Session {
@@ -109,8 +114,8 @@ interface Session {
 const STEP_FEATURE_GATES: Record<number, keyof DemoFeatures | null> = {
   1: null,           // Check In
   2: null,           // Approve
-  3: "nurseEnabled", // Nurse Triage
-  4: null,           // AI Screening (skipAi handled separately)
+  3: null,           // AI Screening (skipAi handled separately)
+  4: "nurseEnabled", // Nurse Triage
   5: null,           // Diagnose
   6: "reviewCollection", // Feedback
   7: null,           // Outreach
@@ -237,7 +242,7 @@ function SessionCard({ session }: { session: Session }) {
       {session.demoFeatures && (
         <div className="px-4 pt-3 flex flex-wrap gap-1">
           {Object.entries(session.demoFeatures).map(([key, val]) => {
-            const label = key === "skipAi" ? "AI Intake" : key === "nurseEnabled" ? "Nurse" : key === "vitalsEnabled" ? "Vitals" : key === "vaccinesEnabled" ? "Vaccines" : key === "reviewCollection" ? "Reviews" : key;
+            const label = key === "skipAi" ? "AI Intake" : key === "nurseEnabled" ? "Nurse" : key === "vitalsEnabled" ? "Vitals" : key === "vaccinesEnabled" ? "Vaccines" : key === "reviewCollection" ? "Reviews" : key === "askReferralSource" ? "Referrals" : key === "askDiscoverySource" ? "Discovery" : key;
             const isOn = key === "skipAi" ? !val : val;
             return (
               <span key={key} className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${isOn ? "bg-green-50 text-green-600" : "bg-red-50 text-red-400"}`}>
@@ -254,7 +259,7 @@ function SessionCard({ session }: { session: Session }) {
           {[1, 2, 3, 4, 5, 6, 7].map((n) => {
             const featureGate = STEP_FEATURE_GATES[n];
             const isSkipped = featureGate !== null && session.demoFeatures && !session.demoFeatures[featureGate];
-            const isAiSkipped = n === 4 && session.demoFeatures?.skipAi;
+            const isAiSkipped = n === 3 && session.demoFeatures?.skipAi;
             const skipped = isSkipped || isAiSkipped;
 
             return (
@@ -284,7 +289,7 @@ function SessionCard({ session }: { session: Session }) {
           <span className="ml-2 text-sm font-medium text-gray-700">{STEP_LABELS[session.step]}</span>
         </div>
 
-        {session.step === 4 && (
+        {session.step === 3 && (
           <p className="text-xs text-gray-400 mb-3">{session.messageCount} messages in AI conversation</p>
         )}
 

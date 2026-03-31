@@ -49,7 +49,8 @@ BEGIN
         WHEN v.status = 'completed' AND EXISTS(SELECT 1 FROM public.reviews r WHERE r.visit_id = v.id) THEN 7
         WHEN v.status = 'completed' THEN 6
         WHEN v.status = 'claimed_by_doctor' THEN 5
-        WHEN v.status IN ('still_answering_ai', 'waiting_doctor_claim') THEN 4
+        WHEN v.status = 'waiting_doctor_claim' THEN 4
+        WHEN v.status = 'still_answering_ai' THEN 3
         WHEN v.status = 'pending_approval' THEN 2
         ELSE 1
       END AS step,
@@ -57,7 +58,8 @@ BEGIN
         WHEN v.status = 'completed' AND EXISTS(SELECT 1 FROM public.reviews r WHERE r.visit_id = v.id) THEN 'Outreach'
         WHEN v.status = 'completed' THEN 'Feedback'
         WHEN v.status = 'claimed_by_doctor' THEN 'Diagnose'
-        WHEN v.status IN ('still_answering_ai', 'waiting_doctor_claim') THEN 'AI Screening'
+        WHEN v.status = 'waiting_doctor_claim' THEN 'Nurse Triage'
+        WHEN v.status = 'still_answering_ai' THEN 'AI Screening'
         WHEN v.status = 'pending_approval' THEN 'Approve'
         ELSE 'Check In'
       END AS step_label,

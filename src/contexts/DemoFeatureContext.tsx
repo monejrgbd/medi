@@ -7,6 +7,8 @@ interface DemoFeatures {
   vaccinesEnabled: boolean;
   skipAi: boolean;
   reviewCollection: boolean;
+  askReferralSource: boolean;
+  askDiscoverySource: boolean;
 }
 
 const DEFAULTS: DemoFeatures = {
@@ -15,6 +17,8 @@ const DEFAULTS: DemoFeatures = {
   vaccinesEnabled: true,
   skipAi: false,
   reviewCollection: true,
+  askReferralSource: true,
+  askDiscoverySource: true,
 };
 
 const STORAGE_KEY = "demo_features";

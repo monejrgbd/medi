@@ -251,6 +251,18 @@ function DemoShellInner({
     }
   }, [demoVisitId]);
 
+  // Synchronous cleanup: if no active demo in sessionStorage, this is a fresh demo (new tab).
+  // Clear stale CheckinFlow tokens BEFORE CheckinFlow mounts and tries to recover them.
+  // Must be synchronous (not useEffect) because children's effects fire before parent's.
+  const cleanupDoneRef = useRef(false);
+  if (!cleanupDoneRef.current) {
+    cleanupDoneRef.current = true;
+    if (typeof window !== "undefined" && !sessionStorage.getItem("demo_visit_id")) {
+      localStorage.removeItem("hilt_session_token");
+      localStorage.removeItem("hilt_session_phone");
+    }
+  }
+
   // On mount: restore visit ID from sessionStorage, then check status in DB
   useEffect(() => {
     const stored = sessionStorage.getItem("demo_visit_id");
@@ -614,7 +626,11 @@ function DemoShellInner({
               <CheckinFlow
                 key={demoKey}
                 locationId={locationId}
-                locationData={locationData}
+                locationData={{
+                  ...locationData,
+                  ask_referral_source: features.askReferralSource,
+                  ask_discovery_source: features.askDiscoverySource,
+                }}
                 demoMode={true}
                 onVisitCreated={handleVisitCreated}
                 onPhoneComplete={handlePhoneComplete}
