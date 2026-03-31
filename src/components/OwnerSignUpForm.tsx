@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PLAN_CONFIG } from "@/lib/constants";
+import ContactLink from "@/components/marketing/ContactLink";
 
 type TrialType = "payg" | "starter" | "professional";
 
@@ -193,7 +194,8 @@ export default function OwnerSignUpForm() {
     if (!container) return;
     container.innerHTML = "";
 
-    const planKey = `${trialType}_${billing}`;
+    // Use trial plan IDs for signup (monthly only, annual has no trial)
+    const planKey = billing === "monthly" ? `${trialType}_monthly_trial` : `${trialType}_annual`;
     const planId = PLAN_IDS[planKey];
     if (!planId) return;
 
@@ -424,7 +426,8 @@ export default function OwnerSignUpForm() {
                 {trialType === "professional" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
               </div>
             </div>
-            <p className="text-xs text-slate mt-1">14 days free. Advanced AI. Unlimited screening. Code + card required. $149/provider/mo after trial.</p>
+            <p className="text-xs text-slate mt-1">14 days free. Advanced AI. Unlimited screening. $149/provider/mo after trial.</p>
+            <p className="text-xs text-amber-600 mt-1 font-medium">Requires an approval code</p>
           </button>
         </div>
       </div>
@@ -442,7 +445,7 @@ export default function OwnerSignUpForm() {
             placeholder={trialType === "professional" ? "Required for Professional trial" : "Enter code for premium trial"} />
           <p className="mt-1 text-xs text-ash">
             {trialType === "professional"
-              ? "A valid approval code is required for the Professional trial."
+              ? <>A valid approval code is required for the Professional trial. <ContactLink className="text-hilt-blue hover:underline font-medium">Apply for a code</ContactLink></>
               : "Have an approval code? Enter it for 200 credits and a 30 day trial."}
           </p>
         </div>

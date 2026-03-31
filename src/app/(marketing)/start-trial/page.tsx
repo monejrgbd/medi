@@ -1,8 +1,9 @@
 import Link from "next/link";
+import ContactLink from "@/components/marketing/ContactLink";
 
 export const metadata = {
   title: "Start Your Free Trial — Hilt Health",
-  description: "Try Hilt Health free. Pay as you go or start a subscription trial.",
+  description: "Try Hilt Health free. Pay as you go with up to $200 in credits, or start a subscription trial.",
 };
 
 export default function StartTrialPage() {
@@ -22,14 +23,18 @@ export default function StartTrialPage() {
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
           <p className="text-lg font-bold text-ink">Pay As You Go</p>
           <p className="mt-1 text-3xl font-bold text-ink">
-            $20 <span className="text-base font-normal text-slate">in credits</span>
+            Up to $200 <span className="text-base font-normal text-slate">in credits</span>
           </p>
-          <p className="text-sm text-slate mt-1">14 day trial</p>
+          <p className="text-sm text-slate mt-1">14 to 30 day trial</p>
 
           <ul className="mt-4 space-y-2 text-sm text-slate">
             <li className="flex items-start gap-2">
               <span className="text-green-500 mt-0.5">✓</span>
               No credit card required
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-green-500 mt-0.5">✓</span>
+              $20 free credits to start (up to $200 with approval code)
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-500 mt-0.5">✓</span>
@@ -71,7 +76,7 @@ export default function StartTrialPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-500 mt-0.5">✓</span>
-              Auto subscribes after 14 days
+              Starter plan free, Professional with approval code
             </li>
             <li className="flex items-start gap-2">
               <span className="text-green-500 mt-0.5">✓</span>
