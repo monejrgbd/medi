@@ -48,6 +48,7 @@ interface ApprovalQueueProps {
   subscriptionPlan?: string;
   onActionComplete: (visitId: string, action: "approve" | "deny") => void;
   aiAutoSkipped?: boolean;
+  demoMode?: boolean;
 }
 
 export default function ApprovalQueue({
@@ -56,6 +57,7 @@ export default function ApprovalQueue({
   subscriptionPlan,
   onActionComplete,
   aiAutoSkipped,
+  demoMode = false,
 }: ApprovalQueueProps) {
   type AiConfig = "standard" | "skip" | "premium";
 
@@ -97,6 +99,11 @@ export default function ApprovalQueue({
 
     // Premium AI: set override before approval
     if (effectiveAiConfig === "premium") {
+      if (demoMode) {
+        setActionState((prev) => { const next = { ...prev }; delete next[visitId]; return next; });
+        setError("Premium AI is not available in the demo. Please select Standard AI or Skip AI.");
+        return;
+      }
       const overrideResult = await setVisitAiOverride(visitId, "advanced");
       if (!overrideResult?.success) {
         setActionState((prev) => { const next = { ...prev }; delete next[visitId]; return next; });

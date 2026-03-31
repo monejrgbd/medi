@@ -556,6 +556,7 @@ export default function ReceptionistDashboard({
             subscriptionPlan={org?.subscription_plan}
             onActionComplete={handleApprovalComplete}
             aiAutoSkipped={aiAutoSkipped}
+            demoMode={demoMode}
           />
         )}
 

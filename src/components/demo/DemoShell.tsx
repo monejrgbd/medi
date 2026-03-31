@@ -628,8 +628,6 @@ function DemoShellInner({
 
       {/* Content area — all tabs mounted, toggled via display */}
       <div className="flex-1 overflow-hidden relative" style={{ zoom: contentZoom }}>
-        {/* Bottom fade — hints there is more content below if overflow occurs */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-snow to-transparent z-10" />
         <div className="absolute inset-0 bg-snow" style={{ display: activeTab === "patient" ? "flex" : "none" }}>
           <div className="h-full w-full flex flex-col items-center px-4 pt-6">
             {/* Skip AI banner */}

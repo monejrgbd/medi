@@ -463,8 +463,6 @@ export default function CheckinFlow({
     lastName: string,
     birthday: string,
     sex: string,
-    wasReferred: boolean = false,
-    referredBy: string = "",
     phone: string | null = null
   ) {
     setState("submitting");
@@ -478,8 +476,6 @@ export default function CheckinFlow({
       p_last_name: lastName,
       p_birthday: birthday,
       p_sex: sex,
-      p_was_referred: wasReferred,
-      p_referred_by: referredBy || null,
       p_phone: phone,
       p_team_code: teamCode || null,
     });
@@ -502,20 +498,12 @@ export default function CheckinFlow({
         setVisitId(data.visit_id);
         localStorage.setItem(STORAGE_KEY, data.session_token);
         if (onVisitCreated && data.visit_id) onVisitCreated(data.visit_id);
-        // Fire-and-forget: create self-reported referral if patient indicated
-        if (wasReferred && data.visit_id) {
-          void supabase.rpc("create_self_reported_referral", {
-            p_visit_id: data.visit_id,
-            p_referred_by: referredBy || null,
-          });
-        }
         // If phone was provided but not yet verified, go to phone verification
         if (data.phone_verified === false && phone) {
           setPatientPhone(phone);
           localStorage.setItem(PHONE_STORAGE_KEY, phone);
           setState("phone_verification");
-        } else if (data.match_type === "new" && locationData?.ask_discovery_source) {
-          // Discovery question: only for new patients when toggle enabled
+        } else if (locationData?.ask_referral_source || (data.match_type === "new" && locationData?.ask_discovery_source)) {
           setState("discovery_question");
         } else {
           setState("waiting");
@@ -586,7 +574,7 @@ export default function CheckinFlow({
       case "potential_match_add_phone":
         // Do NOT set sessionToken or visitId — no visit created yet
         // Save form data for the resolve step
-        setFormDataForResolve({ locationId, firstName, lastName, birthday, sex, phone, wasReferred, referredBy });
+        setFormDataForResolve({ locationId, firstName, lastName, birthday, sex, phone });
         setMatchType(data.match_type);
         setState("match_resolution");
         break;
@@ -792,7 +780,7 @@ export default function CheckinFlow({
     }
     // Phone verified — go to waiting (realtime will handle subsequent transitions)
     if (onPhoneComplete) onPhoneComplete();
-    if (locationData?.ask_discovery_source && !hasPreviousVisits) {
+    if (locationData?.ask_referral_source || (locationData?.ask_discovery_source && !hasPreviousVisits)) {
       setState("discovery_question");
     } else {
       setState("waiting");
@@ -828,7 +816,7 @@ export default function CheckinFlow({
     }
 
     // Otherwise, proceed based on result
-    if (result.isDiscoveryEligible && locationData.ask_discovery_source) {
+    if (locationData.ask_referral_source || (result.isDiscoveryEligible && locationData.ask_discovery_source)) {
       setState("discovery_question");
     } else {
       setState("waiting");
@@ -886,7 +874,6 @@ export default function CheckinFlow({
           loading={loading}
           error={error}
           demoDefaults={demoDefaultsRef.current}
-          askReferralSource={locationData.ask_referral_source}
         />
       );
 
@@ -1118,8 +1105,6 @@ export default function CheckinFlow({
             birthday: formDataForResolve.birthday as string,
             sex: formDataForResolve.sex as string,
             phone: formDataForResolve.phone as string | null,
-            wasReferred: formDataForResolve.wasReferred as boolean,
-            referredBy: formDataForResolve.referredBy as string | null,
           }}
           onResolved={handleMatchResolved}
           onError={(err) => { setError(err); setState("form"); }}
@@ -1194,15 +1179,24 @@ export default function CheckinFlow({
     case "discovery_question":
       return (
         <DiscoveryQuestionScreen
-          onSelect={async (source) => {
+          showReferral={!!locationData.ask_referral_source}
+          showDiscovery={!!locationData.ask_discovery_source && !hasPreviousVisits}
+          onComplete={async (wasReferred, referredBy, discoverySource) => {
             const supabase = createClient();
-            await supabase.rpc("set_discovery_source", {
-              p_visit_id: visitId,
-              p_source: source,
-            });
+            if (wasReferred && visitId) {
+              void supabase.rpc("create_self_reported_referral", {
+                p_visit_id: visitId,
+                p_referred_by: referredBy || null,
+              });
+            }
+            if (discoverySource && visitId) {
+              void supabase.rpc("set_discovery_source", {
+                p_visit_id: visitId,
+                p_source: discoverySource,
+              });
+            }
             setState("waiting");
           }}
-          onSkip={() => setState("waiting")}
           language={patientLanguage}
         />
       );

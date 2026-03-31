@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope } from "lucide-react";
+import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope, UserPlus, Search } from "lucide-react";
 import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
 import { initializeOrgDefaultVitals } from "@/app/(dashboard)/d/_actions/nurse";
 
@@ -29,6 +29,8 @@ export default function ClinicFeaturesStep({
   const [skipAi, setSkipAi] = useState(false); // inverted in UI: "AI Intake" ON = skipAi false
   const [reviewSmsEnabled, setReviewSmsEnabled] = useState(true);
   const [diagnosticEnabled, setDiagnosticEnabled] = useState(true);
+  const [askReferralSource, setAskReferralSource] = useState(false);
+  const [askDiscoverySource, setAskDiscoverySource] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -64,6 +66,8 @@ export default function ClinicFeaturesStep({
         skipAi,
         reviewSmsEnabled,
         diagnosticEnabled,
+        askReferralSource,
+        askDiscoverySource,
       });
 
       if (!result.success) {
@@ -151,8 +155,6 @@ export default function ClinicFeaturesStep({
           activeClass="bg-amber-500"
           label="Review SMS"
           description="Text patients for reviews."
-          cost="0.1 credits/SMS"
-          costClass="text-amber-600"
           enabled={reviewSmsEnabled}
           onToggle={setReviewSmsEnabled}
         />
@@ -164,10 +166,30 @@ export default function ClinicFeaturesStep({
           activeClass="bg-rose-500"
           label="Diagnostic AI"
           description="AI suggests diagnoses."
-          cost="0.5 credits/use"
-          costClass="text-rose-600"
           enabled={diagnosticEnabled}
           onToggle={setDiagnosticEnabled}
+        />
+
+        {/* Referral Tracking */}
+        <FeatureTile
+          icon={<UserPlus className="h-4 w-4 text-indigo-600" />}
+          bg="bg-indigo-50"
+          activeClass="bg-indigo-500"
+          label="Referral Tracking"
+          description="Ask if referred by another provider."
+          enabled={askReferralSource}
+          onToggle={setAskReferralSource}
+        />
+
+        {/* Discovery Source */}
+        <FeatureTile
+          icon={<Search className="h-4 w-4 text-cyan-600" />}
+          bg="bg-cyan-50"
+          activeClass="bg-cyan-500"
+          label="Discovery Source"
+          description="Ask new patients how they found you."
+          enabled={askDiscoverySource}
+          onToggle={setAskDiscoverySource}
         />
       </div>
 
@@ -208,7 +230,7 @@ export default function ClinicFeaturesStep({
 }
 
 function FeatureTile({
-  icon, bg, activeClass, label, description, enabled, onToggle, cost, costClass,
+  icon, bg, activeClass, label, description, enabled, onToggle,
 }: {
   icon: React.ReactNode;
   bg: string;
@@ -217,8 +239,6 @@ function FeatureTile({
   description: string;
   enabled: boolean;
   onToggle: (v: boolean) => void;
-  cost?: string;
-  costClass?: string;
 }) {
   return (
     <label className="flex flex-col gap-2 rounded-xl border border-gray-200 p-3 cursor-pointer hover:border-gray-300 transition-colors select-none">
@@ -239,7 +259,6 @@ function FeatureTile({
       <div>
         <p className="text-xs font-semibold text-ink leading-tight">{label}</p>
         <p className="text-xs text-slate leading-tight">{description}</p>
-        {cost && <p className={`text-xs font-medium mt-0.5 ${costClass}`}>{cost}</p>}
       </div>
     </label>
   );

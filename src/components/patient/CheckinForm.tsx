@@ -41,11 +41,10 @@ interface CheckinFormProps {
   locationName: string;
   address: string;
   logoUrl: string | null;
-  onSubmit: (firstName: string, lastName: string, birthday: string, sex: string, wasReferred: boolean, referredBy: string, phone: string | null) => void;
+  onSubmit: (firstName: string, lastName: string, birthday: string, sex: string, phone: string | null) => void;
   loading: boolean;
   error: string;
   demoDefaults?: { firstName: string; lastName: string; birthday: string; sex: string };
-  askReferralSource?: boolean;
 }
 
 export default function CheckinForm({
@@ -56,14 +55,11 @@ export default function CheckinForm({
   loading,
   error,
   demoDefaults,
-  askReferralSource,
 }: CheckinFormProps) {
   const [firstName, setFirstName] = useState(demoDefaults?.firstName ?? "");
   const [lastName, setLastName] = useState(demoDefaults?.lastName ?? "");
   const [birthday, setBirthday] = useState(demoDefaults?.birthday ?? "");
   const [sex, setSex] = useState(demoDefaults?.sex ?? "male");
-  const [wasReferred, setWasReferred] = useState(false);
-  const [referredBy, setReferredBy] = useState("");
   const [countryCode, setCountryCode] = useState("+1");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [noPhone, setNoPhone] = useState(false);
@@ -121,95 +117,100 @@ export default function CheckinForm({
       phone = fullPhone;
     }
 
-    onSubmit(cleanFirst, cleanLast, birthday, sex, wasReferred, referredBy, phone);
+    onSubmit(cleanFirst, cleanLast, birthday, sex, phone);
   }
 
   const displayError = error || validationError;
 
   return (
     <div className="w-full max-w-md">
-      <div className="mb-8 text-center">
+      <div className="mb-5 text-center">
         {logoUrl && (
           <img
             src={logoUrl}
             alt={locationName}
-            className="mx-auto mb-4 h-16 w-16 rounded-xl object-cover"
+            className="mx-auto mb-2 h-12 w-12 rounded-xl object-cover"
           />
         )}
-        <h1 className="text-2xl font-bold text-ink">{locationName}</h1>
-        {address && <p className="mt-1 text-sm text-slate">{address}</p>}
+        <h1 className="text-xl font-bold text-ink">{locationName}</h1>
+        {address && <p className="mt-0.5 text-xs text-slate">{address}</p>}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">
-            {t("checkin.firstName")}
-          </label>
-          <input
-            type="text"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            maxLength={100}
-            required
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">
-            {t("checkin.lastName")}
-          </label>
-          <input
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            maxLength={100}
-            required
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">
-            {t("checkin.birthday")}
-          </label>
-          <input
-            type="date"
-            value={birthday}
-            onChange={(e) => setBirthday(e.target.value)}
-            max={new Date().toISOString().split("T")[0]}
-            required
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">
-            {t("checkin.sex")}
-          </label>
-          <div className="flex gap-3">
-            <label className={`flex-1 flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm cursor-pointer transition-colors ${sex === "male" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-200 text-ink hover:bg-gray-50"}`}>
-              <input
-                type="radio"
-                name="sex"
-                value="male"
-                checked={sex === "male"}
-                onChange={(e) => setSex(e.target.value)}
-                className="sr-only"
-              />
-              {t("checkin.male")}
+      <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Row 1: First name + Last name */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">
+              {t("checkin.firstName")}
             </label>
-            <label className={`flex-1 flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm cursor-pointer transition-colors ${sex === "female" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-200 text-ink hover:bg-gray-50"}`}>
-              <input
-                type="radio"
-                name="sex"
-                value="female"
-                checked={sex === "female"}
-                onChange={(e) => setSex(e.target.value)}
-                className="sr-only"
-              />
-              {t("checkin.female")}
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              maxLength={100}
+              required
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">
+              {t("checkin.lastName")}
             </label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              maxLength={100}
+              required
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Row 2: Birthday + Sex */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">
+              {t("checkin.birthday")}
+            </label>
+            <input
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              max={new Date().toISOString().split("T")[0]}
+              required
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">
+              {t("checkin.sex")}
+            </label>
+            <div className="flex gap-2">
+              <label className={`flex-1 flex items-center justify-center rounded-lg border px-2 py-2 text-sm cursor-pointer transition-colors ${sex === "male" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-200 text-ink hover:bg-gray-50"}`}>
+                <input
+                  type="radio"
+                  name="sex"
+                  value="male"
+                  checked={sex === "male"}
+                  onChange={(e) => setSex(e.target.value)}
+                  className="sr-only"
+                />
+                {t("checkin.male")}
+              </label>
+              <label className={`flex-1 flex items-center justify-center rounded-lg border px-2 py-2 text-sm cursor-pointer transition-colors ${sex === "female" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-200 text-ink hover:bg-gray-50"}`}>
+                <input
+                  type="radio"
+                  name="sex"
+                  value="female"
+                  checked={sex === "female"}
+                  onChange={(e) => setSex(e.target.value)}
+                  className="sr-only"
+                />
+                {t("checkin.female")}
+              </label>
+            </div>
           </div>
         </div>
 
@@ -242,7 +243,7 @@ export default function CheckinForm({
                 <select
                   value={countryCode}
                   onChange={(e) => setCountryCode(e.target.value)}
-                  className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-ink focus:border-hilt-blue focus:outline-none"
+                  className="rounded-lg border border-gray-200 bg-white px-2 py-2 text-sm text-ink focus:border-hilt-blue focus:outline-none"
                 >
                   {COUNTRY_CODES.map((c) => (
                     <option key={c.code} value={c.code}>
@@ -255,7 +256,7 @@ export default function CheckinForm({
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   placeholder="(555) 123-4567"
-                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2.5 text-base focus:border-hilt-blue focus:outline-none"
+                  className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
                   autoComplete="tel"
                   inputMode="tel"
                 />
@@ -276,32 +277,6 @@ export default function CheckinForm({
             </>
           )}
         </div>
-
-        {askReferralSource && (
-          <div className="border-t border-gray-100 pt-4">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={wasReferred}
-                onChange={(e) => setWasReferred(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
-              />
-              <span className="text-sm text-slate">
-                {t("checkin.wasReferred")}
-              </span>
-            </label>
-            {wasReferred && (
-              <input
-                type="text"
-                placeholder={t("checkin.referredBy")}
-                value={referredBy}
-                onChange={(e) => setReferredBy(e.target.value)}
-                maxLength={200}
-                className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
-              />
-            )}
-          </div>
-        )}
 
         {displayError && (
           <p className="text-sm text-red-600">{displayError}</p>

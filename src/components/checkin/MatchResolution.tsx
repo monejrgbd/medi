@@ -46,8 +46,6 @@ interface MatchResolutionProps {
     birthday: string;
     sex: string;
     phone: string | null;
-    wasReferred: boolean;
-    referredBy: string | null;
   };
   onResolved: (result: {
     matchType: string;
@@ -98,8 +96,6 @@ export default function MatchResolution({
         p_phone: formData.phone ?? null,
         p_old_phone: oldPhone ?? null,
         p_action: action,
-        p_was_referred: formData.wasReferred,
-        p_referred_by: formData.referredBy ?? null,
       });
 
       if (error) {
