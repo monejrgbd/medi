@@ -93,7 +93,19 @@ BEGIN
     'topups_remaining', COALESCE(
       (SELECT SUM(bt.credits - bt.used) FROM public.budget_topups bt
        WHERE bt.org_id = v_org.id AND bt.credits - bt.used > 0), 0
-    )
+    ),
+    'trial_screenings_used', CASE
+      WHEN v_org.trial_end_date IS NOT NULL AND v_org.trial_end_date > now() THEN
+        (SELECT COUNT(*) FROM public.visits v2
+         WHERE v2.org_id = v_org.id
+           AND v2.created_at >= (v_org.trial_end_date - interval '14 days')
+           AND EXISTS (SELECT 1 FROM public.visit_messages vm WHERE vm.visit_id = v2.id))
+      ELSE NULL
+    END,
+    'trial_screenings_limit', CASE
+      WHEN v_org.trial_end_date IS NOT NULL AND v_org.trial_end_date > now() THEN 50
+      ELSE NULL
+    END
   );
 END;
 $$;

@@ -91,6 +91,25 @@ BEGIN
     END IF;
   END IF;
 
+  -- Trial screening limit: 50 screenings for subscription trials
+  IF v_existing_messages = 0
+    AND v_org.subscription_plan IN ('starter', 'professional')
+    AND v_org.trial_end_date IS NOT NULL
+    AND v_org.trial_end_date > now() THEN
+    DECLARE
+      v_screening_count int;
+    BEGIN
+      SELECT COUNT(*) INTO v_screening_count
+      FROM public.visits v2
+      WHERE v2.org_id = v_visit.org_id
+        AND v2.created_at >= (v_org.trial_end_date - interval '14 days')
+        AND EXISTS (SELECT 1 FROM public.visit_messages vm WHERE vm.visit_id = v2.id);
+      IF v_screening_count >= 50 THEN
+        RETURN jsonb_build_object('success', false, 'error', 'trial_screening_limit');
+      END IF;
+    END;
+  END IF;
+
   -- Credit check: PAyG + trials only (they use credits_total/credits_used)
   -- Subscription plans: no pre-check here. Per-feature budget check happens in deduct_credits on first message.
   IF v_org.subscription_plan IN ('pay_as_you_go', 'standard_trial', 'premium_trial') THEN
