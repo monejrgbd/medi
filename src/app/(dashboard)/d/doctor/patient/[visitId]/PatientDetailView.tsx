@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { cancelClaim, fetchVisitDetail } from "@/app/(dashboard)/d/_actions/doctor";
+import { useRole } from "@/contexts/RoleContext";
+import { toast } from "sonner";
 import PatientProfileCard from "@/components/doctor/PatientProfileCard";
 import TranscriptView from "@/components/doctor/TranscriptView";
 import SummaryDisplay from "@/components/doctor/SummaryDisplay";
@@ -92,6 +94,7 @@ export default function PatientDetailView({
   staffUserId,
 }: PatientDetailViewProps) {
   const router = useRouter();
+  const { org } = useRole();
   const [detail, setDetail] = useState(initialDetail);
   const [tab, setTab] = useState<DetailTab>("summary");
   const [showDiagnosis, setShowDiagnosis] = useState(false);
@@ -340,7 +343,13 @@ export default function PatientDetailView({
               {cancelling ? "Releasing..." : "Cancel Claim"}
             </button>
             <button
-              onClick={() => setShowReferral(true)}
+              onClick={() => {
+                if (!org?.verified) {
+                  toast.error("To send referrals, your clinic must be verified. Contact business@hilthealth.com to apply.");
+                  return;
+                }
+                setShowReferral(true);
+              }}
               className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors"
             >
               Refer

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope, UserPlus, Search } from "lucide-react";
 import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
 import { initializeOrgDefaultVitals } from "@/app/(dashboard)/d/_actions/nurse";
+import { createClient } from "@/lib/supabase/client";
 
 interface ClinicFeaturesStepProps {
   locationId: string;
@@ -23,6 +24,7 @@ export default function ClinicFeaturesStep({
   onComplete,
   onBack,
 }: ClinicFeaturesStepProps) {
+  const [loaded, setLoaded] = useState(false);
   const [nurseEnabled, setNurseEnabled] = useState(false);
   const [vitalsEnabled, setVitalsEnabled] = useState(true);
   const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
@@ -33,6 +35,25 @@ export default function ClinicFeaturesStep({
   const [askDiscoverySource, setAskDiscoverySource] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Load existing DB values on mount so going back never resets the form
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.rpc("get_location_detail", { p_location_id: locationId }).then(({ data }) => {
+      const loc = data?.location;
+      if (loc) {
+        setNurseEnabled(loc.nurse_enabled ?? false);
+        setVitalsEnabled(loc.vitals_enabled ?? true);
+        setVaccinesEnabled(loc.vaccines_enabled ?? false);
+        setSkipAi(loc.skip_ai ?? false);
+        setReviewSmsEnabled(loc.review_sms_enabled ?? true);
+        setDiagnosticEnabled(loc.diagnostic_enabled ?? true);
+        setAskReferralSource(loc.ask_referral_source ?? false);
+        setAskDiscoverySource(loc.ask_discovery_source ?? false);
+      }
+      setLoaded(true);
+    });
+  }, [locationId]);
 
   function handleNurseToggle(checked: boolean) {
     setNurseEnabled(checked);
@@ -92,6 +113,14 @@ export default function ClinicFeaturesStep({
       setError("Something went wrong. Please try again.");
       setSaving(false);
     }
+  }
+
+  if (!loaded) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-hilt-blue" />
+      </div>
+    );
   }
 
   return (

@@ -95,6 +95,12 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
   END IF;
 
+  -- Organization must be verified to create referrals
+  PERFORM 1 FROM public.organizations WHERE id = v_caller_org_id AND verified = true;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not verified for referrals');
+  END IF;
+
   -- Authorization: must be a doctor at the org
   SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_caller_org_id;
 

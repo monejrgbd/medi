@@ -25,6 +25,14 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Query must not exceed 200 characters');
   END IF;
 
+  -- Caller org must be verified
+  PERFORM 1 FROM public.staff_users su
+  JOIN public.organizations o ON o.id = su.org_id
+  WHERE su.auth_uid = p_caller_auth_uid AND su.is_active = true AND o.verified = true;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not verified for referrals');
+  END IF;
+
   -- Search locations using pg_trgm similarity
   SELECT jsonb_build_object(
     'success', true,
@@ -47,6 +55,7 @@ BEGIN
     JOIN public.organizations o ON o.id = l.org_id
     WHERE l.org_id <> p_exclude_org_id
       AND o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
+      AND o.verified = true
       AND similarity(l.name || ' ' || o.name, v_clean_query) > 0.1
     ORDER BY similarity(l.name || ' ' || o.name, v_clean_query) DESC
     LIMIT 10

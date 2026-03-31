@@ -19,6 +19,7 @@ interface OrgData {
   trial_end_date: string;
   onboarding_completed_at: string | null;
   cancel_at_period_end: string | null;
+  verified?: boolean;
   created_at: string;
 }
 

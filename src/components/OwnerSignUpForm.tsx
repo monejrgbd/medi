@@ -499,14 +499,14 @@ export default function OwnerSignUpForm() {
                 paygTier === "standard" ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
               }`}>
               <p className="text-xs font-semibold text-ink">$20 Credits</p>
-              <p className="text-[11px] text-slate">14 day trial</p>
+              <p className="text-[11px] text-slate">No code needed</p>
             </button>
             <button type="button" onClick={() => { if (codeVerified) { setPaygTier("premium"); } else { setShowCodeEntry("premium"); } }}
               className={`rounded-lg border px-3 py-2 text-left transition-colors ${
                 paygTier === "premium" && codeVerified ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
               }`}>
               <p className="text-xs font-semibold text-ink">$200 Credits</p>
-              <p className="text-[11px] text-slate">30 day trial</p>
+              <p className="text-[11px] text-slate">Premium code needed</p>
               {codeVerified
                 ? <span className="inline-block rounded-full bg-green-50 px-1.5 py-0.5 text-[9px] font-medium text-green-700 mt-1">Verified</span>
                 : <span className="inline-block rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-medium text-amber-700 mt-1">Code required</span>}

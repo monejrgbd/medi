@@ -115,6 +115,17 @@ export default function OnboardingWizard({
   const [approving, setApproving] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Load queue type from DB when entering step 3 (prevents resetting to "fifo" on back navigation)
+  useEffect(() => {
+    if (step !== 3 || !locationId) return;
+    const supabase = createClient();
+    supabase.rpc("get_location_detail", { p_location_id: locationId }).then(({ data }) => {
+      if (data?.location?.queue_type) {
+        setQueueType(data.location.queue_type);
+      }
+    });
+  }, [step, locationId]);
+
   // Set up demo (create owner staff account + check in as receptionist)
   useEffect(() => {
     if (step !== 6 || !locationId || demoReady) return;

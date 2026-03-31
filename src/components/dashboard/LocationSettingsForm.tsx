@@ -87,7 +87,6 @@ export default function LocationSettingsForm({
     specialty: location.specialty || "",
     aiModel: location.ai_model,
     displayFormat: location.display_format,
-    referralEmail: location.referral_email || "",
     tabletCount: location.tablet_count,
     timezone: location.timezone || getBrowserTimezone(),
     operatingHours: DAYS_OF_WEEK.reduce((acc, day) => {
@@ -157,7 +156,6 @@ export default function LocationSettingsForm({
       operatingHours: Object.keys(hours).length > 0 ? hours : undefined,
       aiModel: form.aiModel,
       displayFormat: form.displayFormat,
-      referralEmail: form.referralEmail,
       tabletCount: form.tabletCount,
       timezone: form.timezone,
       nurseEnabled: form.nurseEnabled,
@@ -329,17 +327,6 @@ export default function LocationSettingsForm({
             <option value="structured_card">Detailed</option>
           </select>
         </div>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-ink mb-1">Referral Email</label>
-        <input
-          type="email"
-          value={form.referralEmail}
-          onChange={(e) => update("referralEmail", e.target.value)}
-          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-          placeholder="referrals@clinic.com"
-        />
       </div>
 
       <div>

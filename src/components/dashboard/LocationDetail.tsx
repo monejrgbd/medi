@@ -27,6 +27,10 @@ interface LocationData {
   ai_message_limit?: number | null;
   review_sms_enabled?: boolean;
   diagnostic_enabled?: boolean;
+  queue_type?: string;
+  raven_api_key?: string | null;
+  ask_referral_source?: boolean;
+  ask_discovery_source?: boolean;
   created_at: string;
 }
 
