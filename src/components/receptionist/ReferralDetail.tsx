@@ -12,6 +12,7 @@ import ReferralStatusTracker from "@/components/doctor/ReferralStatusTracker";
 
 interface ReferralMeta {
   id: string;
+  source?: string;
   from_org_name: string;
   from_doctor_name: string;
   specialty: string;
@@ -137,14 +138,23 @@ export default function ReferralDetail({
       {/* Referral metadata */}
       <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-          <div>
-            <span className="text-xs font-medium text-ash">From Clinic</span>
-            <p className="text-ink">{referral.from_org_name}</p>
-          </div>
-          <div>
-            <span className="text-xs font-medium text-ash">Referring Doctor</span>
-            <p className="text-ink">Dr. {referral.from_doctor_name}</p>
-          </div>
+          {referral.source === "self_reported" ? (
+            <div className="col-span-2">
+              <span className="text-xs font-medium text-ash">Reported by patient</span>
+              <p className="text-ink">{referral.referral_note !== "Self-reported referral" ? `Referred by: ${referral.referral_note}` : "No referring provider specified"}</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <span className="text-xs font-medium text-ash">From Clinic</span>
+                <p className="text-ink">{referral.from_org_name}</p>
+              </div>
+              <div>
+                <span className="text-xs font-medium text-ash">Referring Doctor</span>
+                <p className="text-ink">Dr. {referral.from_doctor_name}</p>
+              </div>
+            </>
+          )}
           <div>
             <span className="text-xs font-medium text-ash">Specialty</span>
             <p className="text-ink">{referral.specialty}</p>

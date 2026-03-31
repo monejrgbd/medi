@@ -25,8 +25,8 @@ const ALL_STEPS = [
     key: "nurse",
     label: "Nurse Triage",
     role: "You are the nurse",
-    todo: "Review the nurse triage view. This step is simulated in the demo.",
-    info: "In a real clinic, the nurse records vitals, administers vaccines, and writes triage notes before the patient sees the doctor.",
+    todo: "Record vitals, add triage notes, then release the patient to the doctor.",
+    info: "The nurse reviews the AI intake, records vitals and vaccines, writes observations, then releases the patient to the doctor queue.",
     featureGate: "nurseEnabled",
     mapsToDemoStep: null as number | null,
   },
@@ -71,10 +71,12 @@ const ALL_STEPS = [
 interface DemoTimelineProps {
   currentStep: number;
   features: DemoFeatures;
+  nurseActive?: boolean;
+  nurseDone?: boolean;
   onFinish?: () => void;
 }
 
-export default function DemoTimeline({ currentStep, features, onFinish }: DemoTimelineProps) {
+export default function DemoTimeline({ currentStep, features, nurseActive, nurseDone, onFinish }: DemoTimelineProps) {
   // Determine status of each step
   const steps = ALL_STEPS.map((step) => {
     const featureKey = step.featureGate as keyof DemoFeatures | null;
@@ -88,7 +90,9 @@ export default function DemoTimeline({ currentStep, features, onFinish }: DemoTi
     // Nurse step (no mapsToDemoStep)
     if (step.mapsToDemoStep === null) {
       if (isGatedOff) return { ...step, status: "disabled" as const };
-      if (currentStep >= 3) return { ...step, status: "done" as const, simulated: true };
+      if (nurseDone) return { ...step, status: "done" as const };
+      if (nurseActive) return { ...step, status: "active" as const };
+      if (currentStep >= 3) return { ...step, status: "pending" as const };
       return { ...step, status: "pending" as const };
     }
 
@@ -115,8 +119,6 @@ export default function DemoTimeline({ currentStep, features, onFinish }: DemoTi
           const isDone = step.status === "done";
           const isActive = step.status === "active";
           const isDisabled = step.status === "disabled";
-          const simulated = "simulated" in step && (step as { simulated?: boolean }).simulated === true;
-
           return (
             <div key={step.key} className="flex items-start">
               <div className="flex flex-col items-center w-10 sm:w-16">
@@ -152,7 +154,6 @@ export default function DemoTimeline({ currentStep, features, onFinish }: DemoTi
                 >
                   {step.label}
                   {isDisabled && <span className="block text-[6px] sm:text-[8px] text-red-400">Skipped</span>}
-                  {simulated && <span className="block text-[6px] sm:text-[8px] text-teal-500">(simulated)</span>}
                 </span>
               </div>
 

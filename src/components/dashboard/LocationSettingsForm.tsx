@@ -30,6 +30,8 @@ interface LocationData {
   queue_type?: string;
   raven_api_key?: string | null;
   logo_url?: string | null;
+  ask_referral_source?: boolean;
+  ask_discovery_source?: boolean;
 }
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -102,6 +104,8 @@ export default function LocationSettingsForm({
     diagnosticEnabled: location.diagnostic_enabled ?? true,
     queueType: location.queue_type || "fifo",
     ravenApiKey: location.raven_api_key || "",
+    askReferralSource: location.ask_referral_source ?? false,
+    askDiscoverySource: location.ask_discovery_source ?? false,
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -166,6 +170,8 @@ export default function LocationSettingsForm({
       diagnosticEnabled: form.diagnosticEnabled,
       queueType: form.queueType,
       ravenApiKey: form.ravenApiKey,
+      askReferralSource: form.askReferralSource,
+      askDiscoverySource: form.askDiscoverySource,
     });
 
     setLoading(false);
@@ -501,6 +507,37 @@ export default function LocationSettingsForm({
             type="checkbox"
             checked={form.diagnosticEnabled}
             onChange={(e) => setForm((prev) => ({ ...prev, diagnosticEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+      </div>
+
+      {/* Check-in Form */}
+      <div className="space-y-3 border-t border-gray-100 pt-5">
+        <h3 className="text-sm font-semibold text-ink">Check-in Form</h3>
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Ask about referrals</span>
+            <p className="text-xs text-ash">Ask patients if they were referred by another provider.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.askReferralSource}
+            onChange={(e) => setForm((prev) => ({ ...prev, askReferralSource: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Ask how they found us</span>
+            <p className="text-xs text-ash">Ask new patients how they learned about your clinic.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.askDiscoverySource}
+            onChange={(e) => setForm((prev) => ({ ...prev, askDiscoverySource: e.target.checked }))}
             className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
           />
         </label>

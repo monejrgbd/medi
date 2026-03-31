@@ -1,0 +1,143 @@
+-- get_discovery_stats: discovery source breakdown for new patients
+-- Supports per-location (owner/manager) or org-wide (owner only)
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_discovery_stats(
+  p_caller_auth_uid uuid,
+  p_location_id uuid DEFAULT NULL,
+  p_org_id uuid DEFAULT NULL,
+  p_start_date date DEFAULT CURRENT_DATE - 30,
+  p_end_date date DEFAULT CURRENT_DATE
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_total_new int;
+  v_with_source int;
+  v_referral_count int;
+  v_by_source jsonb;
+BEGIN
+  -- Must provide one of location_id or org_id
+  IF p_location_id IS NULL AND p_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location or org required');
+  END IF;
+
+  -- Resolve org
+  IF p_location_id IS NOT NULL THEN
+    SELECT l.org_id, o.owner_id INTO v_org_id, v_owner_id
+    FROM public.locations l
+    JOIN public.organizations o ON o.id = l.org_id
+    WHERE l.id = p_location_id;
+  ELSE
+    SELECT o.id, o.owner_id INTO v_org_id, v_owner_id
+    FROM public.organizations o
+    WHERE o.id = p_org_id;
+  END IF;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not found');
+  END IF;
+
+  -- Auth
+  IF p_caller_auth_uid = v_owner_id THEN
+    NULL; -- Owner: always allowed
+  ELSIF p_org_id IS NOT NULL THEN
+    -- Org-wide: owner only
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  ELSE
+    -- Location: owner or manager
+    SELECT id INTO v_caller_staff_id
+    FROM public.staff_users
+    WHERE auth_uid = p_caller_auth_uid
+      AND org_id = v_org_id
+      AND is_active = true
+      AND is_deleted = false;
+
+    IF v_caller_staff_id IS NULL OR NOT EXISTS (
+      SELECT 1 FROM public.staff_roles
+      WHERE staff_user_id = v_caller_staff_id
+        AND role = 'manager'
+        AND location_id = p_location_id
+    ) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Date range guard
+  IF p_end_date < p_start_date THEN
+    RETURN jsonb_build_object('success', false, 'error', 'End date must be after start date');
+  END IF;
+  IF (p_end_date - p_start_date) > 90 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Date range cannot exceed 90 days');
+  END IF;
+
+  -- Aggregate new patient stats
+  SELECT
+    COUNT(*),
+    COUNT(*) FILTER (WHERE v.discovery_source IS NOT NULL),
+    COUNT(*) FILTER (WHERE v.self_reported_referral = true)
+  INTO v_total_new, v_with_source, v_referral_count
+  FROM public.visits v
+  WHERE v.org_id = v_org_id
+    AND (p_location_id IS NULL OR v.location_id = p_location_id)
+    AND v.created_at >= p_start_date
+    AND v.created_at < (p_end_date + 1)::timestamptz
+    AND v.has_previous_visits = false;
+
+  -- By source breakdown
+  SELECT COALESCE(jsonb_object_agg(sub.src, sub.cnt), '{}'::jsonb)
+  INTO v_by_source
+  FROM (
+    SELECT v.discovery_source AS src, COUNT(*) AS cnt
+    FROM public.visits v
+    WHERE v.org_id = v_org_id
+      AND (p_location_id IS NULL OR v.location_id = p_location_id)
+      AND v.created_at >= p_start_date
+      AND v.created_at < (p_end_date + 1)::timestamptz
+      AND v.has_previous_visits = false
+      AND v.discovery_source IS NOT NULL
+    GROUP BY v.discovery_source
+    ORDER BY cnt DESC
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'total_new_patients', COALESCE(v_total_new, 0),
+    'with_source_count', COALESCE(v_with_source, 0),
+    'by_source', v_by_source,
+    'referral_count', COALESCE(v_referral_count, 0)
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_discovery_stats(
+  p_location_id uuid DEFAULT NULL,
+  p_org_id uuid DEFAULT NULL,
+  p_start_date date DEFAULT CURRENT_DATE - 30,
+  p_end_date date DEFAULT CURRENT_DATE
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_discovery_stats(v_auth_uid, p_location_id, p_org_id, p_start_date, p_end_date);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_discovery_stats(uuid, uuid, date, date) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_discovery_stats(uuid, uuid, date, date) TO authenticated;

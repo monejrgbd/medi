@@ -14,7 +14,8 @@ DECLARE
 BEGIN
   -- Validate location exists
   SELECT l.id, l.name, l.address, l.specialty, l.operating_hours, l.logo_url,
-         o.name AS org_name
+         o.name AS org_name,
+         l.ask_referral_source, l.ask_discovery_source
   INTO v_location
   FROM public.locations l
   JOIN public.organizations o ON o.id = l.org_id
@@ -39,7 +40,9 @@ BEGIN
     'specialty', v_location.specialty,
     'operating_hours', v_location.operating_hours,
     'org_name', v_location.org_name,
-    'logo_url', v_location.logo_url
+    'logo_url', v_location.logo_url,
+    'ask_referral_source', v_location.ask_referral_source,
+    'ask_discovery_source', v_location.ask_discovery_source
   );
 END;
 $$;

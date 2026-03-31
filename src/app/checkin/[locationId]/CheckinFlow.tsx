@@ -13,13 +13,14 @@ import SummaryReview from "@/components/patient/SummaryReview";
 import CreditWarning from "@/components/patient/CreditWarning";
 import PatientQueueView from "@/components/patient/PatientQueueView";
 import DoctorClaimedNotice from "@/components/patient/DoctorClaimedNotice";
-import PhoneInput from "@/components/patient/PhoneInput";
 import PhoneVerification from "@/components/patient/PhoneVerification";
 import PatientLeftScreen from "@/components/patient/PatientLeftScreen";
 import VisitCompletedScreen from "@/components/patient/VisitCompletedScreen";
 import SubscriptionExpiredScreen from "@/components/patient/SubscriptionExpiredScreen";
 import KioskAutoReset from "@/components/patient/KioskAutoReset";
 import KioskIdleTimeout from "@/components/patient/KioskIdleTimeout";
+import DiscoveryQuestionScreen from "@/components/checkin/DiscoveryQuestionScreen";
+import MatchResolution from "@/components/checkin/MatchResolution";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { t } from "@/lib/i18n";
 import { Clock } from "lucide-react";
@@ -39,14 +40,13 @@ type FlowState =
   | "claimed"
   | "timeout"
   | "no_credits"
-  | "phone_input"
   | "phone_verification"
-  | "phone_collection"
-  | "no_phone_notice"
+  | "match_resolution"
   | "patient_left"
   | "visit_completed"
   | "subscription_inactive"
-  | "verify_birthday";
+  | "verify_birthday"
+  | "discovery_question";
 
 interface LocationData {
   active: boolean;
@@ -56,6 +56,8 @@ interface LocationData {
   operating_hours?: Record<string, string> | null;
   org_name?: string;
   logo_url?: string | null;
+  ask_referral_source?: boolean;
+  ask_discovery_source?: boolean;
 }
 
 interface CheckinFlowProps {
@@ -117,7 +119,8 @@ export default function CheckinFlow({
   const [verificationId, setVerificationId] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState("");
   const [phoneLoading, setPhoneLoading] = useState(false);
-  const [collisionContext, setCollisionContext] = useState<{ patientId: string; visitId: string } | null>(null);
+  const [matchType, setMatchType] = useState<string | null>(null);
+  const [formDataForResolve, setFormDataForResolve] = useState<Record<string, unknown> | null>(null);
   const [phoneRetryAt, setPhoneRetryAt] = useState<number | null>(null);
   const [phoneRetryReady, setPhoneRetryReady] = useState(false);
 
@@ -156,6 +159,15 @@ export default function CheckinFlow({
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(PHONE_STORAGE_KEY);
   }, [kiosk]);
+
+  // Auto-send SMS code when entering phone_verification without a verificationId
+  useEffect(() => {
+    if (state !== "phone_verification") return;
+    if (verificationId) return; // Already have a verification in progress
+    if (!patientPhone) return;
+    handlePhoneSubmit(patientPhone);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, verificationId, patientPhone]);
 
   // Phone retry timer — 60s after SMS failure
   useEffect(() => {
@@ -256,7 +268,13 @@ export default function CheckinFlow({
       switch (data.status) {
         case "pending_approval":
           if (data.phone_verification_pending) {
-            setState("phone_input");
+            if (data.pending_phone) {
+              setPatientPhone(data.pending_phone as string);
+            } else {
+              const savedPhone = localStorage.getItem(PHONE_STORAGE_KEY);
+              if (savedPhone) setPatientPhone(savedPhone);
+            }
+            setState("phone_verification");
           } else {
             setState("waiting");
           }
@@ -279,12 +297,7 @@ export default function CheckinFlow({
         case "waiting_doctor_claim":
           if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
           if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
-          // Check if phone collection needed
-          if (!data.patient_phone_verified && !data.patient_has_phone) {
-            setState("phone_collection");
-          } else {
-            setState(data.timeout_flagged ? "timeout" : "queued");
-          }
+          setState(data.timeout_flagged ? "timeout" : "queued");
           break;
         case "claimed_by_doctor":
           setState("claimed");
@@ -321,27 +334,8 @@ export default function CheckinFlow({
         return;
       }
 
-      if (event.type === "phone_required") {
-        const current = stateRef.current;
-        // Only transition if not already in a phone state
-        if (current !== "phone_input" && current !== "phone_verification") {
-          if (visitId) {
-            setCollisionContext({ patientId: "", visitId });
-          }
-          setState("phone_input");
-        }
-        return;
-      }
-
-      if (event.type === "phone_verified") {
-        const current = stateRef.current;
-        if (current === "phone_input" || current === "phone_verification") {
-          setState("waiting");
-        }
-        return;
-      }
-
-      // status_change
+      // status_change — only status_change events reach here
+      if (event.type !== "status_change") return;
       const { status, visit_id, timeout_flagged } = event.payload;
 
       if (visit_id) setVisitId(visit_id);
@@ -372,14 +366,12 @@ export default function CheckinFlow({
       }
 
       if (status === "waiting_doctor_claim") {
-        // Skip if summary_review, generating_summary, or any phone state —
-        // handleSummaryApprove will handle the transition with proper phone collection check
+        // Skip if summary_review, generating_summary, or phone_verification —
+        // those flows handle their own transitions
         const current = stateRef.current;
         if (
           current === "summary_review" ||
           current === "generating_summary" ||
-          current === "phone_collection" ||
-          current === "phone_input" ||
           current === "phone_verification"
         ) {
           return;
@@ -391,11 +383,7 @@ export default function CheckinFlow({
 
       if (status === "claimed_by_doctor") {
         const current = stateRef.current;
-        if (
-          current === "phone_collection" ||
-          current === "phone_input" ||
-          current === "phone_verification"
-        ) {
+        if (current === "phone_verification") {
           return;
         }
         setState("claimed");
@@ -438,11 +426,7 @@ export default function CheckinFlow({
 
       if (status === "completed") {
         const current = stateRef.current;
-        if (
-          current === "phone_collection" ||
-          current === "phone_input" ||
-          current === "phone_verification"
-        ) {
+        if (current === "phone_verification") {
           return;
         }
         setState("visit_completed");
@@ -462,10 +446,8 @@ export default function CheckinFlow({
     state === "queued" ||
     state === "claimed" ||
     state === "timeout" ||
-    state === "phone_input" ||
     state === "phone_verification" ||
-    state === "phone_collection" ||
-    state === "no_phone_notice" ||
+    state === "match_resolution" ||
     state === "patient_left" ||
     state === "visit_completed";
 
@@ -478,7 +460,10 @@ export default function CheckinFlow({
     firstName: string,
     lastName: string,
     birthday: string,
-    sex: string
+    sex: string,
+    wasReferred: boolean = false,
+    referredBy: string = "",
+    phone: string | null = null
   ) {
     setState("submitting");
     setLoading(true);
@@ -491,6 +476,9 @@ export default function CheckinFlow({
       p_last_name: lastName,
       p_birthday: birthday,
       p_sex: sex,
+      p_was_referred: wasReferred,
+      p_referred_by: referredBy || null,
+      p_phone: phone,
     });
 
     setLoading(false);
@@ -506,13 +494,31 @@ export default function CheckinFlow({
 
     switch (data.match_type) {
       case "new":
-      case "returning":
+      case "returning": {
         setSessionToken(data.session_token);
         setVisitId(data.visit_id);
         localStorage.setItem(STORAGE_KEY, data.session_token);
         if (onVisitCreated && data.visit_id) onVisitCreated(data.visit_id);
-        setState("waiting");
+        // Fire-and-forget: create self-reported referral if patient indicated
+        if (wasReferred && data.visit_id) {
+          void supabase.rpc("create_self_reported_referral", {
+            p_visit_id: data.visit_id,
+            p_referred_by: referredBy || null,
+          });
+        }
+        // If phone was provided but not yet verified, go to phone verification
+        if (data.phone_verified === false && phone) {
+          setPatientPhone(phone);
+          localStorage.setItem(PHONE_STORAGE_KEY, phone);
+          setState("phone_verification");
+        } else if (data.match_type === "new" && locationData?.ask_discovery_source) {
+          // Discovery question: only for new patients when toggle enabled
+          setState("discovery_question");
+        } else {
+          setState("waiting");
+        }
         break;
+      }
       case "active_session": {
         setSessionToken(data.session_token);
         localStorage.setItem(STORAGE_KEY, data.session_token);
@@ -532,7 +538,13 @@ export default function CheckinFlow({
 
           if (session.status === "pending_approval") {
             if (session.phone_verification_pending) {
-              setState("phone_input");
+              if (session.pending_phone) {
+                setPatientPhone(session.pending_phone);
+              } else {
+                const savedPhone = localStorage.getItem(PHONE_STORAGE_KEY);
+                if (savedPhone) setPatientPhone(savedPhone);
+              }
+              setState("phone_verification");
             } else {
               setState("waiting");
             }
@@ -553,12 +565,7 @@ export default function CheckinFlow({
           } else if (session.status === "waiting_doctor_claim") {
             if (session.queue_position !== undefined) setQueuePosition(session.queue_position);
             if (session.estimated_wait_minutes !== undefined) setEstimatedWait(session.estimated_wait_minutes);
-            // Check if phone collection needed
-            if (!session.patient_phone_verified && !session.patient_has_phone) {
-              setState("phone_collection");
-            } else {
-              setState(session.timeout_flagged ? "timeout" : "queued");
-            }
+            setState(session.timeout_flagged ? "timeout" : "queued");
           } else if (session.status === "claimed_by_doctor") {
             setState("claimed");
           } else if (session.status === "left") {
@@ -571,22 +578,14 @@ export default function CheckinFlow({
         }
         break;
       }
-      case "phone_required":
-        // Path C: collision flagged — patient sees phone input immediately
-        setSessionToken(data.session_token);
-        setVisitId(data.visit_id);
-        localStorage.setItem(STORAGE_KEY, data.session_token);
-        setCollisionContext({ patientId: data.patient_id, visitId: data.visit_id });
-        setState("phone_input");
-        break;
-      case "phone_no_match":
-        // Phone didn't match any collision patient — new record created, go to waiting
-        localStorage.removeItem(PHONE_STORAGE_KEY);
-        setPatientPhone(null);
-        setSessionToken(data.session_token);
-        setVisitId(data.visit_id);
-        localStorage.setItem(STORAGE_KEY, data.session_token);
-        setState("waiting");
+      case "potential_match":
+      case "potential_match_no_phone":
+      case "potential_match_add_phone":
+        // Do NOT set sessionToken or visitId — no visit created yet
+        // Save form data for the resolve step
+        setFormDataForResolve({ locationId, firstName, lastName, birthday, sex, phone, wasReferred, referredBy });
+        setMatchType(data.match_type);
+        setState("match_resolution");
         break;
       default:
         setState("waiting");
@@ -601,7 +600,8 @@ export default function CheckinFlow({
     setError("");
     setPatientPhone(null);
     setVerificationId(null);
-    setCollisionContext(null);
+    setMatchType(null);
+    setFormDataForResolve(null);
     setState("form");
   }
 
@@ -617,7 +617,8 @@ export default function CheckinFlow({
     setVerificationId(null);
     setPhoneError("");
     setPhoneLoading(false);
-    setCollisionContext(null);
+    setMatchType(null);
+    setFormDataForResolve(null);
     setPatientLanguage("en");
     setSummaryData(null);
     setQueuePosition(null);
@@ -712,7 +713,6 @@ export default function CheckinFlow({
   }
 
   async function handleSummaryApprove() {
-    // Check if phone collection needed
     const supabase = createClient();
     if (sessionToken) {
       const { data } = await supabase.rpc("get_patient_session", {
@@ -721,13 +721,8 @@ export default function CheckinFlow({
       if (data?.success) {
         if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
         if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
-        if (!data.patient_phone_verified && !data.patient_has_phone) {
-          setState("phone_collection");
-          return;
-        }
       }
     }
-    // No phone step needed — notify demo shell
     if (onPhoneComplete) onPhoneComplete();
     setState("queued");
   }
@@ -745,29 +740,6 @@ export default function CheckinFlow({
     setPhoneRetryReady(false);
     setPatientPhone(phone);
     localStorage.setItem(PHONE_STORAGE_KEY, phone);
-
-    // If post-AI collection mode, call collect_phone_post_ai first
-    if (state === "phone_collection" && visitId && sessionToken) {
-      const supabase = createClient();
-      const { data } = await supabase.rpc("collect_phone_post_ai", {
-        p_visit_id: visitId,
-        p_session_token: sessionToken,
-        p_phone: phone,
-      });
-
-      if (data?.already_verified) {
-        setPhoneLoading(false);
-        await fetchQueuePosition();
-        setState("queued");
-        return;
-      }
-
-      if (!data?.success && !data?.needs_verification) {
-        setPhoneLoading(false);
-        setPhoneError(data?.error || "Failed to submit phone number");
-        return;
-      }
-    }
 
     // Send verification code
     try {
@@ -806,21 +778,21 @@ export default function CheckinFlow({
   }
 
   async function handlePhoneVerified() {
-    if (collisionContext) {
-      setState("waiting");
-    } else {
-      // Check if visit was completed while patient was in phone flow
-      const supabase = createClient();
-      if (sessionToken) {
-        const { data } = await supabase.rpc("get_patient_session", { p_session_token: sessionToken });
-        if (data?.success && data.status === "completed") {
-          setState("visit_completed");
-          return;
-        }
+    // Check if visit was completed while patient was in phone flow
+    const supabase = createClient();
+    if (sessionToken) {
+      const { data } = await supabase.rpc("get_patient_session", { p_session_token: sessionToken });
+      if (data?.success && data.status === "completed") {
+        setState("visit_completed");
+        return;
       }
-      await fetchQueuePosition();
-      if (onPhoneComplete) onPhoneComplete();
-      setState("queued");
+    }
+    // Phone verified — go to waiting (realtime will handle subsequent transitions)
+    if (onPhoneComplete) onPhoneComplete();
+    if (locationData?.ask_discovery_source && !hasPreviousVisits) {
+      setState("discovery_question");
+    } else {
+      setState("waiting");
     }
   }
 
@@ -829,24 +801,36 @@ export default function CheckinFlow({
     await handlePhoneSubmit(patientPhone);
   }
 
-  async function handleNoPhone() {
-    if (!visitId || !sessionToken) return;
+  // Add handleMatchResolved callback
+  const handleMatchResolved = useCallback((result: { matchType: string; sessionToken: string; visitId: string; phoneVerified: boolean; hasPhoneToVerify: boolean; isDiscoveryEligible?: boolean }) => {
+    // Store session
+    setSessionToken(result.sessionToken);
+    setVisitId(result.visitId);
+    localStorage.setItem(STORAGE_KEY, result.sessionToken);
+    if (onVisitCreated) onVisitCreated(result.visitId);
 
-    setPhoneLoading(true);
-    const supabase = createClient();
-    const { data } = await supabase.rpc("decline_phone_verification", {
-      p_visit_id: visitId,
-      p_session_token: sessionToken,
-    });
-    setPhoneLoading(false);
+    if (result.matchType === "returning") {
+      setHasPreviousVisits(true);
+    }
 
-    if (!data?.success) {
-      setPhoneError(data?.error || "Failed to decline verification");
+    // If phone needs verification, go to phone_verification
+    if (!result.phoneVerified && result.hasPhoneToVerify) {
+      const phone = formDataForResolve?.phone as string;
+      if (phone) {
+        setPatientPhone(phone);
+        localStorage.setItem(PHONE_STORAGE_KEY, phone);
+      }
+      setState("phone_verification");
       return;
     }
 
-    setState("no_phone_notice");
-  }
+    // Otherwise, proceed based on result
+    if (result.isDiscoveryEligible && locationData.ask_discovery_source) {
+      setState("discovery_question");
+    } else {
+      setState("waiting");
+    }
+  }, [onVisitCreated, locationData, formDataForResolve]);
 
   // Render based on state
   const content = (() => {
@@ -899,6 +883,7 @@ export default function CheckinFlow({
           loading={loading}
           error={error}
           demoDefaults={demoDefaultsRef.current}
+          askReferralSource={locationData.ask_referral_source}
         />
       );
 
@@ -949,7 +934,17 @@ export default function CheckinFlow({
                   // Resume at correct state
                   const status = data.status as string;
                   if (status === "pending_approval") {
-                    setState(data.phone_verification_pending ? "phone_input" : "waiting");
+                    if (data.phone_verification_pending) {
+                      if (data.pending_phone) {
+                        setPatientPhone(data.pending_phone as string);
+                      } else {
+                        const sp = localStorage.getItem(PHONE_STORAGE_KEY);
+                        if (sp) setPatientPhone(sp);
+                      }
+                      setState("phone_verification");
+                    } else {
+                      setState("waiting");
+                    }
                   } else if (status === "still_answering_ai") {
                     if (data.ai_summary) {
                       setSummaryData({ summary: data.ai_summary as string, structured_card: data.ai_structured_card as Record<string, unknown> | null });
@@ -964,11 +959,7 @@ export default function CheckinFlow({
                   } else if (status === "waiting_doctor_claim") {
                     if (data.queue_position !== undefined) setQueuePosition(data.queue_position as number);
                     if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes as number | null);
-                    if (!(data.patient_phone_verified as boolean) && !(data.patient_has_phone as boolean)) {
-                      setState("phone_collection");
-                    } else {
-                      setState((data.timeout_flagged as boolean) ? "timeout" : "queued");
-                    }
+                    setState((data.timeout_flagged as boolean) ? "timeout" : "queued");
                   } else if (status === "claimed_by_doctor") {
                     setState("claimed");
                   } else if (status === "left") {
@@ -1113,21 +1104,53 @@ export default function CheckinFlow({
         <KioskAutoReset onReset={handleKioskReset}><CreditWarning /></KioskAutoReset>
       ) : <CreditWarning />;
 
-    case "phone_input":
-      return (
-        <PhoneInput
-          mode="verification"
-          onSubmit={handlePhoneSubmit}
-          loading={phoneLoading}
-          error={phoneError}
-          onNoPhone={handleNoPhone}
-          retryReady={phoneRetryReady}
-          onRetry={patientPhone ? () => handlePhoneSubmit(patientPhone) : undefined}
+    case "match_resolution":
+      return matchType && formDataForResolve ? (
+        <MatchResolution
+          matchType={matchType as "potential_match" | "potential_match_no_phone" | "potential_match_add_phone"}
+          formData={{
+            locationId,
+            firstName: formDataForResolve.firstName as string,
+            lastName: formDataForResolve.lastName as string,
+            birthday: formDataForResolve.birthday as string,
+            sex: formDataForResolve.sex as string,
+            phone: formDataForResolve.phone as string | null,
+            wasReferred: formDataForResolve.wasReferred as boolean,
+            referredBy: formDataForResolve.referredBy as string | null,
+          }}
+          onResolved={handleMatchResolved}
+          onError={(err) => { setError(err); setState("form"); }}
+          isDemo={demoMode}
         />
-      );
+      ) : null;
 
     case "phone_verification":
-      return patientPhone && visitId && sessionToken && verificationId ? (
+      if (!patientPhone || !visitId || !sessionToken) return null;
+      if (!verificationId) {
+        return (
+          <div className="flex flex-col items-center justify-center gap-4 p-8">
+            {phoneError ? (
+              <>
+                <p className="text-sm text-red-600">{phoneError}</p>
+                {phoneRetryReady && (
+                  <button
+                    onClick={() => handlePhoneSubmit(patientPhone)}
+                    className="rounded-lg bg-brand px-4 py-2 text-sm text-white hover:bg-brand/90"
+                  >
+                    Retry
+                  </button>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+                <p className="text-sm text-slate">Sending verification code...</p>
+              </>
+            )}
+          </div>
+        );
+      }
+      return (
         <PhoneVerification
           phone={patientPhone}
           visitId={visitId}
@@ -1138,44 +1161,6 @@ export default function CheckinFlow({
           onResend={handlePhoneResend}
           onError={(msg) => setPhoneError(msg)}
         />
-      ) : null;
-
-    case "phone_collection":
-      return (
-        <div className="flex flex-col items-center">
-          {demoMode && (
-            <div className="w-full max-w-md text-center mb-4">
-              <p className="text-sm font-medium text-blue-700 bg-blue-50 rounded-lg px-4 py-3">
-                Add your phone number to see review requests and visit summary SMS in the demo.
-              </p>
-            </div>
-          )}
-          <PhoneInput
-            mode="collection"
-            onSubmit={handlePhoneSubmit}
-            loading={phoneLoading}
-            error={phoneError}
-            retryReady={phoneRetryReady}
-            onRetry={patientPhone ? () => handlePhoneSubmit(patientPhone) : undefined}
-          />
-        </div>
-      );
-
-    case "no_phone_notice":
-      return (
-        <div className="w-full max-w-md text-center">
-          <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-amber-50">
-            <svg className="h-7 w-7 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-ink mb-2">
-            {t("noPhone.title", patientLanguage)}
-          </h2>
-          <p className="text-sm text-slate">
-            {t("noPhone.subtitle", patientLanguage)}
-          </p>
-        </div>
       );
 
     case "patient_left":
@@ -1202,6 +1187,22 @@ export default function CheckinFlow({
       return kiosk ? (
         <KioskAutoReset onReset={handleKioskReset}><SubscriptionExpiredScreen /></KioskAutoReset>
       ) : <SubscriptionExpiredScreen />;
+
+    case "discovery_question":
+      return (
+        <DiscoveryQuestionScreen
+          onSelect={async (source) => {
+            const supabase = createClient();
+            await supabase.rpc("set_discovery_source", {
+              p_visit_id: visitId,
+              p_source: source,
+            });
+            setState("waiting");
+          }}
+          onSkip={() => setState("waiting")}
+          language={patientLanguage}
+        />
+      );
 
     default:
       return null;

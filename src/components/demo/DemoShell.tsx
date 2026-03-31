@@ -12,7 +12,7 @@ import DemoFAQ from "@/components/demo/DemoFAQ";
 import { DemoIntroCard, DemoGearButton } from "@/components/demo/DemoCustomizePanel";
 import { setVisitDemoFeatures } from "@/app/demo/_actions/demo-features";
 import { skipAiToQueue } from "@/app/(dashboard)/d/_actions/receptionist";
-import NurseDemoMockup from "@/components/demo/NurseDemoMockup";
+import NurseDashboard from "@/app/(dashboard)/d/nurse/NurseDashboard";
 import CheckinFlow from "@/app/checkin/[locationId]/CheckinFlow";
 import ReceptionistDashboard from "@/app/(dashboard)/d/receptionist/ReceptionistDashboard";
 import DoctorDashboard from "@/app/(dashboard)/d/doctor/DoctorDashboard";
@@ -52,6 +52,14 @@ interface DemoShellProps {
     hasMoreCompleted: boolean;
     hasMoreLeft: boolean;
   };
+  nurseInitial: {
+    queue: any[];
+    claimed: any[];
+    completed: any[];
+    left: any[];
+    hasMoreCompleted: boolean;
+    hasMoreLeft: boolean;
+  };
   reviewsInitial: {
     reviews: any[];
     stats: any;
@@ -77,6 +85,7 @@ function DemoShellInner({
   locationName,
   receptionistInitial,
   doctorInitial,
+  nurseInitial,
   reviewsInitial,
   marketingInitial,
 }: DemoShellProps) {
@@ -110,6 +119,7 @@ function DemoShellInner({
   const [phoneStepDone, setPhoneStepDone] = useState(false);
   const [visitCompleted, setVisitCompleted] = useState(false);
   const [visitClaimed, setVisitClaimed] = useState(false);
+  const [nurseStepDone, setNurseStepDone] = useState(false);
   const [demoStep, setDemoStep] = useState(1);
   const [reviewToken, setReviewToken] = useState<string | null>(null);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
@@ -231,6 +241,9 @@ function DemoShellInner({
   const featuresRef = useRef(features);
   useEffect(() => { featuresRef.current = features; }, [features]);
 
+  const nurseStepDoneRef = useRef(nurseStepDone);
+  useEffect(() => { nurseStepDoneRef.current = nurseStepDone; }, [nurseStepDone]);
+
   // Persist visit ID to sessionStorage
   useEffect(() => {
     if (demoVisitId) {
@@ -272,25 +285,52 @@ function DemoShellInner({
         const campaignDone = localStorage.getItem("demo_campaign_done") === "true";
         setDemoStep(campaignDone && step >= 5 ? 7 : step);
         if (step === 5) { setVisitCompleted(true); setActiveTab(featuresRef.current.reviewCollection ? "reviews" : "marketing"); }
-        if (step === 4) { setVisitClaimed(true); setActiveTab("doctor"); }
-        if (step === 3) setActiveTab("patient");
+        if (step === 4) {
+          if (featuresRef.current.nurseEnabled && !data.nurse_reviewed) {
+            setActiveTab("nurse");
+          } else {
+            if (featuresRef.current.nurseEnabled) {
+              setNurseStepDone(true);
+              nurseStepDoneRef.current = true;
+            }
+            setVisitClaimed(true);
+            setActiveTab("doctor");
+          }
+        }
+        if (step === 3) {
+          if (data.status === "waiting_doctor_claim" && featuresRef.current.nurseEnabled && !data.nurse_reviewed) {
+            setActiveTab("nurse");
+          } else {
+            setActiveTab("patient");
+          }
+        }
         if (step === 2) setActiveTab("receptionist");
       }
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
 
-  // Auto-switch to doctor tab once phone step is complete
+  // Auto-switch to nurse or doctor tab once phone step is complete
   useEffect(() => {
     if (waitingForDoctor && phoneStepDone) {
-      setPulsingTab("doctor");
-      setTimeout(() => {
-        setActiveTab("doctor");
-        setPulsingTab(null);
-        setDemoStep(4);
-      }, 3000);
+      if (features.nurseEnabled && !nurseStepDone) {
+        // Route to nurse first
+        setPulsingTab("nurse");
+        setTimeout(() => {
+          setActiveTab("nurse");
+          setPulsingTab(null);
+        }, 3000);
+      } else {
+        // Route to doctor
+        setPulsingTab("doctor");
+        setTimeout(() => {
+          setActiveTab("doctor");
+          setPulsingTab(null);
+          setDemoStep(4);
+        }, 3000);
+      }
       setWaitingForDoctor(false);
     }
-  }, [waitingForDoctor, phoneStepDone]);
+  }, [waitingForDoctor, phoneStepDone, features.nurseEnabled, nurseStepDone]);
 
   // Auto-switch back to doctor tab if user leaves while visit is claimed
   useEffect(() => {
@@ -365,11 +405,19 @@ function DemoShellInner({
           }
 
           if (status === "waiting_doctor_claim") {
+            const nurseReviewed = payload.new.nurse_reviewed;
+            if (featuresRef.current.nurseEnabled && nurseReviewed === true && !nurseStepDoneRef.current) {
+              nurseStepDoneRef.current = true;
+              setNurseStepDone(true);
+            }
             setWaitingForDoctor(true);
           }
 
           if (status === "claimed_by_doctor") {
-            setVisitClaimed(true);
+            // Suppress visitClaimed during nurse step to prevent 50s auto-return timer
+            if (!(featuresRef.current.nurseEnabled && !nurseStepDoneRef.current)) {
+              setVisitClaimed(true);
+            }
           }
 
           if (status === "completed" && demoStepRef.current < 5) {
@@ -501,6 +549,8 @@ function DemoShellInner({
     setPhoneStepDone(false);
     setVisitCompleted(false);
     setVisitClaimed(false);
+    setNurseStepDone(false);
+    nurseStepDoneRef.current = false;
     setDemoStep(1);
     setReviewToken(null);
     setReviewSubmitted(false);
@@ -546,7 +596,7 @@ function DemoShellInner({
       />
 
       {/* Timeline */}
-      <DemoTimeline currentStep={demoStep} features={features} onFinish={() => setDemoComplete(true)} />
+      <DemoTimeline currentStep={demoStep} features={features} nurseActive={features.nurseEnabled && !nurseStepDone && activeTab === "nurse"} nurseDone={nurseStepDone} onFinish={() => setDemoComplete(true)} />
 
 
 
@@ -599,11 +649,25 @@ function DemoShellInner({
           </RoleProvider>
         </div>
 
-        <div
-          style={{ display: activeTab === "nurse" ? "flex" : "none" }}
-          className="justify-center items-start pt-8 px-4"
-        >
-          <NurseDemoMockup />
+        <div style={{ display: activeTab === "nurse" ? "block" : "none" }}>
+          <NurseDashboard
+            key={demoKey}
+            mode="dashboard"
+            locations={[]}
+            staffUserId={staffUserId}
+            isOwner={false}
+            orgId={orgId}
+            locationId={locationId}
+            locationName={locationName}
+            initialQueue={nurseInitial.queue}
+            initialClaimed={nurseInitial.claimed}
+            initialCompleted={nurseInitial.completed}
+            initialLeft={nurseInitial.left}
+            initialHasMoreCompleted={nurseInitial.hasMoreCompleted}
+            initialHasMoreLeft={nurseInitial.hasMoreLeft}
+            demoMode={true}
+            demoVisitId={demoVisitId}
+          />
         </div>
 
         <div

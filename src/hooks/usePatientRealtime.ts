@@ -22,20 +22,10 @@ interface QueueUpdatePayload {
   estimated_wait_minutes: number | null;
 }
 
-interface PhoneRequiredPayload {
-  visit_id: string;
-}
-
-interface PhoneVerifiedPayload {
-  visit_id: string;
-}
-
 export type RealtimePayload =
   | { type: "status_change"; payload: StatusChangePayload }
   | { type: "summary_ready"; payload: SummaryReadyPayload }
-  | { type: "queue_update"; payload: QueueUpdatePayload }
-  | { type: "phone_required"; payload: PhoneRequiredPayload }
-  | { type: "phone_verified"; payload: PhoneVerifiedPayload };
+  | { type: "queue_update"; payload: QueueUpdatePayload };
 
 export function usePatientRealtime(
   sessionToken: string | null,
@@ -72,24 +62,11 @@ export function usePatientRealtime(
           payload: payload.payload as QueueUpdatePayload,
         });
       })
-      .on("broadcast", { event: "phone_required" }, (payload) => {
-        callbackRef.current({
-          type: "phone_required",
-          payload: payload.payload as PhoneRequiredPayload,
-        });
-      })
-      .on("broadcast", { event: "phone_verified" }, (payload) => {
-        callbackRef.current({
-          type: "phone_verified",
-          payload: payload.payload as PhoneVerifiedPayload,
-        });
-      })
       .subscribe();
 
     // Fallback: poll every 5s (only fire on actual status change)
     let lastPolledStatus: string | null = null;
     let summaryEmitted = false;
-    let lastPhonePending: boolean | null = null;
     const interval = setInterval(async () => {
       const { data } = await supabase.rpc("get_patient_session", {
         p_session_token: sessionToken,
@@ -99,7 +76,6 @@ export function usePatientRealtime(
       // Skip first poll to establish baseline (avoids initial spurious event)
       if (lastPolledStatus === null) {
         lastPolledStatus = data.status;
-        lastPhonePending = data.phone_verification_pending ?? false;
         return;
       }
 
@@ -145,21 +121,6 @@ export function usePatientRealtime(
           },
         });
       }
-
-      // Phone verification polling fallback
-      const currentPhonePending = data.phone_verification_pending ?? false;
-      if (currentPhonePending && !lastPhonePending) {
-        callbackRef.current({
-          type: "phone_required",
-          payload: { visit_id: data.visit_id },
-        });
-      } else if (!currentPhonePending && lastPhonePending) {
-        callbackRef.current({
-          type: "phone_verified",
-          payload: { visit_id: data.visit_id },
-        });
-      }
-      lastPhonePending = currentPhonePending;
     }, 5000);
 
     return () => {

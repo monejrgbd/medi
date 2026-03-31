@@ -29,6 +29,11 @@ BEGIN
     DELETE FROM public.reviews WHERE visit_id = ANY(v_visit_ids);
     DELETE FROM public.phone_verifications WHERE visit_id = ANY(v_visit_ids);
 
+    -- Delete self-reported referrals linked to demo visits (before unlinking)
+    DELETE FROM public.referrals
+    WHERE source = 'self_reported'
+      AND linked_visit_id = ANY(v_visit_ids);
+
     -- Referrals: clear linked_visit_id references
     UPDATE public.referrals
     SET linked_visit_id = NULL

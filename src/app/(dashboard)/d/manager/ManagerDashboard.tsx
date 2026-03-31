@@ -8,6 +8,7 @@ import {
   fetchWaitTimeHeatmap,
   fetchPatientReturnRate,
   fetchFollowUpCompliance,
+  fetchDiscoveryStats,
 } from "@/app/(dashboard)/d/_actions/analytics";
 import { fetchReferralAnalytics } from "@/app/(dashboard)/d/_actions/referral";
 import DateRangePicker from "@/components/analytics/DateRangePicker";
@@ -18,6 +19,7 @@ import WaitTimeHeatmap from "@/components/analytics/WaitTimeHeatmap";
 import ReturnRateChart from "@/components/analytics/ReturnRateChart";
 import FollowUpComplianceFunnel from "@/components/analytics/FollowUpComplianceFunnel";
 import ReferralAnalyticsChart from "@/components/analytics/ReferralAnalyticsChart";
+import DiscoverySourceChart from "@/components/analytics/DiscoverySourceChart";
 import PatientSearch from "@/components/dashboard/PatientSearch";
 import { TableSkeleton, CardSkeleton, ChartSkeleton } from "@/components/ui/Skeleton";
 
@@ -108,6 +110,8 @@ export default function ManagerDashboard({
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [discoveryData, setDiscoveryData] = useState<any>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -121,6 +125,9 @@ export default function ManagerDashboard({
           break;
         case "patients":
           result = await fetchPatientStats(selectedLocation, dateRange.start, dateRange.end);
+          fetchDiscoveryStats(selectedLocation, null, dateRange.start, dateRange.end)
+            .then((d) => setDiscoveryData(d))
+            .catch(() => setDiscoveryData(null));
           break;
         case "waittimes":
           result = await fetchWaitTimeHeatmap(selectedLocation, dateRange.start, dateRange.end);
@@ -296,6 +303,7 @@ export default function ManagerDashboard({
             <div className="space-y-8">
               <PatientStatsCards stats={data.stats} />
               <PatientTrendChart daily={data.daily} />
+              <DiscoverySourceChart data={discoveryData} />
             </div>
           )}
           {activeTab === "waittimes" && (

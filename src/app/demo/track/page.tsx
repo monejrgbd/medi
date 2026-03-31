@@ -9,72 +9,77 @@ interface StepTalkingPoints {
 }
 
 const TALKING_POINTS: Record<number, StepTalkingPoints> = {
-  1: { keyPoints: [], lines: [] },
-  2: {
+  1: {
     keyPoints: [
-      "No app install, works on any phone",
-      "Configure AI button on each patient card",
-      "Premium AI or Skip AI, decided per patient before approval",
-      "Returning patients auto matched",
+      "No app to install, this is just their phone browser",
+      "Works in 130 plus languages, doctor still reads English",
+      "Replaces the paper clipboard at your front desk",
     ],
     lines: [
-      "So the patient did not have to download anything. That was just their phone browser. Now look over at the receptionist side. See that Configure AI button on the card? That is how the receptionist decides what happens next. If this patient is just here for a flu shot, they skip the AI, straight to the doctor, no credits used. But if it is a new patient with something more involved, they hit Use Premium AI and let the screening do its job. That decision happens right here, per patient, before they even click Approve. And notice if this person has been here before, they are already matched by name and date of birth.",
+      "So the patient did not download anything for this. This is just their phone browser. They scan a QR code in your waiting room and this comes up. Works in 130 plus languages, but your doctor still reads everything in English. This is what replaces the clipboard at your front desk.",
+    ],
+  },
+  2: {
+    keyPoints: [
+      "Your receptionist controls AI cost per patient",
+      "Simple visits skip AI and cost zero credits",
+      "Returning patients auto matched, no duplicate charts",
+    ],
+    lines: [
+      "OK so now you are the receptionist. That button right there is how your front desk controls cost. Patient here for a flu shot? No reason to burn a credit on AI screening. Skip it. But this next patient has been having chest pains for a week? That is when you want the full screening. Your receptionist makes that call before they even approve the patient. And see how it already matched this person as returning? No one had to look anything up.",
     ],
   },
   3: {
     keyPoints: [
-      "Nurse records vitals, vaccines, and triage notes",
-      "Doctor sees nurse notes before walking in",
-      "Nurse can complete the visit or send to doctor",
-      "Custom vitals per clinic, not just weight and height",
+      "Your doctor walks in already informed, not starting cold",
+      "Nurses handle vaccine only visits without pulling a doctor in",
+      "Vitals are customized per specialty, set up once",
     ],
     lines: [
-      "So before anyone sees the doctor, the nurse gets them first. They record vitals, vaccines, triage notes. And everything they put in here shows up on the doctor's screen before the doctor even walks in the room. The nurse can also complete the visit on their own if the doctor is not needed. And each clinic picks which vitals they want to track. Weight and height are the defaults, but a cardiology clinic adds blood pressure, pediatrics adds head circumference. You set that up once and it just stays.",
+      "So your doctor walks in already knowing what the nurse found. They are not asking the same questions the nurse already covered. For something simple like a vaccine visit, the nurse finishes it without pulling a doctor in at all. And the vitals are customized per clinic. Your cardiology location tracks blood pressure. Your pediatrics location tracks head circumference. You set that up once.",
     ],
   },
   4: {
     keyPoints: [
-      "AI follows up on vague answers, does not stop at surface level",
-      "Voice input supported, patients can speak instead of type",
-      "Urgent symptoms get flagged and moved ahead in queue",
-      "Returning patients: AI has their history, confirms and updates",
-      "AI adapts per clinic specialty via custom instructions",
+      "This replaces the first ten minutes the doctor spends on intake",
+      "Urgent symptoms jump the queue automatically",
+      "Returning patients do not repeat their history",
+      "Each location gets specialty specific screening",
     ],
     lines: [
-      "Watch what happens here. The patient says my knee hurts, and it does not just accept that. It asks which knee, how long, what makes it worse. It keeps going until it has a full picture. Patients can also speak their answers instead of typing, which is huge for elderly patients or anyone who is not comfortable with a keyboard. And if the AI picks up something urgent, that patient gets flagged and moved ahead in the queue automatically. For returning patients, the AI already has their history from previous visits. It confirms what it knows and only asks about what is new. You can also customize what the AI asks per location. A dermatology clinic gets skin focused questions, a pediatrics clinic gets age appropriate ones.",
+      "So this conversation right here is the first ten minutes of the doctor's day with every patient. Except now the doctor is not doing it. By the time they open this chart, the symptom profile is already built. They can speak instead of type, which matters for your elderly patients. If something urgent comes up, that patient jumps the queue. Your staff did not have to make that call. For someone who was here last month, the AI already knows their history. It picks up where it left off. And your orthopedic location gets different questions than your family practice.",
     ],
   },
   5: {
     keyPoints: [
-      "Summary is patient verified, not a guess",
-      "AI diagnostic is doctor eyes only, patient never sees it",
-      "Nurse vitals and vaccines show up here (if enabled)",
-      "Care instructions go straight to patient by text",
-      "Follow up instructions carry to the next visit via AI",
-      "Focus mode auto claims the next patient after completion",
+      "Patient confirmed the summary, it is not a guess",
+      "Diagnostic suggestion is hidden from patients, liability protection",
+      "Care instructions go to the patient by text",
+      "Follow ups carry forward, AI references them next visit",
+      "Focus Mode keeps your doctor moving through the queue",
     ],
     lines: [
-      "So everything the doctor is reading right now, the patient already confirmed that before it got here. It is not a guess, it is a verified record. And that diagnostic suggestion at the bottom? The patient never sees that. That is doctor eyes only. If you have the nurse step enabled, vitals and vaccine records show up here too. When the doctor finishes, they can write care instructions and those go straight to the patient by text. Any follow up instructions carry forward to the next visit, the AI will reference them automatically. And in a busy clinic, the doctor turns on Focus Mode. After completing one patient, the next one loads right away. They do not go back to the queue.",
+      "So the patient already confirmed everything in that summary. It is not the AI guessing, the patient signed off on it. That diagnostic suggestion is hidden from them entirely, that is a liability protection. When your doctor completes, care instructions go straight to the patient by text. If they set a follow up, the AI remembers. Next time this patient comes in, the screening picks up where they left off. And in a busy day, Focus Mode keeps your doctor moving. Next patient loads automatically after each one.",
     ],
   },
   6: {
     keyPoints: [
-      "Patient gets permanent visit summary link by SMS",
-      "5 stars route to Google/Yelp, below 5 stays internal",
-      "Platform rotation is automatic",
+      "Patient keeps a permanent link to their visit summary",
+      "Five stars go to your public pages, everything else stays private",
+      "Your online rating only ever goes up",
     ],
     lines: [
-      "So the patient just got a text with a permanent link to their visit summary. They keep that forever, they can show it to any other doctor. Now here is the smart part. If they give five stars, they get routed to your Google or Yelp page. Anything below five stays internal. So your public rating only ever goes up. And the platform rotation is automatic, you do not have to think about it.",
+      "So your patient just got a permanent link to their visit summary. That is theirs forever, they can take it to any specialist. Now the reviews are smart. Five stars get routed to your Google or Yelp page. Anything below that, you see it, the public does not. Your online rating only ever goes up. Platform rotation is automatic.",
     ],
   },
   7: {
     keyPoints: [
-      "AI scans patient clinical data to find exact matches",
-      "Describe who you want in plain English",
-      "Simple filtering is free, AI scan is 1 credit per 1K patients",
+      "AI reads actual clinical data, not just demographics",
+      "Plain English targeting, no filters to learn",
+      "Basic filtering is free, AI scan is one credit per thousand",
     ],
     lines: [
-      "So this is where it gets really interesting. You just describe who you want to reach. Patients over 65 who missed their flu shot. Diabetics who have not been in for six months. The AI goes through their actual clinical data, visit summaries, diagnoses, medications, and builds the list for you. Simple filtering by age and visit date is always free. The AI scan is one credit per thousand patients.",
+      "So most marketing tools let you filter by age or last visit. That is free here too. But the AI scan is different. You describe who you want in plain English. Patients over 65 who missed their flu shot. Diabetics who have not been seen in six months. It reads their actual visit summaries, diagnoses, medications. That is one credit per thousand patients.",
     ],
   },
 };

@@ -14,6 +14,7 @@ AS $$
 DECLARE
   v_allocation int;
   v_remaining numeric;
+  v_current_plan text;
 BEGIN
   -- Validate plan
   IF p_plan NOT IN ('starter', 'professional', 'business', 'pay_as_you_go') THEN
@@ -28,9 +29,9 @@ BEGIN
     WHEN 'pay_as_you_go' THEN v_allocation := 0;
   END CASE;
 
-  -- Carry over remaining credits from previous plan
-  SELECT GREATEST(0, credits_total - credits_used)
-  INTO v_remaining
+  -- Carry over remaining credits and check current plan
+  SELECT GREATEST(0, credits_total - credits_used), subscription_plan
+  INTO v_remaining, v_current_plan
   FROM public.organizations
   WHERE id = p_org_id;
 
@@ -40,7 +41,11 @@ BEGIN
       billing_cycle_start = now(),
       credits_used = 0,
       credits_total = v_allocation + COALESCE(v_remaining, 0),
-      trial_end_date = NULL,
+      trial_end_date = CASE
+        WHEN v_current_plan IN ('standard_trial', 'premium_trial')
+        THEN now() + interval '14 days'
+        ELSE NULL
+      END,
       cancelled_at = NULL,
       data_retention_until = NULL,
       payment_failure_count = 0,

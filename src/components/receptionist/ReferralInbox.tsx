@@ -12,6 +12,7 @@ interface ReferralItem {
   patient_name: string;
   specialty: string;
   status: string;
+  source?: string;
   from_org_name: string;
   from_doctor_name: string;
   created_at: string;
@@ -170,10 +171,18 @@ export default function ReferralInbox({ locationId }: ReferralInboxProps) {
                         <span className="inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
                           {referral.specialty}
                         </span>
+                        {referral.source === "self_reported" && (
+                          <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            Self Reported
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-slate">
-                        From {referral.from_org_name} — Dr.{" "}
-                        {referral.from_doctor_name}
+                        {referral.source === "self_reported" ? (
+                          <>Reported by patient{referral.from_org_name !== "External" ? `, ${referral.from_org_name}` : ""}</>
+                        ) : (
+                          <>From {referral.from_org_name}, Dr. {referral.from_doctor_name}</>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">

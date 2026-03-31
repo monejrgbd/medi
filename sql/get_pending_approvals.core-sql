@@ -68,10 +68,11 @@ BEGIN
           WHEN v.has_previous_visits THEN 'returning'
           ELSE 'new'
         END,
-        'collision_flag', p.collision_flag,
         'phone_verified', p.phone_verified,
         'phone_masked', CASE WHEN p.phone IS NOT NULL THEN '***-***-' || right(p.phone, 4) ELSE NULL END,
         'phone_verification_pending', v.phone_verification_pending,
+        'self_reported_referral', v.self_reported_referral,
+        'self_reported_referrer', v.self_reported_referrer,
         'active_follow_ups', (
           SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id', fu.id,

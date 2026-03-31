@@ -13,8 +13,9 @@ AS $$
 DECLARE
   v_status text;
   v_org_id uuid;
+  v_nurse_reviewed boolean;
 BEGIN
-  SELECT v.status, v.org_id INTO v_status, v_org_id
+  SELECT v.status, v.org_id, v.nurse_reviewed INTO v_status, v_org_id, v_nurse_reviewed
   FROM public.visits v
   WHERE v.id = p_visit_id;
 
@@ -36,7 +37,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
   END IF;
 
-  RETURN jsonb_build_object('success', true, 'status', v_status);
+  RETURN jsonb_build_object('success', true, 'status', v_status, 'nurse_reviewed', COALESCE(v_nurse_reviewed, false));
 END;
 $$;
 

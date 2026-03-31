@@ -510,6 +510,8 @@ export type Database = {
           ai_custom_instructions: string | null
           ai_message_limit: number | null
           ai_model: string | null
+          ask_discovery_source: boolean | null
+          ask_referral_source: boolean | null
           created_at: string | null
           diagnostic_enabled: boolean | null
           display_format: string | null
@@ -537,6 +539,8 @@ export type Database = {
           ai_custom_instructions?: string | null
           ai_message_limit?: number | null
           ai_model?: string | null
+          ask_discovery_source?: boolean | null
+          ask_referral_source?: boolean | null
           created_at?: string | null
           diagnostic_enabled?: boolean | null
           display_format?: string | null
@@ -564,6 +568,8 @@ export type Database = {
           ai_custom_instructions?: string | null
           ai_message_limit?: number | null
           ai_model?: string | null
+          ask_discovery_source?: boolean | null
+          ask_referral_source?: boolean | null
           created_at?: string | null
           diagnostic_enabled?: boolean | null
           display_format?: string | null
@@ -1124,7 +1130,6 @@ export type Database = {
       patients: {
         Row: {
           birthday: string
-          collision_flag: boolean | null
           consent_given: boolean | null
           consent_given_at: string | null
           created_at: string | null
@@ -1143,7 +1148,6 @@ export type Database = {
         }
         Insert: {
           birthday: string
-          collision_flag?: boolean | null
           consent_given?: boolean | null
           consent_given_at?: string | null
           created_at?: string | null
@@ -1162,7 +1166,6 @@ export type Database = {
         }
         Update: {
           birthday?: string
-          collision_flag?: boolean | null
           consent_given?: boolean | null
           consent_given_at?: string | null
           created_at?: string | null
@@ -1346,9 +1349,9 @@ export type Database = {
         Row: {
           created_at: string | null
           expired_at: string | null
-          from_doctor_id: string
-          from_location_id: string
-          from_org_id: string
+          from_doctor_id: string | null
+          from_location_id: string | null
+          from_org_id: string | null
           id: string
           included_attachment_ids: string[] | null
           included_visit_ids: string[]
@@ -1358,6 +1361,7 @@ export type Database = {
           patient_name: string
           pdf_url: string | null
           referral_note: string
+          source: string
           specialty: string
           status: string
           to_email: string | null
@@ -1367,9 +1371,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           expired_at?: string | null
-          from_doctor_id: string
-          from_location_id: string
-          from_org_id: string
+          from_doctor_id?: string | null
+          from_location_id?: string | null
+          from_org_id?: string | null
           id?: string
           included_attachment_ids?: string[] | null
           included_visit_ids: string[]
@@ -1379,6 +1383,7 @@ export type Database = {
           patient_name: string
           pdf_url?: string | null
           referral_note: string
+          source?: string
           specialty: string
           status?: string
           to_email?: string | null
@@ -1388,9 +1393,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           expired_at?: string | null
-          from_doctor_id?: string
-          from_location_id?: string
-          from_org_id?: string
+          from_doctor_id?: string | null
+          from_location_id?: string | null
+          from_org_id?: string | null
           id?: string
           included_attachment_ids?: string[] | null
           included_visit_ids?: string[]
@@ -1400,6 +1405,7 @@ export type Database = {
           patient_name?: string
           pdf_url?: string | null
           referral_note?: string
+          source?: string
           specialty?: string
           status?: string
           to_email?: string | null
@@ -2297,6 +2303,7 @@ export type Database = {
           created_at: string | null
           credits_charged: number | null
           demo_features: Json | null
+          discovery_source: string | null
           doctor_diagnosis: string | null
           entered_queue_at: string | null
           follow_up_of: string | null
@@ -2316,10 +2323,13 @@ export type Database = {
           patient_approved_at: string | null
           patient_denied: boolean | null
           patient_id: string
+          pending_phone: string | null
           phone_verification_pending: boolean | null
           priority: number | null
           review_sms_sent: boolean | null
           review_token: string | null
+          self_reported_referral: boolean | null
+          self_reported_referrer: string | null
           session_token: string
           status: string
           summary_show_diagnosis: boolean | null
@@ -2345,6 +2355,7 @@ export type Database = {
           created_at?: string | null
           credits_charged?: number | null
           demo_features?: Json | null
+          discovery_source?: string | null
           doctor_diagnosis?: string | null
           entered_queue_at?: string | null
           follow_up_of?: string | null
@@ -2364,10 +2375,13 @@ export type Database = {
           patient_approved_at?: string | null
           patient_denied?: boolean | null
           patient_id: string
+          pending_phone?: string | null
           phone_verification_pending?: boolean | null
           priority?: number | null
           review_sms_sent?: boolean | null
           review_token?: string | null
+          self_reported_referral?: boolean | null
+          self_reported_referrer?: string | null
           session_token?: string
           status?: string
           summary_show_diagnosis?: boolean | null
@@ -2393,6 +2407,7 @@ export type Database = {
           created_at?: string | null
           credits_charged?: number | null
           demo_features?: Json | null
+          discovery_source?: string | null
           doctor_diagnosis?: string | null
           entered_queue_at?: string | null
           follow_up_of?: string | null
@@ -2412,10 +2427,13 @@ export type Database = {
           patient_approved_at?: string | null
           patient_denied?: boolean | null
           patient_id?: string
+          pending_phone?: string | null
           phone_verification_pending?: boolean | null
           priority?: number | null
           review_sms_sent?: boolean | null
           review_token?: string | null
+          self_reported_referral?: boolean | null
+          self_reported_referrer?: string | null
           session_token?: string
           status?: string
           summary_show_diagnosis?: boolean | null
@@ -2596,23 +2614,33 @@ export type Database = {
         Returns: Json
       }
       check_location_active: { Args: { p_location_id: string }; Returns: Json }
-      checkin_patient: {
-        Args: {
-          p_birthday: string
-          p_first_name: string
-          p_last_name: string
-          p_location_id: string
-          p_phone?: string
-          p_sex?: string
-        }
-        Returns: Json
-      }
+      checkin_patient:
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+              p_sex?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+              p_referred_by?: string
+              p_sex?: string
+              p_was_referred?: boolean
+            }
+            Returns: Json
+          }
       claim_patient: { Args: { p_visit_id: string }; Returns: Json }
       cleanup_demo_data: { Args: never; Returns: undefined }
-      collect_phone_post_ai: {
-        Args: { p_phone: string; p_session_token: string; p_visit_id: string }
-        Returns: Json
-      }
       complete_campaign_sending: {
         Args: { p_campaign_id: string }
         Returns: Json
@@ -2677,6 +2705,10 @@ export type Database = {
         }
         Returns: Json
       }
+      create_self_reported_referral: {
+        Args: { p_referred_by?: string; p_visit_id: string }
+        Returns: Json
+      }
       create_sms_campaign: {
         Args: {
           p_ai_criteria?: string
@@ -2698,10 +2730,6 @@ export type Database = {
       }
       deactivate_account: { Args: never; Returns: Json }
       deactivate_staff: { Args: { p_staff_user_id: string }; Returns: Json }
-      decline_phone_verification: {
-        Args: { p_session_token: string; p_visit_id: string }
-        Returns: Json
-      }
       deduct_credits: {
         Args: { p_ai_model: string; p_org_id: string; p_visit_id: string }
         Returns: Json
@@ -2718,6 +2746,7 @@ export type Database = {
           p_first_name?: string
           p_last_name?: string
           p_patient_id: string
+          p_phone?: string
           p_sex?: string
         }
         Returns: Json
@@ -2765,7 +2794,6 @@ export type Database = {
       }
       get_checked_in_doctors: { Args: { p_location_id: string }; Returns: Json }
       get_claimed_patients: { Args: { p_location_id: string }; Returns: Json }
-      get_collision_state: { Args: { p_visit_id: string }; Returns: Json }
       get_completed_and_left_visits: {
         Args: {
           p_cursor_completed?: string
@@ -2786,6 +2814,15 @@ export type Database = {
         Returns: Json
       }
       get_demo_tracker: { Args: { p_team_code: string }; Returns: Json }
+      get_discovery_stats: {
+        Args: {
+          p_end_date?: string
+          p_location_id?: string
+          p_org_id?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
       get_employee_stats: {
         Args: {
           p_end_date?: string
@@ -2918,20 +2955,6 @@ export type Database = {
         Args: { p_language: string; p_session_token: string }
         Returns: Json
       }
-      handle_collision_result: {
-        Args: {
-          p_phone_matches_existing: boolean
-          p_shared_phone?: boolean
-          p_visit_id: string
-        }
-        Returns: Json
-      }
-      handle_collision_returning: {
-        Args: { p_visit_id: string }
-        Returns: Json
-      }
-      handle_collision_verify: { Args: { p_visit_id: string }; Returns: Json }
-      handle_no_phone_existing: { Args: { p_visit_id: string }; Returns: Json }
       handle_patient: { Args: { p_visit_id: string }; Returns: Json }
       handle_payment_failure: { Args: { p_org_id: string }; Returns: Json }
       increment_verification_attempt: {
@@ -3013,6 +3036,21 @@ export type Database = {
         Args: { p_new_password: string; p_staff_user_id: string }
         Returns: Json
       }
+      resolve_potential_match: {
+        Args: {
+          p_action?: string
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
+          p_old_phone?: string
+          p_phone?: string
+          p_referred_by?: string
+          p_sex?: string
+          p_was_referred?: boolean
+        }
+        Returns: Json
+      }
       rotate_review_platforms: { Args: never; Returns: undefined }
       save_campaign_matches: {
         Args: { p_campaign_id: string; p_matches: Json }
@@ -3051,6 +3089,10 @@ export type Database = {
           p_session_token: string
           p_visit_id: string
         }
+        Returns: Json
+      }
+      set_discovery_source: {
+        Args: { p_source: string; p_visit_id: string }
         Returns: Json
       }
       set_recharge_limit: { Args: { p_limit: number }; Returns: Json }
@@ -3157,6 +3199,8 @@ export type Database = {
           p_ai_custom_instructions?: string
           p_ai_message_limit?: number
           p_ai_model?: string
+          p_ask_discovery_source?: boolean
+          p_ask_referral_source?: boolean
           p_diagnostic_enabled?: boolean
           p_display_format?: string
           p_location_id: string
@@ -3353,3 +3397,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

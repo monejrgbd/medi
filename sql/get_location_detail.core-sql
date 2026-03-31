@@ -74,6 +74,8 @@ BEGIN
       'diagnostic_enabled', l.diagnostic_enabled,
       'queue_type', l.queue_type,
       'raven_api_key', l.raven_api_key,
+      'ask_referral_source', l.ask_referral_source,
+      'ask_discovery_source', l.ask_discovery_source,
       'created_at', l.created_at
     )
   )

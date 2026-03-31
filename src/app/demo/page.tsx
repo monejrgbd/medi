@@ -120,6 +120,14 @@ export default async function DemoPage() {
           completedLeftRes.data?.has_more_completed ?? false,
         hasMoreLeft: completedLeftRes.data?.has_more_left ?? false,
       }}
+      nurseInitial={{
+        queue: queueRes.data?.queue ?? [],
+        claimed: claimedRes.data?.claimed ?? [],
+        completed: completedLeftRes.data?.completed ?? [],
+        left: completedLeftRes.data?.left ?? [],
+        hasMoreCompleted: completedLeftRes.data?.has_more_completed ?? false,
+        hasMoreLeft: completedLeftRes.data?.has_more_left ?? false,
+      }}
       reviewsInitial={{
         reviews: (reviewsRes.data?.reviews ?? []) as any[],
         stats: (reviewsRes.data?.stats ?? null) as any,

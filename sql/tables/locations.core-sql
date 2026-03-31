@@ -24,6 +24,8 @@ CREATE TABLE public.locations (
   ai_message_limit      integer DEFAULT NULL
     CHECK (ai_message_limit IS NULL OR (ai_message_limit >= 10 AND ai_message_limit <= 50)),
   skip_ai               boolean DEFAULT false,
+  ask_referral_source   boolean DEFAULT false,
+  ask_discovery_source  boolean DEFAULT false,
   queue_type            text NOT NULL DEFAULT 'fifo'
     CHECK (queue_type IN ('fifo', 'priority', 'appointment_priority', 'appointment_fifo', 'critical_appointment_fifo')),
   raven_api_key         text DEFAULT NULL,

@@ -6,6 +6,7 @@ interface Props {
     total_received: number;
     by_status: Record<string, number>;
     by_specialty: Record<string, number>;
+    by_source?: Record<string, number>;
     top_sending_clinics: { org_name: string; count: number; arrived: number; pending: number }[];
   };
 }
@@ -53,6 +54,25 @@ export default function ReferralAnalyticsChart({ data }: Props) {
           <p className="mt-1 text-2xl font-bold text-green-600">{specialtyEntries.length}</p>
         </div>
       </div>
+
+      {/* By source */}
+      {data.by_source && Object.keys(data.by_source).length > 1 && (
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-slate">Referral Sources:</span>
+          {Object.entries(data.by_source).map(([source, count]) => (
+            <span
+              key={source}
+              className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                source === "self_reported"
+                  ? "bg-amber-100 text-amber-800"
+                  : "bg-blue-100 text-blue-800"
+              }`}
+            >
+              {source === "self_reported" ? "Self Reported" : "Hilt"}: {count}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="grid gap-6 sm:grid-cols-2">
         {/* By status */}

@@ -34,6 +34,7 @@ CREATE TABLE public.visits (
   review_sms_sent       boolean DEFAULT false,
   timeout_flagged       boolean DEFAULT false,
   phone_verification_pending boolean DEFAULT false,
+  pending_phone         text,
   is_return_visit       boolean DEFAULT false,
   summary_show_diagnosis boolean DEFAULT true,
   patient_approved      boolean DEFAULT false,
@@ -46,6 +47,9 @@ CREATE TABLE public.visits (
   care_instructions     text DEFAULT NULL,
   ai_skipped            boolean DEFAULT false,
   demo_features         jsonb DEFAULT NULL,
+  self_reported_referral boolean DEFAULT false,
+  self_reported_referrer text,
+  discovery_source      text,
   updated_at            timestamptz DEFAULT now(),
   created_at            timestamptz DEFAULT now()
 );

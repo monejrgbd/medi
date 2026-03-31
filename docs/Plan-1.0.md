@@ -21,6 +21,8 @@ An AI pre-screening platform for medical clinics. A patient scans a QR code, con
    - When approving a new patient, receptionist sees a "Similar patients" hint (same birthday or similar names) as a safety net for typos.
    - Patient sees "Waiting for approval" until the receptionist approves or denies.
    - **If denied** → patient sees "Your check-in was not approved. Please speak to the front desk." Patient can try again by re-scanning. No credit used.
+1a. **Self-reported referral** (optional, per location toggle `ask_referral_source`) — the check-in form shows a checkbox: "I was referred here by another provider." If checked, an optional free text field appears for the referring doctor or clinic name. This creates a referral record in the system (source='self_reported', status='patient_arrived', linked to the visit) visible in the referral inbox alongside Hilt-to-Hilt referrals. Receptionist sees a "Patient reports being referred" badge on the approval card. Applies to all patients (new and returning).
+1b. **Discovery source** (optional, per location toggle `ask_discovery_source`) — shown as a post-check-in screen ONLY for genuinely new patients (first visit at this org). After `checkin_patient` returns `match_type: "new"`, a screen appears: "How did you learn about us?" with a dropdown (Google Search, Social Media, Friend or Family, Doctor Referral, Insurance Directory, Walk in, Other). Patient can skip. Returning patients never see this screen. Data feeds into discovery analytics (Patients tab in Manager Dashboard, summary widget on Owner Overview).
 2. **First-Timer Explainer** — If it's the patient's first time with Hilt Health AI (checked via history), a brief overlay explains:
    - Use your wait time to share everything on your mind — no rushing
    - Your doctor reads this before they walk in, so you won't have to repeat yourself
@@ -209,6 +211,7 @@ When a staff member logs in, they see all their assigned roles as options (Docto
   - **Non-Hilt Health** — doctor enters an email address → PDF sent via our email system with HiltHealth.com branding. Doctor can also download the PDF directly.
   - Free feature — every referral to a non-Hilt Health clinic is organic marketing.
   - **When a referral is created, the visit summary SMS is not sent** — the referral system handles the information transfer. The visit summary SMS is only for visits where the patient leaves without a referral, so they have a portable record to carry themselves.
+  - **Self-reported referrals** — patients who were referred by an external provider (phone, fax, letter, verbal) can self-report at check-in via the "Were you referred?" checkbox. This creates a referral record (source='self_reported') in the same inbox as Hilt-to-Hilt referrals. The receptionist sees a badge on the approval card and can view the referral in the inbox. The referral auto-completes when the visit is completed. Captures referral data that would otherwise be invisible to the system.
   - **Referral-to-visit linking at receiving clinic** — each referral gets a unique `referral_id`. When the referred patient checks in at the receiving clinic:
     - **Auto-match**: system checks the referral inbox for matching name + birthday. If found, receptionist sees: "Incoming referral from [Clinic A / Dr. Smith] for [specialty]. Link this visit?" Receptionist confirms.
     - **Manual link**: if auto-match fails (name spelled differently, etc.), receptionist can manually search the referral inbox and link the patient to the correct referral.
@@ -248,14 +251,28 @@ When a staff member logs in, they see all their assigned roles as options (Docto
 
 ### Trial
 
-Two trial tiers. No credit card required for either.
+Three trial paths. User chooses on the signup form (preselected from /start-trial).
 
-**Standard Trial** (self-serve, no approval needed)
+**Pay As You Go Trial** (self-serve, no credit card)
 - **$20 worth of credits** (20 credits) + full platform access for 14 days
-- Clinic signs up through the website and starts immediately
-- 7 days before trial ends, we contact them with pricing based on the plan they choose
+- Optional approval code upgrades to Premium PAyG Trial (200 credits, 30 days)
+- Clinic signs up and starts immediately
 
-**Premium Trial** (domain email gated, automated approval)
+**Starter Subscription Trial** (credit card required)
+- 14 days free, then $79/provider/mo (auto charges via PayPal)
+- Standard AI (Haiku), unlimited screening, per-feature budgets
+- Up to 5 providers during trial. Cancel anytime.
+- Org starts as standard_trial, PayPal webhook upgrades to starter plan
+
+**Professional Subscription Trial** (credit card + approval code required)
+- 14 days free, then $149/provider/mo (auto charges via PayPal)
+- Advanced AI (Sonnet), unlimited screening, per-feature budgets
+- Up to 5 providers during trial. Cancel anytime.
+- Requires valid approval code. Org starts as premium_trial, PayPal webhook upgrades to professional plan
+
+**Subscription trial PayPal setup:** each Starter/Professional plan has a 14-day $0 trial billing cycle configured in PayPal. If user skips PayPal checkout, they keep their PAyG trial (standard_trial or premium_trial with credits).
+
+**Premium Trial (PAyG path)** (domain email gated, automated approval)
 - **$200 worth of credits** (200 credits) + full platform access for 30 days
 - Requires an approval code to activate, clinic enters the code during signup
 - **Automated qualification flow (marketing site):** clinic fills out the "Apply for Premium Trial" form on the marketing site with their clinic email address. The frontend enforces custom domain emails only (not gmail, outlook, etc.). If the email is on a generic domain, the user is told to use a clinic email or book a meeting instead. If the email is on a custom domain, the system auto generates an approval code and emails it after a randomized 5 to 15 minute delay (simulates staff review). The user sees "A staff member is currently online, expect a rejection or approval within one hour." One approval per domain, one request per email.
@@ -327,8 +344,10 @@ Two trial tiers. No credit card required for either.
 - Review funnel config (platform links + URLs, cycle time) — only relevant if Review SMS add-on is enabled
 - Embeddable widget (code snippet + preview)
 - Tablet inventory count
+- Ask about referrals toggle (`ask_referral_source`) — show "Were you referred?" checkbox on the check-in form
+- Ask how they found us toggle (`ask_discovery_source`) — show "How did you learn about us?" screen for new patients after check-in
 - Referral receiving address (email address where this location receives incoming referrals from other Hilt Health clinics)
-- Referral inbox (view incoming referrals sent to this location)
+- Referral inbox (view incoming referrals sent to this location, including self-reported referrals from patient check-in)
 - Review hub (view all internal patient ratings, tagged by doctor, see which ones went to external platforms)
 
 ---
@@ -408,13 +427,16 @@ These are confirmed for v1 beyond the core flow:
 
 60. **Demo live tracker** — internal tool at `/demo/track` for team members doing remote demo calls. Each team member gets a unique code (e.g. `HK001`). They share `hilthealth.com/demo?team=HK001` with the prospect. The team code is silently captured from the URL and stored on the `demo_access` record when the prospect enters their email. During the call, the team member opens `/demo/track`, enters their code, and sees the prospect's demo progress in real time (polls every 3 seconds): current step (1 through 5), patient name, message count during AI screening, and contextual talking points that appear at each step. Talking points are things NOT already shown in the demo's built in text, covering urgency detection, patient verified summaries, doctor only AI diagnostics, follow up AI instructions, visit summary SMS, and the review filtering funnel. No authentication required beyond knowing a valid team code. Zero friction for the prospect since the code is a URL parameter they never see. SQL function `get_demo_tracker` runs as SECURITY DEFINER to bypass RLS. New column: `demo_access.team_code`. New SQL function: `get_demo_tracker`. New page: `/demo/track`.
 61. **Queue type per location** — each location chooses one of five queue modes, stored as `queue_type` on the `locations` table. The modes are composable sort layers applied in order:
-    - **FIFO** (`fifo`) — strict arrival order. AI does not update priority. Every patient waits their turn.
-    - **Priority** (`priority`) — AI auto assigns urgency (1 to 3), queue sorted by priority then arrival time. Default for all locations.
+    - **FIFO** (`fifo`) — strict arrival order. AI does not update priority. Every patient waits their turn. Default for new locations.
+    - **Priority** (`priority`) — AI auto assigns urgency (1 to 3), queue sorted by priority then arrival time.
     - **Appointment then Priority** (`appointment_priority`) — scheduled patients first (ordered by appointment time), then priority queue for walk ins. Requires Raven Scheduler integration.
     - **Appointment then FIFO** (`appointment_fifo`) — scheduled patients first (ordered by appointment time), then strict arrival order for walk ins. Requires Raven Scheduler integration.
     - **Critical then Appointment then FIFO** (`critical_appointment_fifo`) — AI flagged critical patients (priority 3) jump everything, then scheduled appointments by time, then FIFO for remaining walk ins. Requires Raven Scheduler integration.
-    Owners select the queue type during onboarding (Step 1, alongside location name and specialty) with a note that the setting applies to the location being created and can be changed later in location settings. Appointment based modes are greyed out unless a valid Raven Scheduler API key is configured. Also configurable per location in the location detail settings page.
+    Owners select the queue type during onboarding (Step 3, after Raven Scheduler) with a note that the setting applies to the location being created and can be changed later in location settings. Appointment based modes are greyed out unless a valid Raven Scheduler API key is configured. Also configurable per location in the location detail settings page.
 62. **Raven Scheduler integration** — optional third party scheduling integration. During onboarding (new step after location creation), the owner can enter a Raven Scheduler API key for the location. The key is stored on the `locations` table as `raven_api_key` (encrypted at rest via vault). When a valid key is present, appointment based queue modes become available. Raven provides appointment data keyed by patient phone number, so the phone collection step in the patient flow includes a note: "If you have an appointment, it is critical you fill this in so we can find your booking." The integration enables: appointment aware queue ordering, follow up scheduling sync (Raven can mark bookings as follow ups linked to our follow up system by phone number), and arrival notification (Raven sends check in events so we can mark patients as arrived). We expose a location scoped API that Raven calls into using the API key we generate. Raven also needs to enter our API credentials on their side, configured during the onboarding step. Also configurable per location in settings.
+
+63. **Self-reported referral tracking** — per location toggle (`ask_referral_source`). Check-in form shows "I was referred here by another provider" checkbox with optional free text for referring doctor/clinic. Creates a referral record (source='self_reported', status='patient_arrived', linked to the visit) in the same referral inbox as Hilt-to-Hilt referrals. Receptionist sees "Patient reports being referred" badge on approval card. Referral auto-completes when the visit is completed. Referral analytics updated with by_source breakdown (hilt vs self_reported). Captures external referral data that would otherwise be invisible. Demo location has this enabled.
+64. **Discovery source tracking** — per location toggle (`ask_discovery_source`). After check-in succeeds for genuinely new patients (match_type='new'), a screen shows "How did you learn about us?" with preset dropdown (Google Search, Social Media, Friend or Family, Doctor Referral, Insurance Directory, Walk in, Other). Returning patients never see this. Data stored on the visit. New `get_discovery_stats` SQL function powers a "Where New Patients Find You" chart in the Patients tab of the Manager Dashboard and a summary widget on the Owner Overview. Demo location has this enabled.
 
 ---
 

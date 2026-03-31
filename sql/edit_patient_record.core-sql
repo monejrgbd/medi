@@ -5,7 +5,8 @@ CREATE OR REPLACE FUNCTION private.edit_patient_record(
   p_first_name text DEFAULT NULL,
   p_last_name text DEFAULT NULL,
   p_birthday date DEFAULT NULL,
-  p_sex text DEFAULT NULL
+  p_sex text DEFAULT NULL,
+  p_phone text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -25,9 +26,11 @@ DECLARE
   v_old_birthday date;
   v_changed_fields text[] := '{}';
   v_duplicate_check uuid;
+  v_clean_phone text;
+  v_old_phone text;
 BEGIN
   -- Get patient
-  SELECT p.id, p.org_id, p.first_name, p.last_name, p.birthday
+  SELECT p.id, p.org_id, p.first_name, p.last_name, p.birthday, p.phone
   INTO v_patient
   FROM public.patients p
   WHERE p.id = p_patient_id;
@@ -97,19 +100,46 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid sex value');
   END IF;
 
-  -- Uniqueness check before update
-  SELECT p.id INTO v_duplicate_check
-  FROM public.patients p
-  WHERE p.org_id = v_patient.org_id
-    AND lower(p.first_name) = lower(COALESCE(v_clean_first, v_patient.first_name))
-    AND lower(p.last_name) = lower(COALESCE(v_clean_last, v_patient.last_name))
-    AND p.birthday = COALESCE(p_birthday, v_patient.birthday)
-    AND p.id <> p_patient_id
-    AND NOT p.is_orphaned
-  LIMIT 1;
+  -- Phone validation if provided
+  IF p_phone IS NOT NULL AND p_phone <> '' THEN
+    v_clean_phone := regexp_replace(p_phone, '[^0-9+]', '', 'g');
+    IF left(v_clean_phone, 1) = '+' THEN
+      v_clean_phone := '+' || regexp_replace(substring(v_clean_phone, 2), '[^0-9]', '', 'g');
+    END IF;
+    IF v_clean_phone !~ '^\+[1-9][0-9]{1,14}$' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid phone number format');
+    END IF;
+    v_old_phone := v_patient.phone;
+  END IF;
+
+  -- Uniqueness check before update (includes phone in check)
+  -- Check uniqueness against full identity key (name + birthday + phone)
+  IF COALESCE(v_clean_phone, v_patient.phone) IS NOT NULL THEN
+    SELECT p.id INTO v_duplicate_check
+    FROM public.patients p
+    WHERE p.org_id = v_patient.org_id
+      AND lower(p.first_name) = lower(COALESCE(v_clean_first, v_patient.first_name))
+      AND lower(p.last_name) = lower(COALESCE(v_clean_last, v_patient.last_name))
+      AND p.birthday = COALESCE(p_birthday, v_patient.birthday)
+      AND p.phone = COALESCE(v_clean_phone, v_patient.phone)
+      AND p.id <> p_patient_id
+      AND NOT p.is_orphaned
+    LIMIT 1;
+  ELSE
+    SELECT p.id INTO v_duplicate_check
+    FROM public.patients p
+    WHERE p.org_id = v_patient.org_id
+      AND lower(p.first_name) = lower(COALESCE(v_clean_first, v_patient.first_name))
+      AND lower(p.last_name) = lower(COALESCE(v_clean_last, v_patient.last_name))
+      AND p.birthday = COALESCE(p_birthday, v_patient.birthday)
+      AND p.phone IS NULL
+      AND p.id <> p_patient_id
+      AND NOT p.is_orphaned
+    LIMIT 1;
+  END IF;
 
   IF v_duplicate_check IS NOT NULL THEN
-    RETURN jsonb_build_object('success', false, 'error', 'A patient with this name and birthday already exists.');
+    RETURN jsonb_build_object('success', false, 'error', 'A patient with this name, birthday, and phone already exists.');
   END IF;
 
   -- Track changed fields
@@ -125,17 +155,22 @@ BEGIN
   IF p_sex IS NOT NULL THEN
     v_changed_fields := v_changed_fields || 'sex';
   END IF;
+  IF v_clean_phone IS NOT NULL AND v_clean_phone <> COALESCE(v_patient.phone, '') THEN
+    v_changed_fields := v_changed_fields || 'phone';
+  END IF;
 
   IF array_length(v_changed_fields, 1) IS NULL THEN
     RETURN jsonb_build_object('success', true, 'message', 'No changes detected');
   END IF;
 
-  -- Update patient
+  -- Update patient (phone change also resets phone_verified)
   UPDATE public.patients
   SET first_name = COALESCE(v_clean_first, first_name),
       last_name = COALESCE(v_clean_last, last_name),
       birthday = COALESCE(p_birthday, birthday),
       sex = COALESCE(p_sex, sex),
+      phone = COALESCE(v_clean_phone, phone),
+      phone_verified = CASE WHEN v_clean_phone IS NOT NULL AND v_clean_phone <> COALESCE(phone, '') THEN false ELSE phone_verified END,
       updated_at = now()
   WHERE id = p_patient_id;
 
@@ -187,7 +222,8 @@ CREATE OR REPLACE FUNCTION public.edit_patient_record(
   p_first_name text DEFAULT NULL,
   p_last_name text DEFAULT NULL,
   p_birthday date DEFAULT NULL,
-  p_sex text DEFAULT NULL
+  p_sex text DEFAULT NULL,
+  p_phone text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -198,9 +234,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.edit_patient_record(v_auth_uid, p_patient_id, p_first_name, p_last_name, p_birthday, p_sex);
+  RETURN private.edit_patient_record(v_auth_uid, p_patient_id, p_first_name, p_last_name, p_birthday, p_sex, p_phone);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date, text, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.edit_patient_record(uuid, text, text, date, text, text) TO authenticated;

@@ -77,6 +77,8 @@ interface NurseDashboardProps {
   initialLeft: CompletedVisit[];
   initialHasMoreCompleted?: boolean;
   initialHasMoreLeft?: boolean;
+  demoMode?: boolean;
+  demoVisitId?: string | null;
 }
 
 type Tab = "pending" | "claimed" | "completed" | "left";
@@ -96,13 +98,23 @@ export default function NurseDashboard({
   initialLeft,
   initialHasMoreCompleted = false,
   initialHasMoreLeft = false,
+  demoMode = false,
+  demoVisitId,
 }: NurseDashboardProps) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("pending");
-  const [queue, setQueue] = useState<QueueVisit[]>(initialQueue);
-  const [claimed, setClaimed] = useState<ClaimedVisit[]>(initialClaimed);
-  const [completed, setCompleted] = useState<CompletedVisit[]>(initialCompleted);
-  const [left, setLeft] = useState<CompletedVisit[]>(initialLeft);
+  const [queue, setQueue] = useState<QueueVisit[]>(
+    demoMode ? (demoVisitId ? initialQueue.filter(q => q.visit_id === demoVisitId) : []) : initialQueue
+  );
+  const [claimed, setClaimed] = useState<ClaimedVisit[]>(
+    demoMode ? (demoVisitId ? initialClaimed.filter(c => c.visit_id === demoVisitId) : []) : initialClaimed
+  );
+  const [completed, setCompleted] = useState<CompletedVisit[]>(
+    demoMode ? (demoVisitId ? initialCompleted.filter(c => c.visit_id === demoVisitId) : []) : initialCompleted
+  );
+  const [left, setLeft] = useState<CompletedVisit[]>(
+    demoMode ? (demoVisitId ? initialLeft.filter(c => c.visit_id === demoVisitId) : []) : initialLeft
+  );
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     suggestedLocationId ?? (locations.length === 1 ? locations[0].id : null)
   );
@@ -116,6 +128,7 @@ export default function NurseDashboard({
   const [hasMoreLeft, setHasMoreLeft] = useState(initialHasMoreLeft);
   const [loadingMore, setLoadingMore] = useState(false);
   const [focusMode, setFocusMode] = useState(() => {
+    if (demoMode) return true;
     if (typeof window !== 'undefined') {
       return localStorage.getItem('nurse_focus_mode') === 'true';
     }
@@ -170,13 +183,41 @@ export default function NurseDashboard({
 
   // Sync state when server component re-renders with new props (via router.refresh())
   useEffect(() => {
-    setQueue(initialQueue);
-    setClaimed(initialClaimed);
-    setCompleted(initialCompleted);
-    setLeft(initialLeft);
+    if (demoMode && demoVisitId) {
+      setQueue(initialQueue.filter(q => q.visit_id === demoVisitId));
+      setClaimed(initialClaimed.filter(c => c.visit_id === demoVisitId));
+      setCompleted(initialCompleted.filter(c => c.visit_id === demoVisitId));
+      setLeft(initialLeft.filter(c => c.visit_id === demoVisitId));
+    } else if (!demoMode) {
+      setQueue(initialQueue);
+      setClaimed(initialClaimed);
+      setCompleted(initialCompleted);
+      setLeft(initialLeft);
+    }
     setHasMoreCompleted(initialHasMoreCompleted);
     setHasMoreLeft(initialHasMoreLeft);
-  }, [initialQueue, initialClaimed, initialCompleted, initialLeft, initialHasMoreCompleted, initialHasMoreLeft]);
+  }, [initialQueue, initialClaimed, initialCompleted, initialLeft, initialHasMoreCompleted, initialHasMoreLeft, demoMode, demoVisitId]);
+
+  // Demo: trigger refresh when demoVisitId is set
+  useEffect(() => {
+    if (demoMode && demoVisitId) {
+      router.refresh();
+    }
+  }, [demoMode, demoVisitId, router]);
+
+  // Demo: auto-claim first queue item when it appears
+  useEffect(() => {
+    if (demoMode && queue.length > 0 && !activeVisitId) {
+      doClaimNext();
+    }
+  }, [demoMode, queue.length, activeVisitId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Demo: auto-restore NursePatientView for already-claimed visits (page refresh mid-triage)
+  useEffect(() => {
+    if (demoMode && claimed.length > 0 && !activeVisitId && queue.length === 0) {
+      setActiveVisitId(claimed[0].visit_id);
+    }
+  }, [demoMode, claimed.length, activeVisitId, queue.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     return () => {
@@ -263,7 +304,7 @@ export default function NurseDashboard({
       <NursePatientView
         visitId={activeVisitId}
         patientName={claimedVisit ? `${claimedVisit.first_name} ${claimedVisit.last_name}` : "Patient"}
-        onBack={() => {
+        onBack={demoMode ? () => {} : () => {
           setActiveVisitId(null);
           router.refresh();
         }}
@@ -275,6 +316,7 @@ export default function NurseDashboard({
             router.refresh();
           }
         }}
+        demoMode={demoMode}
       />
     );
   }
@@ -391,23 +433,25 @@ export default function NurseDashboard({
         onToggleSound={handleToggleSound}
       />
 
-      <div className="px-4 pt-3 lg:px-6 flex justify-end">
-        <button
-          onClick={handleFocusModeToggle}
-          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-            focusMode
-              ? "bg-teal-600 text-white"
-              : "bg-gray-100 text-slate hover:bg-gray-200"
-          }`}
-        >
-          {focusMode ? "Focus Mode On" : "Focus Mode"}
-        </button>
-      </div>
+      {!demoMode && (
+        <div className="px-4 pt-3 lg:px-6 flex justify-end">
+          <button
+            onClick={handleFocusModeToggle}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+              focusMode
+                ? "bg-teal-600 text-white"
+                : "bg-gray-100 text-slate hover:bg-gray-200"
+            }`}
+          >
+            {focusMode ? "Focus Mode On" : "Focus Mode"}
+          </button>
+        </div>
+      )}
 
       <div className="px-4 py-4 lg:px-6">
-        <NotificationPermission />
+        {!demoMode && <NotificationPermission />}
 
-        {locationId && <StaleSessionAlert locationId={locationId} />}
+        {locationId && !demoMode && <StaleSessionAlert locationId={locationId} />}
 
         {urgentPatient && (
           <NotificationBanner
@@ -416,15 +460,19 @@ export default function NurseDashboard({
           />
         )}
 
-        {/* Patient search */}
-        <div className="mb-4">
-          <PatientSearch />
-        </div>
+        {!demoMode && (
+          <>
+            {/* Patient search */}
+            <div className="mb-4">
+              <PatientSearch />
+            </div>
 
-        {/* Check-out */}
-        <div className="mb-4 flex justify-end">
-          <CheckInOutButton />
-        </div>
+            {/* Check-out */}
+            <div className="mb-4 flex justify-end">
+              <CheckInOutButton />
+            </div>
+          </>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 mb-4 border-b border-gray-200">

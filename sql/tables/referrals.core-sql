@@ -1,8 +1,10 @@
 CREATE TABLE public.referrals (
   id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  from_doctor_id          uuid NOT NULL REFERENCES public.staff_users(id),
-  from_location_id        uuid NOT NULL REFERENCES public.locations(id),
-  from_org_id             uuid NOT NULL REFERENCES public.organizations(id),
+  source                  text NOT NULL DEFAULT 'hilt'
+    CHECK (source IN ('hilt', 'self_reported')),
+  from_doctor_id          uuid REFERENCES public.staff_users(id),
+  from_location_id        uuid REFERENCES public.locations(id),
+  from_org_id             uuid REFERENCES public.organizations(id),
   to_org_id               uuid REFERENCES public.organizations(id),
   to_location_id          uuid REFERENCES public.locations(id),
   to_email                text CHECK (to_email IS NULL OR (length(to_email) <= 254)),
@@ -20,7 +22,11 @@ CREATE TABLE public.referrals (
   expired_at              timestamptz,
   created_at              timestamptz DEFAULT now(),
   -- Must have either to_location_id OR to_email (not both null)
-  CHECK (to_location_id IS NOT NULL OR to_email IS NOT NULL)
+  CHECK (to_location_id IS NOT NULL OR to_email IS NOT NULL),
+  -- Hilt-sourced referrals must have from_* populated
+  CHECK (source = 'self_reported' OR (
+    from_doctor_id IS NOT NULL AND from_location_id IS NOT NULL AND from_org_id IS NOT NULL
+  ))
 );
 
 ALTER TABLE public.referrals ENABLE ROW LEVEL SECURITY;

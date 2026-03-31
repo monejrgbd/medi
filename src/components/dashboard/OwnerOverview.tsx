@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StatCard from "./StatCard";
 import LocationCard from "./LocationCard";
 import LocationFormModal from "./LocationFormModal";
 import PatientSearch from "./PatientSearch";
+import { fetchDiscoveryStats } from "@/app/(dashboard)/d/_actions/analytics";
 import { getPlanLabel, getTrialDaysLeft } from "@/lib/utils";
 import { MapPin, Users, CreditCard, ClipboardList } from "lucide-react";
 
@@ -42,6 +43,16 @@ export default function OwnerOverview({
   locations: LocationSummary[];
 }) {
   const [addModalOpen, setAddModalOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [discoveryData, setDiscoveryData] = useState<any>(null);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split("T")[0];
+    const thirtyAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
+    fetchDiscoveryStats(null, overview.org.id, thirtyAgo, today)
+      .then((d) => { if (d?.success) setDiscoveryData(d); })
+      .catch(() => {});
+  }, [overview.org.id]);
 
   const trialDays = getTrialDaysLeft(overview.org.trial_end_date);
   const creditPercent =
@@ -96,6 +107,23 @@ export default function OwnerOverview({
           )}
         </div>
       </div>
+
+      {discoveryData && discoveryData.total_new_patients > 0 && Object.keys(discoveryData.by_source).length > 0 && (
+        <div className="mb-8 rounded-xl border border-gray-100 bg-white p-5">
+          <h3 className="text-sm font-semibold text-ink mb-3">Patient Discovery (last 30 days)</h3>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(discoveryData.by_source as Record<string, number>)
+              .sort((a, b) => (b[1] as number) - (a[1] as number))
+              .slice(0, 3)
+              .map(([source, count]) => (
+                <span key={source} className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800">
+                  {source}: {count as number}
+                </span>
+              ))}
+            <span className="text-xs text-ash self-center">{discoveryData.total_new_patients} new patients total</span>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-ink">Locations</h2>

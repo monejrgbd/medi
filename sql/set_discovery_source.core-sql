@@ -1,0 +1,45 @@
+-- Kiosk-safe: anon-callable, visit_id as capability token
+CREATE OR REPLACE FUNCTION public.set_discovery_source(
+  p_visit_id uuid,
+  p_source text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_clean_source text;
+BEGIN
+  -- Validate visit exists
+  IF NOT EXISTS (SELECT 1 FROM public.visits WHERE id = p_visit_id) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Sanitize
+  v_clean_source := trim(regexp_replace(COALESCE(p_source, ''), '<[^>]*>', '', 'g'));
+  IF length(v_clean_source) > 100 THEN
+    v_clean_source := substring(v_clean_source FROM 1 FOR 100);
+  END IF;
+
+  -- Validate against allowed list
+  IF v_clean_source NOT IN (
+    'Google Search', 'Social Media', 'Friend or Family',
+    'Doctor Referral', 'Insurance Directory', 'Walk in', 'Other'
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid source');
+  END IF;
+
+  -- Update
+  UPDATE public.visits
+  SET discovery_source = v_clean_source
+  WHERE id = p_visit_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.set_discovery_source(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.set_discovery_source(uuid, text) TO anon;
+GRANT EXECUTE ON FUNCTION public.set_discovery_source(uuid, text) TO authenticated;

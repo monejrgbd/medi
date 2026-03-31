@@ -14,6 +14,7 @@ DECLARE
   v_visit record;
   v_patient record;
   v_clean_phone text;
+  v_write_phone text;
 BEGIN
   -- Phone sanitization: strip non-digit except leading +
   v_clean_phone := regexp_replace(p_phone, '[^0-9+]', '', 'g');
@@ -28,7 +29,7 @@ BEGIN
   END IF;
 
   -- Look up visit by id
-  SELECT v.id, v.session_token, v.patient_id, v.phone_verification_pending, v.org_id, v.location_id
+  SELECT v.id, v.session_token, v.patient_id, v.pending_phone, v.org_id, v.location_id
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -42,8 +43,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
   END IF;
 
-  -- Look up patient collision_flag
-  SELECT p.id, p.collision_flag
+  -- Look up patient
+  SELECT p.id
   INTO v_patient
   FROM public.patients p
   WHERE p.id = v_visit.patient_id;
@@ -52,23 +53,22 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
   END IF;
 
-  -- Collision-aware phone handling
-  IF v_patient.collision_flag THEN
-    -- Path C: do NOT write phone to patient record
-    -- Phone stays in phone_verifications until collision resolution
-    NULL;
-  ELSE
-    -- Path B or post-AI: write phone directly to patient
-    UPDATE public.patients
-    SET phone = v_clean_phone,
-        phone_verified = true,
-        updated_at = now()
-    WHERE id = v_patient.id;
-  END IF;
+  -- Determine which phone to write to patient:
+  -- If visit has pending_phone (phone_change or add_phone flow), use that
+  -- Otherwise, phone is already on the patient record from creation, just mark verified
+  v_write_phone := COALESCE(v_visit.pending_phone, v_clean_phone);
 
-  -- Clear pending flag
+  -- Write phone to patient and mark verified
+  UPDATE public.patients
+  SET phone = v_write_phone,
+      phone_verified = true,
+      updated_at = now()
+  WHERE id = v_patient.id;
+
+  -- Clear pending state on visit
   UPDATE public.visits
-  SET phone_verification_pending = false
+  SET phone_verification_pending = false,
+      pending_phone = NULL
   WHERE id = p_visit_id;
 
   -- Audit trail
@@ -81,8 +81,7 @@ BEGIN
     'visit',
     p_visit_id,
     jsonb_build_object(
-      'phone_masked', '***-***-' || right(v_clean_phone, 4),
-      'collision_flag', v_patient.collision_flag
+      'phone_masked', '***-***-' || right(v_write_phone, 4)
     )
   );
 

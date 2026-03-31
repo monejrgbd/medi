@@ -147,3 +147,30 @@ export async function fetchFollowUpCompliance(
   if (error) return { success: false, error: error.message };
   return data;
 }
+
+export async function fetchDiscoveryStats(
+  locationId: string | null,
+  orgId: string | null,
+  startDate: string,
+  endDate: string
+) {
+  await requireAuth();
+  if (locationId && !UUID_RE.test(locationId))
+    return { success: false, error: "Invalid location ID" };
+  if (orgId && !UUID_RE.test(orgId))
+    return { success: false, error: "Invalid org ID" };
+
+  const rangeError = validateDateRange(startDate, endDate);
+  if (rangeError) return { success: false, error: rangeError };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_discovery_stats", {
+    p_location_id: locationId,
+    p_org_id: orgId,
+    p_start_date: startDate,
+    p_end_date: endDate,
+  });
+
+  if (error) return { success: false, error: error.message };
+  return data;
+}

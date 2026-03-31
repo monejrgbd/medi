@@ -21,7 +21,9 @@ CREATE OR REPLACE FUNCTION private.update_location(
   p_review_sms_enabled boolean DEFAULT NULL,
   p_diagnostic_enabled boolean DEFAULT NULL,
   p_queue_type text DEFAULT NULL,
-  p_raven_api_key text DEFAULT NULL
+  p_raven_api_key text DEFAULT NULL,
+  p_ask_referral_source boolean DEFAULT NULL,
+  p_ask_discovery_source boolean DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -88,7 +90,9 @@ BEGIN
     review_sms_enabled = COALESCE(p_review_sms_enabled, review_sms_enabled),
     diagnostic_enabled = COALESCE(p_diagnostic_enabled, diagnostic_enabled),
     queue_type = COALESCE(p_queue_type, queue_type),
-    raven_api_key = CASE WHEN p_raven_api_key IS NOT NULL THEN NULLIF(trim(p_raven_api_key), '') ELSE raven_api_key END
+    raven_api_key = CASE WHEN p_raven_api_key IS NOT NULL THEN NULLIF(trim(p_raven_api_key), '') ELSE raven_api_key END,
+    ask_referral_source = COALESCE(p_ask_referral_source, ask_referral_source),
+    ask_discovery_source = COALESCE(p_ask_discovery_source, ask_discovery_source)
   WHERE id = p_location_id;
 
   -- Auto-initialize org vitals when vitals_enabled is turned on
@@ -107,6 +111,7 @@ $$;
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer);
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean);
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean);
+DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text);
 
 CREATE OR REPLACE FUNCTION public.update_location(
   p_location_id uuid,
@@ -129,7 +134,9 @@ CREATE OR REPLACE FUNCTION public.update_location(
   p_review_sms_enabled boolean DEFAULT NULL,
   p_diagnostic_enabled boolean DEFAULT NULL,
   p_queue_type text DEFAULT NULL,
-  p_raven_api_key text DEFAULT NULL
+  p_raven_api_key text DEFAULT NULL,
+  p_ask_referral_source boolean DEFAULT NULL,
+  p_ask_discovery_source boolean DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -140,9 +147,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url, p_nurse_enabled, p_vaccines_enabled, p_vitals_enabled, p_ai_custom_instructions, p_ai_message_limit, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled, p_queue_type, p_raven_api_key);
+  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url, p_nurse_enabled, p_vaccines_enabled, p_vitals_enabled, p_ai_custom_instructions, p_ai_message_limit, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled, p_queue_type, p_raven_api_key, p_ask_referral_source, p_ask_discovery_source);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean) TO authenticated;

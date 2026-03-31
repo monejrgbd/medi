@@ -99,7 +99,18 @@ BEGIN
       'total_received', v_total_received,
       'by_status', v_by_status,
       'by_specialty', v_by_specialty,
-      'top_sending_clinics', v_top_sending_clinics
+      'top_sending_clinics', v_top_sending_clinics,
+      'by_source', COALESCE((
+        SELECT jsonb_object_agg(sub.source, sub.cnt)
+        FROM (
+          SELECT r.source, count(*) AS cnt
+          FROM public.referrals r
+          WHERE (r.from_org_id = p_org_id OR r.to_org_id = p_org_id)
+            AND r.created_at >= p_start_date
+            AND r.created_at < (p_end_date + 1)
+          GROUP BY r.source
+        ) sub
+      ), '{}'::jsonb)
     )
   );
 END;

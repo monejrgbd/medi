@@ -32,7 +32,6 @@ interface PendingVisit {
   created_at: string;
   has_previous_visits: boolean;
   match_type: string;
-  collision_flag?: boolean;
   phone_verified?: boolean;
   phone_masked?: string | null;
   phone_verification_pending?: boolean;

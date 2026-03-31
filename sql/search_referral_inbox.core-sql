@@ -75,13 +75,14 @@ BEGIN
       'patient_name', r.patient_name,
       'specialty', r.specialty,
       'status', r.status,
-      'from_org_name', o.name,
-      'from_doctor_name', su.full_name,
+      'source', r.source,
+      'from_org_name', COALESCE(o.name, r.referral_note, 'External'),
+      'from_doctor_name', COALESCE(su.full_name, ''),
       'created_at', r.created_at
     ) AS row_data
     FROM public.referrals r
-    JOIN public.organizations o ON o.id = r.from_org_id
-    JOIN public.staff_users su ON su.id = r.from_doctor_id
+    LEFT JOIN public.organizations o ON o.id = r.from_org_id
+    LEFT JOIN public.staff_users su ON su.id = r.from_doctor_id
     WHERE r.to_location_id = p_location_id
       AND r.patient_name ILIKE '%' || replace(replace(v_clean_query, '%', '\%'), '_', '\_') || '%'
     ORDER BY r.created_at DESC

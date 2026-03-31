@@ -129,78 +129,6 @@ export async function fetchSimilarPatients(
   return { success: true, patients: data?.patients ?? [] };
 }
 
-// --- Phase 6: Phone verification & collision handling ---
-
-export async function verifyPhonePrompt(visitId: string) {
-  await requireAuth();
-  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("handle_collision_verify", {
-    p_visit_id: visitId,
-  });
-
-  if (error) return { success: false, error: "Failed to trigger phone verification" };
-  if (data && !data.success) return { success: false, error: data.error };
-
-  revalidatePath("/d/receptionist");
-  return { success: true };
-}
-
-export async function confirmReturning(visitId: string) {
-  await requireAuth();
-  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("handle_collision_returning", {
-    p_visit_id: visitId,
-  });
-
-  if (error) return { success: false, error: "Failed to confirm returning patient" };
-  if (data && !data.success) return { success: false, error: data.error };
-
-  revalidatePath("/d/receptionist");
-  return { success: true };
-}
-
-export async function resolveCollision(
-  visitId: string,
-  phoneMatchesExisting: boolean,
-  sharedPhone: boolean = false
-) {
-  await requireAuth();
-  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("handle_collision_result", {
-    p_visit_id: visitId,
-    p_phone_matches_existing: phoneMatchesExisting,
-    p_shared_phone: sharedPhone,
-  });
-
-  if (error) return { success: false, error: "Failed to resolve collision" };
-  if (data && !data.success) return { success: false, error: data.error };
-
-  revalidatePath("/d/receptionist");
-  return { success: true };
-}
-
-export async function handleNoPhoneExisting(visitId: string) {
-  await requireAuth();
-  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("handle_no_phone_existing", {
-    p_visit_id: visitId,
-  });
-
-  if (error) return { success: false, error: "Failed to handle no-phone case" };
-  if (data && !data.success) return { success: false, error: data.error };
-
-  revalidatePath("/d/receptionist");
-  return { success: true };
-}
-
 export async function skipAiToQueue(visitId: string) {
   await requireAuth();
   if (!visitId || !validUUID(visitId))
@@ -242,27 +170,6 @@ export async function editPatientRecord(
 
   revalidatePath("/d/receptionist");
   return { success: true };
-}
-
-export async function fetchCollisionState(visitId: string) {
-  await requireAuth();
-  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
-
-  const supabase = await createClient();
-  const { data, error } = await supabase.rpc("get_collision_state", {
-    p_visit_id: visitId,
-  });
-
-  if (error) return { success: false, error: "Failed to fetch collision state" };
-  if (data && !data.success) return { success: false, error: data.error };
-
-  return {
-    success: true,
-    match_state: data.match_state,
-    existing_phone_masked: data.existing_phone_masked,
-    new_phone_masked: data.new_phone_masked,
-    existing_patient_id: data.existing_patient_id,
-  };
 }
 
 // --- Phase 7: Follow-ups & audit trail ---

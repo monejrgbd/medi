@@ -1,13 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import ApprovalCard from "./ApprovalCard";
-import CollisionResolutionDialog from "./CollisionResolutionDialog";
 import {
   approvePatient,
   denyPatient,
-  verifyPhonePrompt,
-  confirmReturning,
   setVisitAiOverride,
   skipAiToQueue,
 } from "@/app/(dashboard)/d/_actions/receptionist";
@@ -23,7 +20,6 @@ interface PendingVisit {
   created_at: string;
   has_previous_visits: boolean;
   match_type: string;
-  collision_flag?: boolean;
   phone_verified?: boolean;
   phone_masked?: string | null;
   phone_verification_pending?: boolean;
@@ -42,6 +38,8 @@ interface PendingVisit {
     from_org_name: string;
     from_doctor_name: string;
   } | null;
+  self_reported_referral?: boolean;
+  self_reported_referrer?: string | null;
 }
 
 interface ApprovalQueueProps {
@@ -62,38 +60,15 @@ export default function ApprovalQueue({
   type AiConfig = "standard" | "skip" | "premium";
 
   const [actionState, setActionState] = useState<
-    Record<string, "approving" | "denying" | "verifying" | "confirming">
+    Record<string, "approving" | "denying">
   >({});
 
   const hasPremiumAi = ["starter", "professional", "business", "enterprise"].includes(subscriptionPlan || "");
   const [error, setError] = useState<string | null>(null);
-  const [collisionDialogVisitId, setCollisionDialogVisitId] = useState<string | null>(null);
   const [referralMatchPending, setReferralMatchPending] = useState<{
     visitId: string;
     referralMatch: { referral_id: string; specialty: string; from_org_name: string; from_doctor_name: string };
   } | null>(null);
-
-  // Track previous pending state for auto-triggering collision dialog
-  const prevPendingRef = useRef<Record<string, boolean>>({});
-
-  // Detect phone verification transitions (pending=true -> pending=false + collision=true)
-  useEffect(() => {
-    for (const visit of pending) {
-      const wasPending = prevPendingRef.current[visit.visit_id];
-      const isPending = visit.phone_verification_pending;
-      if (wasPending && !isPending && visit.collision_flag && visit.phone_verified) {
-        if (!collisionDialogVisitId) {
-          setCollisionDialogVisitId(visit.visit_id);
-        }
-      }
-    }
-    // Update ref
-    const map: Record<string, boolean> = {};
-    for (const visit of pending) {
-      map[visit.visit_id] = !!visit.phone_verification_pending;
-    }
-    prevPendingRef.current = map;
-  }, [pending, collisionDialogVisitId]);
 
   async function handleApprove(visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }, aiConfig?: AiConfig) {
     // Check if visit has referral match — show dialog before approving
@@ -204,43 +179,6 @@ export default function ApprovalQueue({
     }
   }
 
-  async function handleVerifyPhone(visitId: string) {
-    setError(null);
-    setActionState((prev) => ({ ...prev, [visitId]: "verifying" }));
-    const result = await verifyPhonePrompt(visitId);
-    setActionState((prev) => {
-      const next = { ...prev };
-      delete next[visitId];
-      return next;
-    });
-    if (!result.success) {
-      setError(result.error ?? "Failed to trigger phone verification.");
-    }
-  }
-
-  async function handleConfirmReturning(visitId: string) {
-    setError(null);
-    setActionState((prev) => ({ ...prev, [visitId]: "confirming" }));
-    const result = await confirmReturning(visitId);
-    setActionState((prev) => {
-      const next = { ...prev };
-      delete next[visitId];
-      return next;
-    });
-    if (result.success) {
-      onActionComplete(visitId, "approve");
-    } else {
-      setError(result.error ?? "Failed to confirm returning patient.");
-    }
-  }
-
-  function handleCollisionResolved() {
-    if (collisionDialogVisitId) {
-      onActionComplete(collisionDialogVisitId, "approve");
-    }
-    setCollisionDialogVisitId(null);
-  }
-
   if (pending.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -268,26 +206,13 @@ export default function ApprovalQueue({
           orgId={orgId}
           onApprove={handleApprove}
           onDeny={handleDeny}
-          onVerifyPhone={handleVerifyPhone}
-          onConfirmReturning={handleConfirmReturning}
           approving={actionState[visit.visit_id] === "approving"}
           denying={actionState[visit.visit_id] === "denying"}
-          verifying={actionState[visit.visit_id] === "verifying"}
-          confirming={actionState[visit.visit_id] === "confirming"}
           aiAutoSkipped={aiAutoSkipped}
           hasPremiumAi={hasPremiumAi}
         />
       ))}
       </div>
-
-      {/* Collision resolution dialog */}
-      {collisionDialogVisitId && (
-        <CollisionResolutionDialog
-          visitId={collisionDialogVisitId}
-          onResolved={handleCollisionResolved}
-          onCancel={() => setCollisionDialogVisitId(null)}
-        />
-      )}
 
       {/* Referral auto-match dialog */}
       {referralMatchPending && (

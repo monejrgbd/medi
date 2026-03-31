@@ -84,6 +84,16 @@ export const QUEUE_TYPES = [
   { value: "critical_appointment_fifo", label: "Critical, Appointment, then FIFO", description: "AI flagged critical patients first, then appointments, then arrival order.", requiresRaven: true },
 ] as const;
 
+export const DISCOVERY_SOURCE_OPTIONS = [
+  "Google Search",
+  "Social Media",
+  "Friend or Family",
+  "Doctor Referral",
+  "Insurance Directory",
+  "Walk in",
+  "Other",
+] as const;
+
 export const MARKETING_SMS_CREDIT_COST = 0.1;
 
 export const MARKETING_SCAN_EXAMPLES = [

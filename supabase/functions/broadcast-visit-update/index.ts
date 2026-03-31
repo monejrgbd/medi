@@ -31,22 +31,8 @@ Deno.serve(async (req) => {
     const channel = supabase.channel(`patient:${session_token}`);
     await channel.subscribe();
 
-    if (event_type === "phone_required") {
-      // Broadcast phone_required event
-      await channel.send({
-        type: "broadcast",
-        event: "phone_required",
-        payload: { visit_id },
-      });
-    } else if (event_type === "phone_verified") {
-      // Broadcast phone_verified event
-      await channel.send({
-        type: "broadcast",
-        event: "phone_verified",
-        payload: { visit_id },
-      });
-    } else {
-      // Default: status_change (existing behavior)
+    {
+      // Status change broadcast
       const { old_status, new_status, timeout_flagged, denied } = body;
 
       if (!new_status) {

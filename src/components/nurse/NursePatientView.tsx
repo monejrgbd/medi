@@ -19,6 +19,7 @@ interface NursePatientViewProps {
   patientName: string;
   onBack: () => void;
   onComplete: () => void;
+  demoMode?: boolean;
 }
 
 interface VisitDetail {
@@ -84,6 +85,7 @@ export default function NursePatientView({
   patientName,
   onBack,
   onComplete,
+  demoMode,
 }: NursePatientViewProps) {
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<VisitDetail | null>(null);
@@ -311,15 +313,21 @@ export default function NursePatientView({
       {/* Action bar */}
       <div className="fixed bottom-0 inset-x-0 border-t border-gray-200 bg-white px-4 py-3 lg:px-6">
         <div className="flex items-center gap-3 max-w-3xl mx-auto">
-          <button
-            onClick={() => setShowComplete(true)}
-            className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
-          >
-            Complete Visit
-          </button>
+          {!demoMode && (
+            <button
+              onClick={() => setShowComplete(true)}
+              className="flex-1 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+            >
+              Complete Visit
+            </button>
+          )}
           <button
             onClick={() => setShowRelease(true)}
-            className="flex-1 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-medium text-teal-700 hover:bg-teal-100 transition-colors"
+            className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors ${
+              demoMode
+                ? "bg-teal-600 text-white hover:bg-teal-700"
+                : "border border-teal-200 bg-teal-50 text-teal-700 hover:bg-teal-100"
+            }`}
           >
             Continue to Doctor
           </button>

@@ -168,6 +168,7 @@ BEGIN
   SELECT jsonb_build_object(
     'referral', jsonb_build_object(
       'id', v_referral.id,
+      'source', v_referral.source,
       'from_org_id', v_referral.from_org_id,
       'from_doctor_name', ds.full_name,
       'from_org_name', fo.name,
@@ -214,14 +215,11 @@ BEGIN
   ) INTO v_result
   FROM visits_combined vc
   CROSS JOIN patient_public_notes ppn
-  CROSS JOIN public.staff_users ds
-  CROSS JOIN public.organizations fo
-  CROSS JOIN public.locations fl
+  LEFT JOIN public.staff_users ds ON ds.id = v_referral.from_doctor_id
+  LEFT JOIN public.organizations fo ON fo.id = v_referral.from_org_id
+  LEFT JOIN public.locations fl ON fl.id = v_referral.from_location_id
   LEFT JOIN public.organizations too ON too.id = v_referral.to_org_id
-  LEFT JOIN public.locations tl ON tl.id = v_referral.to_location_id
-  WHERE ds.id = v_referral.from_doctor_id
-    AND fo.id = v_referral.from_org_id
-    AND fl.id = v_referral.from_location_id;
+  LEFT JOIN public.locations tl ON tl.id = v_referral.to_location_id;
 
   RETURN jsonb_build_object('success', true, 'data', v_result);
 END;

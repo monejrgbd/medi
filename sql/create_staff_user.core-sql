@@ -51,6 +51,28 @@ BEGIN
     END IF;
   END IF;
 
+  -- Trial provider limit: max 5 during trial period
+  IF p_roles && ARRAY['doctor', 'nurse'] THEN
+    DECLARE
+      v_trial_end timestamptz;
+      v_provider_count int;
+    BEGIN
+      SELECT trial_end_date INTO v_trial_end
+      FROM public.organizations WHERE id = p_org_id;
+
+      IF v_trial_end IS NOT NULL AND v_trial_end > now() THEN
+        SELECT COUNT(DISTINCT su.id) INTO v_provider_count
+        FROM public.staff_users su
+        JOIN public.staff_roles sr ON sr.staff_user_id = su.id
+        WHERE su.org_id = p_org_id AND su.is_active AND NOT su.is_deleted
+          AND sr.role IN ('doctor', 'nurse');
+        IF v_provider_count >= 5 THEN
+          RETURN jsonb_build_object('success', false, 'error', 'Trial is limited to 5 providers. Subscribe to add more.');
+        END IF;
+      END IF;
+    END;
+  END IF;
+
   -- Get org slug for synthetic email
   SELECT slug INTO v_slug
   FROM public.organizations

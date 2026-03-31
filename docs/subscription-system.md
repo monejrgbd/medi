@@ -22,7 +22,12 @@ Hilt Health uses per-provider subscription pricing with AI model differentiation
 **Other plan types:**
 - **Enterprise**: custom pricing, managed via admin panel at /d/admin/enterprise
 - **Pay as you go**: $1/credit, credit-based for everything (Sonnet AI, default 30 messages, max 50 per location override)
-- **Trials**: standard_trial (20 credits, 14 days), premium_trial (200 credits, 30 days), credit-based
+- **Trials**: three paths on signup form:
+  - PAyG trial: standard_trial (20 credits, 14 days) or premium_trial (200 credits, 30 days with code). Credit-based.
+  - Starter subscription trial: card required, 14 days free via PayPal trial period, then $79/provider/mo. Org starts as standard_trial, webhook upgrades to starter.
+  - Professional subscription trial: code + card required, 14 days free, then $149/provider/mo. Org starts as premium_trial, webhook upgrades to professional.
+  - Subscription trials: 5 provider limit during trial (enforced in create_staff_user via trial_end_date). Lifts after PayPal charges.
+  - If user skips PayPal checkout, they keep their PAyG trial. No dead state.
 
 Providers = doctors + nurses (paid seats). Admin staff (receptionists, managers, marketers, reviews) = free.
 

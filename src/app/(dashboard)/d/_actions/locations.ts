@@ -73,6 +73,8 @@ export async function updateLocation(formData: {
   diagnosticEnabled?: boolean;
   queueType?: string;
   ravenApiKey?: string;
+  askReferralSource?: boolean;
+  askDiscoverySource?: boolean;
 }) {
   await requireAuth();
   const supabase = await createClient();
@@ -105,6 +107,8 @@ export async function updateLocation(formData: {
   if (formData.diagnosticEnabled !== undefined) params.p_diagnostic_enabled = formData.diagnosticEnabled;
   if (formData.queueType !== undefined) params.p_queue_type = formData.queueType;
   if (formData.ravenApiKey !== undefined) params.p_raven_api_key = formData.ravenApiKey;
+  if (formData.askReferralSource !== undefined) params.p_ask_referral_source = formData.askReferralSource;
+  if (formData.askDiscoverySource !== undefined) params.p_ask_discovery_source = formData.askDiscoverySource;
 
   const { data, error } = await supabase.rpc("update_location", params);
 
