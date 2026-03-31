@@ -580,10 +580,13 @@ export default function OnboardingWizard({
           <button
             onClick={() => setStep(3)}
             disabled={savingRaven}
-            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors mb-3"
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors mb-1.5"
           >
             Continue without Raven
           </button>
+          <p className="text-xs text-ash text-center mb-3">
+            You can connect Raven anytime from location settings.
+          </p>
 
           <div className="flex items-center justify-center gap-1.5 mb-3">
             <a
