@@ -1210,8 +1210,8 @@ export default function CheckinFlow({
 
   return (
     <LanguageProvider language={patientLanguage}>
-      <div dir={patientLanguage === "ar" ? "rtl" : "ltr"} className={needsFullHeight ? "flex-1 w-full min-h-0 flex flex-col" : demoMode ? "flex-1 w-full min-h-0 overflow-y-auto" : "flex items-center justify-center flex-1"}>
-        <div key={state} className={needsFullHeight ? "flex-1 min-h-0 w-full flex flex-col items-center animate-fade-in" : demoMode ? "min-h-full flex items-center justify-center animate-fade-in py-4" : "animate-fade-in"}>
+      <div dir={patientLanguage === "ar" ? "rtl" : "ltr"} className={needsFullHeight ? "flex-1 w-full min-h-0 flex flex-col" : demoMode ? "flex-1 w-full min-h-0 overflow-y-auto" : "flex items-start justify-center flex-1"}>
+        <div key={state} className={needsFullHeight ? "flex-1 min-h-0 w-full flex flex-col items-center animate-fade-in" : demoMode ? "min-h-full flex items-start justify-center animate-fade-in py-4" : "animate-fade-in"}>
           {content}
         </div>
         {kiosk && (
