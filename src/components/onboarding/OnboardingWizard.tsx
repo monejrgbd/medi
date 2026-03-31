@@ -12,7 +12,7 @@ import {
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink, ChevronLeft } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
@@ -48,6 +48,7 @@ export default function OnboardingWizard({
   const [ravenApiKey, setRavenApiKey] = useState("");
   const [savingRaven, setSavingRaven] = useState(false);
   const [showRavenInput, setShowRavenInput] = useState(false);
+  const [ravenError, setRavenError] = useState("");
 
   // Step 3 state (Queue Type)
   const [queueType, setQueueType] = useState("fifo");
@@ -207,13 +208,13 @@ export default function OnboardingWizard({
   }, [locationName, specialty, org.id]);
 
   const handleSaveRaven = useCallback(async () => {
-    if (ravenApiKey.trim()) {
-      setSavingRaven(true);
-      await updateLocation({ locationId, ravenApiKey: ravenApiKey.trim() });
-      setSavingRaven(false);
-    }
-    setStep(3); // Queue step
-  }, [locationId, ravenApiKey]);
+    if (!ravenApiKey.trim()) return;
+    setSavingRaven(true);
+    setRavenError("");
+    // TODO: validate against Raven API when endpoint is available
+    setSavingRaven(false);
+    setRavenError("This is not a valid Raven Scheduler API key. You can get your key from the Raven dashboard at ravenscheduler.com.");
+  }, [ravenApiKey]);
 
   const handleSaveQueue = useCallback(async () => {
     setSavingQueue(true);
@@ -360,61 +361,107 @@ export default function OnboardingWizard({
       {/* Step 1: Create Location */}
       {step === 1 && (
         <div className="max-w-md mx-auto">
-          <h2 className="text-xl font-bold text-ink mb-1 text-center">
-            Create Your First Location
-          </h2>
-          <p className="text-sm text-slate mb-6 text-center">
-            This is where patients will check in.
-          </p>
+          {locationId ? (
+            <>
+              <h2 className="text-xl font-bold text-ink mb-1 text-center">
+                Your Location
+              </h2>
+              <p className="text-sm text-slate mb-6 text-center">
+                This is where patients will check in.
+              </p>
 
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-ink">
-                Location Name
-              </label>
-              <input
-                type="text"
-                value={locationName}
-                onChange={(e) => setLocationName(e.target.value)}
-                placeholder="e.g., Downtown Clinic"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
-                autoFocus
-              />
-            </div>
+              <div className="rounded-xl border border-green-200 bg-green-50 p-4 mb-5 flex items-center gap-3">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-100">
+                  <Check className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-ink">{createdLocationName}</p>
+                  <p className="text-xs text-slate">Location created</p>
+                </div>
+              </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium text-ink">
-                Specialty{" "}
-                <span className="font-normal text-ash">(optional)</span>
-              </label>
-              <SearchableSelect
-                options={ALLOWED_SPECIALTIES}
-                value={specialty}
-                onChange={setSpecialty}
-                placeholder="Search specialties..."
-                emptyLabel="Select a specialty"
-              />
-            </div>
+              <button
+                onClick={() => setStep(2)}
+                className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark"
+              >
+                Continue
+              </button>
 
-            {createError && (
-              <p className="text-sm text-red-600">{createError}</p>
-            )}
+              <button
+                onClick={() => setStep(0)}
+                className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2 mt-2"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </button>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold text-ink mb-1 text-center">
+                Create Your First Location
+              </h2>
+              <p className="text-sm text-slate mb-6 text-center">
+                This is where patients will check in.
+              </p>
 
-            <button
-              onClick={handleCreateLocation}
-              disabled={creating || !locationName.trim()}
-              className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
-            >
-              {creating ? "Creating..." : "Create Location"}
-            </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-ink">
+                    Location Name
+                  </label>
+                  <input
+                    type="text"
+                    value={locationName}
+                    onChange={(e) => setLocationName(e.target.value)}
+                    placeholder="e.g., Downtown Clinic"
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+                    autoFocus
+                  />
+                </div>
 
-            <button
-              onClick={() => router.push("/d/owner")}
-              className="w-full text-sm text-slate hover:text-ink transition-colors py-2"
-            >
-              I will do this later
-            </button>
-          </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-ink">
+                    Specialty{" "}
+                    <span className="font-normal text-ash">(optional)</span>
+                  </label>
+                  <SearchableSelect
+                    options={ALLOWED_SPECIALTIES}
+                    value={specialty}
+                    onChange={setSpecialty}
+                    placeholder="Search specialties..."
+                    emptyLabel="Select a specialty"
+                  />
+                </div>
+
+                {createError && (
+                  <p className="text-sm text-red-600">{createError}</p>
+                )}
+
+                <button
+                  onClick={handleCreateLocation}
+                  disabled={creating || !locationName.trim()}
+                  className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
+                >
+                  {creating ? "Creating..." : "Create Location"}
+                </button>
+
+                <button
+                  onClick={() => router.push("/d/owner")}
+                  className="w-full text-sm text-slate hover:text-ink transition-colors py-2"
+                >
+                  I will do this later
+                </button>
+
+                <button
+                  onClick={() => setStep(0)}
+                  className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Back
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -501,17 +548,24 @@ export default function OnboardingWizard({
               <input
                 type="text"
                 value={ravenApiKey}
-                onChange={(e) => setRavenApiKey(e.target.value)}
+                onChange={(e) => { setRavenApiKey(e.target.value); setRavenError(""); }}
                 placeholder="Paste your API key from Raven dashboard"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 mb-3"
+                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-1 ${
+                  ravenError
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-200 focus:border-violet-500 focus:ring-violet-500"
+                } mb-1.5`}
                 autoFocus
               />
+              {ravenError && (
+                <p className="text-xs text-red-600 mb-2">{ravenError}</p>
+              )}
               <button
                 onClick={handleSaveRaven}
                 disabled={savingRaven || !ravenApiKey.trim()}
-                className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50 mt-1.5"
               >
-                {savingRaven ? "Connecting..." : "Connect and Continue"}
+                {savingRaven ? "Validating..." : "Connect and Continue"}
               </button>
             </div>
           ) : (
@@ -531,7 +585,7 @@ export default function OnboardingWizard({
             Continue without Raven
           </button>
 
-          <div className="flex items-center justify-center gap-1.5">
+          <div className="flex items-center justify-center gap-1.5 mb-3">
             <a
               href="https://ravenscheduler.com"
               target="_blank"
@@ -542,6 +596,15 @@ export default function OnboardingWizard({
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
+
+          <button
+            onClick={() => setStep(1)}
+            disabled={savingRaven}
+            className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
         </div>
       )}
 
@@ -614,6 +677,15 @@ export default function OnboardingWizard({
           >
             Skip
           </button>
+
+          <button
+            onClick={() => setStep(2)}
+            disabled={savingQueue}
+            className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2 mt-1"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back
+          </button>
         </div>
       )}
 
@@ -621,6 +693,7 @@ export default function OnboardingWizard({
       {step === 4 && locationId && (
         <ClinicFeaturesStep
           locationId={locationId}
+          onBack={() => setStep(3)}
           onComplete={(features) => {
             setNurseEnabled(features.nurse);
             setVitalsEnabled(features.vitals);
@@ -639,6 +712,7 @@ export default function OnboardingWizard({
           locationName={createdLocationName}
           nurseEnabled={nurseEnabled}
           onContinue={() => setStep(6)}
+          onBack={() => setStep(4)}
         />
       )}
 
@@ -747,6 +821,14 @@ export default function OnboardingWizard({
                 {tryPhase === "success" ? "Continue" : "Skip this step"}
               </button>
             )}
+
+            <button
+              onClick={() => setStep(5)}
+              className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Back
+            </button>
           </div>
         </div>
       )}

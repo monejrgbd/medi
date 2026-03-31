@@ -66,6 +66,7 @@ interface CheckinFlowProps {
   embed?: boolean;
   kiosk?: boolean;
   demoMode?: boolean;
+  teamCode?: string;
   onVisitCreated?: (visitId: string) => void;
   onPhoneComplete?: () => void;
 }
@@ -94,6 +95,7 @@ export default function CheckinFlow({
   embed = false,
   kiosk = false,
   demoMode = false,
+  teamCode,
   onVisitCreated,
   onPhoneComplete,
 }: CheckinFlowProps) {
@@ -479,6 +481,7 @@ export default function CheckinFlow({
       p_was_referred: wasReferred,
       p_referred_by: referredBy || null,
       p_phone: phone,
+      p_team_code: teamCode || null,
     });
 
     setLoading(false);

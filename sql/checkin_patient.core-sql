@@ -7,7 +7,8 @@ CREATE OR REPLACE FUNCTION private.checkin_patient(
   p_phone text DEFAULT NULL,
   p_sex text DEFAULT NULL,
   p_was_referred boolean DEFAULT false,
-  p_referred_by text DEFAULT NULL
+  p_referred_by text DEFAULT NULL,
+  p_team_code text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -30,6 +31,7 @@ DECLARE
   v_clean_referred_by text;
   v_secondary record;
   v_phone_verified boolean;
+  v_team_code text;
 BEGIN
   -- Input validation: strip HTML, trim, enforce length
   v_clean_first := substring(trim(regexp_replace(p_first_name, '<[^>]*>', '', 'g')), 1, 100);
@@ -84,6 +86,13 @@ BEGIN
     v_clean_referred_by := substring(trim(regexp_replace(p_referred_by, '<[^>]*>', '', 'g')), 1, 200);
   ELSE
     v_clean_referred_by := NULL;
+  END IF;
+
+  -- Sanitize team_code
+  IF p_team_code IS NOT NULL AND p_team_code <> '' THEN
+    v_team_code := upper(trim(substring(p_team_code, 1, 20)));
+  ELSE
+    v_team_code := NULL;
   END IF;
 
   -- Validate location exists and get org_id
@@ -204,13 +213,13 @@ BEGIN
     INSERT INTO public.visits (
       org_id, location_id, patient_id, has_previous_visits,
       phone_verification_pending, is_return_visit,
-      self_reported_referral, self_reported_referrer
+      self_reported_referral, self_reported_referrer, team_code
     )
     VALUES (
       v_org_id, p_location_id, v_patient.id, v_has_previous,
       NOT v_phone_verified,
       v_has_previous,
-      p_was_referred, v_clean_referred_by
+      p_was_referred, v_clean_referred_by, v_team_code
     )
     RETURNING * INTO v_new_visit;
 
@@ -341,12 +350,12 @@ BEGIN
     INSERT INTO public.visits (
       org_id, location_id, patient_id, has_previous_visits,
       phone_verification_pending,
-      self_reported_referral, self_reported_referrer
+      self_reported_referral, self_reported_referrer, team_code
     )
     VALUES (
       v_org_id, p_location_id, v_new_patient_id, false,
       (v_clean_phone IS NOT NULL),
-      p_was_referred, v_clean_referred_by
+      p_was_referred, v_clean_referred_by, v_team_code
     )
     RETURNING * INTO v_new_visit;
 
@@ -393,7 +402,8 @@ CREATE OR REPLACE FUNCTION public.checkin_patient(
   p_phone text DEFAULT NULL,
   p_sex text DEFAULT NULL,
   p_was_referred boolean DEFAULT false,
-  p_referred_by text DEFAULT NULL
+  p_referred_by text DEFAULT NULL,
+  p_team_code text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -402,6 +412,6 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
-  RETURN private.checkin_patient(p_location_id, p_first_name, p_last_name, p_birthday, p_phone, p_sex, p_was_referred, p_referred_by);
+  RETURN private.checkin_patient(p_location_id, p_first_name, p_last_name, p_birthday, p_phone, p_sex, p_was_referred, p_referred_by, p_team_code);
 END;
 $$;

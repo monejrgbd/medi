@@ -648,6 +648,7 @@ function DemoShellInner({
                   ask_discovery_source: features.askDiscoverySource,
                 }}
                 demoMode={true}
+                teamCode={typeof window !== "undefined" ? localStorage.getItem("demo_team_code") || undefined : undefined}
                 onVisitCreated={handleVisitCreated}
                 onPhoneComplete={handlePhoneComplete}
               />

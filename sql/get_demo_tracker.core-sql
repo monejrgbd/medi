@@ -25,7 +25,7 @@ BEGIN
   FROM public.demo_access da
   WHERE da.team_code = v_code;
 
-  -- Get recent visits in demo org (last 3 hours)
+  -- Get visits for this team code (latest per patient)
   SELECT COALESCE(jsonb_agg(
     jsonb_build_object(
       'visitId', sub.id,
@@ -67,8 +67,7 @@ BEGIN
       v.demo_features
     FROM public.visits v
     JOIN public.patients p ON p.id = v.patient_id
-    WHERE v.org_id = 'a24d1aa1-2ae0-4022-b242-9a7dc30fc4b0'
-      AND v.created_at > now() - interval '3 hours'
+    WHERE v.team_code = v_code
     ORDER BY v.patient_id, v.created_at DESC
   ) sub;
 

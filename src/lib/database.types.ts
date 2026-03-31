@@ -12,6 +12,1209 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
+  private: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      activate_subscription: {
+        Args: {
+          p_billing_interval?: string
+          p_org_id: string
+          p_paypal_subscription_id: string
+          p_plan: string
+        }
+        Returns: Json
+      }
+      add_addendum: {
+        Args: { p_content: string; p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      add_patient_note: {
+        Args: {
+          p_caller_auth_uid: string
+          p_content: string
+          p_is_private?: boolean
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      add_vaccine_schedule_entry: {
+        Args: {
+          p_caller_auth_uid: string
+          p_dose_number?: number
+          p_due_date?: string
+          p_patient_id: string
+          p_vaccine_id: string
+        }
+        Returns: Json
+      }
+      add_visit_note: {
+        Args: {
+          p_caller_auth_uid: string
+          p_content: string
+          p_is_private?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      admin_create_premium_code: {
+        Args: {
+          p_caller_auth_uid: string
+          p_domain?: string
+          p_email?: string
+          p_phone?: string
+          p_send_email?: boolean
+        }
+        Returns: Json
+      }
+      admin_list_organizations: {
+        Args: { p_caller_auth_uid: string; p_search?: string }
+        Returns: Json
+      }
+      admin_list_premium_codes: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      admin_set_enterprise_plan: {
+        Args: {
+          p_action?: string
+          p_caller_auth_uid: string
+          p_credits_total: number
+          p_org_id: string
+          p_paypal_subscription_id?: string
+        }
+        Returns: Json
+      }
+      approve_patient: {
+        Args: {
+          p_caller_auth_uid: string
+          p_follow_up_id?: string
+          p_follow_up_of_visit_id?: string
+          p_is_follow_up?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      approve_summary: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      assign_role: {
+        Args: {
+          p_caller_auth_uid: string
+          p_location_id: string
+          p_role: string
+          p_staff_user_id: string
+        }
+        Returns: Json
+      }
+      cancel_campaign: {
+        Args: { p_caller_auth_uid: string; p_campaign_id: string }
+        Returns: Json
+      }
+      cancel_claim: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      cancel_subscription: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      change_subscription_plan: {
+        Args: { p_caller_auth_uid: string; p_new_plan: string }
+        Returns: Json
+      }
+      check_and_deduct_feature_budget:
+        | {
+            Args: {
+              p_amount: number
+              p_description?: string
+              p_feature: string
+              p_org_id: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_description?: string
+              p_feature: string
+              p_org_id: string
+              p_visit_id?: string
+            }
+            Returns: Json
+          }
+      check_credits: { Args: { p_org_id: string }; Returns: number }
+      check_incoming_referral: {
+        Args: {
+          p_birthday: string
+          p_caller_auth_uid: string
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
+        }
+        Returns: Json
+      }
+      check_location_active: { Args: { p_location_id: string }; Returns: Json }
+      checkin_patient:
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+              p_sex?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+              p_referred_by?: string
+              p_sex?: string
+              p_was_referred?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+              p_referred_by?: string
+              p_sex?: string
+              p_team_code?: string
+              p_was_referred?: boolean
+            }
+            Returns: Json
+          }
+      claim_patient: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      cleanup_demo_data: { Args: never; Returns: undefined }
+      complete_campaign_sending: {
+        Args: { p_campaign_id: string }
+        Returns: Json
+      }
+      complete_onboarding: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      complete_referral: {
+        Args: { p_caller_auth_uid: string; p_referral_id: string }
+        Returns: Json
+      }
+      complete_visit: {
+        Args: {
+          p_caller_auth_uid: string
+          p_care_instructions?: string
+          p_diagnosis: string
+          p_follow_up?: Json
+          p_show_diagnosis?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      configure_org_vitals: {
+        Args: { p_caller_auth_uid: string; p_configs: Json }
+        Returns: Json
+      }
+      configure_review_platforms: {
+        Args: {
+          p_caller_auth_uid: string
+          p_location_id: string
+          p_platforms: Json
+        }
+        Returns: Json
+      }
+      create_follow_up: {
+        Args: {
+          p_ai_instructions?: string
+          p_caller_auth_uid: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      create_location:
+        | {
+            Args: {
+              p_address?: string
+              p_caller_auth_uid: string
+              p_name: string
+              p_operating_hours?: Json
+              p_org_id: string
+              p_specialty?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_caller_auth_uid: string
+              p_diagnostic_enabled?: boolean
+              p_name: string
+              p_nurse_enabled?: boolean
+              p_operating_hours?: Json
+              p_org_id: string
+              p_review_sms_enabled?: boolean
+              p_skip_ai?: boolean
+              p_specialty?: string
+              p_vaccines_enabled?: boolean
+              p_vitals_enabled?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_caller_auth_uid: string
+              p_diagnostic_enabled?: boolean
+              p_name: string
+              p_nurse_enabled?: boolean
+              p_operating_hours?: Json
+              p_org_id: string
+              p_queue_type?: string
+              p_raven_api_key?: string
+              p_review_sms_enabled?: boolean
+              p_skip_ai?: boolean
+              p_specialty?: string
+              p_vaccines_enabled?: boolean
+              p_vitals_enabled?: boolean
+            }
+            Returns: Json
+          }
+      create_organization: {
+        Args: {
+          p_approval_code?: string
+          p_name: string
+          p_owner_auth_uid: string
+        }
+        Returns: Json
+      }
+      create_referral: {
+        Args: {
+          p_caller_auth_uid: string
+          p_included_attachment_ids?: string[]
+          p_included_visit_ids: string[]
+          p_patient_id: string
+          p_referral_note: string
+          p_specialty: string
+          p_to_email?: string
+          p_to_location_id?: string
+        }
+        Returns: Json
+      }
+      create_sms_campaign: {
+        Args: {
+          p_ai_criteria?: string
+          p_caller_auth_uid: string
+          p_location_id?: string
+          p_structured_filters: Json
+        }
+        Returns: Json
+      }
+      create_staff_user: {
+        Args: {
+          p_caller_auth_uid: string
+          p_full_name: string
+          p_location_id: string
+          p_org_id: string
+          p_password: string
+          p_roles: string[]
+          p_username: string
+        }
+        Returns: Json
+      }
+      deactivate_account: { Args: { p_caller_auth_uid: string }; Returns: Json }
+      deactivate_staff: {
+        Args: { p_caller_auth_uid: string; p_staff_user_id: string }
+        Returns: Json
+      }
+      deduct_credits: {
+        Args: {
+          p_ai_model: string
+          p_caller_role: string
+          p_org_id: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      deduct_diagnostic_credits: {
+        Args: { p_caller_role: string; p_org_id: string; p_visit_id: string }
+        Returns: Json
+      }
+      delete_staff: {
+        Args: { p_caller_auth_uid: string; p_staff_user_id: string }
+        Returns: Json
+      }
+      deny_patient: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      edit_patient_record: {
+        Args: {
+          p_birthday?: string
+          p_caller_auth_uid: string
+          p_first_name?: string
+          p_last_name?: string
+          p_patient_id: string
+          p_phone?: string
+          p_sex?: string
+        }
+        Returns: Json
+      }
+      exclude_campaign_recipient: {
+        Args: {
+          p_caller_auth_uid: string
+          p_campaign_id: string
+          p_excluded: boolean
+          p_recipient_id: string
+        }
+        Returns: Json
+      }
+      expire_stale_sessions: { Args: never; Returns: undefined }
+      finalize_campaign_scan: {
+        Args: { p_campaign_id: string; p_total_scanned: number }
+        Returns: Json
+      }
+      generate_summary_token: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      generate_unsubscribe_token: {
+        Args: { p_email: string; p_pref_type: string }
+        Returns: string
+      }
+      get_active_follow_ups: {
+        Args: { p_caller_auth_uid: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_audit_trail: {
+        Args: {
+          p_actor_id?: string
+          p_caller_auth_uid: string
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_end_date?: string
+          p_entity_id?: string
+          p_entity_type?: string
+          p_limit?: number
+          p_org_id: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_campaign_detail: {
+        Args: { p_caller_auth_uid: string; p_campaign_id: string }
+        Returns: Json
+      }
+      get_campaign_list: {
+        Args: { p_caller_auth_uid: string; p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
+      get_campaign_patient_count: {
+        Args: {
+          p_caller_auth_uid: string
+          p_location_id?: string
+          p_structured_filters?: Json
+        }
+        Returns: Json
+      }
+      get_campaign_patients: {
+        Args: { p_campaign_id: string; p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
+      get_checked_in_doctors: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      get_claimed_patients: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      get_completed_and_left_visits: {
+        Args: {
+          p_caller_auth_uid: string
+          p_cursor_completed?: string
+          p_cursor_left?: string
+          p_date?: string
+          p_location_id: string
+          p_page_size?: number
+        }
+        Returns: Json
+      }
+      get_conversation: {
+        Args: {
+          p_caller_role: string
+          p_session_token?: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      get_credit_dashboard: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      get_demo_tracker: { Args: { p_team_code: string }; Returns: Json }
+      get_discovery_stats: {
+        Args: {
+          p_caller_auth_uid: string
+          p_end_date?: string
+          p_location_id?: string
+          p_org_id?: string
+          p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_employee_stats: {
+        Args: {
+          p_caller_auth_uid: string
+          p_end_date: string
+          p_location_id: string
+          p_staff_user_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
+      get_followup_compliance: {
+        Args: {
+          p_caller_auth_uid: string
+          p_end_date: string
+          p_location_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
+      get_location_detail: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      get_locations: { Args: { p_caller_auth_uid: string }; Returns: Json }
+      get_my_org: { Args: { p_caller_auth_uid: string }; Returns: Json }
+      get_my_roles: { Args: { p_caller_auth_uid: string }; Returns: Json }
+      get_my_staff_user: { Args: { p_caller_auth_uid: string }; Returns: Json }
+      get_notes_for_patient: {
+        Args: {
+          p_caller_auth_uid: string
+          p_cursor?: string
+          p_limit?: number
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      get_notes_for_visit: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      get_org_vital_configs: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      get_organization_overview: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      get_past_visit_summaries: {
+        Args: { p_limit?: number; p_patient_id: string }
+        Returns: Json
+      }
+      get_patient_full_profile: {
+        Args: { p_caller_auth_uid: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_patient_medical_records: {
+        Args: { p_caller_auth_uid: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_patient_profile: {
+        Args: { p_caller_auth_uid: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_patient_return_rate: {
+        Args: {
+          p_caller_auth_uid: string
+          p_end_date: string
+          p_org_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
+      get_patient_session: { Args: { p_session_token: string }; Returns: Json }
+      get_patient_stats: {
+        Args: {
+          p_caller_auth_uid: string
+          p_end_date: string
+          p_location_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
+      get_patient_visit_history: {
+        Args: {
+          p_caller_auth_uid: string
+          p_cursor?: string
+          p_limit?: number
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      get_pending_approvals: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      get_queue: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      get_receptionist_counts: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      get_referral_analytics: {
+        Args: {
+          p_caller_auth_uid: string
+          p_end_date: string
+          p_org_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
+      get_referral_detail: {
+        Args: { p_caller_auth_uid: string; p_referral_id: string }
+        Returns: Json
+      }
+      get_referral_history: {
+        Args: {
+          p_caller_auth_uid: string
+          p_cursor?: string
+          p_doctor_id: string
+          p_limit?: number
+        }
+        Returns: Json
+      }
+      get_referral_inbox: {
+        Args: {
+          p_caller_auth_uid: string
+          p_cursor?: string
+          p_limit?: number
+          p_location_id: string
+        }
+        Returns: Json
+      }
+      get_review_hub: {
+        Args: {
+          p_caller_org_id: string
+          p_cursor_id?: string
+          p_cursor_ts?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_doctor_id?: string
+          p_limit?: number
+          p_location_id: string
+          p_rating?: number
+        }
+        Returns: Json
+      }
+      get_review_platforms: {
+        Args: { p_caller_org_id: string; p_location_id: string }
+        Returns: Json
+      }
+      get_similar_patients: {
+        Args: {
+          p_birthday: string
+          p_caller_auth_uid: string
+          p_first_name: string
+          p_last_name: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
+      get_staff_list: {
+        Args: {
+          p_caller_auth_uid: string
+          p_location_id?: string
+          p_org_id: string
+        }
+        Returns: Json
+      }
+      get_stale_session_count: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      get_vaccine_history: {
+        Args: { p_caller_auth_uid: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_vaccine_schedule: {
+        Args: { p_caller_auth_uid: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_vaccines_master_list: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      get_visit_attachments: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      get_visit_detail: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      get_visit_status: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      get_vital_types_master_list: {
+        Args: { p_caller_auth_uid: string }
+        Returns: Json
+      }
+      get_vitals_history: {
+        Args: { p_caller_auth_uid: string; p_patient_id: string }
+        Returns: Json
+      }
+      get_wait_time_heatmap: {
+        Args: {
+          p_caller_auth_uid: string
+          p_end_date: string
+          p_location_id: string
+          p_start_date: string
+        }
+        Returns: Json
+      }
+      get_waitlist_count: { Args: never; Returns: number }
+      give_patient_consent: {
+        Args: { p_language: string; p_session_token: string }
+        Returns: Json
+      }
+      handle_patient: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      handle_payment_failure: { Args: { p_org_id: string }; Returns: Json }
+      increment_verification_attempt: {
+        Args: { p_verification_id: string }
+        Returns: number
+      }
+      initialize_org_default_vitals: {
+        Args: { p_caller_auth_uid: string; p_org_id: string }
+        Returns: Json
+      }
+      link_referral_to_visit: {
+        Args: {
+          p_caller_auth_uid: string
+          p_referral_id: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      log_phi_access: {
+        Args: {
+          p_caller_auth_uid: string
+          p_entity_id: string
+          p_entity_type: string
+        }
+        Returns: undefined
+      }
+      mark_follow_up_completed: {
+        Args: { p_caller_auth_uid: string; p_follow_up_id: string }
+        Returns: Json
+      }
+      mark_patient_left: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      move_to_queue_on_error: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      nurse_release_to_doctor: {
+        Args: {
+          p_caller_auth_uid: string
+          p_nurse_notes: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      process_premium_approvals: { Args: never; Returns: undefined }
+      purchase_feature_topup: {
+        Args: {
+          p_caller_auth_uid: string
+          p_credits: number
+          p_feature: string
+        }
+        Returns: Json
+      }
+      purchase_overage_credits: {
+        Args: { p_amount: number; p_caller_auth_uid: string }
+        Returns: Json
+      }
+      purge_expired_orgs: { Args: never; Returns: Json }
+      reactivate_referral: {
+        Args: { p_caller_auth_uid: string; p_referral_id: string }
+        Returns: Json
+      }
+      record_vaccine: {
+        Args: {
+          p_caller_auth_uid: string
+          p_dose_number?: number
+          p_lot_number?: string
+          p_manufacturer?: string
+          p_notes?: string
+          p_patient_id: string
+          p_refusal_reason?: string
+          p_refused?: boolean
+          p_site?: string
+          p_vaccine_id: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      record_vitals: {
+        Args: {
+          p_caller_auth_uid: string
+          p_patient_id: string
+          p_readings: Json
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      reject_summary: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      remove_role: {
+        Args: {
+          p_caller_auth_uid: string
+          p_location_id: string
+          p_role: string
+          p_staff_user_id: string
+        }
+        Returns: Json
+      }
+      request_demo_otp: {
+        Args: { p_email: string; p_team_code?: string }
+        Returns: Json
+      }
+      request_premium_code: {
+        Args: {
+          p_domain?: string
+          p_email?: string
+          p_phone?: string
+          p_send_email?: boolean
+        }
+        Returns: Json
+      }
+      reset_monthly_credits: { Args: { p_org_id: string }; Returns: undefined }
+      reset_staff_password: {
+        Args: {
+          p_caller_auth_uid: string
+          p_new_password: string
+          p_staff_user_id: string
+        }
+        Returns: Json
+      }
+      resolve_potential_match: {
+        Args: {
+          p_action?: string
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
+          p_old_phone?: string
+          p_phone?: string
+          p_referred_by?: string
+          p_sex?: string
+          p_was_referred?: boolean
+        }
+        Returns: Json
+      }
+      save_campaign_matches: {
+        Args: { p_campaign_id: string; p_matches: Json }
+        Returns: Json
+      }
+      save_summary: {
+        Args: {
+          p_caller_role: string
+          p_diagnostic?: string
+          p_structured_card?: Json
+          p_summary: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      search_locations_public: {
+        Args: {
+          p_caller_auth_uid: string
+          p_exclude_org_id: string
+          p_query: string
+        }
+        Returns: Json
+      }
+      search_patients: {
+        Args: {
+          p_birthday?: string
+          p_caller_auth_uid: string
+          p_limit?: number
+          p_query: string
+        }
+        Returns: Json
+      }
+      search_referral_inbox: {
+        Args: {
+          p_caller_auth_uid: string
+          p_location_id: string
+          p_query: string
+        }
+        Returns: Json
+      }
+      send_campaign: {
+        Args: { p_caller_auth_uid: string; p_campaign_id: string }
+        Returns: Json
+      }
+      send_daily_digest: { Args: never; Returns: undefined }
+      send_patient_message: {
+        Args: {
+          p_content: string
+          p_content_original?: string
+          p_session_token: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      send_trial_expiry_alert: { Args: never; Returns: undefined }
+      set_recharge_limit: {
+        Args: { p_caller_auth_uid: string; p_limit: number }
+        Returns: Json
+      }
+      set_review_cycle: {
+        Args: {
+          p_caller_auth_uid: string
+          p_cycle_days: number
+          p_location_id: string
+          p_redirect_min_rating?: number
+        }
+        Returns: Json
+      }
+      set_sensitive_flag: {
+        Args: { p_caller_role: string; p_visit_id: string }
+        Returns: Json
+      }
+      set_visit_ai_override: {
+        Args: {
+          p_ai_model: string
+          p_caller_auth_uid: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      set_visit_demo_features: {
+        Args: {
+          p_caller_auth_uid: string
+          p_features: Json
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      setup_onboarding_demo: {
+        Args: { p_caller_auth_uid: string; p_location_id: string }
+        Returns: Json
+      }
+      skip_ai_to_queue: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      staff_check_in: {
+        Args: {
+          p_caller_auth_uid: string
+          p_location_id: string
+          p_role: string
+        }
+        Returns: Json
+      }
+      staff_check_out: {
+        Args: {
+          p_caller_auth_uid: string
+          p_force?: boolean
+          p_staff_user_id?: string
+        }
+        Returns: Json
+      }
+      start_ai_conversation: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      store_ai_message: {
+        Args: {
+          p_caller_role: string
+          p_content: string
+          p_content_original?: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      submit_contact: {
+        Args: {
+          p_city: string
+          p_clinic_name: string
+          p_contact_name: string
+          p_email: string
+          p_interest?: string
+          p_notes?: string
+          p_phone: string
+        }
+        Returns: undefined
+      }
+      submit_feature_request: {
+        Args: { p_caller_auth_uid: string; p_content: string }
+        Returns: Json
+      }
+      submit_prospect: {
+        Args: {
+          p_city: string
+          p_clinic_name: string
+          p_contact_name: string
+          p_email: string
+          p_interest?: string
+          p_notes?: string
+          p_phone: string
+        }
+        Returns: undefined
+      }
+      toggle_addon: {
+        Args: {
+          p_addon_type: string
+          p_caller_auth_uid: string
+          p_enabled: boolean
+        }
+        Returns: Json
+      }
+      toggle_gave_tablet: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      toggle_location_addon: {
+        Args: {
+          p_addon_type: string
+          p_caller_auth_uid: string
+          p_enabled: boolean
+          p_location_id: string
+        }
+        Returns: Json
+      }
+      trigger_review_sms: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      trigger_visit_summary_sms: {
+        Args: { p_caller_auth_uid: string; p_visit_id: string }
+        Returns: Json
+      }
+      update_allergies: {
+        Args: {
+          p_allergies: string[]
+          p_caller_role: string
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      update_campaign_message: {
+        Args: {
+          p_caller_auth_uid: string
+          p_campaign_id: string
+          p_message_body: string
+        }
+        Returns: Json
+      }
+      update_chronic_conditions: {
+        Args: {
+          p_caller_role: string
+          p_conditions: string[]
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      update_location:
+        | {
+            Args: {
+              p_address?: string
+              p_ai_custom_instructions?: string
+              p_ai_message_limit?: number
+              p_ai_model?: string
+              p_caller_auth_uid: string
+              p_display_format?: string
+              p_location_id: string
+              p_logo_url?: string
+              p_name?: string
+              p_nurse_enabled?: boolean
+              p_operating_hours?: Json
+              p_referral_email?: string
+              p_skip_ai?: boolean
+              p_specialty?: string
+              p_tablet_count?: number
+              p_timezone?: string
+              p_vaccines_enabled?: boolean
+              p_vitals_enabled?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_ai_custom_instructions?: string
+              p_ai_message_limit?: number
+              p_ai_model?: string
+              p_caller_auth_uid: string
+              p_diagnostic_enabled?: boolean
+              p_display_format?: string
+              p_location_id: string
+              p_logo_url?: string
+              p_name?: string
+              p_nurse_enabled?: boolean
+              p_operating_hours?: Json
+              p_referral_email?: string
+              p_review_sms_enabled?: boolean
+              p_skip_ai?: boolean
+              p_specialty?: string
+              p_tablet_count?: number
+              p_timezone?: string
+              p_vaccines_enabled?: boolean
+              p_vitals_enabled?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_ai_custom_instructions?: string
+              p_ai_message_limit?: number
+              p_ai_model?: string
+              p_caller_auth_uid: string
+              p_diagnostic_enabled?: boolean
+              p_display_format?: string
+              p_location_id: string
+              p_logo_url?: string
+              p_name?: string
+              p_nurse_enabled?: boolean
+              p_operating_hours?: Json
+              p_queue_type?: string
+              p_raven_api_key?: string
+              p_referral_email?: string
+              p_review_sms_enabled?: boolean
+              p_skip_ai?: boolean
+              p_specialty?: string
+              p_tablet_count?: number
+              p_timezone?: string
+              p_vaccines_enabled?: boolean
+              p_vitals_enabled?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_address?: string
+              p_ai_custom_instructions?: string
+              p_ai_message_limit?: number
+              p_ai_model?: string
+              p_ask_discovery_source?: boolean
+              p_ask_referral_source?: boolean
+              p_caller_auth_uid: string
+              p_diagnostic_enabled?: boolean
+              p_display_format?: string
+              p_location_id: string
+              p_logo_url?: string
+              p_name?: string
+              p_nurse_enabled?: boolean
+              p_operating_hours?: Json
+              p_queue_type?: string
+              p_raven_api_key?: string
+              p_referral_email?: string
+              p_review_sms_enabled?: boolean
+              p_skip_ai?: boolean
+              p_specialty?: string
+              p_tablet_count?: number
+              p_timezone?: string
+              p_vaccines_enabled?: boolean
+              p_vitals_enabled?: boolean
+            }
+            Returns: Json
+          }
+      update_medications: {
+        Args: {
+          p_caller_role: string
+          p_medications: string[]
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      update_note_preference: {
+        Args: {
+          p_caller_auth_uid: string
+          p_default_private: boolean
+          p_patient_id: string
+        }
+        Returns: Json
+      }
+      update_organization: {
+        Args: { p_caller_auth_uid: string; p_name: string }
+        Returns: Json
+      }
+      update_pets: {
+        Args: { p_caller_role: string; p_patient_id: string; p_pets: string[] }
+        Returns: Json
+      }
+      update_visit_priority: {
+        Args: { p_caller_role: string; p_priority: number; p_visit_id: string }
+        Returns: Json
+      }
+      update_visit_status_system: {
+        Args: {
+          p_action?: string
+          p_new_status: string
+          p_timeout_flagged?: boolean
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      upload_attachment: {
+        Args: {
+          p_caller_auth_uid: string
+          p_file_name: string
+          p_file_size: number
+          p_file_url: string
+          p_mime_type: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      verify_demo_otp: {
+        Args: { p_code: string; p_email: string }
+        Returns: Json
+      }
+      verify_phone_and_link: {
+        Args: { p_phone: string; p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       approval_codes: {
@@ -2335,6 +3538,7 @@ export type Database = {
           summary_show_diagnosis: boolean | null
           summary_sms_sent: boolean | null
           summary_token: string | null
+          team_code: string | null
           timeout_flagged: boolean | null
           updated_at: string | null
         }
@@ -2387,6 +3591,7 @@ export type Database = {
           summary_show_diagnosis?: boolean | null
           summary_sms_sent?: boolean | null
           summary_token?: string | null
+          team_code?: string | null
           timeout_flagged?: boolean | null
           updated_at?: string | null
         }
@@ -2439,6 +3644,7 @@ export type Database = {
           summary_show_diagnosis?: boolean | null
           summary_sms_sent?: boolean | null
           summary_token?: string | null
+          team_code?: string | null
           timeout_flagged?: boolean | null
           updated_at?: string | null
         }
@@ -2635,6 +3841,20 @@ export type Database = {
               p_phone?: string
               p_referred_by?: string
               p_sex?: string
+              p_was_referred?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_birthday: string
+              p_first_name: string
+              p_last_name: string
+              p_location_id: string
+              p_phone?: string
+              p_referred_by?: string
+              p_sex?: string
+              p_team_code?: string
               p_was_referred?: boolean
             }
             Returns: Json
@@ -3257,6 +4477,7 @@ export type Database = {
         }
         Returns: Json
       }
+      validate_approval_code: { Args: { p_code: string }; Returns: Json }
       verify_demo_otp: {
         Args: { p_code: string; p_email: string }
         Returns: Json
@@ -3393,8 +4614,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  private: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
 } as const
-
