@@ -1,5 +1,11 @@
 "use client";
 
+declare global {
+  interface Window {
+    gtag?: (...args: unknown[]) => void;
+  }
+}
+
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -132,6 +138,16 @@ export default function OwnerSignUpForm() {
     await supabase.auth.refreshSession();
     setOrgId(orgResult?.org_id || "");
     setLoading(false);
+
+    // Google Ads conversion tracking
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("event", "conversion", {
+        send_to: "AW-18032484152/aLYSCMb5oZEcELi-x5ZD",
+        value: 1.0,
+        currency: "CAD",
+        transaction_id: orgResult?.org_id || "",
+      });
+    }
 
     // Subscription trials: show PayPal step
     if (trialType === "starter" || trialType === "professional") {
