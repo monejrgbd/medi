@@ -125,8 +125,8 @@ const FAQS = [
     a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Diagnostics use Premium AI on Professional and Business plans for deeper clinical insight. Starter diagnostics use Advanced AI.",
   },
   {
-    q: "Who counts as a provider?",
-    a: "Doctors and nurses are providers (paid seats). The clinic owner counts as the first provider. Receptionists, managers, and other admin staff are free on every plan.",
+    q: "Who pays per seat?",
+    a: "Doctors and nurses are paid seats. The clinic owner counts as the first seat. Receptionists, managers, and other admin staff are free on every plan.",
   },
   {
     q: "What is the marketing budget used for?",
@@ -177,7 +177,7 @@ function PlanCards() {
       <FadeIn>
         <h2 className="mb-2 text-center text-2xl font-bold text-ink">Choose your plan</h2>
         <p className="mb-6 text-center text-slate">
-          Per doctor and nurse pricing. Owner counts as the first provider. All other staff free.
+          Per doctor and nurse pricing. Owner counts too. All other staff free.
         </p>
 
         {/* Controls row */}
@@ -266,7 +266,7 @@ function PlanCards() {
                 {/* Price */}
                 <div className="mb-0.5">
                   <span className="text-4xl font-bold text-ink">${totalPrice}</span>
-                  <span className="text-slate">{providers === 1 ? "/doctor/mo" : "/mo"}</span>
+                  <span className="text-slate">{providers === 1 ? "/doctor and nurse/mo" : "/mo"}</span>
                 </div>
                 {providers > 1 && (
                   <p className="mb-0.5 text-xs text-ash">
@@ -354,7 +354,7 @@ function PlanCards() {
                         : "border-2 border-hilt-blue text-hilt-blue hover:bg-hilt-blue/5"
                     }`}
                   >
-                    Start Free Trial
+                    Get Started
                   </Link>
                 </div>
               </div>
@@ -410,7 +410,7 @@ function PlanCards() {
               </div>
               <p className="text-sm text-slate">
                 <span className="font-semibold text-ink">$1 per credit.</span>{" "}
-                No monthly plan, no per doctor fee, no commitment. Every feature included.
+                No monthly plan, no per doctor and nurse fee, no commitment. Every feature included.
                 Best for low volume clinics or trying the platform before choosing a plan.
               </p>
             </div>
@@ -419,7 +419,7 @@ function PlanCards() {
                 href="/start-trial"
                 className="inline-block rounded-xl border-2 border-hilt-blue px-6 py-2.5 text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
               >
-                Start Free Trial
+                Get Started
               </Link>
             </div>
           </div>

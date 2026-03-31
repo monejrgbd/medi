@@ -8,7 +8,7 @@ CREATE TABLE public.organizations (
       'standard_trial', 'premium_trial', 'starter', 'professional', 'business',
       'enterprise', 'pay_as_you_go', 'expired', 'read_only', 'suspended'
     ])),
-  credits_total         int DEFAULT 20,
+  credits_total         numeric DEFAULT 20,
   credits_used          numeric DEFAULT 0,
   trial_end_date        timestamptz,
   billing_cycle_start   timestamptz,

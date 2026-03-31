@@ -229,7 +229,7 @@ export default function OwnerSignUpForm() {
       <div className="space-y-4">
         <h1 className="text-2xl font-bold text-ink">Start your free trial</h1>
         <p className="text-sm text-slate">
-          {plan.label} plan. 14 days free, then ${displayPrice}/provider/mo. Cancel anytime.
+          {plan.label} plan. 14 days free, then ${displayPrice}/doctor and nurse/mo. Cancel anytime.
         </p>
 
         {error && (
@@ -244,7 +244,7 @@ export default function OwnerSignUpForm() {
             </div>
             <div className="text-right">
               <p className="text-lg font-bold text-ink">${displayPrice}</p>
-              <p className="text-xs text-slate">/provider/mo after trial</p>
+              <p className="text-xs text-slate">/doctor and nurse/mo after trial</p>
             </div>
           </div>
 
@@ -388,46 +388,65 @@ export default function OwnerSignUpForm() {
 
       {/* Trial type selector */}
       <div>
-        <label className="mb-2 block text-sm font-medium text-ink">Choose your trial</label>
-        <div className="space-y-2">
-          <button type="button" onClick={() => setTrialType("payg")}
-            className={`w-full rounded-xl border p-3 text-left transition-colors ${
-              trialType === "payg" ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
-            }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-ink">Pay As You Go</span>
-              <div className={`h-4 w-4 rounded-full border ${trialType === "payg" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
-                {trialType === "payg" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
+        <label className="mb-3 block text-sm font-medium text-ink">Choose your trial</label>
+
+        {/* PAyG */}
+        <button type="button" onClick={() => setTrialType("payg")}
+          className={`w-full rounded-xl border p-4 text-left transition-colors mb-3 ${
+            trialType === "payg" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
+          }`}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-ink">Pay As You Go</p>
+              <p className="text-xs text-slate mt-1">No credit card required</p>
+              <div className="flex gap-3 mt-2">
+                <span className="inline-flex items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700">$20 free</span>
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">Up to $200 with code</span>
               </div>
             </div>
-            <p className="text-xs text-slate mt-1">20 credits free. No credit card. Pay per patient.</p>
-          </button>
+            <div className={`mt-1 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "payg" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
+              {trialType === "payg" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
+            </div>
+          </div>
+        </button>
 
+        {/* Subscription plans header */}
+        <p className="text-xs font-medium text-ash uppercase tracking-wider mb-2 mt-4">Subscription Plans</p>
+
+        <div className="grid grid-cols-2 gap-2 items-stretch">
+          {/* Starter */}
           <button type="button" onClick={() => setTrialType("starter")}
-            className={`w-full rounded-xl border p-3 text-left transition-colors ${
-              trialType === "starter" ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
+            className={`flex flex-col rounded-xl border p-4 text-left transition-colors ${
+              trialType === "starter" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
             }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-ink">Starter Plan</span>
-              <div className={`h-4 w-4 rounded-full border ${trialType === "starter" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">Starter</p>
+              <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "starter" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
                 {trialType === "starter" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
               </div>
             </div>
-            <p className="text-xs text-slate mt-1">14 days free. Standard AI. Unlimited screening. Card required. $79/provider/mo after trial.</p>
+            <p className="text-xs text-slate mt-1">Standard AI</p>
+            <p className="text-xs text-slate">50 screenings</p>
+            <p className="text-xs font-medium text-ink mt-2">14 days free</p>
+            <p className="text-[11px] text-ash">then $79/doctor and nurse/mo</p>
           </button>
 
+          {/* Professional */}
           <button type="button" onClick={() => setTrialType("professional")}
-            className={`w-full rounded-xl border p-3 text-left transition-colors ${
-              trialType === "professional" ? "border-hilt-blue bg-blue-50" : "border-gray-200 hover:border-gray-300"
+            className={`flex flex-col rounded-xl border p-4 text-left transition-colors ${
+              trialType === "professional" ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue" : "border-gray-200 hover:border-gray-300"
             }`}>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-ink">Professional Plan</span>
-              <div className={`h-4 w-4 rounded-full border ${trialType === "professional" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-semibold text-ink">Professional</p>
+              <div className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${trialType === "professional" ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"}`}>
                 {trialType === "professional" && <div className="mx-auto mt-[3px] h-1.5 w-1.5 rounded-full bg-white" />}
               </div>
             </div>
-            <p className="text-xs text-slate mt-1">14 days free. Advanced AI. Unlimited screening. $149/provider/mo after trial.</p>
-            <p className="text-xs text-amber-600 mt-1 font-medium">Requires an approval code</p>
+            <p className="text-xs text-slate mt-1">Advanced AI</p>
+            <p className="text-xs text-slate">50 screenings</p>
+            <p className="text-xs font-medium text-ink mt-2">14 days free</p>
+            <p className="text-[11px] text-ash">then $149/doctor and nurse/mo</p>
+            <span className="mt-2 inline-block rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200">Code required</span>
           </button>
         </div>
       </div>
@@ -446,7 +465,7 @@ export default function OwnerSignUpForm() {
           <p className="mt-1 text-xs text-ash">
             {trialType === "professional"
               ? <>A valid approval code is required for the Professional trial. <ContactLink className="text-hilt-blue hover:underline font-medium">Apply for a code</ContactLink></>
-              : "Have an approval code? Enter it for 200 credits and a 30 day trial."}
+              : <>Have an approval code? Enter it for $200 in credits and a 30 day trial. <ContactLink className="text-hilt-blue hover:underline font-medium">Apply for a code</ContactLink></>}
           </p>
         </div>
       )}

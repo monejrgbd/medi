@@ -39,6 +39,24 @@ BEGIN
       RETURN;
   END CASE;
 
+  -- PAYG: carry over remaining purchased credits, only cycle recharge
+  IF v_plan = 'pay_as_you_go' THEN
+    UPDATE public.organizations
+    SET credits_total = GREATEST(credits_total - credits_used, 0),
+        credits_used = 0,
+        billing_cycle_start = now(),
+        recharge_used = 0,
+        payment_failure_count = 0,
+        payment_first_failed_at = NULL
+    WHERE id = p_org_id;
+
+    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+    VALUES (p_org_id, NULL, 'system', 'monthly_credit_reset', 'organization', p_org_id,
+      jsonb_build_object('plan', v_plan, 'credits_carried_over',
+        (SELECT credits_total FROM public.organizations WHERE id = p_org_id)));
+    RETURN;
+  END IF;
+
   UPDATE public.organizations
   SET credits_used = 0,
       credits_total = v_allocation,

@@ -99,6 +99,9 @@ export default function CreditDashboard() {
     const opusCost = caps.opusCost || 4;
     const opusUsed = Math.round((fu?.opus_used || 0) / opusCost); // credits → conversation count
     const topupsRemaining = Math.round((data as unknown as { topups_remaining?: number }).topups_remaining || 0);
+    const trialScreeningsUsed = (data as unknown as { trial_screenings_used?: number }).trial_screenings_used;
+    const trialScreeningsLimit = (data as unknown as { trial_screenings_limit?: number }).trial_screenings_limit;
+    const isTrialActive = trialScreeningsLimit != null && trialScreeningsLimit > 0;
 
     function UsageBar({ label, used, cap }: { label: string; used: number; cap: number }) {
       if (cap === 0) return null;
@@ -130,8 +133,17 @@ export default function CreditDashboard() {
           </div>
           <div className="rounded-lg bg-green-50 p-3">
             <p className="text-xs text-slate">AI Screening</p>
-            <p className="text-lg font-bold text-green-700">Unlimited</p>
-            <p className="text-xs text-slate">Up to {planInfo.msgLimit} messages per conversation</p>
+            {isTrialActive ? (
+              <>
+                <p className="text-lg font-bold text-ink">{(trialScreeningsUsed || 0)} / {trialScreeningsLimit}</p>
+                <p className="text-xs text-slate">screenings used during trial</p>
+              </>
+            ) : (
+              <>
+                <p className="text-lg font-bold text-green-700">Unlimited</p>
+                <p className="text-xs text-slate">Up to {planInfo.msgLimit} messages per conversation</p>
+              </>
+            )}
           </div>
           <div className="rounded-lg bg-snow p-3">
             <p className="text-xs text-slate">Top Ups</p>
@@ -214,8 +226,10 @@ export default function CreditDashboard() {
             )}
             {data.billing_cycle_start && (
               <p className="text-xs text-slate">
-                Cycle started{" "}
-                {new Date(data.billing_cycle_start).toLocaleDateString()}
+                {isPAyG ? "Recharge resets" : "Cycle started"}{" "}
+                {isPAyG
+                  ? new Date(new Date(data.billing_cycle_start).getTime() + 30 * 86400000).toLocaleDateString()
+                  : new Date(data.billing_cycle_start).toLocaleDateString()}
               </p>
             )}
             {data.recharge_limit != null && data.recharge_limit > 0 && (

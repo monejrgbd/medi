@@ -1,5 +1,4 @@
 import Link from "next/link";
-import ContactLink from "@/components/marketing/ContactLink";
 
 export const metadata = {
   title: "Start Your Free Trial — Hilt Health",
@@ -18,33 +17,26 @@ export default function StartTrialPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <div className="grid gap-6 sm:grid-cols-2 items-stretch">
         {/* Pay As You Go */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-          <p className="text-lg font-bold text-ink">Pay As You Go</p>
-          <p className="mt-1 text-3xl font-bold text-ink">
-            Up to $200 <span className="text-base font-normal text-slate">in credits</span>
-          </p>
-          <p className="text-sm text-slate mt-1">14 to 30 day trial</p>
+        <div className="flex flex-col justify-between rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <div>
+            <p className="text-lg font-bold text-ink">Pay As You Go</p>
+            <p className="mt-1 text-3xl font-bold text-ink">
+              Up to $200 <span className="text-base font-normal text-slate">in credits</span>
+            </p>
 
-          <ul className="mt-4 space-y-2 text-sm text-slate">
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              No credit card required
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              $20 free credits to start (up to $200 with approval code)
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              Pay per patient with credits
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              Full access to every feature
-            </li>
-          </ul>
+            <ul className="mt-4 space-y-2 text-sm text-slate">
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                No credit card required
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                Full access to every feature
+              </li>
+            </ul>
+          </div>
 
           <Link
             href="/signup?trial=payg"
@@ -55,34 +47,27 @@ export default function StartTrialPage() {
         </div>
 
         {/* Subscription Plans */}
-        <div className="relative rounded-2xl border-2 border-hilt-blue bg-hilt-blue/5 p-6 shadow-sm">
+        <div className="relative flex flex-col justify-between rounded-2xl border-2 border-hilt-blue bg-hilt-blue/5 p-6 shadow-sm">
           <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-hilt-blue px-3 py-1 text-[11px] font-semibold text-white">
             Recommended
           </span>
-          <p className="text-lg font-bold text-ink">Subscription Plans</p>
-          <p className="mt-1 text-3xl font-bold text-ink">
-            14 days <span className="text-base font-normal text-slate">free</span>
-          </p>
-          <p className="text-sm text-slate mt-1">Then per provider pricing</p>
+          <div>
+            <p className="text-lg font-bold text-ink">Subscription Plans</p>
+            <p className="mt-1 text-3xl font-bold text-ink">
+              Up to 14 days <span className="text-base font-normal text-slate">Professional</span>
+            </p>
 
-          <ul className="mt-4 space-y-2 text-sm text-slate">
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              Unlimited AI screening
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              Up to 5 providers during trial
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              Starter plan free, Professional with approval code
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="text-green-500 mt-0.5">✓</span>
-              Cancel anytime during trial
-            </li>
-          </ul>
+            <ul className="mt-4 space-y-2 text-sm text-slate">
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                50 AI screenings included
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-500 mt-0.5">✓</span>
+                Full access to every feature
+              </li>
+            </ul>
+          </div>
 
           <Link
             href="/signup?trial=plans"

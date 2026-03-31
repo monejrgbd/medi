@@ -142,7 +142,7 @@ export default function RechargeConfig({
 
           <p className="text-xs text-slate">
             {isPAyG
-              ? "Credits are added automatically at $1 each up to your recharge limit. Unused credits expire every 30 days."
+              ? "Credits are added automatically at $1 each up to your recharge limit. Recharge spending resets every 30 days."
               : "When your marketing budget runs out, additional marketing actions are covered at $1 each up to your recharge limit. Resets each billing cycle."}
           </p>
         </>

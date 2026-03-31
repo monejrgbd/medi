@@ -108,6 +108,10 @@ export default function ChatInterface({
           onError("no_credits");
           return;
         }
+        if (errMsg === "trial_screening_limit") {
+          onError("no_credits");
+          return;
+        }
         if (errMsg === "subscription_inactive") {
           onError("subscription_inactive");
           return;

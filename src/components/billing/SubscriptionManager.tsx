@@ -221,9 +221,9 @@ export default function SubscriptionManager({
               <h3 className="font-semibold text-ink">{plan.name}</h3>
               <p className="text-2xl font-bold text-ink mt-1">
                 ${displayPrice}
-                <span className="text-sm font-normal text-slate">/provider/mo</span>
+                <span className="text-sm font-normal text-slate">/doctor and nurse/mo</span>
               </p>
-              <p className="text-xs text-slate">{plan.aiLabel} · {PLAN_CREDITS[plan.key]} credits/mo</p>
+              <p className="text-xs text-slate">{plan.aiLabel}</p>
               {billing === "annual" && (
                 <p className="text-xs text-green-600 font-medium">
                   Save ${monthlyPrice * 12 - PLAN_ANNUAL_PRICING[plan.key]}/yr
