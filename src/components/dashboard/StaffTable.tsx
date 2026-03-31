@@ -122,7 +122,7 @@ export default function StaffTable({
           {staff.length === 0 ? "No staff members yet" : "No matching staff found"}
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-left">

@@ -74,7 +74,7 @@ BEGIN
   WHERE l.id = v_visit.location_id;
 
   -- Load org info
-  SELECT o.name, o.subscription_plan
+  SELECT o.name, o.subscription_plan, o.trial_end_date
   INTO v_org
   FROM public.organizations o
   WHERE o.id = v_visit.org_id;
