@@ -54,6 +54,7 @@ interface MatchResolutionProps {
     phoneVerified: boolean;
     hasPhoneToVerify: boolean;
     isDiscoveryEligible?: boolean;
+    queueNumber?: number | null;
   }) => void;
   onError: (error: string) => void;
   isDemo?: boolean;
@@ -138,6 +139,7 @@ export default function MatchResolution({
         phoneVerified: data.phone_verified ?? false,
         hasPhoneToVerify: needsPhoneVerify,
         isDiscoveryEligible: data.is_discovery_eligible ?? false,
+        queueNumber: data.queue_number ?? null,
       });
     } catch {
       onError("Something went wrong. Please try again.");

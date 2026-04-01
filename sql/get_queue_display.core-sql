@@ -1,0 +1,74 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_queue_display(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_location record;
+  v_result jsonb;
+BEGIN
+  -- Load location info
+  SELECT l.name, l.queue_type, l.logo_url, l.queue_display_enabled
+  INTO v_location
+  FROM public.locations l
+  WHERE l.id = p_location_id;
+
+  IF v_location IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  IF NOT COALESCE(v_location.queue_display_enabled, false) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Queue display not enabled');
+  END IF;
+
+  -- Get active queue entries (waiting + being seen) for today
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'queue_number', q.queue_number,
+      'status', q.status
+    ) ORDER BY q.sort_priority DESC, q.queue_number ASC
+  ), '[]'::jsonb)
+  INTO v_result
+  FROM (
+    SELECT
+      v.queue_number,
+      v.status,
+      v.priority AS sort_priority
+    FROM public.visits v
+    WHERE v.location_id = p_location_id
+      AND v.status IN ('waiting_doctor_claim', 'claimed_by_doctor')
+      AND v.created_at::date = CURRENT_DATE
+      AND v.queue_number IS NOT NULL
+  ) q;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'location_name', v_location.name,
+    'queue_type', COALESCE(v_location.queue_type, 'fifo'),
+    'logo_url', v_location.logo_url,
+    'queue', v_result
+  );
+END;
+$$;
+
+-- Public wrapper (anon-callable, no auth needed)
+CREATE OR REPLACE FUNCTION public.get_queue_display(
+  p_location_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.get_queue_display(p_location_id);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_queue_display(uuid) TO anon, authenticated;

@@ -45,6 +45,7 @@ CREATE TABLE public.visits (
   nurse_reviewed        boolean DEFAULT false,
   nurse_notes           text DEFAULT NULL,
   care_instructions     text DEFAULT NULL,
+  queue_number           integer,
   ai_skipped            boolean DEFAULT false,
   demo_features         jsonb DEFAULT NULL,
   self_reported_referral boolean DEFAULT false,

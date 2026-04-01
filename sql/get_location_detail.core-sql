@@ -76,6 +76,7 @@ BEGIN
       'raven_api_key', l.raven_api_key,
       'ask_referral_source', l.ask_referral_source,
       'ask_discovery_source', l.ask_discovery_source,
+      'queue_display_enabled', l.queue_display_enabled,
       'created_at', l.created_at
     )
   )

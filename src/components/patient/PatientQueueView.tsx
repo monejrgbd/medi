@@ -10,6 +10,7 @@ interface PatientQueueViewProps {
   estimatedWait: number | null;
   visitId: string;
   sessionToken: string;
+  queueDisplay?: string | null;
 }
 
 export default function PatientQueueView({
@@ -17,6 +18,7 @@ export default function PatientQueueView({
   estimatedWait,
   visitId,
   sessionToken,
+  queueDisplay,
 }: PatientQueueViewProps) {
   const [showForm, setShowForm] = useState(false);
   const [content, setContent] = useState("");
@@ -80,6 +82,13 @@ export default function PatientQueueView({
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-50">
         <Check className="h-8 w-8 text-green-600" />
       </div>
+
+      {queueDisplay && (
+        <div className="mb-4 inline-block rounded-xl bg-gray-100 px-6 py-3">
+          <p className="text-xs text-ash mb-0.5">Your number</p>
+          <p className="text-3xl font-black tabular-nums text-ink">{queueDisplay}</p>
+        </div>
+      )}
 
       <h2 className="text-xl font-bold text-ink mb-2">
         {t("queue.title")}

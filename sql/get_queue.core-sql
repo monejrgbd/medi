@@ -81,6 +81,7 @@ BEGIN
       p.last_name,
       p.sex,
       v.priority,
+      v.queue_number,
       COALESCE(extract(epoch FROM now() - v.entered_queue_at)::int, 0) AS wait_seconds,
       v.is_sensitive,
       v.timeout_flagged,

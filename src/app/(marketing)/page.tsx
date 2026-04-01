@@ -31,6 +31,29 @@ function ChatMockup() {
 
   return (
     <div className="space-y-3">
+      {/* QR scan step */}
+      <div className="w-[300px] sm:w-[340px] rounded-2xl border border-gray-200 bg-white p-4 shadow-xl ring-1 ring-gray-900/5 flex items-center gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+          <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
+          </svg>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-ink">Patient scans QR code</p>
+          <p className="text-[11px] text-slate">No app needed, opens on their phone</p>
+        </div>
+      </div>
+
+      {/* Arrow: QR → chat */}
+      <div className="flex justify-center">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+          </svg>
+        </div>
+      </div>
+
       {/* Chat card */}
       <div className="w-[300px] sm:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
         {/* Header — matches prod: logo + name left, language switcher right */}
@@ -371,7 +394,7 @@ function HeroSection() {
                     </div>
                     {/* Visits included */}
                     <div>
-                      <p className="text-[8px] font-medium text-slate mb-0.5">Include visit chats</p>
+                      <p className="text-[8px] font-medium text-slate mb-0.5">Include visits</p>
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-1 text-[8px]">
                           <div className="h-2.5 w-2.5 rounded-sm border border-hilt-blue bg-hilt-blue flex items-center justify-center">
@@ -387,9 +410,20 @@ function HeroSection() {
                         </div>
                       </div>
                     </div>
+                    {/* Referral note */}
+                    <div>
+                      <p className="text-[8px] font-medium text-slate mb-0.5">Referral note</p>
+                      <div className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[8px] text-ink leading-relaxed">
+                        Bilateral joint symptoms, suspect RA. Requesting rheumatology evaluation.
+                      </div>
+                    </div>
                     {/* Destination */}
                     <div>
                       <p className="text-[8px] font-medium text-slate mb-0.5">Destination</p>
+                      <div className="flex gap-1 mb-1">
+                        <div className="rounded-full bg-hilt-blue px-2 py-0.5 text-[7px] font-semibold text-white">Hilt Clinic</div>
+                        <div className="rounded-full bg-gray-100 px-2 py-0.5 text-[7px] font-medium text-ash">Email</div>
+                      </div>
                       <div className="rounded border border-hilt-blue bg-blue-50/50 px-2 py-1">
                         <p className="text-[8px] font-medium text-ink">City Rheum Clinic</p>
                         <p className="text-[7px] text-ash">Dr. Patel &middot; 123 Health St</p>
@@ -400,7 +434,7 @@ function HeroSection() {
                       Send Referral
                     </div>
                   </div>
-                  <p className="mt-2 text-[8px] text-ash">Transcript, summary, and notes sent digitally</p>
+                  <p className="mt-2 text-[8px] text-ash">Transcript, summary, diagnosis, notes, and attachments included</p>
                 </div>
               </FadeIn>
 
@@ -647,19 +681,19 @@ function HowItWorksSection() {
           </div>
           {steps.map((s, i) => (
             <FadeIn key={s.num} delay={i * 0.12}>
-              <div className="relative flex flex-col rounded-2xl border border-gray-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md h-full">
+              <div className="relative flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md h-full">
                 {/* Icon */}
-                <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl ring-1 ${s.accent}`}>
+                <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${s.accent}`}>
                   {s.icon}
                 </div>
                 {/* Step number + title */}
-                <div className="mb-3 flex items-baseline gap-2.5">
+                <div className="mb-2 flex items-baseline gap-2.5">
                   <span className="text-xs font-bold tracking-wider text-ash">{s.num}</span>
                   <h3 className="text-base font-semibold text-ink leading-snug">{s.title}</h3>
                 </div>
-                <p className="text-sm leading-relaxed text-slate">{s.desc}</p>
+                <p className="flex-1 text-sm leading-relaxed text-slate">{s.desc}</p>
                 {s.tag && (
-                  <span className="mt-auto pt-3 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-green-200 self-start">
+                  <span className="mt-3 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-green-200 self-start">
                     {s.tag}
                   </span>
                 )}
@@ -689,7 +723,7 @@ function BuiltForYourClinicSection() {
               </div>
               <h3 className="mb-2 text-lg font-semibold text-ink">Built around how your clinic works</h3>
               <p className="text-sm leading-relaxed text-slate mb-4">
-                Every clinic is different. Features are enabled per location, and we build custom workflows for clients who need them.
+                Every clinic is different. The toggles below are customizable features you can enable or disable per location, and we build custom workflows for clients who need them.
               </p>
               <ContactLink preselect="meet" className="inline-flex items-center gap-1.5 text-sm font-medium text-hilt-blue hover:underline">
                 Meet with us
@@ -706,6 +740,7 @@ function BuiltForYourClinicSection() {
                   { label: "Nurse triage", desc: "Nurses screen before doctor", on: true },
                   { label: "Vitals tracking", desc: "Custom vitals per visit", on: true },
                   { label: "Vaccine management", desc: "Schedule, record, track", on: true },
+                  { label: "Queue display", desc: "Waiting room TV with live numbers", on: false },
                   { label: "Smart follow ups", desc: "AI linked cross session care", on: true },
                   { label: "Review collection", desc: "Post visit feedback routing", on: false },
                   { label: "AI intake", desc: "AI screens patients before doctor", on: true },

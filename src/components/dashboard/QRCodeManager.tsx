@@ -1,46 +1,58 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
+import { toggleQueueDisplay } from "@/app/(dashboard)/d/_actions/locations";
 
 export default function QRCodeManager({
   locationId,
   locationName,
   logoUrl,
+  queueDisplayEnabled,
 }: {
   locationId: string;
   locationName: string;
   logoUrl: string | null;
+  queueDisplayEnabled: boolean;
 }) {
+  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [queueEnabled, setQueueEnabled] = useState(queueDisplayEnabled);
+  const [toggling, setToggling] = useState(false);
   const [brandedQR, setBrandedQR] = useState(!!logoUrl);
-  const [kioskMode, setKioskMode] = useState(false);
+  const [mode, setMode] = useState<"patient" | "kiosk" | "queue">("patient");
   const [instructionText, setInstructionText] = useState(
     `Please scan this QR code to begin your check-in at ${locationName}.`
   );
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com";
-  const checkinUrl = kioskMode
-    ? `${appUrl}/checkin/${locationId}?kiosk=true`
-    : `${appUrl}/checkin/${locationId}`;
+  const targetUrl =
+    mode === "kiosk"
+      ? `${appUrl}/checkin/${locationId}?kiosk=true`
+      : mode === "queue"
+        ? `${appUrl}/queue/${locationId}`
+        : `${appUrl}/checkin/${locationId}`;
 
   useEffect(() => {
     renderQR();
-  }, [brandedQR, logoUrl, kioskMode]);
+  }, [brandedQR, logoUrl, mode, queueEnabled]);
 
   useEffect(() => {
     setInstructionText(
-      kioskMode
+      mode === "kiosk"
         ? `Scan this QR code on your check-in tablet to activate kiosk mode for ${locationName}.`
-        : `Please scan this QR code to begin your check-in at ${locationName}.`
+        : mode === "queue"
+          ? `Open this link on your waiting room TV or monitor. Bookmark it for daily use.`
+          : `Please scan this QR code to begin your check-in at ${locationName}.`
     );
-  }, [kioskMode, locationName]);
+  }, [mode, locationName]);
 
   async function renderQR() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    await QRCode.toCanvas(canvas, checkinUrl, {
+    await QRCode.toCanvas(canvas, targetUrl, {
       width: 512,
       margin: 2,
       errorCorrectionLevel: "H",
@@ -108,42 +120,78 @@ export default function QRCodeManager({
     // URL at bottom
     pdf.setFontSize(10);
     pdf.setTextColor(100);
-    pdf.text(checkinUrl, pageWidth / 2, 185, { align: "center" });
+    pdf.text(targetUrl, pageWidth / 2, 185, { align: "center" });
 
     pdf.save(`${locationName.replace(/\s+/g, "-").toLowerCase()}-qr.pdf`);
   }
 
+  const hideQR = mode === "queue" && !queueEnabled;
+
   return (
     <div className="max-w-md mx-auto">
-      <div className="flex justify-center mb-6">
-        <canvas ref={canvasRef} className="rounded-lg" style={{ width: 256, height: 256 }} />
-      </div>
-
-      <p className="text-center text-xs text-slate mb-4 break-all">{checkinUrl}</p>
+      {!hideQR && (
+        <>
+          <div className="flex justify-center mb-6">
+            <canvas ref={canvasRef} className="rounded-lg" style={{ width: 256, height: 256 }} />
+          </div>
+          <p className="text-center text-xs text-slate mb-4 break-all">{targetUrl}</p>
+        </>
+      )}
 
       <div className="mb-6 flex justify-center gap-1 rounded-lg bg-gray-100 p-1">
-        <button
-          onClick={() => setKioskMode(false)}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-            !kioskMode ? "bg-white text-ink shadow-sm" : "text-slate"
-          }`}
-        >
-          Patient QR
-        </button>
-        <button
-          onClick={() => setKioskMode(true)}
-          className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-            kioskMode ? "bg-white text-ink shadow-sm" : "text-slate"
-          }`}
-        >
-          Kiosk QR
-        </button>
+        {(["patient", "kiosk", "queue"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              mode === m ? "bg-white text-ink shadow-sm" : "text-slate"
+            }`}
+          >
+            {m === "patient" ? "Patient QR" : m === "kiosk" ? "Kiosk QR" : "Queue Display"}
+          </button>
+        ))}
       </div>
 
-      {kioskMode && (
+      {mode === "kiosk" && (
         <p className="text-center text-xs text-slate mb-6">
           Scan this on your check-in tablet. Enable Guided Access (iPad) or use Fully Kiosk Browser (Android) to lock the device.
         </p>
+      )}
+
+      {mode === "queue" && (
+        <div className="mb-6 space-y-3">
+          <label className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+            <div>
+              <span className="text-sm font-medium text-ink">Enable Queue Display</span>
+              <p className="text-xs text-ash mt-0.5">Shows patients their queue number after check in and activates this TV screen.</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={queueEnabled}
+              disabled={toggling}
+              onChange={async (e) => {
+                const val = e.target.checked;
+                setToggling(true);
+                setQueueEnabled(val);
+                const result = await toggleQueueDisplay(locationId, val);
+                if (!result.success) setQueueEnabled(!val);
+                router.refresh();
+                setToggling(false);
+              }}
+              className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+            />
+          </label>
+
+          {queueEnabled ? (
+            <p className="text-center text-xs text-slate">
+              Open this link on your waiting room TV or monitor. Displays who is being served now and who is up next using queue numbers patients get after entering the queue only, no patient names.
+            </p>
+          ) : (
+            <p className="text-center text-xs text-ash">
+              Enable queue display above to generate the TV screen link and show patients their queue number.
+            </p>
+          )}
+        </div>
       )}
 
       {logoUrl && (

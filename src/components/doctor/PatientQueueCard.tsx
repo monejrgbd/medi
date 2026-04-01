@@ -2,6 +2,7 @@
 
 import ClaimButton from "./ClaimButton";
 import type { QueueVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
+import { formatQueueNumber } from "@/lib/queueUtils";
 
 interface PatientQueueCardProps {
   visit: QueueVisit;
@@ -44,6 +45,11 @@ export default function PatientQueueCard({
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
+            {visit.queue_number != null && (
+              <span className="inline-flex items-center justify-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 tabular-nums">
+                #{formatQueueNumber(visit.queue_number, "fifo")}
+              </span>
+            )}
             <h3 className="font-semibold text-ink">
               {visit.first_name} {visit.last_name}
             </h3>

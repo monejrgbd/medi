@@ -120,6 +120,21 @@ export async function deactivateStaff(staffUserId: string, orgId?: string) {
   return { success: true };
 }
 
+export async function reactivateStaff(staffUserId: string) {
+  await requireAuth();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("reactivate_staff", {
+    p_staff_user_id: staffUserId,
+  });
+
+  if (error) return { success: false, error: "Failed to reactivate staff" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/owner");
+  return { success: true };
+}
+
 export async function deleteStaff(staffUserId: string, orgId?: string) {
   await requireAuth();
   const supabase = await createClient();

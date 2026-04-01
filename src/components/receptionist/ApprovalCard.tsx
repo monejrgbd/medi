@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { fetchSimilarPatients, editPatientRecord } from "@/app/(dashboard)/d/_actions/receptionist";
 import FollowUpIndicator from "./FollowUpIndicator";
+import { formatQueueNumber } from "@/lib/queueUtils";
 
 interface FollowUpInfo {
   id: string;
@@ -38,6 +39,7 @@ interface PendingVisit {
   referral_match?: ReferralMatch | null;
   self_reported_referral?: boolean;
   self_reported_referrer?: string | null;
+  queue_number?: number | null;
 }
 
 interface SimilarPatient {
@@ -255,6 +257,11 @@ export default function ApprovalCard({
           ) : (
             <>
               <div className="flex items-center gap-2 mb-1">
+                {visit.queue_number != null && (
+                  <span className="inline-flex items-center justify-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 tabular-nums">
+                    #{formatQueueNumber(visit.queue_number, "fifo")}
+                  </span>
+                )}
                 <h3 className="font-semibold text-ink">
                   {displayFirst} {displayLast}
                 </h3>

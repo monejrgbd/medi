@@ -63,6 +63,7 @@ BEGIN
         'birthday', p.birthday,
         'sex', p.sex,
         'created_at', v.created_at,
+        'queue_number', v.queue_number,
         'has_previous_visits', v.has_previous_visits,
         'match_type', CASE
           WHEN v.has_previous_visits THEN 'returning'

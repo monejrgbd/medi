@@ -24,7 +24,70 @@ export async function fetchCreditDashboard() {
   return data;
 }
 
-export async function purchaseOverageCredits(amount: number) {
+async function getPayPalAccessToken(): Promise<string | null> {
+  if (!process.env.PAYPAL_CLIENT_ID || !process.env.PAYPAL_CLIENT_SECRET) return null;
+  const auth = Buffer.from(
+    `${process.env.PAYPAL_CLIENT_ID}:${process.env.PAYPAL_CLIENT_SECRET}`
+  ).toString("base64");
+  const res = await fetch(`${PAYPAL_API_BASE}/v1/oauth2/token`, {
+    method: "POST",
+    headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+    body: "grant_type=client_credentials",
+  });
+  const data = await res.json();
+  return data.access_token || null;
+}
+
+export async function captureAndCreditPurchase(orderId: string, amount: number, feature?: string) {
+  await requireAuth();
+
+  if (!orderId || typeof orderId !== "string") return { success: false, error: "Invalid order ID" };
+  if (!Number.isInteger(amount) || amount < 1 || amount > 10000) return { success: false, error: "Invalid amount" };
+
+  // 1. Capture the PayPal order server-side
+  const token = await getPayPalAccessToken();
+  if (!token) return { success: false, error: "Payment service unavailable" };
+
+  const captureRes = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders/${orderId}/capture`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  });
+
+  const captureData = await captureRes.json();
+
+  if (captureData.status !== "COMPLETED") {
+    return { success: false, error: "Payment was not completed" };
+  }
+
+  // 2. Verify the amount matches
+  const captured = captureData.purchase_units?.[0]?.payments?.captures?.[0];
+  const paidAmount = parseFloat(captured?.amount?.value || "0");
+  if (paidAmount < amount) {
+    return { success: false, error: "Payment amount mismatch" };
+  }
+
+  // 3. Credit the account
+  const supabase = await createClient();
+  const VALID_FEATURES = ["marketing_sms", "marketing_scan", "premium_ai", "general"];
+
+  if (feature && VALID_FEATURES.includes(feature)) {
+    const { data, error } = await supabase.rpc("purchase_feature_topup", {
+      p_feature: feature,
+      p_credits: amount,
+    });
+    if (error) return { success: false, error: error.message };
+    return data;
+  } else {
+    const { data, error } = await supabase.rpc("purchase_overage_credits", {
+      p_amount: amount,
+    });
+    if (error) return { success: false, error: error.message };
+    return data;
+  }
+}
+
+// Internal only — called by captureAndCreditPurchase after payment verification
+async function purchaseOverageCredits(amount: number) {
   await requireAuth();
 
   if (!Number.isInteger(amount) || amount < 1 || amount > 1000) {
@@ -41,7 +104,8 @@ export async function purchaseOverageCredits(amount: number) {
 
 const VALID_FEATURES = ["marketing_sms", "marketing_scan", "premium_ai", "general"];
 
-export async function purchaseFeatureTopup(feature: string, credits: number) {
+// Internal only — called by captureAndCreditPurchase after payment verification
+async function purchaseFeatureTopup(feature: string, credits: number) {
   await requireAuth();
 
   if (!VALID_FEATURES.includes(feature))

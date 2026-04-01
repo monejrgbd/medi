@@ -39,6 +39,7 @@ const EVERY_PLAN_FEATURES = [
   "Follow up SMS reminders",
   "Patient search across locations",
   "Unlimited locations with unique QR codes",
+  "Waiting room queue display for TVs",
   "Kiosk and tablet mode with auto clear",
   "Role based access controls",
   "Full audit trail",
@@ -118,7 +119,7 @@ function StyledFeature({ text }: { text: string }) {
 const FAQS = [
   {
     q: "What is included in every plan?",
-    a: "Every feature: AI screening, doctor summaries, diagnostics, referrals, analytics, follow ups, 130+ languages, voice input, SMS notifications, and unlimited locations. The only difference between plans is AI quality and included marketing budget.",
+    a: "Every feature: AI screening, doctor summaries, diagnostics, referrals, analytics, follow ups, 130+ languages, voice input, SMS notifications, waiting room queue display, and unlimited locations. The only difference between plans is AI quality and included marketing budget.",
   },
   {
     q: "What is the difference between the AI tiers?",

@@ -60,6 +60,16 @@ BEGIN
 
   v_synthetic_email := p_username || '@' || v_slug || '.staff.hilt';
 
+  -- Block recreation of deleted usernames
+  IF EXISTS (
+    SELECT 1 FROM public.staff_users
+    WHERE org_id = p_org_id
+      AND username = p_username
+      AND is_deleted = true
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'A staff member with this username was recently deleted. Please choose a different username.');
+  END IF;
+
   -- Create auth user directly in auth.users
   INSERT INTO auth.users (
     instance_id, id, aud, role, email, encrypted_password,

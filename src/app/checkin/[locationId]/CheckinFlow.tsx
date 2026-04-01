@@ -24,6 +24,7 @@ import MatchResolution from "@/components/checkin/MatchResolution";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { t } from "@/lib/i18n";
 import { Clock } from "lucide-react";
+import { formatQueueNumber } from "@/lib/queueUtils";
 
 type FlowState =
   | "inactive"
@@ -58,6 +59,8 @@ interface LocationData {
   logo_url?: string | null;
   ask_referral_source?: boolean;
   ask_discovery_source?: boolean;
+  queue_display_enabled?: boolean;
+  queue_type?: string;
 }
 
 interface CheckinFlowProps {
@@ -115,6 +118,7 @@ export default function CheckinFlow({
   const [medicalInfo, setMedicalInfo] = useState<MedicalInfo | null>(null);
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [estimatedWait, setEstimatedWait] = useState<number | null>(null);
+  const [queueNumber, setQueueNumber] = useState<number | null>(null);
 
   // Phone verification state
   const [patientPhone, setPatientPhone] = useState<string | null>(null);
@@ -259,6 +263,7 @@ export default function CheckinFlow({
       setHasPreviousVisits(data.has_previous_visits);
       setConsentGiven(data.consent_given);
       setVisitId(data.visit_id);
+      if (data.queue_number != null) setQueueNumber(data.queue_number);
       if (onVisitCreated && data.visit_id) onVisitCreated(data.visit_id);
       if (data.language) setPatientLanguage(data.language);
 
@@ -491,6 +496,8 @@ export default function CheckinFlow({
     setPatientFirstName(firstName);
     setHasPreviousVisits(data.has_previous_visits);
 
+    if (data.queue_number != null) setQueueNumber(data.queue_number);
+
     switch (data.match_type) {
       case "new":
       case "returning": {
@@ -520,6 +527,7 @@ export default function CheckinFlow({
         if (session?.success) {
           setConsentGiven(session.consent_given);
           setVisitId(session.visit_id);
+          if (session.queue_number != null) setQueueNumber(session.queue_number);
           if (onVisitCreated && session.visit_id) onVisitCreated(session.visit_id);
 
           // Show cross-location notice
@@ -676,7 +684,7 @@ export default function CheckinFlow({
   }
 
   function handleChatError(errType: string) {
-    if (errType === "no_credits") {
+    if (errType === "no_credits" || errType === "ai_cycle_limit" || errType === "trial_screening_limit") {
       setState("no_credits");
     } else if (errType === "subscription_inactive") {
       setState("subscription_inactive");
@@ -793,7 +801,8 @@ export default function CheckinFlow({
   }
 
   // Add handleMatchResolved callback
-  const handleMatchResolved = useCallback((result: { matchType: string; sessionToken: string; visitId: string; phoneVerified: boolean; hasPhoneToVerify: boolean; isDiscoveryEligible?: boolean }) => {
+  const handleMatchResolved = useCallback((result: { matchType: string; sessionToken: string; visitId: string; phoneVerified: boolean; hasPhoneToVerify: boolean; isDiscoveryEligible?: boolean; queueNumber?: number | null }) => {
+    if (result.queueNumber != null) setQueueNumber(result.queueNumber);
     // Store session
     setSessionToken(result.sessionToken);
     setVisitId(result.visitId);
@@ -918,6 +927,7 @@ export default function CheckinFlow({
                   setHasPreviousVisits(data.has_previous_visits as boolean);
                   setConsentGiven(data.consent_given as boolean);
                   setVisitId(data.visit_id as string);
+                  if (data.queue_number != null) setQueueNumber(data.queue_number as number);
                   if (data.language) setPatientLanguage(data.language as string);
                   const savedPhone = localStorage.getItem(PHONE_STORAGE_KEY);
                   if (savedPhone) setPatientPhone(savedPhone);
@@ -980,6 +990,7 @@ export default function CheckinFlow({
           patientFirstName={patientFirstName}
           locationName={locationData.location_name || "the clinic"}
           onCancel={handleRetry}
+          queueDisplay={locationData.queue_display_enabled ? formatQueueNumber(queueNumber, locationData.queue_type || "fifo") || null : null}
         />
       );
 
@@ -1064,6 +1075,7 @@ export default function CheckinFlow({
           estimatedWait={demoMode ? 1 : estimatedWait}
           visitId={visitId}
           sessionToken={sessionToken}
+          queueDisplay={locationData.queue_display_enabled ? formatQueueNumber(queueNumber, locationData.queue_type || "fifo") || null : null}
         />
       ) : null;
 

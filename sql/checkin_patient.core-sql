@@ -188,7 +188,8 @@ BEGIN
           'session_token', v_active_visit.session_token,
           'has_previous_visits', true,
           'active_at_other_location', true,
-          'other_location_name', v_other_location_name
+          'other_location_name', v_other_location_name,
+          'queue_number', v_active_visit.queue_number
         );
       END IF;
 
@@ -196,7 +197,8 @@ BEGIN
         'success', true,
         'match_type', 'active_session',
         'session_token', v_active_visit.session_token,
-        'has_previous_visits', true
+        'has_previous_visits', true,
+        'queue_number', v_active_visit.queue_number
       );
     END IF;
 
@@ -229,7 +231,8 @@ BEGIN
       'session_token', v_new_visit.session_token,
       'visit_id', v_new_visit.id,
       'has_previous_visits', v_has_previous,
-      'phone_verified', v_phone_verified
+      'phone_verified', v_phone_verified,
+      'queue_number', v_new_visit.queue_number
     );
   END IF;
 
@@ -342,7 +345,8 @@ BEGIN
         'success', true,
         'match_type', 'active_session',
         'session_token', v_active_visit.session_token,
-        'has_previous_visits', true
+        'has_previous_visits', true,
+        'queue_number', v_active_visit.queue_number
       );
     END IF;
 
@@ -365,7 +369,8 @@ BEGIN
       'session_token', v_new_visit.session_token,
       'visit_id', v_new_visit.id,
       'has_previous_visits', false,
-      'phone_verified', false
+      'phone_verified', false,
+      'queue_number', v_new_visit.queue_number
     );
   END;
 
@@ -388,7 +393,8 @@ BEGIN
     'session_token', v_new_visit.session_token,
     'visit_id', v_new_visit.id,
     'has_previous_visits', false,
-    'phone_verified', false
+    'phone_verified', false,
+    'queue_number', v_new_visit.queue_number
   );
 END;
 $$;

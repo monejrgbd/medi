@@ -18,6 +18,7 @@ import NurseClaimedCard from "@/components/nurse/NurseClaimedCard";
 import NursePatientView from "@/components/nurse/NursePatientView";
 import CheckInOutButton from "@/components/doctor/CheckInOutButton";
 import { claimPatientAsNurse } from "@/app/(dashboard)/d/_actions/nurse";
+import RoleSwitchBar from "@/components/dashboard/RoleSwitchBar";
 import NotificationPermission from "@/components/dashboard/NotificationPermission";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
@@ -424,6 +425,7 @@ export default function NurseDashboard({
 
   return (
     <div>
+      <RoleSwitchBar currentRole="nurse" />
       <NurseHeader
         locationName={locationName}
         queueCount={queue.length}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { updateLocation, uploadLocationLogo } from "@/app/(dashboard)/d/_actions/locations";
 import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
@@ -32,6 +32,7 @@ interface LocationData {
   logo_url?: string | null;
   ask_referral_source?: boolean;
   ask_discovery_source?: boolean;
+  queue_display_enabled?: boolean;
 }
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -105,7 +106,10 @@ export default function LocationSettingsForm({
     ravenApiKey: location.raven_api_key || "",
     askReferralSource: location.ask_referral_source ?? false,
     askDiscoverySource: location.ask_discovery_source ?? false,
+    queueDisplayEnabled: location.queue_display_enabled ?? false,
   });
+  const initialFormJson = useMemo(() => JSON.stringify(form), []);
+  const isDirty = JSON.stringify(form) !== initialFormJson;
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -170,6 +174,7 @@ export default function LocationSettingsForm({
       ravenApiKey: form.ravenApiKey,
       askReferralSource: form.askReferralSource,
       askDiscoverySource: form.askDiscoverySource,
+      queueDisplayEnabled: form.queueDisplayEnabled,
     });
 
     setLoading(false);
@@ -568,13 +573,17 @@ export default function LocationSettingsForm({
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="rounded-lg bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50 hover:bg-hilt-blue-dark"
-      >
-        {loading ? "Saving..." : "Save Changes"}
-      </button>
+      {isDirty && (
+        <div className="fixed bottom-6 right-6 z-[9999]">
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white shadow-lg disabled:opacity-50 hover:bg-hilt-blue-dark transition-colors"
+          >
+            {loading ? "Saving..." : "Save Changes"}
+          </button>
+        </div>
+      )}
     </form>
   );
 }

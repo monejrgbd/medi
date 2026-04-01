@@ -65,12 +65,14 @@ export default function BillingPage() {
 
       <PaymentHistory orgId={org.id} />
 
-      <CancelSubscription
-        orgId={org.id}
-        currentPlan={org.subscription_plan}
-        cancelAtPeriodEnd={dashData?.cancel_at_period_end as string | null ?? null}
-        onCancelled={handleRefresh}
-      />
+      {['starter', 'professional', 'business', 'enterprise'].includes(org.subscription_plan) && (
+        <CancelSubscription
+          orgId={org.id}
+          currentPlan={org.subscription_plan}
+          cancelAtPeriodEnd={dashData?.cancel_at_period_end as string | null ?? null}
+          onCancelled={handleRefresh}
+        />
+      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ import ClaimedPatientCard from "@/components/doctor/ClaimedPatientCard";
 import CompletedVisitCard from "@/components/doctor/CompletedVisitCard";
 import CheckInOutButton from "@/components/doctor/CheckInOutButton";
 import NotificationPermission from "@/components/dashboard/NotificationPermission";
+import RoleSwitchBar from "@/components/dashboard/RoleSwitchBar";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
 import PatientSearch from "@/components/dashboard/PatientSearch";
@@ -35,6 +36,7 @@ export interface QueueVisit {
   has_previous_visits: boolean;
   nurse_reviewed: boolean;
   created_at: string;
+  queue_number?: number | null;
 }
 
 export interface ClaimedVisit {
@@ -385,6 +387,7 @@ export default function DoctorDashboard({
 
   return (
     <div>
+      <RoleSwitchBar currentRole="doctor" />
       <DoctorHeader
         locationName={locationName}
         queueCount={queue.length}

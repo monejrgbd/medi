@@ -75,6 +75,7 @@ export async function updateLocation(formData: {
   ravenApiKey?: string;
   askReferralSource?: boolean;
   askDiscoverySource?: boolean;
+  queueDisplayEnabled?: boolean;
 }) {
   await requireAuth();
   const supabase = await createClient();
@@ -109,6 +110,7 @@ export async function updateLocation(formData: {
   if (formData.ravenApiKey !== undefined) params.p_raven_api_key = formData.ravenApiKey;
   if (formData.askReferralSource !== undefined) params.p_ask_referral_source = formData.askReferralSource;
   if (formData.askDiscoverySource !== undefined) params.p_ask_discovery_source = formData.askDiscoverySource;
+  if (formData.queueDisplayEnabled !== undefined) params.p_queue_display_enabled = formData.queueDisplayEnabled;
 
   const { data, error } = await supabase.rpc("update_location", params);
 
@@ -117,6 +119,22 @@ export async function updateLocation(formData: {
 
   revalidatePath("/d/owner");
   revalidatePath("/d/manager");
+  return { success: true };
+}
+
+export async function toggleQueueDisplay(locationId: string, enabled: boolean) {
+  await requireAuth();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("update_location", {
+    p_location_id: locationId,
+    p_queue_display_enabled: enabled,
+  });
+
+  if (error) return { success: false, error: error.message };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/owner");
   return { success: true };
 }
 

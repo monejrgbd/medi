@@ -74,7 +74,7 @@ BEGIN
   WHERE l.id = v_visit.location_id;
 
   -- Load org info
-  SELECT o.name, o.subscription_plan, o.trial_end_date
+  SELECT o.name, o.subscription_plan, o.trial_end_date, o.billing_cycle_start
   INTO v_org
   FROM public.organizations o
   WHERE o.id = v_visit.org_id;
@@ -106,6 +106,36 @@ BEGIN
         AND EXISTS (SELECT 1 FROM public.visit_messages vm WHERE vm.visit_id = v2.id);
       IF v_screening_count >= 50 THEN
         RETURN jsonb_build_object('success', false, 'error', 'trial_screening_limit');
+      END IF;
+    END;
+  END IF;
+
+  -- AI abuse limit: 2000 per active provider per billing cycle (subscription plans only)
+  IF v_existing_messages = 0
+    AND v_org.subscription_plan NOT IN ('pay_as_you_go', 'expired', 'suspended', 'read_only',
+                                        'standard_trial', 'premium_trial') THEN
+    DECLARE
+      v_provider_count int;
+      v_cycle_ai int;
+    BEGIN
+      SELECT COUNT(DISTINCT sr.staff_user_id) INTO v_provider_count
+      FROM public.staff_roles sr
+      JOIN public.staff_users su ON su.id = sr.staff_user_id
+      WHERE su.org_id = v_visit.org_id
+        AND sr.role IN ('doctor', 'nurse')
+        AND su.is_active = true
+        AND su.is_deleted = false;
+
+      v_provider_count := GREATEST(v_provider_count, 1);
+
+      SELECT COUNT(*) INTO v_cycle_ai
+      FROM public.visits v2
+      WHERE v2.org_id = v_visit.org_id
+        AND v2.created_at >= COALESCE(v_org.billing_cycle_start, v2.created_at)
+        AND v2.ai_started_at IS NOT NULL;
+
+      IF v_cycle_ai >= v_provider_count * 2000 THEN
+        RETURN jsonb_build_object('success', false, 'error', 'ai_cycle_limit');
       END IF;
     END;
   END IF;

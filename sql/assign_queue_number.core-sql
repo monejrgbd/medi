@@ -1,0 +1,22 @@
+-- Trigger function: auto-assign daily sequential queue number per location
+CREATE OR REPLACE FUNCTION private.assign_queue_number()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Serialize per location per day to prevent duplicate numbers on concurrent check-ins
+  PERFORM pg_advisory_xact_lock(hashtext('qn_' || NEW.location_id::text || CURRENT_DATE::text));
+  NEW.queue_number := COALESCE(
+    (SELECT MAX(queue_number) FROM public.visits
+     WHERE location_id = NEW.location_id AND created_at::date = CURRENT_DATE),
+    0
+  ) + 1;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_assign_queue_number ON public.visits;
+CREATE TRIGGER trg_assign_queue_number
+  BEFORE INSERT ON public.visits
+  FOR EACH ROW
+  EXECUTE FUNCTION private.assign_queue_number();

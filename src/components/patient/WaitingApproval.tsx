@@ -6,12 +6,14 @@ interface WaitingApprovalProps {
   patientFirstName: string;
   locationName: string;
   onCancel?: () => void;
+  queueDisplay?: string | null;
 }
 
 export default function WaitingApproval({
   patientFirstName,
   locationName,
   onCancel,
+  queueDisplay,
 }: WaitingApprovalProps) {
   const { t } = useLanguage();
 
@@ -20,6 +22,13 @@ export default function WaitingApproval({
       <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-200 border-t-hilt-blue" />
       </div>
+
+      {queueDisplay && (
+        <div className="mb-4 inline-block rounded-xl bg-gray-100 px-6 py-3">
+          <p className="text-xs text-ash mb-0.5">Your number</p>
+          <p className="text-3xl font-black tabular-nums text-ink">{queueDisplay}</p>
+        </div>
+      )}
 
       <h2 className="text-xl font-bold text-ink mb-2">
         {t("waiting.title")}

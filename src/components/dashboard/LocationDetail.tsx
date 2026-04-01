@@ -31,6 +31,7 @@ interface LocationData {
   raven_api_key?: string | null;
   ask_referral_source?: boolean;
   ask_discovery_source?: boolean;
+  queue_display_enabled?: boolean;
   created_at: string;
 }
 
@@ -110,6 +111,7 @@ export default function LocationDetail({
           locationId={location.id}
           locationName={location.name}
           logoUrl={location.logo_url}
+          queueDisplayEnabled={location.queue_display_enabled ?? false}
         />
       )}
     </div>

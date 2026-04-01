@@ -8,6 +8,7 @@ import {
   toggleGaveTablet,
   handlePatient,
 } from "@/app/(dashboard)/d/_actions/receptionist";
+import { formatQueueNumber } from "@/lib/queueUtils";
 
 interface ActiveVisit {
   id: string;
@@ -20,6 +21,7 @@ interface ActiveVisit {
   claimed_by: string | null;
   nurse_reviewed: boolean;
   claimed_is_nurse: boolean;
+  queue_number?: number | null;
   patients: {
     id?: string;
     first_name: string;
@@ -142,6 +144,11 @@ export default function ActivePatientsList({
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
+                      {visit.queue_number != null && (
+                        <span className="inline-flex items-center justify-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 tabular-nums">
+                          #{formatQueueNumber(visit.queue_number, "fifo")}
+                        </span>
+                      )}
                       <h3 className="font-medium text-ink truncate">
                         {visit.patients.first_name} {visit.patients.last_name}
                       </h3>

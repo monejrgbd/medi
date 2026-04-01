@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { deactivateStaff, deleteStaff } from "@/app/(dashboard)/d/_actions/staff";
+import { deactivateStaff, reactivateStaff, deleteStaff } from "@/app/(dashboard)/d/_actions/staff";
 import ConfirmModal from "./ConfirmModal";
 import ResetPasswordModal from "./ResetPasswordModal";
 import RoleAssignmentModal from "./RoleAssignmentModal";
@@ -54,7 +54,7 @@ export default function StaffTable({
   const [roleModal, setRoleModal] = useState<StaffMember | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     staff: StaffMember;
-    action: "deactivate" | "delete";
+    action: "deactivate" | "reactivate" | "delete";
   } | null>(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
 
@@ -76,6 +76,8 @@ export default function StaffTable({
     const result =
       confirmModal.action === "deactivate"
         ? await deactivateStaff(confirmModal.staff.id)
+        : confirmModal.action === "reactivate"
+        ? await reactivateStaff(confirmModal.staff.id)
         : await deleteStaff(confirmModal.staff.id);
 
     setConfirmLoading(false);
@@ -197,7 +199,7 @@ export default function StaffTable({
                         >
                           Reset Password
                         </button>
-                        {s.is_active && (
+                        {s.is_active ? (
                           <button
                             onClick={() => {
                               setActionMenu(null);
@@ -206,6 +208,16 @@ export default function StaffTable({
                             className="w-full px-4 py-2 text-left text-sm text-amber-600 hover:bg-gray-50"
                           >
                             Deactivate
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setActionMenu(null);
+                              setConfirmModal({ staff: s, action: "reactivate" });
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm text-green-600 hover:bg-gray-50"
+                          >
+                            Reactivate
                           </button>
                         )}
                         <button
@@ -261,14 +273,16 @@ export default function StaffTable({
       {confirmModal && (
         <ConfirmModal
           open
-          title={confirmModal.action === "deactivate" ? "Deactivate Staff" : "Delete Staff"}
+          title={confirmModal.action === "deactivate" ? "Deactivate Staff" : confirmModal.action === "reactivate" ? "Reactivate Staff" : "Delete Staff"}
           message={
             confirmModal.action === "deactivate"
-              ? `Are you sure you want to deactivate ${confirmModal.staff.full_name}? They will no longer be able to log in. This can be reversed — their records and history will be preserved.`
+              ? `Are you sure you want to deactivate ${confirmModal.staff.full_name}? They will no longer be able to log in. This can be reversed, their records and history will be preserved.`
+              : confirmModal.action === "reactivate"
+              ? `Are you sure you want to reactivate ${confirmModal.staff.full_name}? They will be able to log in again.`
               : `Are you sure you want to delete ${confirmModal.staff.full_name}? This action cannot be undone. Past records will show "Deleted staff member."`
           }
-          confirmLabel={confirmModal.action === "deactivate" ? "Deactivate" : "Delete"}
-          destructive
+          confirmLabel={confirmModal.action === "deactivate" ? "Deactivate" : confirmModal.action === "reactivate" ? "Reactivate" : "Delete"}
+          destructive={confirmModal.action !== "reactivate"}
           loading={confirmLoading}
           onConfirm={handleConfirmAction}
           onClose={() => setConfirmModal(null)}

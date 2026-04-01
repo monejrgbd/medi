@@ -26,6 +26,7 @@ CREATE TABLE public.locations (
   skip_ai               boolean DEFAULT false,
   ask_referral_source   boolean DEFAULT false,
   ask_discovery_source  boolean DEFAULT false,
+  queue_display_enabled boolean DEFAULT false,
   queue_type            text NOT NULL DEFAULT 'fifo'
     CHECK (queue_type IN ('fifo', 'priority', 'appointment_priority', 'appointment_fifo', 'critical_appointment_fifo')),
   raven_api_key         text DEFAULT NULL,

@@ -22,6 +22,7 @@ import ReferralAnalyticsChart from "@/components/analytics/ReferralAnalyticsChar
 import DiscoverySourceChart from "@/components/analytics/DiscoverySourceChart";
 import PatientSearch from "@/components/dashboard/PatientSearch";
 import { TableSkeleton, CardSkeleton, ChartSkeleton } from "@/components/ui/Skeleton";
+import RoleSwitchBar from "@/components/dashboard/RoleSwitchBar";
 
 type Tab = "employees" | "patients" | "waittimes" | "returns" | "followups" | "referrals";
 
@@ -178,6 +179,7 @@ export default function ManagerDashboard({
 
   return (
     <div className="mx-auto max-w-7xl">
+      <RoleSwitchBar currentRole="manager" />
       {/* Header */}
       <div className="mb-6 flex items-center justify-end">
         <div className="flex items-center gap-3">

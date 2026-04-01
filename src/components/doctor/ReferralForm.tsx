@@ -306,7 +306,7 @@ export default function ReferralForm({
                   : "bg-gray-100 text-slate hover:bg-gray-200"
               }`}
             >
-              Hilt Health Clinic
+              Hilt Clinic
             </button>
             <button
               type="button"
@@ -322,7 +322,7 @@ export default function ReferralForm({
                   : "bg-gray-100 text-slate hover:bg-gray-200"
               }`}
             >
-              External (Email)
+              Email
             </button>
           </div>
 
