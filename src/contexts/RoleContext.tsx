@@ -55,3 +55,7 @@ export function useRole() {
   if (!ctx) throw new Error("useRole must be used within RoleProvider");
   return ctx;
 }
+
+export function useRoleSafe() {
+  return useContext(RoleContext);
+}

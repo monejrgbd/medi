@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRole } from "@/contexts/RoleContext";
+import { useRoleSafe } from "@/contexts/RoleContext";
 import {
   Stethoscope,
   ClipboardList,
@@ -24,8 +24,13 @@ const ROLE_NAV: Record<string, { label: string; icon: ReactNode; path: string }>
 };
 
 export default function RoleSwitchBar({ currentRole }: { currentRole: string }) {
-  const { roles, isOwner } = useRole();
+  const ctx = useRoleSafe();
   const router = useRouter();
+
+  // No RoleProvider (e.g. demo) — don't render
+  if (!ctx) return null;
+
+  const { roles, isOwner } = ctx;
 
   // Build unique role list
   const uniqueRoles = [...new Set(roles.map((r) => r.role))];
