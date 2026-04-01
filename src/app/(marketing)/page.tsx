@@ -1013,7 +1013,7 @@ function BeyondTheVisitSection() {
               </div>
               <h3 className="mb-1.5 text-base font-semibold text-ink">Zero lost referrals</h3>
               <p className="text-xs leading-relaxed text-slate mb-4">
-                Refer a patient with one click. The receiving clinic gets the full package: AI summary, doctor notes, visit history. You see when they arrive. No fax, no wondering.
+                Refer a patient in seconds. The receiving clinic gets the full package: transcript, AI summary, diagnosis, notes, and attachments. You see when they arrive. No fax, no wondering.
               </p>
               {/* Mini referral tracker */}
               <div className="mt-auto rounded-xl bg-white/80 p-4 ring-1 ring-purple-200/60">
@@ -1040,7 +1040,7 @@ function BeyondTheVisitSection() {
                   <svg className="h-3 w-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                   </svg>
-                  AI summary + notes + history sent digitally
+                  Transcript, summary, diagnosis, notes, and attachments included
                 </div>
               </div>
             </div>
