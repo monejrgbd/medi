@@ -41,7 +41,7 @@ function ChatMockup() {
         </div>
         <div>
           <p className="text-sm font-semibold text-ink">Patient scans QR code</p>
-          <p className="text-[11px] text-slate">No app needed, opens on their phone</p>
+          <p className="text-[11px] text-slate">Their phone or your clinic tablet, no app needed</p>
         </div>
       </div>
 
