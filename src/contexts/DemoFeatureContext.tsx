@@ -9,6 +9,7 @@ interface DemoFeatures {
   reviewCollection: boolean;
   askReferralSource: boolean;
   askDiscoverySource: boolean;
+  queueDisplayEnabled: boolean;
 }
 
 const DEFAULTS: DemoFeatures = {
@@ -19,6 +20,7 @@ const DEFAULTS: DemoFeatures = {
   reviewCollection: true,
   askReferralSource: true,
   askDiscoverySource: true,
+  queueDisplayEnabled: true,
 };
 
 const STORAGE_KEY = "demo_features";

@@ -644,6 +644,8 @@ function DemoShellInner({
                   ...locationData,
                   ask_referral_source: features.askReferralSource,
                   ask_discovery_source: features.askDiscoverySource,
+                  queue_display_enabled: features.queueDisplayEnabled,
+                  queue_type: "fifo",
                 }}
                 demoMode={true}
                 teamCode={typeof window !== "undefined" ? localStorage.getItem("demo_team_code") || undefined : undefined}

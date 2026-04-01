@@ -1076,6 +1076,7 @@ export default function CheckinFlow({
           visitId={visitId}
           sessionToken={sessionToken}
           queueDisplay={locationData.queue_display_enabled ? formatQueueNumber(queueNumber, locationData.queue_type || "fifo") || null : null}
+          showTvPreview={demoMode && !!locationData.queue_display_enabled}
         />
       ) : null;
 

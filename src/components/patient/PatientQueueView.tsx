@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Check } from "lucide-react";
+import { Check, Monitor, ArrowLeft } from "lucide-react";
 
 interface PatientQueueViewProps {
   queuePosition: number | null;
@@ -11,6 +11,7 @@ interface PatientQueueViewProps {
   visitId: string;
   sessionToken: string;
   queueDisplay?: string | null;
+  showTvPreview?: boolean;
 }
 
 export default function PatientQueueView({
@@ -19,7 +20,9 @@ export default function PatientQueueView({
   visitId,
   sessionToken,
   queueDisplay,
+  showTvPreview,
 }: PatientQueueViewProps) {
+  const [showingTv, setShowingTv] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -75,6 +78,53 @@ export default function PatientQueueView({
     setContent("");
     setSubmitted(true);
     setShowForm(false);
+  }
+
+  if (showingTv && queueDisplay) {
+    return (
+      <div className="w-full max-w-md" role="status">
+        <button
+          onClick={() => setShowingTv(false)}
+          className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-hilt-blue hover:underline"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to patient view
+        </button>
+        <div className="rounded-xl border border-gray-200 overflow-hidden">
+          <div className="flex min-h-[320px] flex-col bg-gray-50">
+            <header className="flex items-center justify-between border-b border-gray-200 bg-white px-4 py-2">
+              <h1 className="text-sm font-bold text-gray-900">Smith Family Clinic</h1>
+              <time className="text-xs font-medium tabular-nums text-gray-500">
+                {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </time>
+            </header>
+            <main className="flex flex-1 flex-col gap-4 p-4">
+              <section>
+                <h2 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Now Serving</h2>
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex min-w-[80px] items-center justify-center rounded-2xl bg-emerald-500 px-6 py-4 shadow-lg">
+                    <span className="text-3xl font-black text-white">{queueDisplay}</span>
+                  </div>
+                </div>
+              </section>
+              <section className="flex-1">
+                <h2 className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Up Next</h2>
+                <div className="flex flex-wrap gap-2">
+                  {[parseInt(queueDisplay.replace(/\D/g, ""), 10) + 1, parseInt(queueDisplay.replace(/\D/g, ""), 10) + 2].map((n) => (
+                    <div key={n} className="flex min-w-[50px] items-center justify-center rounded-xl bg-white px-3 py-2 shadow-sm border border-gray-200">
+                      <span className="text-lg font-bold text-gray-700">{n}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </main>
+          </div>
+          <div className="bg-white px-4 py-2 border-t border-gray-200">
+            <p className="text-[10px] text-gray-400 text-center">This is what your waiting room TV shows</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -138,6 +188,17 @@ export default function PatientQueueView({
           className="mt-4 text-sm text-hilt-blue hover:underline"
         >
           {t("queue.enableNotif")}
+        </button>
+      )}
+
+      {/* View on TV button (demo only) */}
+      {showTvPreview && queueDisplay && !showingTv && (
+        <button
+          onClick={() => setShowingTv(true)}
+          className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-hilt-blue hover:underline"
+        >
+          <Monitor className="h-3.5 w-3.5" />
+          View on TV
         </button>
       )}
 

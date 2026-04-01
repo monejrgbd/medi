@@ -866,9 +866,10 @@ function BeyondTheVisitSection() {
   ];
 
   const referralSteps = [
-    { label: "Referred", done: true },
-    { label: "Received", done: true },
-    { label: "Checked in", done: true },
+    { label: "Sent", done: true },
+    { label: "Viewed", done: true },
+    { label: "Arrived", done: true },
+    { label: "Completed", done: true },
   ];
 
   return (

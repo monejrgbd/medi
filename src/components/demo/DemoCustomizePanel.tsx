@@ -12,6 +12,7 @@ const TOGGLES: { key: keyof DemoFeatures; label: string; desc: string; inverted?
   { key: "reviewCollection", label: "Review Collection", desc: "Collect patient feedback after visits" },
   { key: "askReferralSource", label: "Referral Tracking", desc: "Ask patients if they were referred by another provider" },
   { key: "askDiscoverySource", label: "Discovery Source", desc: "Ask new patients how they found your clinic" },
+  { key: "queueDisplayEnabled", label: "Queue Display", desc: "Show queue numbers and waiting room TV preview" },
 ];
 
 function ToggleSwitch({

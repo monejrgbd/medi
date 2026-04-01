@@ -106,7 +106,6 @@ export default function LocationSettingsForm({
     ravenApiKey: location.raven_api_key || "",
     askReferralSource: location.ask_referral_source ?? false,
     askDiscoverySource: location.ask_discovery_source ?? false,
-    queueDisplayEnabled: location.queue_display_enabled ?? false,
   });
   const initialFormJson = useMemo(() => JSON.stringify(form), []);
   const isDirty = JSON.stringify(form) !== initialFormJson;
@@ -174,7 +173,6 @@ export default function LocationSettingsForm({
       ravenApiKey: form.ravenApiKey,
       askReferralSource: form.askReferralSource,
       askDiscoverySource: form.askDiscoverySource,
-      queueDisplayEnabled: form.queueDisplayEnabled,
     });
 
     setLoading(false);
