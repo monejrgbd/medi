@@ -1,0 +1,42 @@
+-- Simple helper for generate-summary: returns vital readings as name/unit/value rows
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_visit_vitals_text(
+  p_visit_id uuid
+)
+RETURNS TABLE(name text, unit text, value numeric)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(vt.name, ovc.custom_name)::text AS name,
+    COALESCE(vt.unit, ovc.custom_unit, '')::text AS unit,
+    pv.value
+  FROM public.patient_vitals pv
+  JOIN public.org_vital_configs ovc ON ovc.id = pv.vital_config_id
+  LEFT JOIN public.vital_types vt ON vt.id = ovc.vital_type_id
+  WHERE pv.visit_id = p_visit_id
+  ORDER BY ovc.display_order ASC, pv.measured_at DESC;
+END;
+$$;
+
+-- Public wrapper (service_role only)
+CREATE OR REPLACE FUNCTION public.get_visit_vitals_text(
+  p_visit_id uuid
+)
+RETURNS TABLE(name text, unit text, value numeric)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN;
+  END IF;
+  RETURN QUERY SELECT * FROM private.get_visit_vitals_text(p_visit_id);
+END;
+$$;

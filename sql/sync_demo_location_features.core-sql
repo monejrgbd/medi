@@ -1,0 +1,75 @@
+-- Syncs demo feature toggles to location settings
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.sync_demo_location_features(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_nurse_enabled boolean,
+  p_vitals_enabled boolean,
+  p_vaccines_enabled boolean,
+  p_review_sms_enabled boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+BEGIN
+  -- Verify location exists and caller has access (any staff role at this org)
+  SELECT l.org_id INTO v_org_id
+  FROM public.locations l
+  WHERE l.id = p_location_id;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Allow owner or any active staff in the org
+  IF NOT EXISTS (
+    SELECT 1 FROM public.organizations o WHERE o.id = v_org_id AND o.owner_id = p_caller_auth_uid
+  ) AND NOT EXISTS (
+    SELECT 1 FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid AND su.org_id = v_org_id AND su.is_active = true AND su.is_deleted = false
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  UPDATE public.locations
+  SET nurse_enabled = p_nurse_enabled,
+      vitals_enabled = p_vitals_enabled,
+      vaccines_enabled = p_vaccines_enabled,
+      review_sms_enabled = p_review_sms_enabled
+  WHERE id = p_location_id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.sync_demo_location_features(
+  p_location_id uuid,
+  p_nurse_enabled boolean,
+  p_vitals_enabled boolean,
+  p_vaccines_enabled boolean,
+  p_review_sms_enabled boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.sync_demo_location_features(v_auth_uid, p_location_id, p_nurse_enabled, p_vitals_enabled, p_vaccines_enabled, p_review_sms_enabled);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.sync_demo_location_features(uuid, boolean, boolean, boolean, boolean) FROM anon;
+GRANT EXECUTE ON FUNCTION public.sync_demo_location_features(uuid, boolean, boolean, boolean, boolean) TO authenticated;

@@ -101,18 +101,14 @@ Deno.serve(async (req) => {
         parts.push(`Nurse Notes:\n${visitRow.nurse_notes.trim()}`);
       }
 
-      const { data: vitalsRows } = await supabase
-        .from("patient_vitals")
-        .select("value, org_vital_configs(vital_types(name, unit), custom_name, custom_unit)")
-        .eq("visit_id", visit_id);
+      const { data: vitalsRows } = await supabase.rpc("get_visit_vitals_text", {
+        p_visit_id: visit_id,
+      });
 
-      if (vitalsRows && vitalsRows.length > 0) {
-        const vitalsLines = vitalsRows.map((v: any) => {
-          const config = v.org_vital_configs;
-          const name = config?.vital_types?.name || config?.custom_name || "Unknown";
-          const unit = config?.vital_types?.unit || config?.custom_unit || "";
-          return `${name}: ${v.value}${unit ? " " + unit : ""}`;
-        });
+      if (vitalsRows && Array.isArray(vitalsRows) && vitalsRows.length > 0) {
+        const vitalsLines = vitalsRows.map((v: { name: string; unit: string; value: number }) =>
+          `${v.name}: ${v.value}${v.unit ? " " + v.unit : ""}`
+        );
         parts.push(`Vitals:\n${vitalsLines.join("\n")}`);
       }
 

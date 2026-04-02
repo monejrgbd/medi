@@ -527,15 +527,15 @@ Deno.serve(async (req) => {
             // Nurse triage enabled: skip summary generation, move patient straight to queue.
             // Summary will be generated when the doctor claims (includes nurse notes + vitals).
             try {
-              await supabase.rpc("move_to_queue_on_error", {
-                p_visit_id: visit_id,
-                p_session_token: session_token,
-              });
-              // Mark ai_completed_at so claim_patient knows to trigger summary
+              // Set ai_completed_at BEFORE moving to queue (so claim_patient sees it)
               await supabase
                 .from("visits")
                 .update({ ai_completed_at: new Date().toISOString() })
                 .eq("id", visit_id);
+              await supabase.rpc("move_to_queue_on_error", {
+                p_visit_id: visit_id,
+                p_session_token: session_token,
+              });
             } catch (err) {
               console.error("Failed to move nurse-enabled visit to queue:", err);
             }

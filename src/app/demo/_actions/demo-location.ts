@@ -14,16 +14,15 @@ export async function syncDemoLocationFeatures(
   if (!locationId) return { success: false, error: "Missing location ID" };
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("locations")
-    .update({
-      nurse_enabled: features.nurseEnabled,
-      vitals_enabled: features.vitalsEnabled,
-      vaccines_enabled: features.vaccinesEnabled,
-      review_sms_enabled: features.reviewCollection,
-    })
-    .eq("id", locationId);
+  const { data, error } = await supabase.rpc("sync_demo_location_features", {
+    p_location_id: locationId,
+    p_nurse_enabled: features.nurseEnabled,
+    p_vitals_enabled: features.vitalsEnabled,
+    p_vaccines_enabled: features.vaccinesEnabled,
+    p_review_sms_enabled: features.reviewCollection,
+  });
 
   if (error) return { success: false, error: "Failed to sync location features" };
+  if (data && !data.success) return { success: false, error: data.error };
   return { success: true };
 }
