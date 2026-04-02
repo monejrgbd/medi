@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
     const { data: locationRow } = await supabase
       .from("locations")
-      .select("ai_model, ai_message_limit, queue_type")
+      .select("ai_model, ai_message_limit, queue_type, nurse_enabled")
       .eq("id", visitRow.location_id)
       .single();
 
@@ -515,35 +515,55 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Conversation complete — trigger summary generation
+        // Conversation complete — trigger summary generation or move to queue
         if (hasCompletion) {
           await writer.write(
             encoder.encode(`data: ${JSON.stringify({ type: "conversation_complete" })}\n\n`)
           );
 
-          // Invoke generate-summary (must await or Deno kills the fetch on isolate termination)
-          const edgeFunctionUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/generate-summary";
-          try {
-            const summaryRes = await fetch(edgeFunctionUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                "x-internal-secret": INTERNAL_SECRET!,
-              },
-              body: JSON.stringify({ visit_id }),
-            });
-            if (!summaryRes.ok) {
-              console.error("generate-summary returned error:", summaryRes.status);
-            }
-          } catch (summaryErr) {
-            console.error("generate-summary invoke error:", summaryErr);
+          const nurseEnabled = locationRow?.nurse_enabled === true;
+
+          if (nurseEnabled) {
+            // Nurse triage enabled: skip summary generation, move patient straight to queue.
+            // Summary will be generated when the doctor claims (includes nurse notes + vitals).
             try {
               await supabase.rpc("move_to_queue_on_error", {
                 p_visit_id: visit_id,
                 p_session_token: session_token,
               });
-            } catch { /* best effort */ }
+              // Mark ai_completed_at so claim_patient knows to trigger summary
+              await supabase
+                .from("visits")
+                .update({ ai_completed_at: new Date().toISOString() })
+                .eq("id", visit_id);
+            } catch (err) {
+              console.error("Failed to move nurse-enabled visit to queue:", err);
+            }
+          } else {
+            // No nurse: generate summary immediately for efficiency
+            const edgeFunctionUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/generate-summary";
+            try {
+              const summaryRes = await fetch(edgeFunctionUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  "x-internal-secret": INTERNAL_SECRET!,
+                },
+                body: JSON.stringify({ visit_id }),
+              });
+              if (!summaryRes.ok) {
+                console.error("generate-summary returned error:", summaryRes.status);
+              }
+            } catch (summaryErr) {
+              console.error("generate-summary invoke error:", summaryErr);
+              try {
+                await supabase.rpc("move_to_queue_on_error", {
+                  p_visit_id: visit_id,
+                  p_session_token: session_token,
+                });
+              } catch { /* best effort */ }
+            }
           }
         }
       } catch (err) {

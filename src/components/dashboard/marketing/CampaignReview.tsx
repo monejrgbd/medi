@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRole } from "@/contexts/RoleContext";
 import {
   updateCampaignMessage,
@@ -48,9 +48,25 @@ export default function CampaignReview({
     new Set(recipients.filter((r) => r.excluded).map((r) => r.id))
   );
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [sending, setSending] = useState(false);
   const [cancellingCampaign, setCancellingCampaign] = useState(false);
   const [togglingExclude, setTogglingExclude] = useState<string | null>(null);
+  const initialMessageRef = useRef(messageBody);
+
+  // Debounced auto-save: wait 800ms after typing stops
+  useEffect(() => {
+    // Skip auto-save if message is unchanged from initial or empty
+    if (!messageBody.trim() || messageBody === initialMessageRef.current) return;
+
+    setSaved(false);
+    const timer = setTimeout(() => {
+      handleSaveMessage();
+    }, 800);
+
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messageBody]);
 
   const isPAyG = org?.subscription_plan === "pay_as_you_go";
   const isTrial = org?.subscription_plan?.includes("trial");
@@ -124,12 +140,14 @@ export default function CampaignReview({
       return;
     }
     setSaving(true);
+    setSaved(false);
     try {
       const result = await updateCampaignMessage(campaignId, messageBody.trim());
       if (result && "error" in result) {
         toast.error(result.error as string);
       } else {
-        toast.success("Message saved");
+        initialMessageRef.current = messageBody;
+        setSaved(true);
       }
     } catch {
       toast.error("Failed to save message");
@@ -311,13 +329,9 @@ export default function CampaignReview({
               {messageBody.length} + {footerLen} footer = {totalLen}/160 ({segments}{" "}
               {segments === 1 ? "segment" : "segments"})
             </p>
-            <button
-              onClick={handleSaveMessage}
-              disabled={saving || !messageBody.trim()}
-              className="text-xs text-hilt-blue hover:text-blue-700 font-medium disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Save Message"}
-            </button>
+            <span className="text-xs text-ash">
+              {saving ? "Saving..." : saved ? "Saved" : ""}
+            </span>
           </div>
         </div>
 

@@ -67,7 +67,7 @@ export default function CheckinForm({
   const [noPhone, setNoPhone] = useState(false);
   const [smsTermsAccepted, setSmsTermsAccepted] = useState(false);
   const [validationError, setValidationError] = useState("");
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -283,7 +283,34 @@ export default function CheckinForm({
                     className="mt-0.5 h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
                   />
                   <span className="text-xs text-slate leading-relaxed">
-                    {t("checkin.sms_terms")}
+                    {(() => {
+                      const text = t("checkin.sms_terms");
+                      const tosLabel: Record<string, string> = {
+                        en: "terms of service",
+                        es: "terminos de servicio",
+                        fr: "conditions de service",
+                        ar: "شروط الخدمة",
+                        zh: "服务条款",
+                        ko: "서비스 약관",
+                        vi: "dieu khoan dich vu",
+                        pt: "termos de servico",
+                        ru: "условиями обслуживания",
+                        hi: "सेवा शर्तों",
+                      };
+                      const label = tosLabel[language] || tosLabel["en"];
+                      const idx = text.toLowerCase().indexOf(label.toLowerCase());
+                      if (idx === -1) return text;
+                      const before = text.slice(0, idx);
+                      const match = text.slice(idx, idx + label.length);
+                      const after = text.slice(idx + label.length);
+                      return (
+                        <>
+                          {before}
+                          <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-hilt-blue underline">{match}</a>
+                          {after}
+                        </>
+                      );
+                    })()}
                   </span>
                 </label>
               )}

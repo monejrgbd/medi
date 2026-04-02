@@ -33,7 +33,7 @@ async function getD7Token(): Promise<string> {
 // SMS templates
 const TEMPLATES: Record<string, (params: Record<string, string>) => string> = {
   summary: (p) =>
-    `Hi ${p.first_name}, your visit summary from ${p.org_name} is ready: ${APP_BASE_URL}/summary/${p.token}. You can share this with any doctor to help explain your visit.`,
+    `Hi ${p.first_name}, visit summary from ${p.org_name.slice(0, 25)}: ${APP_BASE_URL}/s/${p.token}. Share with any doctor.`,
   review: (p) =>
     `Hi ${p.first_name}, ${p.org_name} would appreciate your feedback: ${APP_BASE_URL}/review/${p.token}`,
   follow_up: (p) =>

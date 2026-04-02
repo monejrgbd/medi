@@ -17,10 +17,12 @@ DECLARE
   v_can_access boolean := false;
   v_nurse_enabled boolean;
   v_locked record;
+  v_edge_url text;
+  v_edge_secret text;
   -- v_claimer_name removed (m10: don't leak doctor names)
 BEGIN
   -- Get visit details
-  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.nurse_reviewed
+  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.nurse_reviewed, v.ai_completed_at, v.ai_summary
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -125,6 +127,38 @@ BEGIN
       claimed_by = v_caller_staff_id,
       claimed_at = now()
   WHERE id = p_visit_id;
+
+  -- If AI conversation completed but summary not yet generated (nurse-enabled flow),
+  -- trigger generate-summary now that the doctor has claimed
+  IF v_visit.ai_completed_at IS NOT NULL AND v_visit.ai_summary IS NULL THEN
+    DECLARE
+      v_anon_key text;
+    BEGIN
+      SELECT decrypted_secret INTO v_edge_url
+      FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+      SELECT decrypted_secret INTO v_edge_secret
+      FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+      SELECT decrypted_secret INTO v_anon_key
+      FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+      IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
+        PERFORM net.http_post(
+          url := v_edge_url || '/generate-summary',
+          headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || v_anon_key,
+            'x-internal-secret', v_edge_secret
+          ),
+          body := jsonb_build_object('visit_id', p_visit_id)
+        );
+      END IF;
+    EXCEPTION WHEN OTHERS THEN
+      -- Fire-and-forget: don't fail the claim if summary trigger fails
+      RAISE WARNING 'generate-summary trigger failed: %', SQLERRM;
+    END;
+  END IF;
 
   RETURN jsonb_build_object('success', true);
 END;

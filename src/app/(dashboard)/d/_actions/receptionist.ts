@@ -166,10 +166,34 @@ export async function editPatientRecord(
   const { data, error } = await supabase.rpc("edit_patient_record", params);
 
   if (error) return { success: false, error: "Failed to edit patient record" };
-  if (data && !data.success) return { success: false, error: data.error };
+  if (data && !data.success) {
+    return {
+      success: false,
+      error: data.error,
+      existing_patient_id: data.existing_patient_id ?? undefined,
+    };
+  }
 
   revalidatePath("/d/receptionist");
   return { success: true };
+}
+
+export async function mergeVisitToPatient(visitId: string, targetPatientId: string) {
+  await requireAuth();
+  if (!visitId || !validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+  if (!targetPatientId || !validUUID(targetPatientId)) return { success: false, error: "Invalid patient ID" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("merge_visit_to_patient", {
+    p_visit_id: visitId,
+    p_target_patient_id: targetPatientId,
+  });
+
+  if (error) return { success: false, error: "Failed to merge visit to patient" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/receptionist");
+  return { success: true, target_patient_name: data?.target_patient_name };
 }
 
 // --- Phase 7: Follow-ups & audit trail ---

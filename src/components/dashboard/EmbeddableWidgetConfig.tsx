@@ -5,14 +5,26 @@ import { toast } from "sonner";
 
 interface EmbeddableWidgetConfigProps {
   locations: { id: string; name: string }[];
+  subscriptionPlan: string;
 }
 
 export default function EmbeddableWidgetConfig({
   locations,
+  subscriptionPlan,
 }: EmbeddableWidgetConfigProps) {
   const [selectedLocation, setSelectedLocation] = useState(
     locations[0]?.id || ""
   );
+
+  if (subscriptionPlan !== "business" && subscriptionPlan !== "enterprise") {
+    return (
+      <div className="rounded-xl border border-gray-100 bg-white p-6 text-center">
+        <h2 className="text-lg font-semibold text-ink mb-2">Embeddable Check in Widget</h2>
+        <p className="text-sm text-slate mb-4">Embed your check in form directly on your clinic website. Available on the Business plan.</p>
+        <a href="/d/owner/billing" className="inline-block rounded-lg bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-colors">Upgrade Plan</a>
+      </div>
+    );
+  }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com";
   const iframeCode = `<iframe src="${baseUrl}/checkin/${selectedLocation}?embed=true" width="100%" height="600" style="border:none;border-radius:12px;" allow="microphone"></iframe>`;
@@ -25,7 +37,7 @@ export default function EmbeddableWidgetConfig({
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-6">
       <h2 className="text-lg font-semibold text-ink mb-4">
-        Embeddable Check-In Widget
+        Embeddable Check in Widget
       </h2>
 
       {locations.length > 1 && (

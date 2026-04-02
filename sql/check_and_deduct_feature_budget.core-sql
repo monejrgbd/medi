@@ -1,3 +1,9 @@
+-- Drop stale function signatures to prevent "not unique" errors
+DROP FUNCTION IF EXISTS private.check_and_deduct_feature_budget(uuid, text, numeric);
+DROP FUNCTION IF EXISTS private.check_and_deduct_feature_budget(uuid, text, numeric, text);
+DROP FUNCTION IF EXISTS public.check_and_deduct_feature_budget(uuid, text, numeric);
+DROP FUNCTION IF EXISTS public.check_and_deduct_feature_budget(uuid, text, numeric, text);
+
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.check_and_deduct_feature_budget(
   p_org_id uuid,

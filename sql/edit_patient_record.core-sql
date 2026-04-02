@@ -139,7 +139,7 @@ BEGIN
   END IF;
 
   IF v_duplicate_check IS NOT NULL THEN
-    RETURN jsonb_build_object('success', false, 'error', 'A patient with this name, birthday, and phone already exists.');
+    RETURN jsonb_build_object('success', false, 'error', 'duplicate_found', 'existing_patient_id', v_duplicate_check);
   END IF;
 
   -- Track changed fields

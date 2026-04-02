@@ -59,10 +59,10 @@ Deno.serve(async (req) => {
       })
       .join("\n\n");
 
-    // Load visit details for display_format and ai_model
+    // Load visit details for display_format, ai_model, and nurse data
     const { data: visitRow } = await supabase
       .from("visits")
-      .select("org_id, patient_id, session_token, location_id")
+      .select("org_id, patient_id, session_token, location_id, nurse_notes, nurse_reviewed")
       .eq("id", visit_id)
       .single();
 
@@ -92,6 +92,35 @@ Deno.serve(async (req) => {
       .single();
     const subscriptionPlan = orgRow?.subscription_plan || "starter";
 
+    // Load nurse vitals if available
+    let nurseContext = "";
+    if (visitRow.nurse_reviewed) {
+      const parts: string[] = [];
+
+      if (visitRow.nurse_notes?.trim()) {
+        parts.push(`Nurse Notes:\n${visitRow.nurse_notes.trim()}`);
+      }
+
+      const { data: vitalsRows } = await supabase
+        .from("patient_vitals")
+        .select("value, org_vital_configs(vital_types(name, unit), custom_name, custom_unit)")
+        .eq("visit_id", visit_id);
+
+      if (vitalsRows && vitalsRows.length > 0) {
+        const vitalsLines = vitalsRows.map((v: any) => {
+          const config = v.org_vital_configs;
+          const name = config?.vital_types?.name || config?.custom_name || "Unknown";
+          const unit = config?.vital_types?.unit || config?.custom_unit || "";
+          return `${name}: ${v.value}${unit ? " " + unit : ""}`;
+        });
+        parts.push(`Vitals:\n${vitalsLines.join("\n")}`);
+      }
+
+      if (parts.length > 0) {
+        nurseContext = `\n\nThe following nurse assessment data was recorded before the doctor review. Incorporate this into your summary:\n\n${parts.join("\n\n")}`;
+      }
+    }
+
     // Build the structured output prompt
     const includeStructuredCard = displayFormat === "structured_card";
 
@@ -99,7 +128,7 @@ Deno.serve(async (req) => {
 
 <transcript>
 ${transcript}
-</transcript>
+</transcript>${nurseContext}
 
 Produce a JSON object with these fields:
 1. "summary" (string, REQUIRED): A concise plain-text paragraph summarizing the patient's chief complaint, symptoms, timeline, severity, and relevant history discussed. Do NOT include medications, allergies, chronic conditions, or pets in the summary — these are extracted separately and shown to the doctor in a dedicated panel. Written for the treating physician.

@@ -71,7 +71,7 @@ interface DemoShellProps {
 
 export default function DemoShell(props: DemoShellProps) {
   return (
-    <DemoFeatureProvider>
+    <DemoFeatureProvider locationId={props.locationId}>
       <DemoShellInner {...props} />
     </DemoFeatureProvider>
   );
@@ -135,6 +135,8 @@ function DemoShellInner({
   const [visitClaimed, setVisitClaimed] = useState(false);
   const [nurseStepDone, setNurseStepDone] = useState(false);
   const [demoStep, setDemoStep] = useState(1);
+  const [patientStepsDone, setPatientStepsDone] = useState(false);
+  const [pendingReceptionistSwitch, setPendingReceptionistSwitch] = useState(false);
   const [reviewToken, setReviewToken] = useState<string | null>(null);
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
@@ -310,7 +312,14 @@ function DemoShellInner({
         // If campaign was already done, show step 7 (all complete)
         const campaignDone = localStorage.getItem("demo_campaign_done") === "true";
         setDemoStep(campaignDone && step >= 5 ? 7 : step);
-        if (step === 5) { setVisitCompleted(true); setActiveTab(featuresRef.current.reviewCollection ? "reviews" : "marketing"); }
+        if (step === 5) {
+          setVisitCompleted(true);
+          if (campaignDone) {
+            setActiveTab("marketing");
+          } else {
+            setActiveTab(featuresRef.current.reviewCollection ? "reviews" : "marketing");
+          }
+        }
         if (step === 4) {
           if (featuresRef.current.nurseEnabled && !data.nurse_reviewed) {
             setActiveTab("nurse");
@@ -335,18 +344,34 @@ function DemoShellInner({
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- only on mount
 
-  // Auto-switch to nurse or doctor tab once phone step is complete
+  // Switch to receptionist tab once patient finishes phone verification + discovery
+  useEffect(() => {
+    if (pendingReceptionistSwitch && patientStepsDone) {
+      setPendingReceptionistSwitch(false);
+      setPulsingTab("receptionist");
+      setTimeout(() => {
+        setActiveTab("receptionist");
+        setPulsingTab(null);
+      }, 3000);
+    }
+  }, [pendingReceptionistSwitch, patientStepsDone]);
+
+  // Auto-switch to nurse or doctor tab once patient is in queue
+  const nurseTabShownRef = useRef(false);
   useEffect(() => {
     if (waitingForDoctor && phoneStepDone) {
       if (features.nurseEnabled && !nurseStepDone) {
-        // Route to nurse first
-        setPulsingTab("nurse");
-        setTimeout(() => {
-          setActiveTab("nurse");
-          setPulsingTab(null);
-        }, 3000);
-      } else {
-        // Route to doctor
+        // Route to nurse first (only once)
+        if (!nurseTabShownRef.current) {
+          nurseTabShownRef.current = true;
+          setPulsingTab("nurse");
+          setTimeout(() => {
+            setActiveTab("nurse");
+            setPulsingTab(null);
+          }, 3000);
+        }
+      } else if (nurseStepDone || !features.nurseEnabled) {
+        // Route to doctor only after nurse explicitly released (or nurse disabled)
         setPulsingTab("doctor");
         setTimeout(() => {
           setActiveTab("doctor");
@@ -393,11 +418,8 @@ function DemoShellInner({
             }
 
             setDemoStep(2);
-            setPulsingTab("receptionist");
-            setTimeout(() => {
-              setActiveTab("receptionist");
-              setPulsingTab(null);
-            }, 3000);
+            // Defer receptionist tab switch until patient finishes phone + discovery steps
+            setPendingReceptionistSwitch(true);
           }
         }
       )
@@ -561,6 +583,10 @@ function DemoShellInner({
     setPhoneStepDone(true);
   }, []);
 
+  const handlePatientReady = useCallback(() => {
+    setPatientStepsDone(true);
+  }, []);
+
   function handleRestart() {
     // Clear patient session from localStorage so CheckinFlow starts fresh
     if (typeof window !== "undefined") {
@@ -577,6 +603,9 @@ function DemoShellInner({
     setVisitClaimed(false);
     setNurseStepDone(false);
     nurseStepDoneRef.current = false;
+    nurseTabShownRef.current = false;
+    setPatientStepsDone(false);
+    setPendingReceptionistSwitch(false);
     setDemoStep(1);
     setReviewToken(null);
     setReviewSubmitted(false);
@@ -651,6 +680,7 @@ function DemoShellInner({
                 teamCode={typeof window !== "undefined" ? localStorage.getItem("demo_team_code") || undefined : undefined}
                 onVisitCreated={handleVisitCreated}
                 onPhoneComplete={handlePhoneComplete}
+                onPatientReady={handlePatientReady}
               />
             </div>
           </div>
@@ -736,22 +766,27 @@ function DemoShellInner({
         <div className="absolute inset-0 overflow-y-auto" style={{ display: activeTab === "reviews" ? "block" : "none" }}>
           <div className="mx-auto max-w-6xl">
             {/* Review submission guidance */}
-            {visitCompleted && !reviewSubmitted && reviewToken && (
+            {visitCompleted && !reviewSubmitted && (
               <div className="mx-4 mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
                 <p className="text-sm font-medium text-blue-800 mb-2">
-                  Your patient just received an SMS with a review link
+                  {reviewToken
+                    ? "Your patient received an SMS with a review link"
+                    : "Visit complete. If the patient had no phone, share the review link directly."}
                 </p>
                 <p className="text-xs text-blue-600 mb-3">
-                  Try it yourself. This is exactly what your patients see after every visit. Open the link below or check the SMS on your phone.
+                  Try it yourself. This is exactly what your patients see after every visit.
+                  {!reviewToken && " If the link is taking a moment to appear, wait a few seconds."}
                 </p>
-                <a
-                  href={`/review/${reviewToken}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block rounded-lg bg-hilt-blue px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-                >
-                  Open Review Page
-                </a>
+                {reviewToken && (
+                  <a
+                    href={`/review/${reviewToken}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block rounded-lg bg-hilt-blue px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                  >
+                    Open Review Page
+                  </a>
+                )}
               </div>
             )}
 

@@ -19,12 +19,19 @@ export default function DiscoveryQuestionScreen({
   const [wasReferred, setWasReferred] = useState(false);
   const [referredBy, setReferredBy] = useState("");
   const [selected, setSelected] = useState("");
+  const [customSource, setCustomSource] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const { t } = useLanguage();
 
   async function handleContinue() {
     setSubmitting(true);
-    await onComplete(wasReferred, referredBy, selected || null);
+    // For "Other", use the custom text; normalize to lowercase for analytics grouping
+    const source = selected === "Other" && customSource.trim()
+      ? customSource.trim().toLowerCase()
+      : selected
+        ? selected.toLowerCase()
+        : null;
+    await onComplete(wasReferred, referredBy, source);
   }
 
   return (
@@ -61,30 +68,34 @@ export default function DiscoveryQuestionScreen({
         {showDiscovery && (
           <div>
             <p className="text-sm font-medium text-ink mb-3">{t("checkin.discoveryQuestion")}</p>
-            <div className="space-y-2">
+            <select
+              value={selected}
+              onChange={(e) => {
+                setSelected(e.target.value);
+                if (e.target.value !== "Other") setCustomSource("");
+              }}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink bg-white focus:border-hilt-blue focus:outline-none appearance-none"
+            >
+              <option value="" disabled>
+                {t("checkin.discoveryPlaceholder") || "Select how you found us"}
+              </option>
               {DISCOVERY_SOURCE_OPTIONS.map((option) => (
-                <label
-                  key={option}
-                  className={`flex items-center gap-3 rounded-lg border px-4 py-2.5 cursor-pointer transition-colors ${
-                    selected === option
-                      ? "border-hilt-blue bg-blue-50 text-hilt-blue"
-                      : "border-gray-200 text-ink hover:bg-gray-50"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="discovery"
-                    value={option}
-                    checked={selected === option}
-                    onChange={(e) => setSelected(e.target.value)}
-                    className="sr-only"
-                  />
-                  <span className="text-sm font-medium">
-                    {t(`checkin.discovery.${option}`) || option}
-                  </span>
-                </label>
+                <option key={option} value={option}>
+                  {t(`checkin.discovery.${option}`) || option}
+                </option>
               ))}
-            </div>
+            </select>
+            {selected === "Other" && (
+              <input
+                type="text"
+                placeholder={t("checkin.discoveryOtherPlaceholder") || "Please specify"}
+                value={customSource}
+                onChange={(e) => setCustomSource(e.target.value)}
+                maxLength={200}
+                className="mt-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+                autoFocus
+              />
+            )}
           </div>
         )}
       </div>

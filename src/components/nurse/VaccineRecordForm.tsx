@@ -32,6 +32,9 @@ export default function VaccineRecordForm({ patientId, visitId, onRecorded }: Va
   const [vaccines, setVaccines] = useState<Vaccine[]>([]);
   const [loadingVaccines, setLoadingVaccines] = useState(true);
   const [vaccineId, setVaccineId] = useState("");
+  const [customVaccineName, setCustomVaccineName] = useState("");
+  const [vaccineSearch, setVaccineSearch] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
   const [doseNumber, setDoseNumber] = useState("1");
   const [lotNumber, setLotNumber] = useState("");
   const [manufacturer, setManufacturer] = useState("");
@@ -57,7 +60,7 @@ export default function VaccineRecordForm({ patientId, visitId, onRecorded }: Va
     setError(null);
     setSuccess(false);
 
-    if (!vaccineId) {
+    if (!vaccineId && !customVaccineName.trim()) {
       setError("Please select a vaccine");
       return;
     }
@@ -84,6 +87,8 @@ export default function VaccineRecordForm({ patientId, visitId, onRecorded }: Va
       if (result.success) {
         setSuccess(true);
         setVaccineId("");
+        setCustomVaccineName("");
+        setVaccineSearch("");
         setDoseNumber("1");
         setLotNumber("");
         setManufacturer("");
@@ -107,20 +112,67 @@ export default function VaccineRecordForm({ patientId, visitId, onRecorded }: Va
         <p className="text-xs text-slate">Loading vaccines...</p>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
-          <div>
+          <div className="relative">
             <label className="text-xs text-slate">Vaccine</label>
-            <select
-              value={vaccineId}
-              onChange={(e) => setVaccineId(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink focus:border-teal-500 focus:outline-none"
-            >
-              <option value="">Select a vaccine...</option>
-              {vaccines.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} ({v.code})
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={vaccineSearch}
+              onChange={(e) => {
+                setVaccineSearch(e.target.value);
+                setShowDropdown(true);
+                if (vaccineId) { setVaccineId(""); setCustomVaccineName(""); }
+              }}
+              onFocus={() => setShowDropdown(true)}
+              placeholder="Search vaccines..."
+              className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-teal-500 focus:outline-none"
+            />
+            {showDropdown && (
+              <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                {vaccines
+                  .filter((v) => !vaccineSearch || v.name.toLowerCase().includes(vaccineSearch.toLowerCase()) || v.code.toLowerCase().includes(vaccineSearch.toLowerCase()))
+                  .map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        setVaccineId(v.id);
+                        setVaccineSearch(v.name);
+                        setCustomVaccineName("");
+                        setShowDropdown(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 text-sm hover:bg-teal-50 transition-colors ${vaccineId === v.id ? "bg-teal-50 text-teal-700 font-medium" : "text-ink"}`}
+                    >
+                      {v.name} <span className="text-ash">({v.code})</span>
+                    </button>
+                  ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVaccineId("");
+                    setCustomVaccineName(vaccineSearch);
+                    setVaccineSearch("Other (custom)");
+                    setShowDropdown(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-amber-700 hover:bg-amber-50 border-t border-gray-100 font-medium"
+                >
+                  Other (enter custom vaccine)
+                </button>
+              </div>
+            )}
+            {customVaccineName !== "" && (
+              <div className="mt-2">
+                <input
+                  type="text"
+                  value={customVaccineName}
+                  onChange={(e) => setCustomVaccineName(e.target.value)}
+                  placeholder="Enter custom vaccine name"
+                  maxLength={200}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-teal-500 focus:outline-none"
+                  autoFocus
+                />
+                <p className="text-xs text-amber-600 mt-1">This vaccine will be saved for future sessions.</p>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

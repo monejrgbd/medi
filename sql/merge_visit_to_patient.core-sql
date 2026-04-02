@@ -1,0 +1,153 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.merge_visit_to_patient(
+  p_caller_auth_uid uuid,
+  p_visit_id uuid,
+  p_target_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_target_patient record;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_authorized boolean := false;
+  v_old_patient_id uuid;
+  v_has_other_visits boolean;
+BEGIN
+  -- Get the visit
+  SELECT v.id, v.patient_id, v.org_id, v.location_id
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  -- Get the target patient and verify same org
+  SELECT p.id, p.org_id, p.first_name, p.last_name
+  INTO v_target_patient
+  FROM public.patients p
+  WHERE p.id = p_target_patient_id;
+
+  IF v_target_patient IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Target patient not found');
+  END IF;
+
+  IF v_target_patient.org_id <> v_visit.org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Target patient does not belong to this organization');
+  END IF;
+
+  -- Auth: owner, receptionist, or manager (same pattern as edit_patient_record)
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_visit.org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_visit.org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    v_is_authorized := true;
+  ELSIF v_caller_staff_id IS NOT NULL THEN
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role IN ('receptionist', 'manager')
+        AND sr.location_id = v_visit.location_id
+    ) INTO v_is_authorized;
+  END IF;
+
+  IF NOT v_is_authorized THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized. Only receptionists, managers, and owners can merge patients.');
+  END IF;
+
+  -- Save old patient_id
+  v_old_patient_id := v_visit.patient_id;
+
+  -- Do not merge if already pointing to the target
+  IF v_old_patient_id = p_target_patient_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is already linked to this patient');
+  END IF;
+
+  -- Update visit to point to target patient
+  UPDATE public.visits
+  SET patient_id = p_target_patient_id
+  WHERE id = p_visit_id;
+
+  -- Mark old patient as orphaned if no other active visits remain
+  SELECT EXISTS(
+    SELECT 1 FROM public.visits v
+    WHERE v.patient_id = v_old_patient_id
+      AND v.id <> p_visit_id
+  ) INTO v_has_other_visits;
+
+  IF NOT v_has_other_visits THEN
+    UPDATE public.patients
+    SET is_orphaned = true
+    WHERE id = v_old_patient_id;
+  END IF;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (
+    org_id, location_id, actor_id, actor_type, action, entity_type, entity_id, details
+  )
+  VALUES (
+    v_visit.org_id,
+    v_visit.location_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    CASE
+      WHEN v_owner_id = p_caller_auth_uid THEN 'owner'
+      ELSE COALESCE(
+        (SELECT sr.role FROM public.staff_roles sr
+         WHERE sr.staff_user_id = v_caller_staff_id
+           AND sr.role IN ('receptionist', 'manager')
+           AND sr.location_id = v_visit.location_id
+         ORDER BY CASE sr.role WHEN 'manager' THEN 1 ELSE 2 END
+         LIMIT 1),
+        'staff'
+      )
+    END,
+    'merge_patient',
+    'visit',
+    p_visit_id,
+    jsonb_build_object(
+      'old_patient_id', v_old_patient_id,
+      'new_patient_id', p_target_patient_id,
+      'target_patient_name', v_target_patient.first_name || ' ' || v_target_patient.last_name
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'target_patient_name', v_target_patient.first_name || ' ' || v_target_patient.last_name
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.merge_visit_to_patient(
+  p_visit_id uuid,
+  p_target_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  RETURN private.merge_visit_to_patient(v_auth_uid, p_visit_id, p_target_patient_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.merge_visit_to_patient(uuid, uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.merge_visit_to_patient(uuid, uuid) TO authenticated;

@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import PatientStatusBadge from "@/components/patient/PatientStatusBadge";
-import PatientRecordEditor from "./PatientRecordEditor";
 import {
   markPatientLeft,
   toggleGaveTablet,
@@ -71,13 +70,6 @@ export default function ActivePatientsList({
   const [loadingAction, setLoadingAction] = useState<Record<string, string>>(
     {}
   );
-  const [editingPatient, setEditingPatient] = useState<{
-    patientId: string;
-    firstName: string;
-    lastName: string;
-    birthday: string;
-  } | null>(null);
-
   async function handleMarkLeft(visitId: string) {
     setLoadingAction((prev) => ({ ...prev, [visitId]: "left" }));
     const result = await markPatientLeft(visitId);
@@ -168,27 +160,6 @@ export default function ActivePatientsList({
                 </div>
 
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {/* Edit button */}
-                  {visit.patients.id && (
-                    <button
-                      onClick={() =>
-                        setEditingPatient({
-                          patientId: visit.patients.id!,
-                          firstName: visit.patients.first_name,
-                          lastName: visit.patients.last_name,
-                          birthday: visit.patients.birthday,
-                        })
-                      }
-                      disabled={isLoading}
-                      className="rounded-lg bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 disabled:opacity-50"
-                      title="Edit patient record"
-                    >
-                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  )}
-
                   <button
                     onClick={() => handleToggleTablet(visit.id)}
                     disabled={isLoading}
@@ -252,20 +223,6 @@ export default function ActivePatientsList({
         </div>
       )}
 
-      {/* Patient record editor modal */}
-      {editingPatient && (
-        <PatientRecordEditor
-          patientId={editingPatient.patientId}
-          currentFirstName={editingPatient.firstName}
-          currentLastName={editingPatient.lastName}
-          currentBirthday={editingPatient.birthday}
-          onSaved={() => {
-            setEditingPatient(null);
-            // Trigger refresh — parent handles via realtime
-          }}
-          onCancel={() => setEditingPatient(null)}
-        />
-      )}
     </div>
   );
 }

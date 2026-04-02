@@ -10,14 +10,13 @@ import {
   Users,
   ClipboardList,
   Activity,
-  Star,
   BarChart3,
   CreditCard,
+  Code,
   Tablet,
   Settings,
   Wrench,
   ArrowLeftRight,
-  Megaphone,
   LogOut,
 } from "lucide-react";
 
@@ -27,10 +26,9 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
   { href: "/d/owner/staff", label: "Staff", icon: <Users className="h-4 w-4" /> },
   { href: "/d/owner/audit", label: "Audit Trail", icon: <ClipboardList className="h-4 w-4" /> },
   { href: "/d/vitals-config", label: "Vitals", icon: <Activity className="h-4 w-4" /> },
-  { href: "/d/reviews", label: "Reviews", icon: <Star className="h-4 w-4" /> },
   { href: "/d/manager", label: "Analytics", icon: <BarChart3 className="h-4 w-4" /> },
   { href: "/d/owner/billing", label: "Billing", icon: <CreditCard className="h-4 w-4" /> },
-  { href: "/d/owner/marketing", label: "Marketing", icon: <Megaphone className="h-4 w-4" /> },
+  { href: "/d/owner/developer", label: "Developer", icon: <Code className="h-4 w-4" /> },
   { href: "/d/owner/kiosk", label: "Tablet and TV Setup", icon: <Tablet className="h-4 w-4" /> },
   { href: "/d/owner/settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
 ];

@@ -225,30 +225,6 @@ export default function FocusMode({
     fetchVisitDetail(currentVisit.visit_id).then((result) => {
       if (result.success && result.data) {
         let detail = result.data as VisitDetail;
-        // Inject mock nurse data in demo mode
-        if (demoMode && nurseEnabled) {
-          detail = {
-            ...detail,
-            visit: {
-              ...detail.visit,
-              nurse_reviewed: true,
-              nurse_notes: "Patient appears fatigued. Swelling visible in both knuckles. Range of motion limited in right knee. Vitals within normal range. No fever.",
-            },
-            vitals: [
-              { id: "demo-v1", measured_at: new Date().toISOString(), value: 68.2, vital_name: "Weight", vital_unit: "kg", display_order: 1, notes: null, recorded_by_name: "Nurse Amy R." },
-              { id: "demo-v2", measured_at: new Date().toISOString(), value: 165.0, vital_name: "Height", vital_unit: "cm", display_order: 2, notes: null, recorded_by_name: "Nurse Amy R." },
-              { id: "demo-v3", measured_at: new Date().toISOString(), value: 118, vital_name: "Blood Pressure Systolic", vital_unit: "mmHg", display_order: 3, notes: null, recorded_by_name: "Nurse Amy R." },
-              { id: "demo-v4", measured_at: new Date().toISOString(), value: 76, vital_name: "Blood Pressure Diastolic", vital_unit: "mmHg", display_order: 4, notes: null, recorded_by_name: "Nurse Amy R." },
-              { id: "demo-v5", measured_at: new Date().toISOString(), value: 72, vital_name: "Heart Rate", vital_unit: "bpm", display_order: 5, notes: null, recorded_by_name: "Nurse Amy R." },
-              { id: "demo-v6", measured_at: new Date().toISOString(), value: 98.4, vital_name: "Temperature", vital_unit: "F", display_order: 6, notes: null, recorded_by_name: "Nurse Amy R." },
-              ...(detail.vitals || []),
-            ],
-            vaccines: [
-              { id: "demo-vac1", vaccine_name: "Influenza (Seasonal)", dose_number: null, administered_at: new Date().toISOString(), refused: false, refusal_reason: null, lot_number: "FL2026A", manufacturer: "Sanofi", site: "Left Deltoid", notes: null, administered_by_name: "Nurse Amy R." },
-              ...(detail.vaccines || []),
-            ],
-          };
-        }
         setDetail(detail);
         updatedAtRef.current = detail.visit.updated_at;
       }

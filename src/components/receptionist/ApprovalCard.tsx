@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { fetchSimilarPatients, editPatientRecord } from "@/app/(dashboard)/d/_actions/receptionist";
+import { fetchSimilarPatients, editPatientRecord, mergeVisitToPatient } from "@/app/(dashboard)/d/_actions/receptionist";
 import FollowUpIndicator from "./FollowUpIndicator";
 import { formatQueueNumber } from "@/lib/queueUtils";
 
@@ -89,6 +89,12 @@ export default function ApprovalCard({
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
 
+  // Merge dialog state
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [mergePatientId, setMergePatientId] = useState<string | null>(null);
+  const [mergeLoading, setMergeLoading] = useState(false);
+  const [mergeSuccess, setMergeSuccess] = useState("");
+
   // Display values (updated after successful edit)
   const [displayFirst, setDisplayFirst] = useState(visit.first_name);
   const [displayLast, setDisplayLast] = useState(visit.last_name);
@@ -170,6 +176,11 @@ export default function ApprovalCard({
     setEditLoading(false);
 
     if (!result.success) {
+      if (result.error === "duplicate_found" && result.existing_patient_id) {
+        setMergePatientId(result.existing_patient_id);
+        setShowMergeDialog(true);
+        return;
+      }
       setEditError(result.error ?? "Failed to update patient.");
       return;
     }
@@ -182,8 +193,30 @@ export default function ApprovalCard({
     setEditing(false);
   }
 
+  async function handleMergeConfirm() {
+    if (!mergePatientId) return;
+    setMergeLoading(true);
+    const result = await mergeVisitToPatient(visit.visit_id, mergePatientId);
+    setMergeLoading(false);
+    setShowMergeDialog(false);
+    setMergePatientId(null);
+    setEditing(false);
+
+    if (result.success) {
+      setMergeSuccess(`Visit linked to ${result.target_patient_name ?? "existing patient"}.`);
+      setTimeout(() => setMergeSuccess(""), 3000);
+    } else {
+      setEditError(result.error ?? "Failed to merge.");
+    }
+  }
+
+  function handleMergeCancel() {
+    setShowMergeDialog(false);
+    setMergePatientId(null);
+  }
+
   const isReturning = visit.match_type === "returning";
-  const busy = approving || denying || editing;
+  const busy = approving || denying || editing || mergeLoading;
   const isPending = visit.phone_verification_pending;
   const noPhone = !visit.phone_masked && !isPending;
 
@@ -508,6 +541,39 @@ export default function ApprovalCard({
         )}
 
       </div>
+      )}
+
+      {/* Merge success message */}
+      {mergeSuccess && (
+        <div className="mt-3 rounded-lg bg-green-50 px-3 py-2">
+          <p className="text-xs font-medium text-green-700">{mergeSuccess}</p>
+        </div>
+      )}
+
+      {/* Merge confirmation dialog */}
+      {showMergeDialog && (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3">
+          <p className="text-sm font-medium text-amber-800 mb-1">Duplicate patient found</p>
+          <p className="text-xs text-amber-700 mb-3">
+            A patient with this name, birthday, and phone already exists. Would you like to link this visit to the existing patient record instead?
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleMergeConfirm}
+              disabled={mergeLoading}
+              className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              {mergeLoading ? "Linking..." : "Yes, link to existing patient"}
+            </button>
+            <button
+              onClick={handleMergeCancel}
+              disabled={mergeLoading}
+              className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-slate hover:bg-gray-200 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

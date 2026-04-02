@@ -94,7 +94,7 @@ BEGIN
   SELECT COALESCE(jsonb_object_agg(sub.src, sub.cnt), '{}'::jsonb)
   INTO v_by_source
   FROM (
-    SELECT v.discovery_source AS src, COUNT(*) AS cnt
+    SELECT LOWER(v.discovery_source) AS src, COUNT(*) AS cnt
     FROM public.visits v
     WHERE v.org_id = v_org_id
       AND (p_location_id IS NULL OR v.location_id = p_location_id)

@@ -72,6 +72,7 @@ interface CheckinFlowProps {
   teamCode?: string;
   onVisitCreated?: (visitId: string) => void;
   onPhoneComplete?: () => void;
+  onPatientReady?: () => void;
 }
 
 interface MedicalInfo {
@@ -101,6 +102,7 @@ export default function CheckinFlow({
   teamCode,
   onVisitCreated,
   onPhoneComplete,
+  onPatientReady,
 }: CheckinFlowProps) {
   const [state, setState] = useState<FlowState>(
     locationData.active ? "form" : "inactive"
@@ -194,6 +196,11 @@ export default function CheckinFlow({
     const timer = setTimeout(() => setPhoneRetryReady(true), remaining);
     return () => clearTimeout(timer);
   }, [phoneRetryAt]);
+
+  // Notify parent when patient reaches waiting state (phone + discovery done)
+  useEffect(() => {
+    if (state === "waiting" && onPatientReady) onPatientReady();
+  }, [state, onPatientReady]);
 
   // Summary generation: 45s slow warning + 60s timeout
   const [summaryWarning, setSummaryWarning] = useState(false);
