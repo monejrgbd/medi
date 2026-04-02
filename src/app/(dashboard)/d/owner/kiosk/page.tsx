@@ -1,7 +1,7 @@
 import KioskSetupGuide from "@/components/dashboard/KioskSetupGuide";
 
 export const metadata = {
-  title: "Kiosk Setup — Hilt Health",
+  title: "Tablet and TV Setup — Hilt Health",
 };
 
 export default function KioskPage() {

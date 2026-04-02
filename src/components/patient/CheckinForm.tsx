@@ -45,6 +45,7 @@ interface CheckinFormProps {
   loading: boolean;
   error: string;
   demoDefaults?: { firstName: string; lastName: string; birthday: string; sex: string };
+  preFill?: { firstName: string; lastName: string };
 }
 
 export default function CheckinForm({
@@ -55,9 +56,10 @@ export default function CheckinForm({
   loading,
   error,
   demoDefaults,
+  preFill,
 }: CheckinFormProps) {
-  const [firstName, setFirstName] = useState(demoDefaults?.firstName ?? "");
-  const [lastName, setLastName] = useState(demoDefaults?.lastName ?? "");
+  const [firstName, setFirstName] = useState(demoDefaults?.firstName ?? preFill?.firstName ?? "");
+  const [lastName, setLastName] = useState(demoDefaults?.lastName ?? preFill?.lastName ?? "");
   const [birthday, setBirthday] = useState(demoDefaults?.birthday ?? "");
   const [sex, setSex] = useState(demoDefaults?.sex ?? "male");
   const [countryCode, setCountryCode] = useState("+1");
@@ -135,6 +137,17 @@ export default function CheckinForm({
         <h1 className="text-xl font-bold text-ink">{locationName}</h1>
         {address && <p className="mt-0.5 text-xs text-slate">{address}</p>}
       </div>
+
+      {preFill && (
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-center">
+          <p className="text-sm font-medium text-blue-800">
+            Your clinic has started your check in
+          </p>
+          <p className="text-xs text-blue-600 mt-0.5">
+            Please confirm your details below
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {/* Row 1: First name + Last name */}

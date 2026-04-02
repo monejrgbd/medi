@@ -1,0 +1,36 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.capture_email(
+  p_email text,
+  p_source text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+BEGIN
+  IF p_email IS NULL OR length(trim(p_email)) = 0 OR p_email NOT LIKE '%@%.%' THEN
+    RAISE EXCEPTION 'Valid email is required';
+  END IF;
+
+  INSERT INTO public.email_captures (email, source)
+  VALUES (lower(trim(p_email)), COALESCE(trim(p_source), 'homepage'));
+END;
+$function$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.capture_email(
+  p_email text,
+  p_source text DEFAULT 'homepage'
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+BEGIN
+  PERFORM private.capture_email(p_email, p_source);
+END;
+$function$;

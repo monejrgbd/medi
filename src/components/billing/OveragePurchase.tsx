@@ -58,7 +58,8 @@ export default function OveragePurchase({ onPurchased, subscriptionPlan }: Overa
     btnContainerRef.current.innerHTML = "";
 
     const btn = window.paypal.Buttons({
-      style: { layout: "horizontal", label: "pay", height: 40, tagline: false },
+      style: { layout: "vertical", label: "pay", height: 40, tagline: false },
+      fundingSource: undefined,
       createOrder: (
         _data: unknown,
         actions: { order: { create: (opts: Record<string, unknown>) => Promise<string> } }
@@ -178,6 +179,7 @@ export default function OveragePurchase({ onPurchased, subscriptionPlan }: Overa
           ? `$1 each. ${TOPUP_OPTIONS.find((o) => o.key === feature)?.desc || ""} Top ups do not expire.`
           : "Credits are $1 each. Added immediately after payment."}
       </p>
+      <p className="text-xs text-ash mt-1">Pay with PayPal or debit/credit card.</p>
     </div>
   );
 }

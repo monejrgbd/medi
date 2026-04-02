@@ -4,11 +4,94 @@ import { useState } from "react";
 import Link from "next/link";
 
 export default function KioskSetupGuide() {
+  const [section, setSection] = useState<"tablet" | "tv">("tablet");
   const [tab, setTab] = useState<"ipad" | "android">("ipad");
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-slate mb-2">
+      {/* Section selector */}
+      <div className="flex gap-1 rounded-lg bg-gray-100 p-1">
+        <button
+          onClick={() => setSection("tablet")}
+          className={`flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+            section === "tablet" ? "bg-white text-ink shadow-sm" : "text-slate"
+          }`}
+        >
+          Check in Tablet
+        </button>
+        <button
+          onClick={() => setSection("tv")}
+          className={`flex-1 rounded-md px-4 py-2.5 text-sm font-medium transition-colors ${
+            section === "tv" ? "bg-white text-ink shadow-sm" : "text-slate"
+          }`}
+        >
+          Queue TV
+        </button>
+      </div>
+
+      {section === "tv" && (
+        <>
+          <p className="text-sm text-slate">
+            Display a live queue screen in your waiting room so patients can track their number.
+          </p>
+
+          <div className="rounded-xl border border-gray-100 bg-white p-6">
+            <h2 className="text-lg font-semibold text-ink mb-1">Before You Start</h2>
+            <p className="text-sm text-slate mb-4">
+              Enable Queue Display for your location and get the TV link.
+            </p>
+            <Link
+              href="/d/owner/locations"
+              className="inline-flex items-center gap-2 rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark transition-colors"
+            >
+              Go to Locations
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <p className="text-xs text-slate mt-3">
+              Navigate to your location &rarr; QR Code tab &rarr; switch to &ldquo;Queue Display&rdquo; &rarr; enable the toggle.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-gray-100 bg-white p-6">
+            <h2 className="text-lg font-semibold text-ink mb-4">Setup Options</h2>
+            <ol className="space-y-4">
+              <Step n={1} title="Smart TV with a browser">
+                Open the TV&apos;s built-in browser, scan the QR code from your phone to send the link, or type it in. Bookmark it for daily use.
+              </Step>
+              <Step n={2} title="Chromecast or Fire Stick">
+                Open the queue link on your phone&apos;s browser, then cast the tab to your TV.
+              </Step>
+              <Step n={3} title="Dedicated tablet or stick PC">
+                Use a tablet or stick PC connected to the TV via HDMI. Open the link in a browser and set it as the homepage.
+              </Step>
+            </ol>
+          </div>
+
+          <div className="rounded-xl border border-gray-100 bg-white p-6">
+            <h2 className="text-lg font-semibold text-ink mb-4">Tips</h2>
+            <ul className="space-y-3">
+              <Tip title="Tap to go fullscreen">
+                The queue screen prompts to enter fullscreen on first tap. This hides the browser address bar and navigation.
+              </Tip>
+              <Tip title="Numbers only, no names">
+                The screen shows queue numbers only. Patient names are never displayed for privacy.
+              </Tip>
+              <Tip title="Auto updates">
+                The screen refreshes every 5 seconds. No manual refresh needed.
+              </Tip>
+              <Tip title="Works without login">
+                The queue screen is a public page. No login required on the TV.
+              </Tip>
+            </ul>
+          </div>
+        </>
+      )}
+
+      {section === "tablet" && (
+      <>
+      <p className="text-sm text-slate">
         Turn any tablet into a dedicated check-in station for your waiting room.
       </p>
 
@@ -147,6 +230,8 @@ export default function KioskSetupGuide() {
           </Tip>
         </ul>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -1,0 +1,81 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.update_organization_name(
+  p_auth_uid uuid,
+  p_name text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_org_id uuid;
+  v_base_slug text;
+  v_suffix text;
+  v_new_slug text;
+BEGIN
+  IF p_name IS NULL OR length(trim(p_name)) = 0 THEN
+    RAISE EXCEPTION 'Organization name is required';
+  END IF;
+
+  -- Get org where caller is owner
+  SELECT su.org_id INTO v_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_auth_uid
+    AND su.is_owner = true
+    AND su.is_deleted = false;
+
+  IF v_org_id IS NULL THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  -- Only regenerate slug if no non-owner staff exist (safe during onboarding,
+  -- avoids breaking staff synthetic emails like {username}@{slug}.staff.hilt)
+  IF NOT EXISTS (
+    SELECT 1 FROM public.staff_users
+    WHERE org_id = v_org_id AND is_owner = false AND is_deleted = false
+  ) THEN
+    v_base_slug := lower(regexp_replace(trim(p_name), '[^a-zA-Z0-9]+', '-', 'g'));
+    v_base_slug := trim(BOTH '-' FROM v_base_slug);
+    v_suffix := substr(md5(random()::text), 1, 4);
+    v_new_slug := v_base_slug || '-' || v_suffix;
+
+    UPDATE public.organizations
+    SET name = trim(p_name), slug = v_new_slug
+    WHERE id = v_org_id;
+  ELSE
+    -- Staff exist: only update name, preserve slug for staff emails
+    UPDATE public.organizations
+    SET name = trim(p_name)
+    WHERE id = v_org_id;
+  END IF;
+
+EXCEPTION
+  WHEN unique_violation THEN
+    -- Slug collision: retry with different suffix
+    v_suffix := substr(md5(random()::text || clock_timestamp()::text), 1, 4);
+    v_new_slug := v_base_slug || '-' || v_suffix;
+
+    UPDATE public.organizations
+    SET name = trim(p_name), slug = v_new_slug
+    WHERE id = v_org_id;
+END;
+$function$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.update_organization_name(
+  p_name text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  PERFORM private.update_organization_name(v_auth_uid, p_name);
+END;
+$function$;

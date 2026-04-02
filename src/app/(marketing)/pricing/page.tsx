@@ -150,7 +150,7 @@ function HeroCTA() {
     <FadeIn>
       <div className="mx-auto mb-12 flex flex-col items-center gap-3">
         <Link
-          href="/start-trial"
+          href="/d/owner/subscribe"
           className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
         >
           Start Free Trial, up to $200
@@ -348,7 +348,7 @@ function PlanCards() {
                 {/* CTA */}
                 <div className="mt-auto">
                   <Link
-                    href="/start-trial"
+                    href="/d/owner/subscribe"
                     className={`block rounded-xl py-3 text-center text-sm font-semibold transition-colors ${
                       plan.highlight
                         ? "bg-hilt-blue text-white hover:bg-hilt-blue-dark"
@@ -417,7 +417,7 @@ function PlanCards() {
             </div>
             <div className="shrink-0">
               <Link
-                href="/start-trial"
+                href="/d/owner/subscribe"
                 className="inline-block rounded-xl border-2 border-hilt-blue px-6 py-2.5 text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
               >
                 Get Started
@@ -610,7 +610,7 @@ function BottomCTA() {
           Join clinics across Canada using AI to streamline patient pre screening.
         </p>
         <Link
-          href="/start-trial"
+          href="/d/owner/subscribe"
           className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
         >
           Start Your Free Trial

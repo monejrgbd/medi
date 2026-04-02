@@ -1,0 +1,68 @@
+-- Anon-callable: patients open links without auth
+CREATE OR REPLACE FUNCTION public.validate_pre_checkin_token(
+  p_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_tok record;
+  v_visit_status text;
+BEGIN
+  IF p_token IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Token is required');
+  END IF;
+
+  SELECT t.*, l.org_id AS loc_org_id
+  INTO v_tok
+  FROM public.pre_checkin_tokens t
+  JOIN public.locations l ON l.id = t.location_id
+  WHERE t.token = p_token;
+
+  IF v_tok IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid token');
+  END IF;
+
+  IF v_tok.expires_at < now() THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Token has expired');
+  END IF;
+
+  -- Token already used: check if visit is still active
+  IF v_tok.used AND v_tok.visit_id IS NOT NULL THEN
+    SELECT v.status INTO v_visit_status
+    FROM public.visits v
+    WHERE v.id = v_tok.visit_id;
+
+    IF v_visit_status IS NOT NULL AND v_visit_status NOT IN ('completed', 'left') THEN
+      -- Active visit: return session info for recovery
+      RETURN jsonb_build_object(
+        'success', true,
+        'valid', true,
+        'used', true,
+        'session_token', v_tok.session_token,
+        'visit_id', v_tok.visit_id,
+        'location_id', v_tok.location_id
+      );
+    ELSE
+      -- Visit is done, token is spent
+      RETURN jsonb_build_object('success', false, 'error', 'This link has already been used');
+    END IF;
+  END IF;
+
+  -- Token unused: return name for pre-fill
+  RETURN jsonb_build_object(
+    'success', true,
+    'valid', true,
+    'used', false,
+    'first_name', v_tok.first_name,
+    'last_name', v_tok.last_name,
+    'location_id', v_tok.location_id
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.validate_pre_checkin_token(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.validate_pre_checkin_token(uuid) TO anon, authenticated;

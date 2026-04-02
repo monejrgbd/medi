@@ -52,6 +52,11 @@ export default function CampaignReview({
   const [cancellingCampaign, setCancellingCampaign] = useState(false);
   const [togglingExclude, setTogglingExclude] = useState<string | null>(null);
 
+  const isPAyG = org?.subscription_plan === "pay_as_you_go";
+  const isTrial = org?.subscription_plan?.includes("trial");
+  const isCreditsMode = isPAyG || isTrial;
+  const budgetLabel = isCreditsMode ? "credits" : "from marketing budget";
+
   const activeCount = recipients.filter((r) => !excludedIds.has(r.id)).length;
   const creditsCost = activeCount * MARKETING_SMS_CREDIT_COST;
 
@@ -143,8 +148,11 @@ export default function CampaignReview({
       return;
     }
 
+    const costLabel = isCreditsMode
+      ? `This will use ${creditsCost.toFixed(1)} credits.`
+      : `This will use ${activeCount} SMS from your marketing budget.`;
     const confirmed = window.confirm(
-      `Send this campaign to ${activeCount} patient${activeCount !== 1 ? "s" : ""}? This will use ${creditsCost.toFixed(1)} credits.`
+      `Send this campaign to ${activeCount} patient${activeCount !== 1 ? "s" : ""}? ${costLabel}`
     );
     if (!confirmed) return;
 
@@ -336,11 +344,12 @@ export default function CampaignReview({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-ink font-medium">
-              Send to {activeCount} patient{activeCount !== 1 ? "s" : ""} ({creditsCost.toFixed(1)}{" "}
-              credits)
+              Send to {activeCount} patient{activeCount !== 1 ? "s" : ""}{isCreditsMode ? ` (${creditsCost.toFixed(1)} credits)` : ""}
             </p>
             <p className="text-xs text-ash mt-0.5">
-              {MARKETING_SMS_CREDIT_COST} credits per SMS
+              {isCreditsMode
+                ? `${MARKETING_SMS_CREDIT_COST} credits per SMS`
+                : `${activeCount} SMS ${budgetLabel}`}
             </p>
           </div>
           <button

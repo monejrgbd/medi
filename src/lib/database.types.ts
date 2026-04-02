@@ -381,6 +381,27 @@ export type Database = {
           },
         ]
       }
+      email_captures: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       feature_requests: {
         Row: {
           content: string
@@ -1309,6 +1330,80 @@ export type Database = {
           },
           {
             foreignKeyName: "phone_verifications_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pre_checkin_tokens: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string
+          first_name: string
+          id: string
+          last_name: string
+          location_id: string
+          org_id: string
+          session_token: string | null
+          token: string
+          used: boolean
+          visit_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          first_name: string
+          id?: string
+          last_name: string
+          location_id: string
+          org_id: string
+          session_token?: string | null
+          token?: string
+          used?: boolean
+          visit_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          location_id?: string
+          org_id?: string
+          session_token?: string | null
+          token?: string
+          used?: boolean
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_checkin_tokens_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_checkin_tokens_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_checkin_tokens_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_checkin_tokens_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visits"
@@ -2584,6 +2679,7 @@ export type Database = {
         }
         Returns: Json
       }
+      apply_premium_code: { Args: { p_code: string }; Returns: Json }
       approve_patient: {
         Args: {
           p_follow_up_id?: string
@@ -2604,6 +2700,10 @@ export type Database = {
       cancel_campaign: { Args: { p_campaign_id: string }; Returns: Json }
       cancel_claim: { Args: { p_visit_id: string }; Returns: Json }
       cancel_subscription: { Args: never; Returns: Json }
+      capture_email: {
+        Args: { p_email: string; p_source?: string }
+        Returns: undefined
+      }
       change_subscription_plan: { Args: { p_new_plan: string }; Returns: Json }
       check_and_deduct_feature_budget: {
         Args: {
@@ -2626,45 +2726,31 @@ export type Database = {
         Returns: Json
       }
       check_location_active: { Args: { p_location_id: string }; Returns: Json }
-      checkin_patient:
-        | {
-            Args: {
-              p_birthday: string
-              p_first_name: string
-              p_last_name: string
-              p_location_id: string
-              p_phone?: string
-              p_sex?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_birthday: string
-              p_first_name: string
-              p_last_name: string
-              p_location_id: string
-              p_phone?: string
-              p_referred_by?: string
-              p_sex?: string
-              p_was_referred?: boolean
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_birthday: string
-              p_first_name: string
-              p_last_name: string
-              p_location_id: string
-              p_phone?: string
-              p_referred_by?: string
-              p_sex?: string
-              p_team_code?: string
-              p_was_referred?: boolean
-            }
-            Returns: Json
-          }
+      checkin_patient: {
+        Args: {
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
+          p_phone?: string
+          p_referred_by?: string
+          p_sex?: string
+          p_team_code?: string
+          p_was_referred?: boolean
+        }
+        Returns: Json
+      }
+      checkin_with_token: {
+        Args: {
+          p_birthday: string
+          p_first_name: string
+          p_last_name: string
+          p_phone?: string
+          p_sex?: string
+          p_token: string
+        }
+        Returns: Json
+      }
       claim_patient: { Args: { p_visit_id: string }; Returns: Json }
       cleanup_demo_data: { Args: never; Returns: undefined }
       complete_campaign_sending: {
@@ -2716,6 +2802,14 @@ export type Database = {
           p_approval_code?: string
           p_name: string
           p_owner_auth_uid: string
+        }
+        Returns: Json
+      }
+      create_pre_checkin_token: {
+        Args: {
+          p_first_name: string
+          p_last_name: string
+          p_location_id: string
         }
         Returns: Json
       }
@@ -3259,6 +3353,7 @@ export type Database = {
         Returns: Json
       }
       update_organization: { Args: { p_name: string }; Returns: Json }
+      update_organization_name: { Args: { p_name: string }; Returns: undefined }
       update_pets: {
         Args: { p_patient_id: string; p_pets: string[] }
         Returns: Json
@@ -3287,6 +3382,7 @@ export type Database = {
         Returns: Json
       }
       validate_approval_code: { Args: { p_code: string }; Returns: Json }
+      validate_pre_checkin_token: { Args: { p_token: string }; Returns: Json }
       verify_demo_otp: {
         Args: { p_code: string; p_email: string }
         Returns: Json

@@ -21,6 +21,23 @@ export async function setupOnboardingDemo(locationId: string) {
   return data as { success: boolean; error?: string; staff_user_id?: string };
 }
 
+export async function updateOrganizationProfile(orgName: string, fullName: string) {
+  await requireAuth();
+  const supabase = await createClient();
+
+  const { error: nameError } = await supabase.rpc("update_organization_name", {
+    p_name: orgName,
+  });
+  if (nameError) return { success: false, error: "Failed to update organization name" };
+
+  const { error: userError } = await supabase.auth.updateUser({
+    data: { full_name: fullName },
+  });
+  if (userError) return { success: false, error: "Failed to update name" };
+
+  return { success: true };
+}
+
 export async function approveOnboardingVisit(visitId: string) {
   await requireAuth();
   const supabase = await createClient();

@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import OwnerSignUpForm from "@/components/OwnerSignUpForm";
@@ -12,9 +11,5 @@ export default async function SignUpPage() {
   const user = await getUser();
   if (user) redirect("/d/select-role");
 
-  return (
-    <Suspense>
-      <OwnerSignUpForm />
-    </Suspense>
-  );
+  return <OwnerSignUpForm />;
 }

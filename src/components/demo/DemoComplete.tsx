@@ -74,7 +74,7 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
           <button
             onClick={async () => {
               await signOutDemoUser();
-              router.push("/start-trial");
+              router.push("/signup");
             }}
             className="inline-flex items-center justify-center px-8 py-2.5 bg-hilt-blue text-white font-medium rounded-lg hover:bg-hilt-blue/90 transition-colors"
           >

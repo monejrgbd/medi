@@ -17,8 +17,13 @@ import AIDiagnosticPanel from "@/components/doctor/AIDiagnosticPanel";
 import NotesPanel from "@/components/doctor/NotesPanel";
 import AttachmentsSection from "@/components/doctor/AttachmentsSection";
 import DiagnosisForm from "@/components/doctor/DiagnosisForm";
+import ReferralForm from "@/components/doctor/ReferralForm";
+import ReferralHistory from "@/components/doctor/ReferralHistory";
+import VisitHistoryAccordion from "@/components/doctor/VisitHistoryAccordion";
 import VitalsHistory from "@/components/nurse/VitalsHistory";
 import VaccineHistory from "@/components/nurse/VaccineHistory";
+import { useRoleSafe } from "@/contexts/RoleContext";
+import { toast } from "sonner";
 import type { ClaimedVisit, QueueVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 
 interface VisitNote {
@@ -111,7 +116,7 @@ interface VisitDetail {
   vaccines?: VaccineRecord[];
 }
 
-type FocusTab = "summary" | "transcript" | "notes" | "attachments" | "vitals" | "vaccines";
+type FocusTab = "summary" | "transcript" | "notes" | "attachments" | "vitals" | "vaccines" | "history" | "referrals";
 
 interface FocusModeProps {
   locationId: string;
@@ -137,6 +142,8 @@ export default function FocusMode({
   nurseEnabled = false,
 }: FocusModeProps) {
   const router = useRouter();
+  const roleCtx = useRoleSafe();
+  const [showReferral, setShowReferral] = useState(false);
   const [currentVisit, setCurrentVisit] = useState<ClaimedVisit | null>(
     initialClaimed[0] || null
   );
@@ -453,6 +460,8 @@ export default function FocusMode({
     { key: "vitals", label: `Vitals (${(detail?.vitals || []).length})`, show: (detail?.vitals || []).length > 0 },
     { key: "vaccines", label: `Vaccines (${(detail?.vaccines || []).length})`, show: (detail?.vaccines || []).length > 0 },
     { key: "attachments", label: `Files (${(detail?.attachments || []).length})`, show: true },
+    { key: "history", label: "History", show: true },
+    { key: "referrals", label: "Referrals", show: true },
   ];
 
   return (
@@ -634,6 +643,10 @@ export default function FocusMode({
                 canUpload={true}
               />
             )}
+            {tab === "history" && (
+              <VisitHistoryAccordion patientId={detail.patient.id} />
+            )}
+            {tab === "referrals" && <ReferralHistory />}
           </div>
         </div>
       ) : null}
@@ -660,6 +673,22 @@ export default function FocusMode({
               {cancelling ? "Cancelling..." : "Cancel Claim"}
             </button>
             <button
+              onClick={() => {
+                if (demoMode) {
+                  toast.info("Referral is not available in the demo");
+                  return;
+                }
+                if (!roleCtx?.org?.verified) {
+                  toast.error("To send referrals, your clinic must be verified. Contact business@hilthealth.com to apply.");
+                  return;
+                }
+                setShowReferral(true);
+              }}
+              className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 disabled:opacity-50 transition-colors"
+            >
+              Refer
+            </button>
+            <button
               onClick={() => setShowDiagnosis(true)}
               className={`flex-1 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors ${demoMode ? "animate-pulse ring-2 ring-green-400 ring-offset-2" : ""}`}
             >
@@ -681,6 +710,16 @@ export default function FocusMode({
           onClose={() => setShowDiagnosis(false)}
           onComplete={handleVisitCompleted}
           demoMode={demoMode}
+        />
+      )}
+
+      {/* Referral modal */}
+      {showReferral && detail && (
+        <ReferralForm
+          visitId={detail.visit.id}
+          patientId={detail.patient.id}
+          onClose={() => setShowReferral(false)}
+          onComplete={() => setShowReferral(false)}
         />
       )}
     </div>

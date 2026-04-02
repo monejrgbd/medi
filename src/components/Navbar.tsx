@@ -53,7 +53,7 @@ export default function Navbar() {
               Sign In
             </Link>
             <a
-              href="/start-trial"
+              href="/signup"
               className="rounded-xl bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
             >
               Start Free Trial
@@ -98,7 +98,7 @@ export default function Navbar() {
               Sign In
             </Link>
             <a
-              href="/start-trial"
+              href="/signup"
               className="block w-full rounded-xl bg-hilt-blue px-5 py-3 text-center text-sm font-semibold text-white"
             >
               Start Free Trial

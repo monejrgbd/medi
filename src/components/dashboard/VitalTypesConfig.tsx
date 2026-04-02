@@ -179,7 +179,7 @@ export default function VitalTypesConfig() {
         <div className="divide-y divide-gray-100">
           {predefined.map((vt) => {
             const config = getConfigForType(vt.id);
-            const isEnabled = config?.is_enabled ?? false;
+            const isEnabled = config?.is_enabled ?? true;  // predefined vitals are enabled by default
             const isSaving = saving === vt.id;
 
             return (

@@ -135,7 +135,7 @@ export default function DoctorDashboard({
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [urgentPatient, setUrgentPatient] = useState<string | null>(null);
-  const [focusMode, setFocusMode] = useState(demoMode);
+  const [focusMode, setFocusMode] = useState(false);
   const [hasMoreCompleted, setHasMoreCompleted] = useState(initialHasMoreCompleted);
   const [hasMoreLeft, setHasMoreLeft] = useState(initialHasMoreLeft);
   const [loadingMore, setLoadingMore] = useState(false);

@@ -7,6 +7,7 @@ import {
   cancelCampaign,
 } from "@/app/(dashboard)/d/_actions/marketing";
 import { ArrowLeft, Loader2, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { useRole } from "@/contexts/RoleContext";
 import { toast } from "sonner";
 import CampaignReview from "./CampaignReview";
 
@@ -23,6 +24,9 @@ export default function CampaignDetail({
 }: CampaignDetailProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { org } = useRole();
+  const isCreditsMode = org?.subscription_plan === "pay_as_you_go" || org?.subscription_plan?.includes("trial");
+  const costLabel = isCreditsMode ? "{costLabel}" : "Marketing budget used";
   const listPath = pathname?.startsWith("/d/marketer") ? "/d/marketer" : "/d/owner/marketing";
   const [data, setData] = useState(initialData);
   const [cancelling, setCancelling] = useState(false);
@@ -258,7 +262,7 @@ export default function CampaignDetail({
               <p className="text-2xl font-bold text-blue-700">
                 {credits.toFixed(1)}
               </p>
-              <p className="text-xs text-blue-600">Credits charged</p>
+              <p className="text-xs text-blue-600">{costLabel}</p>
             </div>
             {durationStr && (
               <div className="rounded-lg bg-gray-50 p-4 text-center">
@@ -334,7 +338,7 @@ export default function CampaignDetail({
               <p className="text-2xl font-bold text-ink">
                 {credits.toFixed(1)}
               </p>
-              <p className="text-xs text-ash">Credits charged</p>
+              <p className="text-xs text-ash">{costLabel}</p>
             </div>
           </div>
         )}

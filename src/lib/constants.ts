@@ -1,8 +1,8 @@
 // Per-provider pricing with AI model differentiation
 export const PLAN_CONFIG = {
-  starter:      { ai: "haiku" as const,  price: 79,  annual: 63,  credits: 20,  label: "Starter" },
-  professional: { ai: "sonnet" as const, price: 149, annual: 119, credits: 100, label: "Professional" },
-  business:     { ai: "sonnet" as const, price: 249, annual: 199, credits: 300, label: "Business" },
+  starter:      { ai: "standard" as const,  price: 79,  annual: 63,  credits: 20,  label: "Starter" },
+  professional: { ai: "advanced" as const, price: 149, annual: 119, credits: 100, label: "Professional" },
+  business:     { ai: "advanced" as const, price: 249, annual: 199, credits: 300, label: "Business" },
 } as const;
 
 export const PROVIDER_ROLES = ["doctor", "nurse"] as const;

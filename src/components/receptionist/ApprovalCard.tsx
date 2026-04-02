@@ -257,11 +257,6 @@ export default function ApprovalCard({
           ) : (
             <>
               <div className="flex items-center gap-2 mb-1">
-                {visit.queue_number != null && (
-                  <span className="inline-flex items-center justify-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 tabular-nums">
-                    #{formatQueueNumber(visit.queue_number, "fifo")}
-                  </span>
-                )}
                 <h3 className="font-semibold text-ink">
                   {displayFirst} {displayLast}
                 </h3>
@@ -312,12 +307,17 @@ export default function ApprovalCard({
       )}
 
       {!isReturning && (
-        <button
-          onClick={handleExpand}
-          className="mb-3 text-xs text-hilt-blue hover:underline"
-        >
-          {expanded ? "Hide" : "Show"} similar patients
-        </button>
+        <div className="mb-3">
+          <button
+            onClick={handleExpand}
+            className="text-xs text-hilt-blue hover:underline"
+          >
+            {expanded ? "Hide duplicates" : "Check for duplicates"}
+          </button>
+          <p className="text-xs text-ash mt-0.5">
+            If you suspect this patient has visited before, use this to investigate.
+          </p>
+        </div>
       )}
 
       {expanded && (

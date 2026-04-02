@@ -1,0 +1,111 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.create_pre_checkin_token(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_first_name text,
+  p_last_name text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_owner_id uuid;
+  v_is_receptionist boolean := false;
+  v_clean_first text;
+  v_clean_last text;
+  v_location_exists boolean;
+  v_token_id uuid;
+  v_token uuid;
+BEGIN
+  -- Sanitize names
+  v_clean_first := regexp_replace(trim(COALESCE(p_first_name, '')), '<[^>]*>', '', 'g');
+  v_clean_last := regexp_replace(trim(COALESCE(p_last_name, '')), '<[^>]*>', '', 'g');
+
+  IF length(v_clean_first) = 0 OR length(v_clean_last) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'First and last name are required');
+  END IF;
+  IF length(v_clean_first) > 100 OR length(v_clean_last) > 100 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Name exceeds maximum length');
+  END IF;
+
+  -- Resolve caller
+  SELECT su.id, su.org_id INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
+  END IF;
+
+  -- Authorization: owner or receptionist at location
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_caller_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can create tokens
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'receptionist'
+        AND sr.location_id = p_location_id
+    ) INTO v_is_receptionist;
+
+    IF NOT v_is_receptionist THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Check location exists and belongs to org
+  SELECT EXISTS(
+    SELECT 1 FROM public.locations l
+    WHERE l.id = p_location_id AND l.org_id = v_caller_org_id
+  ) INTO v_location_exists;
+
+  IF NOT v_location_exists THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Create token
+  INSERT INTO public.pre_checkin_tokens (org_id, location_id, first_name, last_name, created_by)
+  VALUES (v_caller_org_id, p_location_id, v_clean_first, v_clean_last, v_caller_staff_id)
+  RETURNING id, token INTO v_token_id, v_token;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'token', v_token,
+    'token_id', v_token_id
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.create_pre_checkin_token(
+  p_location_id uuid,
+  p_first_name text,
+  p_last_name text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.create_pre_checkin_token(v_auth_uid, p_location_id, p_first_name, p_last_name);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_pre_checkin_token(uuid, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_pre_checkin_token(uuid, text, text) TO authenticated;

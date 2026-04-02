@@ -86,18 +86,18 @@ export default function CreditDashboard() {
 
   // For subscription plans: show plan overview + per-feature usage
   if (!isCreditsMode && planInfo) {
-    const featureCaps: Record<string, { sms: number; scan: number; opus: number; opusCost: number }> = {
-      starter: { sms: 100, scan: 10000, opus: 1, opusCost: 3.5 },
-      professional: { sms: 500, scan: 50000, opus: 5, opusCost: 3 },
-      business: { sms: 1000, scan: 100000, opus: 25, opusCost: 2.5 },
-      enterprise: { sms: 10000, scan: 1000000, opus: 1000, opusCost: 4 },
+    const featureCaps: Record<string, { sms: number; scan: number; premiumAi: number; premiumAiCost: number }> = {
+      starter: { sms: 100, scan: 10000, premiumAi: 1, premiumAiCost: 3.5 },
+      professional: { sms: 500, scan: 50000, premiumAi: 5, premiumAiCost: 3 },
+      business: { sms: 1000, scan: 100000, premiumAi: 25, premiumAiCost: 2.5 },
+      enterprise: { sms: 10000, scan: 1000000, premiumAi: 1000, premiumAiCost: 4 },
     };
-    const caps = featureCaps[data.subscription_plan] || { sms: 0, scan: 0, opus: 0 };
+    const caps = featureCaps[data.subscription_plan] || { sms: 0, scan: 0, premiumAi: 0 };
     const fu = (data as unknown as { feature_usage?: { sms_used: number; scan_used: number; opus_used: number } }).feature_usage;
     const smsUsed = Math.round((fu?.sms_used || 0) / 0.1); // credits → SMS count
     const scanUsed = Math.round((fu?.scan_used || 0) * 1000); // credits → patient count
-    const opusCost = caps.opusCost || 4;
-    const opusUsed = Math.round((fu?.opus_used || 0) / opusCost); // credits → conversation count
+    const premiumAiCost = caps.premiumAiCost || 4;
+    const premiumAiUsed = Math.round((fu?.opus_used || 0) / premiumAiCost); // credits → conversation count
     const topupsRemaining = Math.round((data as unknown as { topups_remaining?: number }).topups_remaining || 0);
     const trialScreeningsUsed = (data as unknown as { trial_screenings_used?: number }).trial_screenings_used;
     const trialScreeningsLimit = (data as unknown as { trial_screenings_limit?: number }).trial_screenings_limit;
@@ -156,7 +156,7 @@ export default function CreditDashboard() {
         <div className="space-y-3">
           <UsageBar label="Marketing SMS" used={smsUsed} cap={caps.sms} />
           <UsageBar label="AI Patient Scans" used={scanUsed} cap={caps.scan} />
-          {caps.opus > 0 && <UsageBar label="Premium AI Conversations" used={opusUsed} cap={caps.opus} />}
+          {caps.premiumAi > 0 && <UsageBar label="Premium AI Conversations" used={premiumAiUsed} cap={caps.premiumAi} />}
         </div>
 
         {data.billing_cycle_start && (

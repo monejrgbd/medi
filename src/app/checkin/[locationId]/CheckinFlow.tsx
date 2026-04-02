@@ -130,6 +130,11 @@ export default function CheckinFlow({
   const [phoneRetryAt, setPhoneRetryAt] = useState<number | null>(null);
   const [phoneRetryReady, setPhoneRetryReady] = useState(false);
 
+  // Pre-checkin token (from shared link)
+  const [preCheckinToken, setPreCheckinToken] = useState<string | null>(null);
+  const [preCheckinName, setPreCheckinName] = useState<{ first: string; last: string } | null>(null);
+  const [tokenValidating, setTokenValidating] = useState(false);
+
   // Birthday verification for session recovery on shared kiosks
   const [pendingSession, setPendingSession] = useState<{
     token: string;
@@ -222,10 +227,101 @@ export default function CheckinFlow({
     };
   }, [state, visitId, sessionToken]);
 
+  // Pre-checkin token validation on mount (runs before localStorage recovery)
+  useEffect(() => {
+    if (kiosk || !locationData.active) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get("token");
+    if (!urlToken) return;
+
+    setTokenValidating(true);
+    const supabase = createClient();
+    (async () => {
+      const { data, error: rpcError } = await supabase.rpc("validate_pre_checkin_token", {
+        p_token: urlToken,
+      });
+
+      if (rpcError || !data?.success) {
+        // Invalid/expired token — proceed normally
+        setTokenValidating(false);
+        return;
+      }
+
+      // Check location_id matches
+      if (data.location_id && data.location_id !== locationId) {
+        setTokenValidating(false);
+        return;
+      }
+
+      if (data.used && data.session_token) {
+        // Token already used, active visit — recover session without birthday check
+        localStorage.setItem(STORAGE_KEY, data.session_token);
+        setSessionToken(data.session_token);
+
+        const { data: session } = await supabase.rpc("get_patient_session", {
+          p_session_token: data.session_token,
+        });
+
+        if (session?.success) {
+          setPatientFirstName(session.patient_first_name);
+          setHasPreviousVisits(session.has_previous_visits);
+          setConsentGiven(session.consent_given);
+          setVisitId(session.visit_id);
+          if (session.queue_number != null) setQueueNumber(session.queue_number);
+          if (onVisitCreated && session.visit_id) onVisitCreated(session.visit_id);
+          if (session.language) setPatientLanguage(session.language);
+
+          switch (session.status) {
+            case "pending_approval":
+              setState("waiting");
+              break;
+            case "still_answering_ai":
+              if (session.ai_summary) {
+                setSummaryData({ summary: session.ai_summary, structured_card: session.ai_structured_card });
+                setState("summary_review");
+              } else if (session.ai_completed_at) {
+                setState("generating_summary");
+              } else if (!session.consent_given) {
+                setState("first_timer");
+              } else {
+                setState("chatting");
+              }
+              break;
+            case "waiting_doctor_claim":
+              if (session.queue_position !== undefined) setQueuePosition(session.queue_position);
+              if (session.estimated_wait_minutes !== undefined) setEstimatedWait(session.estimated_wait_minutes);
+              setState(session.timeout_flagged ? "timeout" : "queued");
+              break;
+            case "claimed_by_doctor":
+              setState("claimed");
+              break;
+            case "completed":
+              setState("visit_completed");
+              break;
+            case "left":
+              setState("patient_left");
+              break;
+            default:
+              setState("chatting");
+          }
+        }
+        setTokenValidating(false);
+        return;
+      }
+
+      // Token unused: pre-fill form
+      setPreCheckinToken(urlToken);
+      setPreCheckinName({ first: data.first_name, last: data.last_name });
+      setTokenValidating(false);
+    })();
+  }, [locationId, locationData.active, kiosk]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Session recovery on mount — requires birthday verification on shared kiosks
   // Skipped entirely in kiosk mode (localStorage already cleared above)
+  // Also skipped if URL has a ?token= param (token validation effect handles it)
   useEffect(() => {
     if (kiosk) return;
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("token")) return;
     const saved = localStorage.getItem(STORAGE_KEY);
     if (!saved || !locationData.active) return;
 
@@ -475,6 +571,80 @@ export default function CheckinFlow({
     setError("");
 
     const supabase = createClient();
+
+    // Pre-checkin token flow: use checkin_with_token instead
+    if (preCheckinToken) {
+      const { data: tokenData, error: tokenError } = await supabase.rpc("checkin_with_token", {
+        p_token: preCheckinToken,
+        p_first_name: firstName,
+        p_last_name: lastName,
+        p_birthday: birthday,
+        p_sex: sex,
+        p_phone: phone,
+      });
+
+      setLoading(false);
+
+      if (tokenError || !tokenData?.success) {
+        const errMsg = tokenData?.error || tokenError?.message || "Check-in failed.";
+        if (errMsg === "subscription_inactive") {
+          setState("subscription_inactive");
+          return;
+        }
+        setError(errMsg);
+        setState("form");
+        return;
+      }
+
+      setPatientFirstName(firstName);
+      setHasPreviousVisits(tokenData.has_previous_visits);
+      if (tokenData.queue_number != null) setQueueNumber(tokenData.queue_number);
+
+      if (tokenData.match_type === "active_session") {
+        // Already has active visit — recover session
+        setSessionToken(tokenData.session_token);
+        localStorage.setItem(STORAGE_KEY, tokenData.session_token);
+        const { data: session } = await supabase.rpc("get_patient_session", {
+          p_session_token: tokenData.session_token,
+        });
+        if (session?.success) {
+          setConsentGiven(session.consent_given);
+          setVisitId(session.visit_id);
+          if (session.queue_number != null) setQueueNumber(session.queue_number);
+          if (onVisitCreated && session.visit_id) onVisitCreated(session.visit_id);
+          switch (session.status) {
+            case "still_answering_ai":
+              if (!session.consent_given) setState("first_timer");
+              else setState("chatting");
+              break;
+            case "waiting_doctor_claim":
+              setState("queued");
+              break;
+            case "claimed_by_doctor":
+              setState("claimed");
+              break;
+            default:
+              setState("chatting");
+          }
+        }
+        return;
+      }
+
+      // Pre-approved: visit created, skip approval + phone + discovery
+      setSessionToken(tokenData.session_token);
+      setVisitId(tokenData.visit_id);
+      localStorage.setItem(STORAGE_KEY, tokenData.session_token);
+      if (onVisitCreated && tokenData.visit_id) onVisitCreated(tokenData.visit_id);
+
+      if (tokenData.ai_skipped) {
+        setState("queued");
+      } else {
+        setState("first_timer");
+      }
+      return;
+    }
+
+    // Normal flow: checkin_patient
     const { data, error: rpcError } = await supabase.rpc("checkin_patient", {
       p_location_id: locationId,
       p_first_name: firstName,
@@ -883,6 +1053,7 @@ export default function CheckinFlow({
           loading={loading}
           error={error}
           demoDefaults={demoDefaultsRef.current}
+          preFill={preCheckinName ? { firstName: preCheckinName.first, lastName: preCheckinName.last } : undefined}
         />
       );
 

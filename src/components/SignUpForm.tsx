@@ -196,7 +196,7 @@ export default function SignUpForm() {
               <p className="text-lg text-slate">
                 {interest === "meet"
                   ? "Let\u2019s find a time to chat about how Hilt Health can work for your clinic."
-                  : <>Start with 200 free credits. No card required. <Link href="/start-trial" className="text-hilt-blue hover:underline font-medium">See trial details</Link>.</>}
+                  : <>Start with 200 free credits. No card required.</>}
               </p>
             </motion.div>
           </AnimatePresence>

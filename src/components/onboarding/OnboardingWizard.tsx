@@ -9,6 +9,7 @@ import {
   completeOnboarding,
   setupOnboardingDemo,
   approveOnboardingVisit,
+  updateOrganizationProfile,
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
@@ -58,6 +59,13 @@ export default function OnboardingWizard({
   const [nurseEnabled, setNurseEnabled] = useState(false);
   const [vitalsEnabled, setVitalsEnabled] = useState(true);
   const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
+
+  // Step 0 state (Profile)
+  const [profileFullName, setProfileFullName] = useState("");
+  const [profileOrgName, setProfileOrgName] = useState(org.name === "My Clinic" ? "" : org.name);
+  const [premiumCode, setPremiumCode] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState("");
 
   // Step 1 state
   const [locationName, setLocationName] = useState("");
@@ -277,94 +285,95 @@ export default function OnboardingWizard({
     <div>
       <StepIndicator currentStep={step} />
 
-      {/* Step 0: Welcome */}
+      {/* Step 0: Profile */}
       {step === 0 && (
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-ink mb-2">
+        <div className="max-w-md mx-auto">
+          <h2 className="text-2xl font-bold text-ink mb-2 text-center">
             Welcome to Hilt Health
           </h2>
-          <p className="text-lg text-slate mb-6">{org.name}</p>
+          <p className="text-sm text-slate mb-6 text-center">
+            Tell us a bit about yourself and your clinic to get started.
+          </p>
 
-          <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-4 py-2 mb-8">
-            <span className="text-sm font-medium text-blue-800">
-              {creditsRemaining} credits &middot; {daysRemaining} days remaining
-            </span>
+
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink">Your Name</label>
+              <input
+                type="text"
+                required
+                value={profileFullName}
+                onChange={(e) => setProfileFullName(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+                placeholder="Dr. Sarah Smith"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink">Organization Name</label>
+              <input
+                type="text"
+                required
+                value={profileOrgName}
+                onChange={(e) => setProfileOrgName(e.target.value)}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+                placeholder="Smith Family Clinic"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-ink">
+                Premium Code <span className="font-normal text-ash">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={premiumCode}
+                onChange={(e) => setPremiumCode(e.target.value.toUpperCase())}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm font-mono tracking-wider focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+                placeholder="Enter premium code"
+              />
+              <p className="mt-1 text-xs text-ash">Have a premium code? Enter it to unlock additional credits.</p>
+            </div>
           </div>
 
-          <div className="max-w-md mx-auto text-left space-y-3 mb-8">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  AI intake in 130+ languages
-                </p>
-                <p className="text-xs text-slate mt-0.5">
-                  Patients describe symptoms by text or voice. Doctors read a structured summary before walking in.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  Returning patients are remembered
-                </p>
-                <p className="text-xs text-slate mt-0.5">
-                  AI references past visits and picks up where the doctor left off.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  Reviews collected automatically
-                </p>
-                <p className="text-xs text-slate mt-0.5">
-                  Happy patients guided to Google or Yelp. Low ratings come to you privately first.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  Follow ups that carry doctor instructions
-                </p>
-                <p className="text-xs text-slate mt-0.5">
-                  Doctors tag what to ask next time. AI continues with full memory on the return visit.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  Marketing that reads every chart
-                </p>
-                <p className="text-xs text-slate mt-0.5">
-                  Describe who you want to reach in plain English. AI scans visit histories, medications, and conditions to find them.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700"><Check className="h-3 w-3" /></span>
-              <div>
-                <p className="text-sm font-medium text-ink">
-                  Analytics and referral tracking
-                </p>
-                <p className="text-xs text-slate mt-0.5">
-                  Wait times, patient volume, and staff performance across every location. Refer patients digitally and track incoming referrals from other clinics.
-                </p>
-              </div>
-            </div>
-          </div>
+          {profileError && (
+            <div className="mt-3 rounded-lg bg-red-50 p-3 text-sm text-red-600">{profileError}</div>
+          )}
 
           <button
-            onClick={() => setStep(1)}
-            className="rounded-lg bg-hilt-blue px-6 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark"
+            onClick={async () => {
+              if (!profileFullName.trim() || !profileOrgName.trim()) {
+                setProfileError("Both fields are required");
+                return;
+              }
+              setProfileSaving(true);
+              setProfileError("");
+              const result = await updateOrganizationProfile(profileOrgName.trim(), profileFullName.trim());
+              if (!result.success) {
+                setProfileSaving(false);
+                setProfileError(result.error || "Something went wrong");
+                return;
+              }
+
+              // Apply premium code if provided
+              if (premiumCode.trim()) {
+                const { createClient } = await import("@/lib/supabase/client");
+                const supabase = createClient();
+                const { data: codeResult } = await supabase.rpc("apply_premium_code", {
+                  p_code: premiumCode.trim(),
+                });
+                if (codeResult && !codeResult.success) {
+                  setProfileSaving(false);
+                  setProfileError(codeResult.error || "Invalid or already used code");
+                  return;
+                }
+              }
+
+              setProfileSaving(false);
+              setStep(1);
+            }}
+            disabled={profileSaving || !profileFullName.trim() || !profileOrgName.trim()}
+            className="mt-6 w-full rounded-lg bg-hilt-blue px-6 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
           >
-            Set Up Your First Location
+            {profileSaving ? "Saving..." : "Continue"}
           </button>
         </div>
       )}

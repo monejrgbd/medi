@@ -1,0 +1,276 @@
+-- Anon-callable: patient submitting form via pre-checkin link
+CREATE OR REPLACE FUNCTION public.checkin_with_token(
+  p_token uuid,
+  p_first_name text,
+  p_last_name text,
+  p_birthday date,
+  p_sex text DEFAULT NULL,
+  p_phone text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_tok record;
+  v_org_id uuid;
+  v_location_id uuid;
+  v_clean_first text;
+  v_clean_last text;
+  v_clean_phone text;
+  v_skip_ai boolean;
+  v_patient record;
+  v_new_patient_id uuid;
+  v_has_previous boolean;
+  v_active_visit record;
+  v_new_visit record;
+  v_name_sim real;
+BEGIN
+  -- Validate inputs
+  IF p_token IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Token is required');
+  END IF;
+
+  -- Sanitize name inputs
+  v_clean_first := substring(trim(regexp_replace(COALESCE(p_first_name, ''), '<[^>]*>', '', 'g')), 1, 100);
+  v_clean_last := substring(trim(regexp_replace(COALESCE(p_last_name, ''), '<[^>]*>', '', 'g')), 1, 100);
+
+  IF length(v_clean_first) = 0 OR length(v_clean_last) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'First and last name are required');
+  END IF;
+
+  -- Validate birthday
+  IF p_birthday IS NULL OR p_birthday >= CURRENT_DATE OR p_birthday < '1900-01-01'::date THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid date of birth');
+  END IF;
+
+  -- Validate sex
+  IF p_sex IS NOT NULL AND p_sex NOT IN ('male', 'female') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid sex value');
+  END IF;
+
+  -- Validate phone (E.164)
+  IF p_phone IS NOT NULL AND p_phone <> '' THEN
+    v_clean_phone := trim(p_phone);
+    IF v_clean_phone !~ '^\+[1-9]\d{1,14}$' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid phone format');
+    END IF;
+  ELSE
+    v_clean_phone := NULL;
+  END IF;
+
+  -- =====================================================
+  -- LOCK AND VALIDATE TOKEN
+  -- =====================================================
+  SELECT t.*, l.org_id AS loc_org_id
+  INTO v_tok
+  FROM public.pre_checkin_tokens t
+  JOIN public.locations l ON l.id = t.location_id
+  WHERE t.token = p_token
+  FOR UPDATE OF t;
+
+  IF v_tok IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid token');
+  END IF;
+
+  IF v_tok.expires_at < now() THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Token has expired');
+  END IF;
+
+  v_org_id := v_tok.loc_org_id;
+  v_location_id := v_tok.location_id;
+
+  -- Token already used: return session recovery if visit is active
+  IF v_tok.used AND v_tok.visit_id IS NOT NULL THEN
+    SELECT v.* INTO v_active_visit
+    FROM public.visits v
+    WHERE v.id = v_tok.visit_id
+      AND v.status NOT IN ('completed', 'left');
+
+    IF v_active_visit IS NOT NULL THEN
+      RETURN jsonb_build_object(
+        'success', true,
+        'match_type', 'active_session',
+        'session_token', v_active_visit.session_token,
+        'visit_id', v_active_visit.id,
+        'queue_number', v_active_visit.queue_number
+      );
+    ELSE
+      RETURN jsonb_build_object('success', false, 'error', 'This link has already been used');
+    END IF;
+  END IF;
+
+  -- =====================================================
+  -- SUBSCRIPTION CHECK
+  -- =====================================================
+  IF EXISTS (
+    SELECT 1 FROM public.organizations o
+    WHERE o.id = v_org_id
+      AND o.subscription_plan IN ('expired', 'suspended', 'read_only')
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'subscription_inactive');
+  END IF;
+
+  -- Location existence is guaranteed by the token FK.
+  -- We intentionally skip the "receptionist checked in" check because
+  -- pre-checkin links are designed for patients filling out from home
+  -- before arriving at the clinic.
+
+  -- =====================================================
+  -- FUZZY NAME MATCH (pg_trgm)
+  -- =====================================================
+  v_name_sim := (
+    similarity(lower(v_clean_first), lower(v_tok.first_name)) +
+    similarity(lower(v_clean_last), lower(v_tok.last_name))
+  ) / 2.0;
+
+  IF v_name_sim < 0.4 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Name does not match the invitation');
+  END IF;
+
+  -- =====================================================
+  -- FIND OR CREATE PATIENT
+  -- =====================================================
+  -- Try exact match first (org, name, birthday)
+  SELECT p.* INTO v_patient
+  FROM public.patients p
+  WHERE p.org_id = v_org_id
+    AND lower(p.first_name) = lower(v_clean_first)
+    AND lower(p.last_name) = lower(v_clean_last)
+    AND p.birthday = p_birthday
+    AND NOT p.is_orphaned
+  ORDER BY p.created_at ASC
+  LIMIT 1;
+
+  IF v_patient IS NOT NULL THEN
+    -- Check for active visit
+    SELECT v.* INTO v_active_visit
+    FROM public.visits v
+    WHERE v.patient_id = v_patient.id
+      AND v.location_id = v_location_id
+      AND v.status NOT IN ('completed', 'left')
+    ORDER BY v.created_at DESC
+    LIMIT 1;
+
+    IF v_active_visit IS NOT NULL THEN
+      -- Mark token used with existing visit
+      UPDATE public.pre_checkin_tokens
+      SET used = true, visit_id = v_active_visit.id, session_token = v_active_visit.session_token
+      WHERE id = v_tok.id;
+
+      RETURN jsonb_build_object(
+        'success', true,
+        'match_type', 'active_session',
+        'session_token', v_active_visit.session_token,
+        'visit_id', v_active_visit.id,
+        'queue_number', v_active_visit.queue_number
+      );
+    END IF;
+
+    -- Check for prior completed visits
+    SELECT EXISTS(
+      SELECT 1 FROM public.visits v
+      WHERE v.patient_id = v_patient.id AND v.status = 'completed'
+    ) INTO v_has_previous;
+
+    -- Update phone/sex if provided and not set
+    IF v_clean_phone IS NOT NULL AND v_patient.phone IS NULL THEN
+      UPDATE public.patients SET phone = v_clean_phone WHERE id = v_patient.id;
+    END IF;
+    IF p_sex IS NOT NULL AND v_patient.sex IS NULL THEN
+      UPDATE public.patients SET sex = p_sex WHERE id = v_patient.id;
+    END IF;
+  ELSE
+    -- New patient
+    v_has_previous := false;
+
+    BEGIN
+      INSERT INTO public.patients (org_id, first_name, last_name, birthday, phone, phone_verified, sex)
+      VALUES (v_org_id, v_clean_first, v_clean_last, p_birthday, v_clean_phone, false, p_sex)
+      RETURNING * INTO v_patient;
+    EXCEPTION WHEN unique_violation THEN
+      SELECT p.* INTO v_patient
+      FROM public.patients p
+      WHERE p.org_id = v_org_id
+        AND lower(p.first_name) = lower(v_clean_first)
+        AND lower(p.last_name) = lower(v_clean_last)
+        AND p.birthday = p_birthday
+        AND NOT p.is_orphaned
+      LIMIT 1;
+
+      IF v_patient IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Unable to create patient record');
+      END IF;
+    END;
+  END IF;
+
+  -- =====================================================
+  -- CREATE VISIT (auto-approved)
+  -- =====================================================
+  SELECT COALESCE(l.skip_ai, false) INTO v_skip_ai
+  FROM public.locations l WHERE l.id = v_location_id;
+
+  IF COALESCE(v_skip_ai, false) THEN
+    -- Skip AI: go straight to doctor queue
+    INSERT INTO public.visits (
+      org_id, location_id, patient_id, has_previous_visits,
+      phone_verification_pending, is_return_visit,
+      status, ai_skipped, entered_queue_at
+    )
+    VALUES (
+      v_org_id, v_location_id, v_patient.id, v_has_previous,
+      false, v_has_previous,
+      'waiting_doctor_claim', true, now()
+    )
+    RETURNING * INTO v_new_visit;
+  ELSE
+    -- Normal: go to AI conversation
+    INSERT INTO public.visits (
+      org_id, location_id, patient_id, has_previous_visits,
+      phone_verification_pending, is_return_visit,
+      status, ai_started_at
+    )
+    VALUES (
+      v_org_id, v_location_id, v_patient.id, v_has_previous,
+      false, v_has_previous,
+      'still_answering_ai', now()
+    )
+    RETURNING * INTO v_new_visit;
+  END IF;
+
+  -- =====================================================
+  -- MARK TOKEN USED + AUDIT
+  -- =====================================================
+  UPDATE public.pre_checkin_tokens
+  SET used = true, visit_id = v_new_visit.id, session_token = v_new_visit.session_token
+  WHERE id = v_tok.id;
+
+  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_org_id, 'visit', v_new_visit.id,
+    v_tok.created_by, 'receptionist', 'pre_checkin_used',
+    jsonb_build_object(
+      'token_id', v_tok.id,
+      'patient_name', v_clean_first || ' ' || v_clean_last,
+      'name_similarity', round(v_name_sim::numeric, 2),
+      'ai_skipped', COALESCE(v_skip_ai, false)
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'match_type', 'pre_approved',
+    'session_token', v_new_visit.session_token,
+    'visit_id', v_new_visit.id,
+    'queue_number', v_new_visit.queue_number,
+    'has_previous_visits', v_has_previous,
+    'phone_verified', false,
+    'ai_skipped', COALESCE(v_skip_ai, false)
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.checkin_with_token(uuid, text, text, date, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.checkin_with_token(uuid, text, text, date, text, text) TO anon, authenticated;

@@ -18,6 +18,9 @@ const DemoQR = dynamic(() => import("@/components/marketing/DemoQR"), {
 const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMockup"), {
   loading: () => <div className="h-[300px] rounded-2xl border border-gray-200 bg-gray-50" />,
 });
+const HeroEmailCTA = dynamic(() => import("@/components/marketing/HeroEmailCTA"), {
+  loading: () => <div className="h-[52px]" />,
+});
 
 /* ── Hero ─────────────────────────────────────────────── */
 
@@ -40,7 +43,7 @@ function ChatMockup() {
           </svg>
         </div>
         <div>
-          <p className="text-sm font-semibold text-ink">Patient scans QR code</p>
+          <p className="text-sm font-semibold text-ink">Patient scans QR code or opens a shared link</p>
           <p className="text-[11px] text-slate">Their phone or your clinic tablet, no app needed</p>
         </div>
       </div>
@@ -167,7 +170,7 @@ function ChatMockup() {
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-24 pb-20 lg:pt-32 lg:pb-24">
+    <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-16 pb-20 lg:pt-20 lg:pb-24">
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="flex flex-col sm:flex-row sm:items-start gap-4 md:gap-6 lg:gap-16 sm:pt-8">
           {/* Left column */}
@@ -183,16 +186,7 @@ function HeroSection() {
               Intake in 130+ languages. Follow ups that remember. Reviews that grow. Marketing that knows. Analytics that show.
             </p>
             {/* Start Trial CTA */}
-            <Link
-              href="/start-trial"
-              className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5 sm:text-xs sm:px-3 sm:py-2 md:text-sm md:px-4 md:py-2.5 lg:text-base lg:px-6 lg:py-3.5"
-            >
-              Start Trial, Up to $200 in Free Credits
-              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
-              </svg>
-            </Link>
-            <p className="mt-2 text-xs text-slate">No credit card required</p>
+            <HeroEmailCTA />
 
             {/* Live Demo Card */}
             <div className="mt-6 sm:mt-4 md:mt-8 max-w-md rounded-xl sm:rounded-xl md:rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-3 sm:px-2 sm:py-2.5 md:px-3 md:py-4 shadow-lg">
@@ -612,8 +606,8 @@ function HowItWorksSection() {
   const steps = [
     {
       num: "01",
-      title: "Patient scans a QR code in your waiting room.",
-      desc: "Patients scan it with their own phone or a clinic tablet, enter their name and date of birth, and they are checked in. About 10 seconds.",
+      title: "Patient scans a QR code or clicks a link you shared.",
+      desc: "Patients scan it with their own phone or a clinic tablet, enter their name and date of birth, and they are checked in. Or share a link ahead of time so they can start from home.",
       tag: "Clinic tablet kiosk mode for patients without phones",
       icon: (
         <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">

@@ -23,6 +23,7 @@ import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
 import NoDoctorsWarning from "@/components/dashboard/NoDoctorsWarning";
 import PatientSearch from "@/components/dashboard/PatientSearch";
+import ShareCheckinLink from "@/components/receptionist/ShareCheckinLink";
 
 interface PendingVisit {
   visit_id: string;
@@ -151,6 +152,7 @@ export default function ReceptionistDashboard({
   const router = useRouter();
   const { org } = useRole();
   const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
+  const [showShareLink, setShowShareLink] = useState(false);
   const [pending, setPending] = useState<PendingVisit[]>(
     demoMode ? (demoVisitId ? initialPending.filter((p) => p.visit_id === demoVisitId) : []) : initialPending
   );
@@ -533,8 +535,8 @@ export default function ReceptionistDashboard({
           <PatientSearch />
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 mb-4 border-b border-gray-200">
+        {/* Tabs + Share Link */}
+        <div className="flex items-center gap-1 mb-4 border-b border-gray-200">
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -548,6 +550,17 @@ export default function ReceptionistDashboard({
               {t.label}
             </button>
           ))}
+          <div className="ml-auto -mb-px pb-1">
+            <button
+              onClick={() => setShowShareLink(true)}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-slate hover:bg-gray-50 transition-colors flex items-center gap-1.5"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m9.86-2.282a4.5 4.5 0 0 0-1.242-7.244l-4.5-4.5a4.5 4.5 0 0 0-6.364 6.364L4.34 8.657" />
+              </svg>
+              Share Link
+            </button>
+          </div>
         </div>
 
         {/* Tab content */}
@@ -575,6 +588,13 @@ export default function ReceptionistDashboard({
           <ReferralInbox locationId={locationId} />
         )}
       </div>
+
+      {showShareLink && locationId && (
+        <ShareCheckinLink
+          locationId={locationId}
+          onClose={() => setShowShareLink(false)}
+        />
+      )}
     </div>
   );
 }
