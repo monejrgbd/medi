@@ -25,12 +25,10 @@ export default function DiscoveryQuestionScreen({
 
   async function handleContinue() {
     setSubmitting(true);
-    // For "Other", use the custom text; normalize to lowercase for analytics grouping
+    // For "Other", use the custom text as-is; analytics uses LOWER() for grouping
     const source = selected === "Other" && customSource.trim()
-      ? customSource.trim().toLowerCase()
-      : selected
-        ? selected.toLowerCase()
-        : null;
+      ? customSource.trim()
+      : selected || null;
     await onComplete(wasReferred, referredBy, source);
   }
 

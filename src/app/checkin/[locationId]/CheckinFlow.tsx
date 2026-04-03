@@ -104,8 +104,10 @@ export default function CheckinFlow({
   onPhoneComplete,
   onPatientReady,
 }: CheckinFlowProps) {
+  // If URL has ?token=, always start on form (bypass location active check — patient may be at home)
+  const hasUrlToken = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("token");
   const [state, setState] = useState<FlowState>(
-    locationData.active ? "form" : "inactive"
+    (locationData.active || hasUrlToken) ? "form" : "inactive"
   );
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [visitId, setVisitId] = useState<string | null>(null);
@@ -236,7 +238,7 @@ export default function CheckinFlow({
 
   // Pre-checkin token validation on mount (runs before localStorage recovery)
   useEffect(() => {
-    if (kiosk || !locationData.active) return;
+    if (kiosk) return;
     const params = new URLSearchParams(window.location.search);
     const urlToken = params.get("token");
     if (!urlToken) return;
@@ -586,8 +588,8 @@ export default function CheckinFlow({
         p_first_name: firstName,
         p_last_name: lastName,
         p_birthday: birthday,
-        p_sex: sex,
-        p_phone: phone,
+        p_sex: sex || null,
+        p_phone: phone || null,
       });
 
       setLoading(false);

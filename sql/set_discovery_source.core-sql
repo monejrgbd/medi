@@ -17,18 +17,13 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
   END IF;
 
-  -- Sanitize
+  -- Sanitize (accept any text — custom "Other" entries are allowed)
   v_clean_source := trim(regexp_replace(COALESCE(p_source, ''), '<[^>]*>', '', 'g'));
-  IF length(v_clean_source) > 100 THEN
-    v_clean_source := substring(v_clean_source FROM 1 FOR 100);
+  IF length(v_clean_source) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Source cannot be empty');
   END IF;
-
-  -- Validate against allowed list
-  IF v_clean_source NOT IN (
-    'Google Search', 'Social Media', 'Friend or Family',
-    'Doctor Referral', 'Insurance Directory', 'Walk in', 'Other'
-  ) THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Invalid source');
+  IF length(v_clean_source) > 200 THEN
+    v_clean_source := substring(v_clean_source FROM 1 FOR 200);
   END IF;
 
   -- Update

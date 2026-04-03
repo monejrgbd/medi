@@ -122,8 +122,8 @@ BEGIN
   -- FUZZY NAME MATCH (pg_trgm)
   -- =====================================================
   v_name_sim := (
-    similarity(lower(v_clean_first), lower(v_tok.first_name)) +
-    similarity(lower(v_clean_last), lower(v_tok.last_name))
+    public.similarity(lower(v_clean_first), lower(v_tok.first_name)) +
+    public.similarity(lower(v_clean_last), lower(v_tok.last_name))
   ) / 2.0;
 
   IF v_name_sim < 0.4 THEN

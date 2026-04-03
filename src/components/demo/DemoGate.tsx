@@ -14,7 +14,11 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
   const searchParams = useSearchParams();
   const [teamCode, setTeamCode] = useState(() => {
     const fromUrl = searchParams.get("team");
-    if (fromUrl) return fromUrl.toUpperCase();
+    if (fromUrl) {
+      const code = fromUrl.toUpperCase();
+      if (typeof window !== "undefined") localStorage.setItem("demo_team_code", code);
+      return code;
+    }
     if (typeof window !== "undefined") {
       return localStorage.getItem("demo_team_code") || "";
     }
@@ -168,7 +172,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
             />
             <button
               type="button"
-              onClick={() => { if (teamCode) setShowCodeInput(false); }}
+              onClick={() => { if (teamCode) { localStorage.setItem("demo_team_code", teamCode.toUpperCase()); setShowCodeInput(false); } }}
               disabled={!teamCode}
               className="px-3 py-1.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 disabled:opacity-50 transition-colors"
             >
