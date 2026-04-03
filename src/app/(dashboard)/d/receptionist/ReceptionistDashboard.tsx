@@ -24,6 +24,7 @@ import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
 import NoDoctorsWarning from "@/components/dashboard/NoDoctorsWarning";
 import PatientSearch from "@/components/dashboard/PatientSearch";
 import ShareCheckinLink from "@/components/receptionist/ShareCheckinLink";
+import { toast } from "sonner";
 
 interface PendingVisit {
   visit_id: string;
@@ -262,6 +263,15 @@ export default function ReceptionistDashboard({
           router.refresh();
         }
         return;
+      }
+
+      // UPDATE — check for phone verification completion (same status, but pending flag changed)
+      if (
+        visit.status === "pending_approval" &&
+        oldVisit.phone_verification_pending === true &&
+        visit.phone_verification_pending === false
+      ) {
+        router.refresh();
       }
 
       // UPDATE — diff old vs new status to update counts
@@ -537,7 +547,13 @@ export default function ReceptionistDashboard({
 
         {/* Share check-in link */}
         <button
-          onClick={() => setShowShareLink(true)}
+          onClick={() => {
+            if (demoMode) {
+              toast.info("Check in links cannot be generated in the demo");
+              return;
+            }
+            setShowShareLink(true);
+          }}
           className="mb-4 w-full rounded-lg border border-hilt-blue/20 bg-blue-50 px-4 py-3 text-left transition-colors hover:bg-blue-100 flex items-center gap-3"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-hilt-blue/10">
