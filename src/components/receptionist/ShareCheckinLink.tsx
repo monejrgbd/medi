@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import { generateCheckinLink } from "@/app/(dashboard)/d/_actions/checkin-link";
 import { toast } from "sonner";
 
+type AiConfig = "standard" | "skip" | "premium";
+
 interface ShareCheckinLinkProps {
   locationId: string;
   onClose: () => void;
@@ -15,8 +17,10 @@ export default function ShareCheckinLink({
 }: ShareCheckinLinkProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [aiConfig, setAiConfig] = useState<AiConfig>("standard");
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleGenerate() {
@@ -27,12 +31,20 @@ export default function ShareCheckinLink({
       return;
     }
 
+    setError(null);
     startTransition(async () => {
-      const result = await generateCheckinLink(locationId, trimFirst, trimLast);
+      const result = await generateCheckinLink(
+        locationId,
+        trimFirst,
+        trimLast,
+        aiConfig === "premium" ? "advanced" : null,
+        aiConfig === "skip"
+      );
       if (result.success && result.link) {
         setLink(result.link);
       } else {
-        toast.error(result.error || "Failed to generate link");
+        // Budget errors stay inline so user can switch AI config
+        setError(result.error || "Failed to generate link");
       }
     });
   }
@@ -82,12 +94,57 @@ export default function ShareCheckinLink({
                   onChange={(e) => setLastName(e.target.value.slice(0, 100))}
                   placeholder="Patient last name"
                   className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && firstName.trim() && lastName.trim()) handleGenerate();
-                  }}
                 />
               </div>
+
+              {/* AI Config */}
+              <div>
+                <label className="text-xs font-medium text-slate mb-1.5 block">
+                  AI Configuration
+                </label>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setAiConfig("standard"); setError(null); }}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      aiConfig === "standard"
+                        ? "bg-green-100 text-green-700 ring-1 ring-green-300"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    Standard AI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAiConfig("skip"); setError(null); }}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      aiConfig === "skip"
+                        ? "bg-gray-200 text-gray-700 ring-1 ring-gray-400"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    Skip AI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setAiConfig("premium"); setError(null); }}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      aiConfig === "premium"
+                        ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    Premium AI
+                  </button>
+                </div>
+              </div>
             </div>
+
+            {error && (
+              <div className="mb-3 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-xs text-red-700">
+                {error}
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
@@ -100,7 +157,13 @@ export default function ShareCheckinLink({
               <button
                 onClick={handleGenerate}
                 disabled={isPending || !firstName.trim() || !lastName.trim()}
-                className="flex-1 rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 transition-colors ${
+                  aiConfig === "premium"
+                    ? "bg-purple-600 hover:bg-purple-700"
+                    : aiConfig === "skip"
+                      ? "bg-gray-600 hover:bg-gray-700"
+                      : "bg-hilt-blue hover:bg-blue-700"
+                }`}
               >
                 {isPending ? "Generating..." : "Generate Link"}
               </button>
@@ -111,6 +174,8 @@ export default function ShareCheckinLink({
             <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3">
               <p className="text-xs font-medium text-green-800 mb-2">
                 Link generated for {firstName.trim()} {lastName.trim()}
+                {aiConfig === "premium" && <span className="ml-1 text-purple-700">(Premium AI)</span>}
+                {aiConfig === "skip" && <span className="ml-1 text-gray-600">(No AI)</span>}
               </p>
               <div className="rounded-md bg-white border border-gray-200 px-3 py-2 text-xs text-ink break-all font-mono">
                 {link}

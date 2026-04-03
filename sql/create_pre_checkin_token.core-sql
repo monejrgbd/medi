@@ -1,9 +1,15 @@
+-- Drop old signatures
+DROP FUNCTION IF EXISTS private.create_pre_checkin_token(uuid, uuid, text, text);
+DROP FUNCTION IF EXISTS public.create_pre_checkin_token(uuid, text, text);
+
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.create_pre_checkin_token(
   p_caller_auth_uid uuid,
   p_location_id uuid,
   p_first_name text,
-  p_last_name text
+  p_last_name text,
+  p_ai_model text DEFAULT NULL,
+  p_skip_ai boolean DEFAULT false
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -31,6 +37,11 @@ BEGIN
   END IF;
   IF length(v_clean_first) > 100 OR length(v_clean_last) > 100 THEN
     RETURN jsonb_build_object('success', false, 'error', 'Name exceeds maximum length');
+  END IF;
+
+  -- Validate ai_model
+  IF p_ai_model IS NOT NULL AND p_ai_model NOT IN ('standard', 'advanced') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid AI model');
   END IF;
 
   -- Resolve caller
@@ -72,9 +83,57 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Location not found');
   END IF;
 
+  -- Premium AI budget pre-flight check (read-only, no deduction)
+  IF p_ai_model = 'advanced' THEN
+    DECLARE
+      v_org record;
+      v_cap numeric;
+      v_cost numeric;
+      v_net_usage numeric;
+      v_topup_remaining numeric;
+    BEGIN
+      SELECT subscription_plan, billing_cycle_start, credits_total, credits_used
+      INTO v_org
+      FROM public.organizations WHERE id = v_caller_org_id;
+
+      -- PAyG / trials: check general credit pool
+      IF v_org.subscription_plan IN ('pay_as_you_go', 'standard_trial', 'premium_trial') THEN
+        v_cost := 4; -- PAyG/trial rate
+        IF (v_org.credits_total - v_org.credits_used) < v_cost THEN
+          RETURN jsonb_build_object('success', false, 'error', 'No Premium AI budget remaining. Top up from the billing page.');
+        END IF;
+      ELSE
+        -- Subscription plans: per-feature budget
+        CASE v_org.subscription_plan
+          WHEN 'starter' THEN v_cap := 3.5; v_cost := 3.5;
+          WHEN 'professional' THEN v_cap := 15; v_cost := 3;
+          WHEN 'business' THEN v_cap := 62.5; v_cost := 2.5;
+          WHEN 'enterprise' THEN v_cap := 10000; v_cost := 2.5;
+          ELSE v_cap := 0; v_cost := 4;
+        END CASE;
+
+        SELECT GREATEST(COALESCE(-SUM(credits_amount), 0), 0) INTO v_net_usage
+        FROM public.credits_log
+        WHERE org_id = v_caller_org_id AND credit_type = 'premium_ai'
+          AND created_at >= COALESCE(v_org.billing_cycle_start, now() - interval '30 days');
+
+        IF v_net_usage + v_cost > v_cap THEN
+          -- Check top-ups
+          SELECT COALESCE(SUM(credits - used), 0) INTO v_topup_remaining
+          FROM public.budget_topups
+          WHERE org_id = v_caller_org_id AND feature IN ('premium_ai', 'general') AND credits - used > 0;
+
+          IF v_topup_remaining < v_cost THEN
+            RETURN jsonb_build_object('success', false, 'error', 'No Premium AI budget remaining. Top up from the billing page.');
+          END IF;
+        END IF;
+      END IF;
+    END;
+  END IF;
+
   -- Create token
-  INSERT INTO public.pre_checkin_tokens (org_id, location_id, first_name, last_name, created_by)
-  VALUES (v_caller_org_id, p_location_id, v_clean_first, v_clean_last, v_caller_staff_id)
+  INSERT INTO public.pre_checkin_tokens (org_id, location_id, first_name, last_name, created_by, ai_model_override, skip_ai)
+  VALUES (v_caller_org_id, p_location_id, v_clean_first, v_clean_last, v_caller_staff_id, p_ai_model, COALESCE(p_skip_ai, false))
   RETURNING id, token INTO v_token_id, v_token;
 
   RETURN jsonb_build_object(
@@ -89,7 +148,9 @@ $$;
 CREATE OR REPLACE FUNCTION public.create_pre_checkin_token(
   p_location_id uuid,
   p_first_name text,
-  p_last_name text
+  p_last_name text,
+  p_ai_model text DEFAULT NULL,
+  p_skip_ai boolean DEFAULT false
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -103,9 +164,9 @@ BEGIN
   IF v_auth_uid IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
   END IF;
-  RETURN private.create_pre_checkin_token(v_auth_uid, p_location_id, p_first_name, p_last_name);
+  RETURN private.create_pre_checkin_token(v_auth_uid, p_location_id, p_first_name, p_last_name, p_ai_model, p_skip_ai);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.create_pre_checkin_token(uuid, text, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_pre_checkin_token(uuid, text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean) TO authenticated;

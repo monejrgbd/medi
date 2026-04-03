@@ -526,16 +526,35 @@ Deno.serve(async (req) => {
           if (nurseEnabled) {
             // Nurse triage enabled: skip summary generation, move patient straight to queue.
             // Summary will be generated when the doctor claims (includes nurse notes + vitals).
+            // Direct update instead of move_to_queue_on_error (which sets timeout_flagged = true).
             try {
-              // Set ai_completed_at BEFORE moving to queue (so claim_patient sees it)
               await supabase
                 .from("visits")
-                .update({ ai_completed_at: new Date().toISOString() })
-                .eq("id", visit_id);
-              await supabase.rpc("move_to_queue_on_error", {
-                p_visit_id: visit_id,
-                p_session_token: session_token,
-              });
+                .update({
+                  status: "waiting_doctor_claim",
+                  ai_completed_at: new Date().toISOString(),
+                  entered_queue_at: new Date().toISOString(),
+                })
+                .eq("id", visit_id)
+                .eq("status", "still_answering_ai");
+
+              // Broadcast status change so patient's CheckinFlow updates immediately
+              const broadcastUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/broadcast-visit-update";
+              fetch(broadcastUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  "x-internal-secret": INTERNAL_SECRET!,
+                },
+                body: JSON.stringify({
+                  visit_id,
+                  session_token,
+                  old_status: "still_answering_ai",
+                  new_status: "waiting_doctor_claim",
+                  timeout_flagged: false,
+                }),
+              }).catch(() => { /* best effort */ });
             } catch (err) {
               console.error("Failed to move nurse-enabled visit to queue:", err);
             }

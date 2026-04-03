@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS public.pre_checkin_tokens (
   used            boolean NOT NULL DEFAULT false,
   visit_id        uuid REFERENCES public.visits(id),
   session_token   uuid,
+  ai_model_override text DEFAULT NULL,
+  skip_ai         boolean NOT NULL DEFAULT false,
   created_at      timestamptz NOT NULL DEFAULT now(),
   expires_at      timestamptz NOT NULL DEFAULT now() + interval '48 hours'
 );

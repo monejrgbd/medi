@@ -144,19 +144,19 @@ BEGIN
 
   -- Track changed fields
   IF p_first_name IS NOT NULL AND lower(v_clean_first) <> lower(v_patient.first_name) THEN
-    v_changed_fields := v_changed_fields || 'first_name';
+    v_changed_fields := array_append(v_changed_fields, 'first_name');
   END IF;
   IF p_last_name IS NOT NULL AND lower(v_clean_last) <> lower(v_patient.last_name) THEN
-    v_changed_fields := v_changed_fields || 'last_name';
+    v_changed_fields := array_append(v_changed_fields, 'last_name');
   END IF;
   IF p_birthday IS NOT NULL AND p_birthday <> v_patient.birthday THEN
-    v_changed_fields := v_changed_fields || 'birthday';
+    v_changed_fields := array_append(v_changed_fields, 'birthday');
   END IF;
   IF p_sex IS NOT NULL THEN
-    v_changed_fields := v_changed_fields || 'sex';
+    v_changed_fields := array_append(v_changed_fields, 'sex');
   END IF;
   IF v_clean_phone IS NOT NULL AND v_clean_phone <> COALESCE(v_patient.phone, '') THEN
-    v_changed_fields := v_changed_fields || 'phone';
+    v_changed_fields := array_append(v_changed_fields, 'phone');
   END IF;
 
   IF array_length(v_changed_fields, 1) IS NULL THEN

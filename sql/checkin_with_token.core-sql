@@ -207,68 +207,133 @@ BEGIN
   END IF;
 
   -- =====================================================
-  -- CREATE VISIT (auto-approved)
+  -- RESOLVE AI CONFIG (skip_ai + model override + fallback)
   -- =====================================================
-  SELECT COALESCE(l.skip_ai, false) INTO v_skip_ai
-  FROM public.locations l WHERE l.id = v_location_id;
+  DECLARE
+    v_loc_skip_ai boolean;
+    v_resolved_skip boolean := false;
+    v_resolved_model text := NULL;
+    v_ai_fallback boolean := false;
+  BEGIN
+    SELECT COALESCE(l.skip_ai, false) INTO v_loc_skip_ai
+    FROM public.locations l WHERE l.id = v_location_id;
 
-  IF COALESCE(v_skip_ai, false) THEN
-    -- Skip AI: go straight to doctor queue
-    INSERT INTO public.visits (
-      org_id, location_id, patient_id, has_previous_visits,
-      phone_verification_pending, is_return_visit,
-      status, ai_skipped, entered_queue_at
-    )
+    -- Skip AI resolution (same priority as approve_patient)
+    IF v_loc_skip_ai THEN
+      v_resolved_skip := true;  -- Location always wins
+    ELSIF COALESCE(v_tok.skip_ai, false) THEN
+      v_resolved_skip := true;  -- Token skip is additive
+    END IF;
+
+    -- Premium AI fallback: re-check budget at use time
+    IF NOT v_resolved_skip AND v_tok.ai_model_override = 'advanced' THEN
+      DECLARE
+        v_org_budget record;
+        v_cap numeric;
+        v_cost numeric;
+        v_net_usage numeric;
+        v_topup_remaining numeric;
+        v_budget_ok boolean := false;
+      BEGIN
+        SELECT subscription_plan, billing_cycle_start, credits_total, credits_used
+        INTO v_org_budget
+        FROM public.organizations WHERE id = v_org_id;
+
+        IF v_org_budget.subscription_plan IN ('pay_as_you_go', 'standard_trial', 'premium_trial') THEN
+          v_cost := 4;
+          v_budget_ok := (v_org_budget.credits_total - v_org_budget.credits_used) >= v_cost;
+        ELSE
+          CASE v_org_budget.subscription_plan
+            WHEN 'starter' THEN v_cap := 3.5; v_cost := 3.5;
+            WHEN 'professional' THEN v_cap := 15; v_cost := 3;
+            WHEN 'business' THEN v_cap := 62.5; v_cost := 2.5;
+            WHEN 'enterprise' THEN v_cap := 10000; v_cost := 2.5;
+            ELSE v_cap := 0; v_cost := 4;
+          END CASE;
+
+          SELECT GREATEST(COALESCE(-SUM(credits_amount), 0), 0) INTO v_net_usage
+          FROM public.credits_log
+          WHERE org_id = v_org_id AND credit_type = 'premium_ai'
+            AND created_at >= COALESCE(v_org_budget.billing_cycle_start, now() - interval '30 days');
+
+          IF v_net_usage + v_cost <= v_cap THEN
+            v_budget_ok := true;
+          ELSE
+            SELECT COALESCE(SUM(credits - used), 0) INTO v_topup_remaining
+            FROM public.budget_topups
+            WHERE org_id = v_org_id AND feature IN ('premium_ai', 'general') AND credits - used > 0;
+            v_budget_ok := v_topup_remaining >= v_cost;
+          END IF;
+        END IF;
+
+        IF v_budget_ok THEN
+          v_resolved_model := 'advanced';
+        ELSE
+          v_resolved_model := NULL; -- Silent fallback to standard
+          v_ai_fallback := true;
+        END IF;
+      END;
+    ELSIF NOT v_resolved_skip AND v_tok.ai_model_override IS NOT NULL THEN
+      v_resolved_model := v_tok.ai_model_override;
+    END IF;
+
+    -- Create visit
+    IF v_resolved_skip THEN
+      INSERT INTO public.visits (
+        org_id, location_id, patient_id, has_previous_visits,
+        phone_verification_pending, is_return_visit,
+        status, ai_skipped, entered_queue_at
+      )
+      VALUES (
+        v_org_id, v_location_id, v_patient.id, v_has_previous,
+        false, v_has_previous,
+        'waiting_doctor_claim', true, now()
+      )
+      RETURNING * INTO v_new_visit;
+    ELSE
+      INSERT INTO public.visits (
+        org_id, location_id, patient_id, has_previous_visits,
+        phone_verification_pending, is_return_visit,
+        status, ai_started_at, ai_model_override
+      )
+      VALUES (
+        v_org_id, v_location_id, v_patient.id, v_has_previous,
+        false, v_has_previous,
+        'still_answering_ai', now(), v_resolved_model
+      )
+      RETURNING * INTO v_new_visit;
+    END IF;
+
+    -- Mark token used + audit
+    UPDATE public.pre_checkin_tokens
+    SET used = true, visit_id = v_new_visit.id, session_token = v_new_visit.session_token
+    WHERE id = v_tok.id;
+
+    INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
     VALUES (
-      v_org_id, v_location_id, v_patient.id, v_has_previous,
-      false, v_has_previous,
-      'waiting_doctor_claim', true, now()
-    )
-    RETURNING * INTO v_new_visit;
-  ELSE
-    -- Normal: go to AI conversation
-    INSERT INTO public.visits (
-      org_id, location_id, patient_id, has_previous_visits,
-      phone_verification_pending, is_return_visit,
-      status, ai_started_at
-    )
-    VALUES (
-      v_org_id, v_location_id, v_patient.id, v_has_previous,
-      false, v_has_previous,
-      'still_answering_ai', now()
-    )
-    RETURNING * INTO v_new_visit;
-  END IF;
+      v_org_id, 'visit', v_new_visit.id,
+      v_tok.created_by, 'receptionist', 'pre_checkin_used',
+      jsonb_build_object(
+        'token_id', v_tok.id,
+        'patient_name', v_clean_first || ' ' || v_clean_last,
+        'name_similarity', round(v_name_sim::numeric, 2),
+        'ai_skipped', v_resolved_skip,
+        'ai_model_override', v_resolved_model,
+        'ai_model_fallback', v_ai_fallback
+      )
+    );
 
-  -- =====================================================
-  -- MARK TOKEN USED + AUDIT
-  -- =====================================================
-  UPDATE public.pre_checkin_tokens
-  SET used = true, visit_id = v_new_visit.id, session_token = v_new_visit.session_token
-  WHERE id = v_tok.id;
-
-  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
-  VALUES (
-    v_org_id, 'visit', v_new_visit.id,
-    v_tok.created_by, 'receptionist', 'pre_checkin_used',
-    jsonb_build_object(
-      'token_id', v_tok.id,
-      'patient_name', v_clean_first || ' ' || v_clean_last,
-      'name_similarity', round(v_name_sim::numeric, 2),
-      'ai_skipped', COALESCE(v_skip_ai, false)
-    )
-  );
-
-  RETURN jsonb_build_object(
-    'success', true,
-    'match_type', 'pre_approved',
-    'session_token', v_new_visit.session_token,
-    'visit_id', v_new_visit.id,
-    'queue_number', v_new_visit.queue_number,
-    'has_previous_visits', v_has_previous,
-    'phone_verified', false,
-    'ai_skipped', COALESCE(v_skip_ai, false)
-  );
+    RETURN jsonb_build_object(
+      'success', true,
+      'match_type', 'pre_approved',
+      'session_token', v_new_visit.session_token,
+      'visit_id', v_new_visit.id,
+      'queue_number', v_new_visit.queue_number,
+      'has_previous_visits', v_has_previous,
+      'phone_verified', false,
+      'ai_skipped', v_resolved_skip
+    );
+  END;
 END;
 $$;
 

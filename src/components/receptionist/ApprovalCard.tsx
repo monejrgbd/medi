@@ -345,10 +345,10 @@ export default function ApprovalCard({
             onClick={handleExpand}
             className="text-xs text-hilt-blue hover:underline"
           >
-            {expanded ? "Hide duplicates" : "Check for duplicates"}
+            {expanded ? "Hide similar patients" : "Check for similar patients"}
           </button>
           <p className="text-xs text-ash mt-0.5">
-            If you suspect this patient has visited before, use this to investigate.
+            Use this if you suspect this patient is not new because they entered incorrect info.
           </p>
         </div>
       )}
@@ -491,19 +491,17 @@ export default function ApprovalCard({
                   >
                     Skip AI
                   </button>
-                  {hasPremiumAi && (
-                    <button
-                      onClick={() => setAiConfig("premium")}
-                      disabled={busy}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                        aiConfig === "premium"
-                          ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
-                          : "bg-gray-50 text-slate hover:bg-gray-100"
-                      }`}
-                    >
-                      Premium AI
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setAiConfig("premium")}
+                    disabled={busy}
+                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                      aiConfig === "premium"
+                        ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    Premium AI
+                  </button>
                 </div>
               )}
             </div>

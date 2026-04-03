@@ -10,7 +10,9 @@ const UUID_RE =
 export async function generateCheckinLink(
   locationId: string,
   firstName: string,
-  lastName: string
+  lastName: string,
+  aiModel?: string | null,
+  skipAi?: boolean
 ): Promise<{ success: boolean; link?: string; error?: string }> {
   await requireAuth();
 
@@ -28,6 +30,8 @@ export async function generateCheckinLink(
     p_location_id: locationId,
     p_first_name: cleanFirst,
     p_last_name: cleanLast,
+    p_ai_model: aiModel || null,
+    p_skip_ai: skipAi || false,
   });
 
   if (error) return { success: false, error: "Failed to generate link" };

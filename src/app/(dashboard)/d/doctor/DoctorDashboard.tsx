@@ -443,7 +443,14 @@ export default function DoctorDashboard({
 
         {/* Tab content */}
         {tab === "pending" && (
-          <QueueList queue={queue} onClaimed={(visitId) => router.push(`/d/doctor/patient/${visitId}`)} />
+          <QueueList queue={queue} onClaimed={(visitId) => {
+            if (demoMode) {
+              setFocusMode(true);
+              router.refresh();
+            } else {
+              router.push(`/d/doctor/patient/${visitId}`);
+            }
+          }} />
         )}
 
         {tab === "claimed" && (
