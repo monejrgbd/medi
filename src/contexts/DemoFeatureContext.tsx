@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useRef, type ReactNode } from "react";
 import { syncDemoLocationFeatures } from "@/app/demo/_actions/demo-location";
 
 interface DemoFeatures {
@@ -59,6 +59,8 @@ export function DemoFeatureProvider({ children, locationId }: { children: ReactN
     }
     return DEFAULTS;
   });
+  const featuresRef = useRef(features);
+  featuresRef.current = features;
 
   const [isCustomized, setIsCustomized] = useState(() => {
     if (typeof window !== "undefined") return sessionStorage.getItem("demo_customized") === "true";
@@ -69,17 +71,21 @@ export function DemoFeatureProvider({ children, locationId }: { children: ReactN
     setFeatures(prev => {
       const next = { ...prev, [key]: value };
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      if (locationId) syncToLocation(locationId, next);
       return next;
     });
+    // Sync to location DB (fire-and-forget, outside state updater)
+    if (locationId) {
+      const next = { ...featuresRef.current, [key]: value };
+      syncToLocation(locationId, next);
+    }
   }, [locationId]);
 
   const markCustomized = useCallback(() => {
     setIsCustomized(true);
     sessionStorage.setItem("demo_customized", "true");
     // Sync initial features to location DB on demo start
-    if (locationId) syncToLocation(locationId, features);
-  }, [locationId, features]);
+    if (locationId) syncToLocation(locationId, featuresRef.current);
+  }, [locationId]);
 
   return (
     <DemoFeatureContext.Provider value={{ features, setFeature, isCustomized, markCustomized, locationId: locationId || null }}>

@@ -3,14 +3,15 @@ CREATE OR REPLACE FUNCTION private.record_vaccine(
   p_caller_auth_uid uuid,
   p_patient_id uuid,
   p_visit_id uuid,
-  p_vaccine_id uuid,
+  p_vaccine_id uuid DEFAULT NULL,
   p_dose_number smallint DEFAULT 1,
   p_lot_number text DEFAULT NULL,
   p_manufacturer text DEFAULT NULL,
   p_site text DEFAULT NULL,
   p_refused boolean DEFAULT false,
   p_refusal_reason text DEFAULT NULL,
-  p_notes text DEFAULT NULL
+  p_notes text DEFAULT NULL,
+  p_custom_vaccine_name text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -77,9 +78,24 @@ BEGIN
     END IF;
   END IF;
 
-  -- Validate vaccine_id exists
-  IF NOT EXISTS(SELECT 1 FROM public.vaccines WHERE id = p_vaccine_id) THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Vaccine not found');
+  -- Resolve vaccine: by ID or by custom name (find-or-create)
+  IF p_vaccine_id IS NOT NULL THEN
+    IF NOT EXISTS(SELECT 1 FROM public.vaccines WHERE id = p_vaccine_id) THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Vaccine not found');
+    END IF;
+  ELSIF p_custom_vaccine_name IS NOT NULL AND trim(p_custom_vaccine_name) <> '' THEN
+    -- Find existing vaccine by name (case-insensitive) or create new
+    SELECT id INTO p_vaccine_id
+    FROM public.vaccines
+    WHERE lower(name) = lower(trim(p_custom_vaccine_name));
+
+    IF p_vaccine_id IS NULL THEN
+      INSERT INTO public.vaccines (name, code, notes)
+      VALUES (trim(p_custom_vaccine_name), 'CUSTOM', 'Added by staff')
+      RETURNING id INTO p_vaccine_id;
+    END IF;
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Vaccine ID or custom name required');
   END IF;
 
   -- Validate patient belongs to same org
@@ -118,18 +134,22 @@ BEGIN
 END;
 $$;
 
+-- Drop old signature before creating new one (parameter count changed)
+DROP FUNCTION IF EXISTS public.record_vaccine(uuid, uuid, uuid, smallint, text, text, text, boolean, text, text);
+
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.record_vaccine(
   p_patient_id uuid,
   p_visit_id uuid,
-  p_vaccine_id uuid,
+  p_vaccine_id uuid DEFAULT NULL,
   p_dose_number smallint DEFAULT 1,
   p_lot_number text DEFAULT NULL,
   p_manufacturer text DEFAULT NULL,
   p_site text DEFAULT NULL,
   p_refused boolean DEFAULT false,
   p_refusal_reason text DEFAULT NULL,
-  p_notes text DEFAULT NULL
+  p_notes text DEFAULT NULL,
+  p_custom_vaccine_name text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -145,10 +165,10 @@ BEGIN
   END IF;
   RETURN private.record_vaccine(
     v_auth_uid, p_patient_id, p_visit_id, p_vaccine_id, p_dose_number,
-    p_lot_number, p_manufacturer, p_site, p_refused, p_refusal_reason, p_notes
+    p_lot_number, p_manufacturer, p_site, p_refused, p_refusal_reason, p_notes, p_custom_vaccine_name
   );
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.record_vaccine(uuid, uuid, uuid, smallint, text, text, text, boolean, text, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.record_vaccine(uuid, uuid, uuid, smallint, text, text, text, boolean, text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.record_vaccine(uuid, uuid, uuid, smallint, text, text, text, boolean, text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.record_vaccine(uuid, uuid, uuid, smallint, text, text, text, boolean, text, text, text) TO authenticated;

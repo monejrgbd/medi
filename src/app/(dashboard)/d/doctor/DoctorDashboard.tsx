@@ -443,7 +443,7 @@ export default function DoctorDashboard({
 
         {/* Tab content */}
         {tab === "pending" && (
-          <QueueList queue={queue} onClaimed={() => router.refresh()} />
+          <QueueList queue={queue} onClaimed={(visitId) => router.push(`/d/doctor/patient/${visitId}`)} />
         )}
 
         {tab === "claimed" && (
@@ -461,7 +461,6 @@ export default function DoctorDashboard({
                 <ClaimedPatientCard
                   key={v.visit_id}
                   visit={v}
-                  onClickOverride={demoMode ? () => setFocusMode(true) : undefined}
                 />
               ))
             )}

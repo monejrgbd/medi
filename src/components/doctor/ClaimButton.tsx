@@ -5,7 +5,7 @@ import { claimPatient } from "@/app/(dashboard)/d/_actions/doctor";
 
 interface ClaimButtonProps {
   visitId: string;
-  onClaimed: () => void;
+  onClaimed: (visitId: string) => void;
 }
 
 export default function ClaimButton({ visitId, onClaimed }: ClaimButtonProps) {
@@ -18,13 +18,13 @@ export default function ClaimButton({ visitId, onClaimed }: ClaimButtonProps) {
       const result = await claimPatient(visitId);
 
       if (result.success) {
-        onClaimed();
+        onClaimed(visitId);
         return;
       }
 
       if (result.already_claimed) {
         setError(`Already claimed by ${result.claimed_by_name}`);
-        onClaimed();
+        onClaimed(visitId);
         return;
       }
 

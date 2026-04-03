@@ -5,7 +5,7 @@ import type { QueueVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 
 interface QueueListProps {
   queue: QueueVisit[];
-  onClaimed: () => void;
+  onClaimed: (visitId: string) => void;
 }
 
 export default function QueueList({ queue, onClaimed }: QueueListProps) {

@@ -74,7 +74,8 @@ export default function VaccineRecordForm({ patientId, visitId, onRecorded }: Va
       const result = await recordVaccine({
         patientId,
         visitId,
-        vaccineId,
+        vaccineId: vaccineId || undefined,
+        customVaccineName: !vaccineId && customVaccineName.trim() ? customVaccineName.trim() : undefined,
         doseNumber: doseNumber ? parseInt(doseNumber) : undefined,
         lotNumber: refused ? undefined : lotNumber.trim() || undefined,
         manufacturer: refused ? undefined : manufacturer.trim() || undefined,

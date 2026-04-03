@@ -224,7 +224,8 @@ export async function fetchVitalsHistory(patientId: string) {
 export async function recordVaccine(data: {
   patientId: string;
   visitId: string;
-  vaccineId: string;
+  vaccineId?: string;
+  customVaccineName?: string;
   doseNumber?: number;
   lotNumber?: string;
   manufacturer?: string;
@@ -238,14 +239,17 @@ export async function recordVaccine(data: {
     return { success: false, error: "Invalid patient ID" };
   if (!data.visitId || !validUUID(data.visitId))
     return { success: false, error: "Invalid visit ID" };
-  if (!data.vaccineId || !validUUID(data.vaccineId))
+  if (!data.vaccineId && !data.customVaccineName?.trim())
+    return { success: false, error: "Vaccine ID or custom name required" };
+  if (data.vaccineId && !validUUID(data.vaccineId))
     return { success: false, error: "Invalid vaccine ID" };
 
   const supabase = await createClient();
   const { data: result, error } = await supabase.rpc("record_vaccine", {
     p_patient_id: data.patientId,
     p_visit_id: data.visitId,
-    p_vaccine_id: data.vaccineId,
+    ...(data.vaccineId ? { p_vaccine_id: data.vaccineId } : {}),
+    ...(data.customVaccineName ? { p_custom_vaccine_name: stripHtml(data.customVaccineName).slice(0, 200) } : {}),
     ...(data.doseNumber !== undefined ? { p_dose_number: data.doseNumber } : {}),
     ...(data.lotNumber ? { p_lot_number: stripHtml(data.lotNumber).slice(0, 100) } : {}),
     ...(data.manufacturer ? { p_manufacturer: stripHtml(data.manufacturer).slice(0, 200) } : {}),

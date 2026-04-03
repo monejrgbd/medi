@@ -145,5 +145,7 @@
   "checkin.discovery.Doctor Referral": "Doctor Referral",
   "checkin.discovery.Insurance Directory": "Insurance Directory",
   "checkin.discovery.Walk in": "Walk in",
-  "checkin.discovery.Other": "Other"
+  "checkin.discovery.Other": "Other",
+  "checkin.discoveryPlaceholder": "Select how you found us",
+  "checkin.discoveryOtherPlaceholder": "Please specify"
 }

@@ -6,7 +6,7 @@ import { formatQueueNumber } from "@/lib/queueUtils";
 
 interface PatientQueueCardProps {
   visit: QueueVisit;
-  onClaimed: () => void;
+  onClaimed: (visitId: string) => void;
 }
 
 function PriorityBadge({ priority }: { priority: number }) {
