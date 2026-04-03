@@ -123,7 +123,7 @@
   "checkin.referredBy": "转介医生或诊所（可选）",
   "checkin.phone_label": "电话号码",
   "checkin.no_phone_toggle": "我没有电话号码",
-  "checkin.sms_terms": "我同意按照我们的服务条款接收短信，包括促销信息。可能会收取短信和数据费用。",
+  "checkin.sms_terms": "我同意按照我们的服务条款接收短信。可能会收取短信和数据费用。",
   "checkin.match_found_title": "我们找到了与您的姓名和出生日期匹配的现有记录。",
   "checkin.match_found_phone_change": "您最近是否更换了电话号码？",
   "checkin.enter_previous_phone": "请输入您之前的电话号码",

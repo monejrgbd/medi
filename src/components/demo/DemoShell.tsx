@@ -572,11 +572,8 @@ function DemoShellInner({
     setVisitDemoFeatures(visitId, { ...featuresRef.current });
     if (demoStepRef.current > 1) return;
     setDemoStep(2);
-    setPulsingTab("receptionist");
-    setTimeout(() => {
-      setActiveTab("receptionist");
-      setPulsingTab(null);
-    }, 3000);
+    // Defer tab switch until patient finishes phone verification + discovery
+    setPendingReceptionistSwitch(true);
   }, []);
 
   const handlePhoneComplete = useCallback(() => {
@@ -833,7 +830,7 @@ function DemoShellInner({
               currentStaffUser: { id: staffUserId, org_id: orgId, auth_uid: "", full_name: "Demo User", username: "demo" },
             }}>
               {selectedCampaignId && selectedCampaignData ? (
-                <CampaignDetail initialData={selectedCampaignData} campaignId={selectedCampaignId} onBack={() => { setSelectedCampaignId(null); setSelectedCampaignData(null); }} />
+                <CampaignDetail initialData={selectedCampaignData} campaignId={selectedCampaignId} onBack={() => { setSelectedCampaignId(null); setSelectedCampaignData(null); }} demoMode={true} />
               ) : (
                 <MarketingDashboard
                   initialData={marketingInitial}
@@ -842,11 +839,14 @@ function DemoShellInner({
                     if (data && !("error" in data)) {
                       setSelectedCampaignId(id);
                       setSelectedCampaignData(data);
-                      setDemoStep(7);
+                      // Only advance to Outreach step if visit is already completed
+                      if (demoStepRef.current >= 5) {
+                        setDemoStep(7);
+                        localStorage.setItem("demo_campaign_done", "true");
+                      }
                       setDemoCampaignIds(prev => {
                         const next = prev.includes(id) ? prev : [...prev, id];
                         localStorage.setItem("demo_campaign_ids", JSON.stringify(next));
-                        localStorage.setItem("demo_campaign_done", "true");
                         return next;
                       });
                     }

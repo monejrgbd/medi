@@ -123,7 +123,7 @@
   "checkin.referredBy": "Bac si hoac phong kham gioi thieu (tuy chon)",
   "checkin.phone_label": "So dien thoai",
   "checkin.no_phone_toggle": "Toi khong co so dien thoai",
-  "checkin.sms_terms": "Toi dong y nhan tin nhan SMS theo dieu khoan dich vu cua chung toi, bao gom tin nhan quang cao. Co the ap dung phi tin nhan va du lieu.",
+  "checkin.sms_terms": "Toi dong y nhan tin nhan SMS theo dieu khoan dich vu cua chung toi. Co the ap dung phi tin nhan va du lieu.",
   "checkin.match_found_title": "Chúng tôi tìm thấy hồ sơ hiện có với tên và ngày sinh của bạn.",
   "checkin.match_found_phone_change": "Bạn có thay đổi số điện thoại gần đây không?",
   "checkin.enter_previous_phone": "Nhập số điện thoại trước đây của bạn",

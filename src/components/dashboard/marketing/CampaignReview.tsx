@@ -25,6 +25,7 @@ interface CampaignReviewProps {
   campaign: Record<string, unknown>;
   campaignId: string;
   onStatusChange: () => void;
+  demoMode?: boolean;
 }
 
 const OPT_OUT_FOOTER = "\nReply STOP to opt out";
@@ -33,6 +34,7 @@ export default function CampaignReview({
   campaign,
   campaignId,
   onStatusChange,
+  demoMode = false,
 }: CampaignReviewProps) {
   const { org } = useRole();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -163,6 +165,11 @@ export default function CampaignReview({
     }
     if (activeCount === 0) {
       toast.error("No recipients to send to");
+      return;
+    }
+
+    if (demoMode) {
+      toast.success("In production, this would send SMS to " + activeCount + " patients. No messages are sent in demo mode.");
       return;
     }
 

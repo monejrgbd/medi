@@ -123,7 +123,7 @@
   "checkin.referredBy": "Medico ou clinica que encaminhou (opcional)",
   "checkin.phone_label": "Numero de telefone",
   "checkin.no_phone_toggle": "Nao tenho numero de telefone",
-  "checkin.sms_terms": "Concordo em receber mensagens SMS conforme descrito em nossos termos de servico, incluindo mensagens promocionais. Taxas de mensagens e dados podem ser aplicadas.",
+  "checkin.sms_terms": "Concordo em receber mensagens SMS conforme descrito em nossos termos de servico. Taxas de mensagens e dados podem ser aplicadas.",
   "checkin.match_found_title": "Encontramos um registro existente com seu nome e data de nascimento.",
   "checkin.match_found_phone_change": "Você mudou recentemente seu número de telefone?",
   "checkin.enter_previous_phone": "Digite seu número de telefone anterior",

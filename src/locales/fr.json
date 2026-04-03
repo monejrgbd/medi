@@ -123,7 +123,7 @@
   "checkin.referredBy": "Medecin ou clinique referent (optionnel)",
   "checkin.phone_label": "Numero de telephone",
   "checkin.no_phone_toggle": "Je ne possede pas de numero de telephone",
-  "checkin.sms_terms": "J'accepte de recevoir des messages SMS tels que decrits dans nos conditions de service, y compris des messages promotionnels. Des frais de messagerie et de donnees peuvent s'appliquer.",
+  "checkin.sms_terms": "J accepte de recevoir des messages SMS tels que decrits dans nos conditions de service. Des frais de messagerie et de donnees peuvent s appliquer.",
   "checkin.match_found_title": "Nous avons trouvé un dossier existant avec votre nom et date de naissance.",
   "checkin.match_found_phone_change": "Avez vous récemment changé votre numéro de téléphone?",
   "checkin.enter_previous_phone": "Entrez votre ancien numéro de téléphone",

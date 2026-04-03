@@ -123,7 +123,7 @@
   "checkin.referredBy": "의뢰한 의사 또는 병원 (선택)",
   "checkin.phone_label": "전화번호",
   "checkin.no_phone_toggle": "전화번호가 없습니다",
-  "checkin.sms_terms": "서비스 약관에 명시된 대로 프로모션 메시지를 포함한 SMS 수신에 동의합니다. 메시지 및 데이터 요금이 부과될 수 있습니다.",
+  "checkin.sms_terms": "서비스 약관에 명시된 대로 SMS 수신에 동의합니다. 메시지 및 데이터 요금이 부과될 수 있습니다.",
   "checkin.match_found_title": "귀하의 이름과 생년월일로 기존 기록을 찾았습니다.",
   "checkin.match_found_phone_change": "최근에 전화번호를 변경하셨나요?",
   "checkin.enter_previous_phone": "이전 전화번호를 입력하세요",

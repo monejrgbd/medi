@@ -196,6 +196,25 @@ export default function TermsPage() {
               by CASL s.11. Unsubscribing from review requests does not affect transactional messages
               (visit summaries and follow-up reminders).
             </p>
+
+            <h3>Marketing and Promotional Messages</h3>
+            <p>
+              The Clinic may use the Service to send marketing or promotional SMS messages to patients
+              who have consented during check in. These messages may include health reminders, seasonal
+              campaigns, appointment availability, or other clinic communications. Marketing messages
+              are sent at the Clinic&rsquo;s direction using AI assisted or manual patient targeting.
+            </p>
+            <p>
+              Each marketing SMS includes identification of the sending Clinic and a functional
+              opt out mechanism. Patients can reply STOP to any marketing message to unsubscribe
+              from future promotional communications. Opting out of marketing messages does not affect
+              transactional messages (visit summaries, follow up reminders, or phone verification codes).
+            </p>
+            <p>
+              Marketing SMS constitutes a commercial electronic message under CASL. The patient&rsquo;s
+              consent is obtained through the SMS consent checkbox during check in, which expressly
+              includes consent to receive promotional messages from the Clinic through the Service.
+            </p>
           </section>
 
           <section>

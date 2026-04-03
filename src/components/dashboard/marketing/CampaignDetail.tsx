@@ -15,12 +15,14 @@ interface CampaignDetailProps {
   initialData: Record<string, unknown>;
   campaignId: string;
   onBack?: () => void;
+  demoMode?: boolean;
 }
 
 export default function CampaignDetail({
   initialData,
   campaignId,
   onBack,
+  demoMode = false,
 }: CampaignDetailProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -147,6 +149,7 @@ export default function CampaignDetail({
           campaign={{ ...campaign, recipients, credit_cost_preview: creditCostPreview }}
           campaignId={campaignId}
           onStatusChange={refresh}
+          demoMode={demoMode}
         />
       </div>
     );
