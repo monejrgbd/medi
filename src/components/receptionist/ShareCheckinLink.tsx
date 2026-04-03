@@ -9,11 +9,13 @@ type AiConfig = "standard" | "skip" | "premium";
 interface ShareCheckinLinkProps {
   locationId: string;
   onClose: () => void;
+  demoMode?: boolean;
 }
 
 export default function ShareCheckinLink({
   locationId,
   onClose,
+  demoMode = false,
 }: ShareCheckinLinkProps) {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -28,6 +30,11 @@ export default function ShareCheckinLink({
     const trimLast = lastName.trim();
     if (!trimFirst || !trimLast) {
       toast.error("Please enter first and last name");
+      return;
+    }
+
+    if (demoMode) {
+      setError("Check in links cannot be generated in the demo");
       return;
     }
 

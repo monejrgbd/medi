@@ -547,13 +547,7 @@ export default function ReceptionistDashboard({
 
         {/* Share check-in link */}
         <button
-          onClick={() => {
-            if (demoMode) {
-              toast.info("Check in links cannot be generated in the demo");
-              return;
-            }
-            setShowShareLink(true);
-          }}
+          onClick={() => setShowShareLink(true)}
           className="mb-4 w-full rounded-lg border border-hilt-blue/20 bg-blue-50 px-4 py-3 text-left transition-colors hover:bg-blue-100 flex items-center gap-3"
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-hilt-blue/10">
@@ -614,6 +608,7 @@ export default function ReceptionistDashboard({
         <ShareCheckinLink
           locationId={locationId}
           onClose={() => setShowShareLink(false)}
+          demoMode={demoMode}
         />
       )}
     </div>
