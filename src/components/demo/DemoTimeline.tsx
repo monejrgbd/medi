@@ -17,7 +17,7 @@ const ALL_STEPS = [
     label: "Approve",
     role: "You are the receptionist",
     todo: "Review the patient details and click Approve.",
-    info: "This triggers the AI pre screening conversation. Returning patients are automatically identified by name and date of birth. You can edit their info using the edit icon. You can also skip the AI or switch to Premium AI before approving by clicking on configure AI.",
+    info: "This triggers the AI pre screening conversation. Returning patients are automatically identified by name and date of birth. You can edit their info, skip the AI, or switch to Premium AI before approving. You can also share a check in link so patients start intake from home and skip approval entirely.",
     featureGate: null,
     mapsToDemoStep: 2,
   },

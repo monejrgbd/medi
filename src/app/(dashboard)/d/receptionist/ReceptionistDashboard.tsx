@@ -153,7 +153,6 @@ export default function ReceptionistDashboard({
   const { org } = useRole();
   const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
   const [showShareLink, setShowShareLink] = useState(false);
-  const [showShareHint, setShowShareHint] = useState(demoMode);
   const [pending, setPending] = useState<PendingVisit[]>(
     demoMode ? (demoVisitId ? initialPending.filter((p) => p.visit_id === demoVisitId) : []) : initialPending
   );
@@ -537,37 +536,20 @@ export default function ReceptionistDashboard({
         </div>
 
         {/* Share check-in link */}
-        <div className={`mb-4 relative ${showShareHint ? "rounded-xl ring-2 ring-hilt-blue ring-offset-2" : ""}`}>
-          <button
-            onClick={() => setShowShareLink(true)}
-            className="w-full rounded-lg border border-hilt-blue/20 bg-blue-50 px-4 py-3 text-left transition-colors hover:bg-blue-100 flex items-center gap-3"
-          >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-hilt-blue/10">
-              <svg className="h-4 w-4 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-hilt-blue">Share Check-in Link</p>
-              <p className="text-xs text-slate">Send a patient a link to start intake from home</p>
-            </div>
-          </button>
-          {showShareHint && (
-            <div className="mt-2 rounded-lg bg-blue-600 px-4 py-3 text-white relative">
-              <button
-                onClick={() => setShowShareHint(false)}
-                className="absolute top-2 right-2 text-white/60 hover:text-white transition-colors"
-                aria-label="Dismiss"
-              >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                </svg>
-              </button>
-              <p className="text-sm font-medium pr-6">Share a link with patients before they arrive</p>
-              <p className="text-xs text-white/80 mt-0.5">They fill out intake from home and skip the approval step.</p>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => setShowShareLink(true)}
+          className="mb-4 w-full rounded-lg border border-hilt-blue/20 bg-blue-50 px-4 py-3 text-left transition-colors hover:bg-blue-100 flex items-center gap-3"
+        >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-hilt-blue/10">
+            <svg className="h-4 w-4 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.217 10.907a2.25 2.25 0 1 0 0 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186 9.566-5.314m-9.566 7.5 9.566 5.314m0 0a2.25 2.25 0 1 0 3.935 2.186 2.25 2.25 0 0 0-3.935-2.186Zm0-12.814a2.25 2.25 0 1 0 3.933-2.185 2.25 2.25 0 0 0-3.933 2.185Z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-hilt-blue">Share Check-in Link</p>
+            <p className="text-xs text-slate">Send a patient a link to start intake from home</p>
+          </div>
+        </button>
 
         {/* Tabs */}
         <div className="flex gap-1 mb-4 border-b border-gray-200">
