@@ -301,7 +301,7 @@ function DemoShellInner({
         skipAiToQueue(stored);
       }
       const statusToStep: Record<string, number> = {
-        pending_approval: 2,
+        pending_approval: 1, // Stay on step 1 — deferred mechanism handles the switch after phone+discovery
         still_answering_ai: 3,
         waiting_doctor_claim: 3,
         claimed_by_doctor: 4,
@@ -309,6 +309,10 @@ function DemoShellInner({
       };
       const step = statusToStep[data.status];
       if (step) {
+        // If pending_approval, re-arm the deferred receptionist switch
+        if (data.status === "pending_approval") {
+          setPendingReceptionistSwitch(true);
+        }
         // If campaign was already done, show step 7 (all complete)
         const campaignDone = localStorage.getItem("demo_campaign_done") === "true";
         setDemoStep(campaignDone && step >= 5 ? 7 : step);
@@ -348,6 +352,7 @@ function DemoShellInner({
   useEffect(() => {
     if (pendingReceptionistSwitch && patientStepsDone) {
       setPendingReceptionistSwitch(false);
+      setDemoStep(2);
       setPulsingTab("receptionist");
       setTimeout(() => {
         setActiveTab("receptionist");
@@ -417,8 +422,7 @@ function DemoShellInner({
               setVisitDemoFeatures(visitId, { ...featuresRef.current });
             }
 
-            setDemoStep(2);
-            // Defer receptionist tab switch until patient finishes phone + discovery steps
+            // Defer both step advancement and tab switch until patient finishes phone + discovery
             setPendingReceptionistSwitch(true);
           }
         }
@@ -571,8 +575,7 @@ function DemoShellInner({
     // Write demo features to visit
     setVisitDemoFeatures(visitId, { ...featuresRef.current });
     if (demoStepRef.current > 1) return;
-    setDemoStep(2);
-    // Defer tab switch until patient finishes phone verification + discovery
+    // Defer both step advancement and tab switch until patient finishes phone + discovery
     setPendingReceptionistSwitch(true);
   }, []);
 
