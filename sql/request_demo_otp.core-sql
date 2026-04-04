@@ -22,6 +22,11 @@ BEGIN
 
   p_email := lower(trim(p_email));
 
+  -- Reserved prelog emails cannot use the normal OTP flow
+  IF private.is_prelog_email(p_email) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'This email is reserved. Please use a different address.');
+  END IF;
+
   -- Look up existing row
   SELECT * INTO v_existing
   FROM public.demo_access

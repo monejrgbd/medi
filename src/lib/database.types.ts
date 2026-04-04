@@ -326,6 +326,8 @@ export type Database = {
           id: string
           otp_expires_at: string | null
           otp_hash: string | null
+          prelog_daily_count: number
+          prelog_daily_date: string | null
           team_code: string | null
         }
         Insert: {
@@ -335,6 +337,8 @@ export type Database = {
           id?: string
           otp_expires_at?: string | null
           otp_hash?: string | null
+          prelog_daily_count?: number
+          prelog_daily_date?: string | null
           team_code?: string | null
         }
         Update: {
@@ -344,6 +348,8 @@ export type Database = {
           id?: string
           otp_expires_at?: string | null
           otp_hash?: string | null
+          prelog_daily_count?: number
+          prelog_daily_date?: string | null
           team_code?: string | null
         }
         Relationships: []
@@ -1339,6 +1345,7 @@ export type Database = {
       }
       pre_checkin_tokens: {
         Row: {
+          ai_model_override: string | null
           created_at: string
           created_by: string
           expires_at: string
@@ -1348,11 +1355,13 @@ export type Database = {
           location_id: string
           org_id: string
           session_token: string | null
+          skip_ai: boolean
           token: string
           used: boolean
           visit_id: string | null
         }
         Insert: {
+          ai_model_override?: string | null
           created_at?: string
           created_by: string
           expires_at?: string
@@ -1362,11 +1371,13 @@ export type Database = {
           location_id: string
           org_id: string
           session_token?: string | null
+          skip_ai?: boolean
           token?: string
           used?: boolean
           visit_id?: string | null
         }
         Update: {
+          ai_model_override?: string | null
           created_at?: string
           created_by?: string
           expires_at?: string
@@ -1376,6 +1387,7 @@ export type Database = {
           location_id?: string
           org_id?: string
           session_token?: string | null
+          skip_ai?: boolean
           token?: string
           used?: boolean
           visit_id?: string | null
@@ -2807,9 +2819,11 @@ export type Database = {
       }
       create_pre_checkin_token: {
         Args: {
+          p_ai_model?: string
           p_first_name: string
           p_last_name: string
           p_location_id: string
+          p_skip_ai?: boolean
         }
         Returns: Json
       }
@@ -3061,6 +3075,14 @@ export type Database = {
       get_visit_detail: { Args: { p_visit_id: string }; Returns: Json }
       get_visit_status: { Args: { p_visit_id: string }; Returns: Json }
       get_visit_summary_public: { Args: { p_token: string }; Returns: Json }
+      get_visit_vitals_text: {
+        Args: { p_visit_id: string }
+        Returns: {
+          name: string
+          unit: string
+          value: number
+        }[]
+      }
       get_vital_types_master_list: { Args: never; Returns: Json }
       get_vitals_history: { Args: { p_patient_id: string }; Returns: Json }
       get_wait_time_heatmap: {
@@ -3096,6 +3118,10 @@ export type Database = {
         Returns: Json
       }
       mark_patient_left: { Args: { p_visit_id: string }; Returns: Json }
+      merge_visit_to_patient: {
+        Args: { p_target_patient_id: string; p_visit_id: string }
+        Returns: Json
+      }
       move_to_queue_on_error: {
         Args: { p_session_token: string; p_visit_id: string }
         Returns: Json
@@ -3114,6 +3140,7 @@ export type Database = {
       reactivate_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       record_vaccine: {
         Args: {
+          p_custom_vaccine_name?: string
           p_dose_number?: number
           p_lot_number?: string
           p_manufacturer?: string
@@ -3122,7 +3149,7 @@ export type Database = {
           p_refusal_reason?: string
           p_refused?: boolean
           p_site?: string
-          p_vaccine_id: string
+          p_vaccine_id?: string
           p_visit_id: string
         }
         Returns: Json
@@ -3143,6 +3170,7 @@ export type Database = {
         Args: { p_email: string; p_team_code?: string }
         Returns: Json
       }
+      request_prelog_demo: { Args: { p_email: string }; Returns: Json }
       request_premium_code: {
         Args: {
           p_domain?: string
@@ -3286,6 +3314,16 @@ export type Database = {
       }
       submit_review: {
         Args: { p_feedback_text?: string; p_rating: number; p_token: string }
+        Returns: Json
+      }
+      sync_demo_location_features: {
+        Args: {
+          p_location_id: string
+          p_nurse_enabled: boolean
+          p_review_sms_enabled: boolean
+          p_vaccines_enabled: boolean
+          p_vitals_enabled: boolean
+        }
         Returns: Json
       }
       toggle_addon: {

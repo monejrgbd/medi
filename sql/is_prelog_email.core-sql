@@ -1,0 +1,11 @@
+-- Single source of truth for prelog-whitelisted emails.
+-- Called by request_prelog_demo (allow check) and request_demo_otp (block check).
+CREATE OR REPLACE FUNCTION private.is_prelog_email(p_email text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+  SELECT lower(trim(p_email)) IN ('demo@hilthealth.com');
+$$;

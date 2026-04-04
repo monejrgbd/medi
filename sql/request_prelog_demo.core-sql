@@ -1,0 +1,68 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.request_prelog_demo(p_email text)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_normalized text;
+  v_new_count int;
+BEGIN
+  IF p_email IS NULL OR p_email !~ '^[^@]+@[^@]+\.[^@]+$' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid email format');
+  END IF;
+
+  v_normalized := lower(trim(p_email));
+
+  -- Whitelist check (single source of truth)
+  IF NOT private.is_prelog_email(v_normalized) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Email not authorized for prelog');
+  END IF;
+
+  -- Atomic upsert with daily rate limit.
+  -- INSERT path (first-ever use): creates row with count=1.
+  -- UPDATE path (row exists): resets count to 1 on new day, or increments on same day.
+  -- UPDATE WHERE clause blocks the update if same-day count >= 100, so RETURNING is NULL.
+  -- Concurrency safe: Postgres READ COMMITTED re-evaluates WHERE after waiting for row lock.
+  INSERT INTO public.demo_access AS da (email, prelog_daily_count, prelog_daily_date)
+  VALUES (v_normalized, 1, current_date)
+  ON CONFLICT (lower(email)) DO UPDATE
+  SET
+    prelog_daily_count = CASE
+      WHEN da.prelog_daily_date IS NULL OR da.prelog_daily_date < current_date THEN 1
+      ELSE da.prelog_daily_count + 1
+    END,
+    prelog_daily_date = current_date
+  WHERE da.prelog_daily_date IS NULL
+     OR da.prelog_daily_date < current_date
+     OR da.prelog_daily_count < 100
+  RETURNING prelog_daily_count INTO v_new_count;
+
+  IF v_new_count IS NULL THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'rate_limited', true,
+      'error', 'Daily demo limit reached. Please use email verification.'
+    );
+  END IF;
+
+  RETURN jsonb_build_object('success', true, 'used_today', v_new_count, 'daily_limit', 100);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.request_prelog_demo(p_email text)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.request_prelog_demo(p_email);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.request_prelog_demo(text) TO anon, authenticated;

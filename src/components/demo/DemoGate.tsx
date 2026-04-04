@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { requestDemoOtp, verifyDemoOtp } from "@/app/demo/_actions/demo";
+import { requestDemoOtp, verifyDemoOtp, startPrelogDemo } from "@/app/demo/_actions/demo";
 import { Shield } from "lucide-react";
 
 interface DemoGateProps {
@@ -24,6 +24,13 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     }
     return "";
   });
+  // Prelog: auto-fire if ?prelog=<email> is present and no existing session
+  const prelogAttempted = useRef(false);
+  const [prelogState, setPrelogState] = useState<"idle" | "loading" | "failed">(() => {
+    const prelogEmail = searchParams.get("prelog");
+    return (prelogEmail && !existingSession) ? "loading" : "idle";
+  });
+
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
@@ -49,6 +56,22 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     }, 1000);
     return () => clearInterval(timer);
   }, [resendCooldown]);
+
+  // Prelog auto-fire: skip OTP flow entirely for whitelisted emails
+  useEffect(() => {
+    const prelogEmail = searchParams.get("prelog");
+    if (!prelogEmail || prelogAttempted.current || existingSession) return;
+    prelogAttempted.current = true;
+
+    (async () => {
+      const result = await startPrelogDemo(prelogEmail);
+      if (result.success) {
+        router.refresh();
+      } else {
+        setPrelogState("failed");
+      }
+    })();
+  }, [searchParams, router, existingSession]);
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -127,6 +150,19 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     } else {
       inputRefs.current[pasted.length]?.focus();
     }
+  }
+
+  // Prelog loading state: show spinner while auto-login is in flight
+  if (prelogState === "loading") {
+    return (
+      <div className="min-h-screen bg-snow flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-2xl font-bold text-hilt-blue mb-2">Hilt Health</p>
+          <div className="w-6 h-6 border-2 border-hilt-blue border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-slate text-sm">Starting your demo...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
