@@ -147,6 +147,12 @@ export default function SignUpForm() {
       setLoading(false);
       setSubmittedEmail(emailValue);
       setSubmitted(true);
+      if (typeof window !== "undefined" && typeof window.gtag === "function") {
+        window.gtag("event", "conversion", {
+          send_to: "AW-18032484152/P8SxCPDbpZccELi-x5ZD",
+          transaction_id: `email-${emailValue}`,
+        });
+      }
       return;
     }
 
@@ -175,6 +181,12 @@ export default function SignUpForm() {
       return;
     }
 
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("event", "conversion", {
+        send_to: "AW-18032484152/9-IpCO_ljpccELi-x5ZD",
+        transaction_id: `meet-${emailValue}`,
+      });
+    }
     router.push("/book");
   }
 

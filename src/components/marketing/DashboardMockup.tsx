@@ -7,9 +7,9 @@ type Tab = (typeof tabs)[number];
 
 function StatCard({ label, value, unit, color }: { label: string; value: string; unit?: string; color?: string }) {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <p className="text-xs font-medium text-slate uppercase">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-ink">{value}{unit && <span className={`text-sm ml-0.5 ${color || "text-slate"}`}>{unit}</span>}</p>
+    <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+      <p className="text-[10px] sm:text-xs font-medium text-slate uppercase">{label}</p>
+      <p className="mt-0.5 sm:mt-1 text-xl sm:text-2xl font-bold text-ink">{value}{unit && <span className={`text-xs sm:text-sm ml-0.5 ${color || "text-slate"}`}>{unit}</span>}</p>
     </div>
   );
 }
@@ -23,37 +23,37 @@ function EmployeesTab() {
   ];
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
         <StatCard label="Active staff" value="4" />
         <StatCard label="Avg utilization" value="85" unit="%" color="text-blue-600" />
         <StatCard label="Total hours" value="29.5" unit="hrs" />
         <StatCard label="Total patients" value="93" />
       </div>
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase">Role</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Hours</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Util.</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Patients</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Rate</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Avg Handling</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase hidden sm:table-cell">Idle</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate uppercase">Name</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate uppercase">Role</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase">Hours</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase hidden sm:table-cell">Util.</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase">Patients</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase hidden sm:table-cell">Rate</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase hidden sm:table-cell">Avg Handling</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase hidden sm:table-cell">Idle</th>
             </tr>
           </thead>
           <tbody>
             {staff.map(s => (
               <tr key={s.name} className="border-b border-gray-50">
-                <td className="px-4 py-3 font-medium text-ink">{s.name}</td>
-                <td className="px-4 py-3 text-slate capitalize">{s.role}</td>
-                <td className="px-4 py-3 text-right text-slate">{s.hours}h</td>
-                <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.util}%</td>
-                <td className="px-4 py-3 text-right text-slate">{s.patients}</td>
-                <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.throughput}</td>
-                <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.avgHandling || "—"}</td>
-                <td className="px-4 py-3 text-right text-slate hidden sm:table-cell">{s.idle || "—"}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-ink">{s.name}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-slate capitalize">{s.role}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate">{s.hours}h</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate hidden sm:table-cell">{s.util}%</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate">{s.patients}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate hidden sm:table-cell">{s.throughput}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate hidden sm:table-cell">{s.avgHandling || "—"}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate hidden sm:table-cell">{s.idle || "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -73,14 +73,14 @@ function PatientsTab() {
   ];
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
         <StatCard label="Total patients" value="151" />
         <StatCard label="Avg AI time" value="4.1" unit="min" color="text-blue-600" />
         <StatCard label="Avg wait" value="6.3" unit="min" color="text-amber-600" />
         <StatCard label="Avg handling" value="12.4" unit="min" color="text-green-600" />
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm font-semibold text-ink mb-4">Daily breakdown</p>
+      <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+        <p className="text-xs sm:text-sm font-semibold text-ink mb-3 sm:mb-4">Daily breakdown</p>
         <div className="space-y-2.5">
           {days.map(d => (
             <div key={d.day} className="flex items-center gap-3">
@@ -101,8 +101,8 @@ function PatientsTab() {
         </div>
       </div>
       {/* Discovery source */}
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm font-semibold text-ink mb-1">Where New Patients Find You</p>
+      <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+        <p className="text-xs sm:text-sm font-semibold text-ink mb-1">Where New Patients Find You</p>
         <p className="text-xs text-ash mb-3">68 new patients, 79% responded</p>
         <div className="space-y-2">
           {[
@@ -150,43 +150,46 @@ function WaitTimesTab() {
 
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
         <StatCard label="Avg wait" value="6.1" unit="min" color="text-amber-600" />
         <StatCard label="Peak wait" value="16" unit="min" color="text-red-500" />
         <StatCard label="Busiest hour" value="1pm" />
         <StatCard label="Busiest day" value="Thu" />
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-semibold text-ink">Wait time by hour</p>
-          <p className="text-xs text-slate">minutes</p>
+      <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <p className="text-xs sm:text-sm font-semibold text-ink">Wait time by hour</p>
+          <p className="text-[10px] sm:text-xs text-slate">minutes</p>
         </div>
         {/* Hour headers */}
-        <div style={{ display: "grid", gridTemplateColumns: "36px repeat(13, 1fr)", gap: "3px" }} className="mb-0.5">
+        <div style={{ display: "grid", gridTemplateColumns: "28px repeat(13, 1fr)" }} className="gap-[2px] sm:gap-[3px] mb-0.5">
           <div />
-          {hours.map(h => (
-            <p key={h} className="text-center text-[8px] sm:text-[10px] font-medium text-slate">{h}</p>
+          {hours.map((h, i) => (
+            <p key={h} className="text-center text-[7px] sm:text-[10px] font-medium text-slate overflow-hidden">
+              <span className="sm:hidden">{i === 0 ? "8a" : i === 4 ? "12" : i === 12 ? "8p" : i % 2 === 0 ? h : ""}</span>
+              <span className="hidden sm:inline">{h}</span>
+            </p>
           ))}
         </div>
         {/* Heatmap rows */}
         {heatmap.map(row => (
-          <div key={row.day} style={{ display: "grid", gridTemplateColumns: "36px repeat(13, 1fr)", gap: "3px" }} className="mb-0.5">
-            <p className="text-[9px] sm:text-[10px] text-slate flex items-center justify-end pr-1">{row.day}</p>
+          <div key={row.day} style={{ display: "grid", gridTemplateColumns: "28px repeat(13, 1fr)" }} className="gap-[2px] sm:gap-[3px] mb-0.5">
+            <p className="text-[8px] sm:text-[10px] text-slate flex items-center justify-end pr-0.5 sm:pr-1">{row.day}</p>
             {row.values.map((v, i) => (
               <div
                 key={i}
-                className={`aspect-[2/1] rounded flex items-center justify-center ${heatColor(v)} text-white`}
+                className={`aspect-square sm:aspect-[2/1] rounded flex items-center justify-center ${heatColor(v)} text-white`}
               >
-                <span className="text-[8px] sm:text-[10px] font-medium">{v}</span>
+                <span className="text-[7px] sm:text-[10px] font-medium">{v}</span>
               </div>
             ))}
           </div>
         ))}
         {/* Legend */}
-        <div className="flex items-center gap-2 mt-4">
-          <span className="text-xs text-slate">Low</span>
-          <div className="flex-1 h-3 rounded" style={{ background: "linear-gradient(to right, #22c55e, #eab308, #ef4444)" }} />
-          <span className="text-xs text-slate">High</span>
+        <div className="flex items-center gap-2 mt-3 sm:mt-4">
+          <span className="text-[10px] sm:text-xs text-slate">Low</span>
+          <div className="flex-1 h-2.5 sm:h-3 rounded" style={{ background: "linear-gradient(to right, #22c55e, #eab308, #ef4444)" }} />
+          <span className="text-[10px] sm:text-xs text-slate">High</span>
         </div>
       </div>
     </>
@@ -201,28 +204,28 @@ function ReturnsTab() {
   ];
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4">
         <StatCard label="Total visits" value="199" />
         <StatCard label="Return visits" value="78" color="text-blue-600" />
         <StatCard label="Return rate" value="39" unit="%" color="text-green-600" />
       </div>
       <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-xs sm:text-sm">
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
-              <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase">Doctor</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Visits</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Returns</th>
-              <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Rate</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs font-semibold text-slate uppercase">Doctor</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase">Visits</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase">Returns</th>
+              <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase">Rate</th>
             </tr>
           </thead>
           <tbody>
             {doctors.map(d => (
               <tr key={d.name} className="border-b border-gray-50">
-                <td className="px-4 py-3 font-medium text-ink">{d.name}</td>
-                <td className="px-4 py-3 text-right text-slate">{d.visits}</td>
-                <td className="px-4 py-3 text-right text-slate">{d.returns}</td>
-                <td className="px-4 py-3 text-right font-medium text-blue-600">{d.rate}%</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 font-medium text-ink">{d.name}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate">{d.visits}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right text-slate">{d.returns}</td>
+                <td className="px-2 sm:px-4 py-2 sm:py-3 text-right font-medium text-blue-600">{d.rate}%</td>
               </tr>
             ))}
           </tbody>
@@ -243,20 +246,20 @@ function FollowUpsTab() {
   ];
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
         <StatCard label="Compliance" value="84" unit="%" color="text-green-600" />
         <StatCard label="Tagged" value="89" />
         <StatCard label="Returned" value="75" />
         <StatCard label="Overdue" value="8" />
       </div>
-      <div className="rounded-lg border border-gray-200 bg-white p-4">
-        <p className="text-sm font-semibold text-ink mb-4">Follow-up funnel</p>
+      <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+        <p className="text-xs sm:text-sm font-semibold text-ink mb-3 sm:mb-4">Follow-up funnel</p>
         <div className="space-y-3">
           {funnel.map(f => (
             <div key={f.label} className="flex items-center gap-3">
-              <span className="w-28 sm:w-44 text-xs sm:text-sm text-slate shrink-0 text-right truncate">{f.label}</span>
+              <span className="w-24 sm:w-44 text-[11px] sm:text-sm text-slate shrink-0 text-right truncate">{f.label}</span>
               <div className="flex-1 bg-gray-100 rounded overflow-hidden">
-                <div className={`h-8 rounded flex items-center px-3 text-white text-sm font-medium ${f.color}`} style={{ width: `${f.pct}%`, minWidth: "40px" }}>
+                <div className={`h-6 sm:h-8 rounded flex items-center px-2 sm:px-3 text-white text-xs sm:text-sm font-medium ${f.color}`} style={{ width: `${f.pct}%`, minWidth: "32px" }}>
                   {f.count}
                 </div>
               </div>
@@ -291,27 +294,27 @@ function ReferralsTab() {
   const maxSpecialty = Math.max(...bySpecialty.map(s => s.count));
   return (
     <>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-4">
         <StatCard label="Total sent" value="21" />
         <StatCard label="Total received" value="17" />
         <StatCard label="By status" value="5" unit=" types" />
         <StatCard label="Top specialty" value="Rheum." />
       </div>
       {/* Referral sources */}
-      <div className="flex items-center gap-3 mb-4">
-        <span className="text-xs font-medium text-slate">Referral Sources:</span>
-        <span className="inline-block rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">Hilt: 21</span>
-        <span className="inline-block rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">Self Reported: 17</span>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
+        <span className="text-[11px] sm:text-xs font-medium text-slate">Referral Sources:</span>
+        <span className="inline-block rounded-full bg-blue-100 px-2 sm:px-2.5 py-0.5 text-[11px] sm:text-xs font-medium text-blue-800">Hilt: 21</span>
+        <span className="inline-block rounded-full bg-amber-100 px-2 sm:px-2.5 py-0.5 text-[11px] sm:text-xs font-medium text-amber-800">Self Reported: 17</span>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2">
         {/* By status */}
-        <div className="rounded-lg border border-gray-200 bg-white p-4">
-          <p className="text-sm font-semibold text-ink mb-3">By status</p>
+        <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+          <p className="text-xs sm:text-sm font-semibold text-ink mb-3">By status</p>
           <div className="space-y-2">
             {byStatus.map(s => (
-              <div key={s.status} className="flex items-center gap-3">
-                <span className="w-20 text-xs text-slate shrink-0">{s.status}</span>
+              <div key={s.status} className="flex items-center gap-2 sm:gap-3">
+                <span className="w-16 sm:w-20 text-[11px] sm:text-xs text-slate shrink-0">{s.status}</span>
                 <div className="flex-1 bg-gray-100 rounded overflow-hidden">
                   <div className={`h-5 rounded ${s.color}`} style={{ width: `${(s.count / 14) * 100}%`, minWidth: "24px" }} />
                 </div>
@@ -322,12 +325,12 @@ function ReferralsTab() {
         </div>
         {/* By specialty + top clinics */}
         <div className="space-y-4">
-          <div className="rounded-lg border border-gray-200 bg-white p-4">
-            <p className="text-sm font-semibold text-ink mb-3">By specialty</p>
+          <div className="rounded-lg border border-gray-200 bg-white p-3 sm:p-4">
+            <p className="text-xs sm:text-sm font-semibold text-ink mb-3">By specialty</p>
             <div className="space-y-2">
               {bySpecialty.map(s => (
-                <div key={s.name} className="flex items-center gap-3">
-                  <span className="w-24 text-xs text-slate shrink-0 truncate">{s.name}</span>
+                <div key={s.name} className="flex items-center gap-2 sm:gap-3">
+                  <span className="w-20 sm:w-24 text-[11px] sm:text-xs text-slate shrink-0 truncate">{s.name}</span>
                   <div className="flex-1 bg-gray-100 rounded overflow-hidden">
                     <div className="h-5 rounded bg-hilt-blue" style={{ width: `${(s.count / maxSpecialty) * 100}%`, minWidth: "24px" }} />
                   </div>
@@ -337,25 +340,25 @@ function ReferralsTab() {
             </div>
           </div>
           <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
-            <div className="p-4 pb-0">
-              <p className="text-sm font-semibold text-ink mb-3">Top referring clinics</p>
+            <div className="p-3 sm:p-4 pb-0">
+              <p className="text-xs sm:text-sm font-semibold text-ink mb-3">Top referring clinics</p>
             </div>
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-slate uppercase">Clinic</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate uppercase">Total</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate uppercase">Arrived</th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-slate uppercase">Pending</th>
+                  <th className="px-2 sm:px-4 py-2 text-left text-[10px] sm:text-xs font-semibold text-slate uppercase">Clinic</th>
+                  <th className="px-2 sm:px-4 py-2 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase">Total</th>
+                  <th className="px-2 sm:px-4 py-2 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase">Arrived</th>
+                  <th className="px-2 sm:px-4 py-2 text-right text-[10px] sm:text-xs font-semibold text-slate uppercase hidden sm:table-cell">Pending</th>
                 </tr>
               </thead>
               <tbody>
                 {topClinics.map(c => (
                   <tr key={c.name} className="border-b border-gray-50">
-                    <td className="px-4 py-2 font-medium text-ink">{c.name}</td>
-                    <td className="px-4 py-2 text-right text-slate">{c.count}</td>
-                    <td className="px-4 py-2 text-right text-green-600 font-medium">{c.arrived}</td>
-                    <td className="px-4 py-2 text-right text-amber-600 font-medium">{c.pending}</td>
+                    <td className="px-2 sm:px-4 py-2 font-medium text-ink max-w-[100px] sm:max-w-none truncate">{c.name}</td>
+                    <td className="px-2 sm:px-4 py-2 text-right text-slate">{c.count}</td>
+                    <td className="px-2 sm:px-4 py-2 text-right text-green-600 font-medium">{c.arrived}</td>
+                    <td className="px-2 sm:px-4 py-2 text-right text-amber-600 font-medium hidden sm:table-cell">{c.pending}</td>
                   </tr>
                 ))}
               </tbody>
@@ -415,7 +418,7 @@ export default function DashboardMockup() {
           <button
             key={tab}
             onClick={() => handleTabClick(tab)}
-            className={`shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+            className={`shrink-0 px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               active === tab
                 ? "border-hilt-blue text-hilt-blue"
                 : "border-transparent text-slate hover:text-ink hover:border-gray-300"
@@ -428,17 +431,17 @@ export default function DashboardMockup() {
 
       {!clicked && <p className="animate-pulse text-center text-sm text-hilt-blue font-medium py-2 bg-blue-50/80">Click the tabs to explore</p>}
 
-      <div className="p-4 sm:p-6">
+      <div className="p-3 sm:p-6">
         {/* Date picker mock */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-slate">Feb 14</div>
-          <span className="text-xs text-ash">to</span>
-          <div className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm text-slate">Mar 16</div>
-          <div className="flex items-center gap-1 ml-auto">
-            <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate">Today</div>
-            <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate">7d</div>
-            <div className="rounded-lg border border-hilt-blue bg-blue-50 px-2.5 py-1.5 text-xs font-medium text-hilt-blue">30d</div>
-            <div className="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate">90d</div>
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-4">
+          <div className="rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-slate">Feb 14</div>
+          <span className="text-[10px] sm:text-xs text-ash">to</span>
+          <div className="rounded-lg border border-gray-200 bg-white px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm text-slate">Mar 16</div>
+          <div className="flex items-center gap-1 sm:ml-auto">
+            <div className="rounded-lg border border-gray-200 bg-white px-1.5 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium text-slate">Today</div>
+            <div className="rounded-lg border border-gray-200 bg-white px-1.5 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium text-slate">7d</div>
+            <div className="rounded-lg border border-hilt-blue bg-blue-50 px-1.5 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium text-hilt-blue">30d</div>
+            <div className="rounded-lg border border-gray-200 bg-white px-1.5 sm:px-2.5 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium text-slate">90d</div>
           </div>
         </div>
 

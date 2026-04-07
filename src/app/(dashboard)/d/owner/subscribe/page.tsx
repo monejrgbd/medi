@@ -74,6 +74,16 @@ export default function SubscribePage() {
         });
       },
       onApprove: () => {
+        if (typeof window !== "undefined" && typeof window.gtag === "function") {
+          const planConfig = PLAN_CONFIG[selectedAction!.plan as keyof typeof PLAN_CONFIG];
+          const price = billing === "annual" ? planConfig.annual : planConfig.price;
+          window.gtag("event", "conversion", {
+            send_to: "AW-18032484152/QMO6COrbpZccELi-x5ZD",
+            value: price,
+            currency: "CAD",
+            transaction_id: `${org?.id}-${Date.now()}`,
+          });
+        }
         toast.success("Subscription created. Your plan will activate shortly.");
         setTimeout(() => router.push("/d/owner/billing"), 2000);
       },

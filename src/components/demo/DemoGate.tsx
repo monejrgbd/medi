@@ -66,6 +66,12 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     (async () => {
       const result = await startPrelogDemo(prelogEmail);
       if (result.success) {
+        if (typeof window !== "undefined" && typeof window.gtag === "function") {
+          window.gtag("event", "conversion", {
+            send_to: "AW-18032484152/BFv3CO3bpZccELi-x5ZD",
+            transaction_id: `demo-${prelogEmail}`,
+          });
+        }
         router.refresh();
       } else {
         setPrelogState("failed");
@@ -101,6 +107,12 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
       setLoading(false);
 
       if (result.success) {
+        if (typeof window !== "undefined" && typeof window.gtag === "function") {
+          window.gtag("event", "conversion", {
+            send_to: "AW-18032484152/BFv3CO3bpZccELi-x5ZD",
+            transaction_id: `demo-${email}`,
+          });
+        }
         router.refresh();
       } else {
         setError(result.error ?? "Verification failed.");

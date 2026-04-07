@@ -1,11 +1,5 @@
 "use client";
 
-declare global {
-  interface Window {
-    gtag?: (...args: unknown[]) => void;
-  }
-}
-
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -105,7 +99,7 @@ export default function OwnerSignUpForm() {
 
     if (typeof window !== "undefined" && typeof window.gtag === "function") {
       window.gtag("event", "conversion", {
-        send_to: "AW-18032484152/aLYSCMb5oZEcELi-x5ZD",
+        send_to: "AW-18032484152/Zz_ACOfbpZccELi-x5ZD",
         value: 1.0,
         currency: "CAD",
         transaction_id: orgResult?.org_id || "",
