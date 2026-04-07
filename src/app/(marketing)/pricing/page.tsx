@@ -388,7 +388,7 @@ function PlanCards() {
             </ul>
             <div className="mt-auto">
               <a
-                href="https://calendar.app.google/1Lmd2eT35zScoj4K8"
+                href="https://cal.com/102937474/hilt-health-meeting"
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
@@ -467,7 +467,7 @@ function PlanCards() {
       <FadeIn>
         <div className="mt-4 text-center">
           <a
-            href="https://calendar.app.google/1Lmd2eT35zScoj4K8"
+            href="https://cal.com/102937474/hilt-health-meeting"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => {
