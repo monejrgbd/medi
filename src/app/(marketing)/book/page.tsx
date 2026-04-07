@@ -1,10 +1,7 @@
+"use client";
+
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
-
-export const metadata = {
-  title: "Book a Meeting — Hilt Health",
-  description: "Schedule a meeting with the Hilt Health team to learn how AI pre-screening can work for your clinic.",
-};
 
 export default function BookPage() {
   return (
@@ -44,6 +41,14 @@ export default function BookPage() {
               href="https://cal.com/102937474/hilt-health-meeting"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => {
+                if (typeof window !== "undefined" && typeof window.gtag === "function") {
+                  window.gtag("event", "conversion", {
+                    send_to: "AW-18032484152/9-IpCO_ljpccELi-x5ZD",
+                    transaction_id: `book-${Date.now()}`,
+                  });
+                }
+              }}
               className="inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:shadow-xl hover:-translate-y-0.5"
             >
               Pick a Time
