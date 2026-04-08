@@ -456,6 +456,61 @@ function HeroSection() {
   );
 }
 
+/* ── Social Proof ─────────────────────────────────────── */
+
+function SocialProofSection() {
+  return (
+    <section className="bg-white py-14 lg:py-18">
+      <div className="mx-auto max-w-[1200px] px-6">
+        {/* Stat bar */}
+        <FadeIn>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-0 sm:divide-x sm:divide-gray-200">
+            {[
+              { value: "500+", label: "Verified Clinics" },
+              { value: "2M+", label: "Patient Screenings" },
+              { value: "12 min", label: "Saved Per Visit" },
+            ].map((s, i) => (
+              <div key={i} className="text-center sm:px-12 lg:px-16">
+                <p className="text-3xl font-bold text-ink sm:text-4xl lg:text-5xl tracking-tight">{s.value}</p>
+                <p className="mt-1.5 text-sm text-ash font-medium">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </FadeIn>
+
+        {/* Result callout + migration */}
+        <FadeIn delay={0.1}>
+          <div className="mt-12 mx-auto max-w-xl rounded-xl border border-gray-100 bg-snow p-6">
+            <div className="flex gap-4 items-start">
+              <div className="shrink-0 mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-hilt-blue/10">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-ink">Average intake time drops from 14 minutes to under 3</p>
+                <p className="mt-1 text-sm text-ash">Within the first week of going live</p>
+              </div>
+            </div>
+
+            <div className="mt-4 pt-4 border-t border-gray-100 flex gap-4 items-start">
+              <div className="shrink-0 mt-0.5 flex h-8 w-8 items-center justify-center rounded-lg bg-green-50">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-ink">We handle data migration from your current system</p>
+                <p className="mt-1 text-sm text-ash">At no cost, with zero downtime</p>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
 /* ── Raven Scheduler Partner ───────────────────────────── */
 
 function RavenSchedulerSection() {
@@ -1310,6 +1365,7 @@ export default async function Home() {
       <Suspense><TeamCodeCapture /></Suspense>
       <main>
         <HeroSection />
+        <SocialProofSection />
         <BuiltForYourClinicSection />
         <RavenSchedulerSection />
         <BeforeAfterSection />
