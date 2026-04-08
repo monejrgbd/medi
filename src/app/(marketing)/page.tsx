@@ -137,18 +137,22 @@ function ChatMockup() {
           {/* Medical info on file */}
           <div className="rounded-lg bg-white/60 p-2.5 mb-3">
             <p className="text-[9px] font-semibold text-green-800 mb-1.5">Your information on file</p>
-            <div className="grid grid-cols-3 gap-2 text-[10px]">
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px]">
               <div>
-                <p className="font-medium text-slate">Meds</p>
-                <p className="text-ink">Ibuprofen</p>
+                <p className="font-medium text-slate">Meds (1)</p>
+                <p className="text-ink">Ibuprofen PRN</p>
               </div>
               <div>
-                <p className="font-medium text-red-600">Allergies</p>
+                <p className="font-medium text-red-600">Allergies (1)</p>
                 <p className="text-ink">Penicillin</p>
               </div>
               <div>
-                <p className="font-medium text-slate">Chronic</p>
+                <p className="font-medium text-slate">Chronic (0)</p>
                 <p className="text-ash">None</p>
+              </div>
+              <div>
+                <p className="font-medium text-slate">Pets (1)</p>
+                <p className="text-ink">Cat</p>
               </div>
             </div>
           </div>
