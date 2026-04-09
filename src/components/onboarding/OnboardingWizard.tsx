@@ -13,7 +13,7 @@ import {
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink, ChevronLeft } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink, ChevronLeft, ArrowLeftRight } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
@@ -43,7 +43,7 @@ export default function OnboardingWizard({
   const storageKey = `hilt_onboarding_${org.id}`;
   const [hydrated, setHydrated] = useState(false);
 
-  const [step, setStep] = useState(existingLocations.length > 0 ? 6 : 0);
+  const [step, setStep] = useState(existingLocations.length > 0 ? 7 : 0);
 
   // Step 2 state (Raven Scheduler)
   const [ravenApiKey, setRavenApiKey] = useState("");
@@ -111,7 +111,7 @@ export default function OnboardingWizard({
     } catch {}
   }, [hydrated, step, locationId, createdLocationName, ravenApiKey, storageKey]);
 
-  // Step 6 (Try It) state
+  // Step 7 (Try It) state
   const [demoReady, setDemoReady] = useState(false);
   const [demoError, setDemoError] = useState("");
   type TryItPhase = "ready" | "detected" | "success";
@@ -136,7 +136,7 @@ export default function OnboardingWizard({
 
   // Set up demo (create owner staff account + check in as receptionist)
   useEffect(() => {
-    if (step !== 6 || !locationId || demoReady) return;
+    if (step !== 7 || !locationId || demoReady) return;
 
     let cancelled = false;
     setupOnboardingDemo(locationId).then((result) => {
@@ -153,7 +153,7 @@ export default function OnboardingWizard({
 
   // QR rendering
   useEffect(() => {
-    if (step === 6 && locationId && demoReady && canvasRef.current) {
+    if (step === 7 && locationId && demoReady && canvasRef.current) {
       QRCode.toCanvas(
         canvasRef.current,
         `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
@@ -164,7 +164,7 @@ export default function OnboardingWizard({
 
   // Realtime subscription — starts immediately when step 6 is ready
   useEffect(() => {
-    if (step !== 6 || !locationId || !demoReady || tryPhase !== "ready") return;
+    if (step !== 7 || !locationId || !demoReady || tryPhase !== "ready") return;
 
     const supabase = createClient();
     const channel = supabase
@@ -739,8 +739,8 @@ export default function OnboardingWizard({
         />
       )}
 
-      {/* Step 6: Try the Check-in */}
-      {step === 6 && (
+      {/* Step 7: Try the Check-in */}
+      {step === 7 && (
         <div className="max-w-md mx-auto text-center">
           <h2 className="text-xl font-bold text-ink mb-1">
             Try the Check in

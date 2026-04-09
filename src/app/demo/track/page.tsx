@@ -35,12 +35,14 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
   3: {
     keyPoints: [
       "This replaces the first ten minutes the doctor spends on intake",
+      "You give the AI explicit instructions on what to ask",
+      "You set a max message count so it does not run forever",
       "Urgent symptoms jump the queue automatically",
       "Returning patients do not repeat their history",
       "Each location gets specialty specific screening",
     ],
     lines: [
-      "So this conversation right here is the first ten minutes of the doctor's day with every patient. Except now the doctor is not doing it. By the time they open this chart, the symptom profile is already built. They can speak instead of type, which matters for your elderly patients. If something urgent comes up, that patient jumps the queue. Your staff did not have to make that call. For someone who was here last month, the AI already knows their history. It picks up where it left off. And your orthopedic location gets different questions than your family practice.",
+      "So this conversation right here is the first ten minutes of the doctor's day with every patient. Except now the doctor is not doing it. By the time they open this chart, the symptom profile is already built. You write the instructions for what the AI asks. You tell it to always ask about allergies, always ask about current medications, whatever matters at your clinic. And you set a max message count so it does not keep going forever. Ten messages, fifteen, whatever you want. They can speak instead of type, which matters for your elderly patients. If something urgent comes up, that patient jumps the queue. Your staff did not have to make that call. For someone who was here last month, the AI already knows their history. It picks up where it left off. And your orthopedic location gets completely different questions than your family practice.",
     ],
   },
   4: {

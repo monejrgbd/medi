@@ -285,7 +285,7 @@ function HeroSection() {
                 <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                 </svg>
-                <span className="text-slate">Free data migration, <a href="https://cal.com/102937474/hilt-health-meeting" target="_blank" rel="noopener noreferrer" className="font-semibold text-hilt-blue hover:underline">meet with us</a></span>
+                <span className="text-slate">Free data migration, <Link href="/migrate" className="font-semibold text-hilt-blue hover:underline">learn more</Link></span>
               </div>
             </div>
           </div>
