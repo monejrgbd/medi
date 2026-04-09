@@ -80,17 +80,15 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
           >
             Start Free Trial, Up to $200 in Credits
           </button>
-          <button
-            onClick={async () => {
-              await signOutDemoUser();
-              sessionStorage.setItem("scrollToContact", "1");
-              sessionStorage.setItem("preselectInterest", "meet");
-              router.push("/");
-            }}
+          <a
+            href="https://cal.com/102937474/hilt-health-meeting"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => signOutDemoUser()}
             className="inline-flex items-center justify-center px-8 py-2.5 border border-hilt-blue text-hilt-blue font-medium rounded-lg hover:bg-blue-50 transition-colors"
           >
             Book a Meeting
-          </button>
+          </a>
         </div>
 
         <button
