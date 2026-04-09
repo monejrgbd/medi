@@ -2,8 +2,8 @@ CREATE TABLE IF NOT EXISTS public.pre_checkin_tokens (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   org_id          uuid NOT NULL REFERENCES public.organizations(id),
   location_id     uuid NOT NULL REFERENCES public.locations(id),
-  first_name      text NOT NULL,
-  last_name       text NOT NULL,
+  first_name      text,
+  last_name       text,
   created_by      uuid NOT NULL REFERENCES public.staff_users(id),
   token           uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
   used            boolean NOT NULL DEFAULT false,
@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS public.pre_checkin_tokens (
   session_token   uuid,
   ai_model_override text DEFAULT NULL,
   skip_ai         boolean NOT NULL DEFAULT false,
+  ai_session_instructions text DEFAULT NULL,
+  name_match_mode text NOT NULL DEFAULT 'name' CHECK (name_match_mode IN ('name', 'none')),
   created_at      timestamptz NOT NULL DEFAULT now(),
   expires_at      timestamptz NOT NULL DEFAULT now() + interval '48 hours'
 );

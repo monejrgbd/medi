@@ -26,7 +26,7 @@ const ALL_STEPS = [
     label: "AI Screening",
     role: "You are the patient",
     todo: "Answer the AI's questions. The conversation ends on its own when enough information is collected.",
-    info: "The AI builds a structured symptom profile automatically, saving the doctor time.",
+    info: "The AI builds a structured symptom profile automatically, saving the doctor time. You can write custom instructions for what the AI should ask and set a max message count per location.",
     featureGate: null,
     mapsToDemoStep: 3,
   },

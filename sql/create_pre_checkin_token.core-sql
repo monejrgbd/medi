@@ -1,6 +1,8 @@
 -- Drop old signatures
 DROP FUNCTION IF EXISTS private.create_pre_checkin_token(uuid, uuid, text, text);
 DROP FUNCTION IF EXISTS public.create_pre_checkin_token(uuid, text, text);
+DROP FUNCTION IF EXISTS private.create_pre_checkin_token(uuid, uuid, text, text, text, boolean);
+DROP FUNCTION IF EXISTS public.create_pre_checkin_token(uuid, text, text, text, boolean);
 
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.create_pre_checkin_token(
@@ -9,7 +11,9 @@ CREATE OR REPLACE FUNCTION private.create_pre_checkin_token(
   p_first_name text,
   p_last_name text,
   p_ai_model text DEFAULT NULL,
-  p_skip_ai boolean DEFAULT false
+  p_skip_ai boolean DEFAULT false,
+  p_ai_session_instructions text DEFAULT NULL,
+  p_name_match_mode text DEFAULT 'name'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -24,19 +28,36 @@ DECLARE
   v_is_receptionist boolean := false;
   v_clean_first text;
   v_clean_last text;
+  v_clean_instructions text;
   v_location_exists boolean;
   v_token_id uuid;
   v_token uuid;
 BEGIN
-  -- Sanitize names
-  v_clean_first := regexp_replace(trim(COALESCE(p_first_name, '')), '<[^>]*>', '', 'g');
-  v_clean_last := regexp_replace(trim(COALESCE(p_last_name, '')), '<[^>]*>', '', 'g');
-
-  IF length(v_clean_first) = 0 OR length(v_clean_last) = 0 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'First and last name are required');
+  -- Validate name_match_mode
+  IF p_name_match_mode NOT IN ('name', 'none') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid name match mode');
   END IF;
-  IF length(v_clean_first) > 100 OR length(v_clean_last) > 100 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Name exceeds maximum length');
+
+  -- Sanitize names (conditional on mode)
+  IF p_name_match_mode = 'name' THEN
+    v_clean_first := regexp_replace(trim(COALESCE(p_first_name, '')), '<[^>]*>', '', 'g');
+    v_clean_last := regexp_replace(trim(COALESCE(p_last_name, '')), '<[^>]*>', '', 'g');
+
+    IF length(v_clean_first) = 0 OR length(v_clean_last) = 0 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'First and last name are required');
+    END IF;
+    IF length(v_clean_first) > 100 OR length(v_clean_last) > 100 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Name exceeds maximum length');
+    END IF;
+  ELSE
+    v_clean_first := NULL;
+    v_clean_last := NULL;
+  END IF;
+
+  -- Sanitize session instructions
+  v_clean_instructions := left(trim(regexp_replace(COALESCE(p_ai_session_instructions, ''), '<[^>]*>', '', 'g')), 2000);
+  IF length(v_clean_instructions) = 0 THEN
+    v_clean_instructions := NULL;
   END IF;
 
   -- Validate ai_model
@@ -132,8 +153,8 @@ BEGIN
   END IF;
 
   -- Create token
-  INSERT INTO public.pre_checkin_tokens (org_id, location_id, first_name, last_name, created_by, ai_model_override, skip_ai)
-  VALUES (v_caller_org_id, p_location_id, v_clean_first, v_clean_last, v_caller_staff_id, p_ai_model, COALESCE(p_skip_ai, false))
+  INSERT INTO public.pre_checkin_tokens (org_id, location_id, first_name, last_name, created_by, ai_model_override, skip_ai, ai_session_instructions, name_match_mode)
+  VALUES (v_caller_org_id, p_location_id, v_clean_first, v_clean_last, v_caller_staff_id, p_ai_model, COALESCE(p_skip_ai, false), v_clean_instructions, p_name_match_mode)
   RETURNING id, token INTO v_token_id, v_token;
 
   RETURN jsonb_build_object(
@@ -150,7 +171,9 @@ CREATE OR REPLACE FUNCTION public.create_pre_checkin_token(
   p_first_name text,
   p_last_name text,
   p_ai_model text DEFAULT NULL,
-  p_skip_ai boolean DEFAULT false
+  p_skip_ai boolean DEFAULT false,
+  p_ai_session_instructions text DEFAULT NULL,
+  p_name_match_mode text DEFAULT 'name'
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -164,9 +187,9 @@ BEGIN
   IF v_auth_uid IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
   END IF;
-  RETURN private.create_pre_checkin_token(v_auth_uid, p_location_id, p_first_name, p_last_name, p_ai_model, p_skip_ai);
+  RETURN private.create_pre_checkin_token(v_auth_uid, p_location_id, p_first_name, p_last_name, p_ai_model, p_skip_ai, p_ai_session_instructions, p_name_match_mode);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean, text, text) TO authenticated;

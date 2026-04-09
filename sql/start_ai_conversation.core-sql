@@ -35,7 +35,8 @@ BEGIN
   -- Look up visit with joins
   SELECT v.id, v.status, v.session_token, v.patient_id, v.location_id,
          v.org_id, v.has_previous_visits, v.created_at,
-         v.is_follow_up, v.follow_up_of, v.ai_model_override
+         v.is_follow_up, v.follow_up_of, v.ai_model_override,
+         v.ai_session_instructions
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -333,6 +334,13 @@ BEGIN
     v_system_prompt := v_system_prompt
       || E'\n\nCLINIC SPECIFIC INSTRUCTIONS:\n'
       || left(trim(v_location.ai_custom_instructions), 2000);
+  END IF;
+
+  -- Append per-session instructions if set by receptionist
+  IF v_visit.ai_session_instructions IS NOT NULL AND length(trim(v_visit.ai_session_instructions)) > 0 THEN
+    v_system_prompt := v_system_prompt
+      || E'\n\nSESSION SPECIFIC INSTRUCTIONS:\n'
+      || left(trim(v_visit.ai_session_instructions), 2000);
   END IF;
 
   -- Insert system prompt as first message (cached for subsequent get_conversation calls)

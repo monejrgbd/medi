@@ -1346,13 +1346,15 @@ export type Database = {
       pre_checkin_tokens: {
         Row: {
           ai_model_override: string | null
+          ai_session_instructions: string | null
           created_at: string
           created_by: string
           expires_at: string
-          first_name: string
+          first_name: string | null
           id: string
-          last_name: string
+          last_name: string | null
           location_id: string
+          name_match_mode: string
           org_id: string
           session_token: string | null
           skip_ai: boolean
@@ -1362,13 +1364,15 @@ export type Database = {
         }
         Insert: {
           ai_model_override?: string | null
+          ai_session_instructions?: string | null
           created_at?: string
           created_by: string
           expires_at?: string
-          first_name: string
+          first_name?: string | null
           id?: string
-          last_name: string
+          last_name?: string | null
           location_id: string
+          name_match_mode?: string
           org_id: string
           session_token?: string | null
           skip_ai?: boolean
@@ -1378,13 +1382,15 @@ export type Database = {
         }
         Update: {
           ai_model_override?: string | null
+          ai_session_instructions?: string | null
           created_at?: string
           created_by?: string
           expires_at?: string
-          first_name?: string
+          first_name?: string | null
           id?: string
-          last_name?: string
+          last_name?: string | null
           location_id?: string
+          name_match_mode?: string
           org_id?: string
           session_token?: string | null
           skip_ai?: boolean
@@ -2404,6 +2410,7 @@ export type Database = {
           ai_diagnostic: string | null
           ai_model_override: string | null
           ai_model_used: string | null
+          ai_session_instructions: string | null
           ai_skipped: boolean | null
           ai_started_at: string | null
           ai_structured_card: Json | null
@@ -2458,6 +2465,7 @@ export type Database = {
           ai_diagnostic?: string | null
           ai_model_override?: string | null
           ai_model_used?: string | null
+          ai_session_instructions?: string | null
           ai_skipped?: boolean | null
           ai_started_at?: string | null
           ai_structured_card?: Json | null
@@ -2512,6 +2520,7 @@ export type Database = {
           ai_diagnostic?: string | null
           ai_model_override?: string | null
           ai_model_used?: string | null
+          ai_session_instructions?: string | null
           ai_skipped?: boolean | null
           ai_started_at?: string | null
           ai_structured_card?: Json | null
@@ -2820,9 +2829,11 @@ export type Database = {
       create_pre_checkin_token: {
         Args: {
           p_ai_model?: string
+          p_ai_session_instructions?: string
           p_first_name: string
           p_last_name: string
           p_location_id: string
+          p_name_match_mode?: string
           p_skip_ai?: boolean
         }
         Returns: Json
@@ -3257,6 +3268,10 @@ export type Database = {
       set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
       set_visit_ai_override: {
         Args: { p_ai_model?: string; p_visit_id: string }
+        Returns: Json
+      }
+      set_visit_ai_session_instructions: {
+        Args: { p_instructions?: string; p_visit_id: string }
         Returns: Json
       }
       set_visit_demo_features: {

@@ -6,6 +6,7 @@ import {
   approvePatient,
   denyPatient,
   setVisitAiOverride,
+  setVisitAiSessionInstructions,
   skipAiToQueue,
 } from "@/app/(dashboard)/d/_actions/receptionist";
 import { linkReferralToVisit } from "@/app/(dashboard)/d/_actions/referral";
@@ -72,7 +73,7 @@ export default function ApprovalQueue({
     referralMatch: { referral_id: string; specialty: string; from_org_name: string; from_doctor_name: string };
   } | null>(null);
 
-  async function handleApprove(visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }, aiConfig?: AiConfig) {
+  async function handleApprove(visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }, aiConfig?: AiConfig, aiSessionInstructions?: string) {
     // Check if visit has referral match — show dialog before approving
     const visit = pending.find((v) => v.visit_id === visitId);
     if (visit?.referral_match && !followUpInfo) {
@@ -110,6 +111,11 @@ export default function ApprovalQueue({
         setError(overrideResult?.error ?? "Premium AI not available. Budget may be exhausted.");
         return;
       }
+    }
+
+    // Session instructions: set before approval so AI picks them up
+    if (aiSessionInstructions) {
+      await setVisitAiSessionInstructions(visitId, aiSessionInstructions);
     }
 
     const result = await approvePatient(visitId, followUpInfo);

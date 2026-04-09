@@ -1,13 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope, UserPlus, Search } from "lucide-react";
+import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope, UserPlus, Search, Lock, CalendarClock } from "lucide-react";
 import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
 import { initializeOrgDefaultVitals } from "@/app/(dashboard)/d/_actions/nurse";
 import { createClient } from "@/lib/supabase/client";
+import { QUEUE_TYPES } from "@/lib/constants";
 
 interface ClinicFeaturesStepProps {
   locationId: string;
+  hasRaven?: boolean;
   onComplete: (features: {
     nurse: boolean;
     vitals: boolean;
@@ -21,6 +23,7 @@ interface ClinicFeaturesStepProps {
 
 export default function ClinicFeaturesStep({
   locationId,
+  hasRaven,
   onComplete,
   onBack,
 }: ClinicFeaturesStepProps) {
@@ -33,6 +36,7 @@ export default function ClinicFeaturesStep({
   const [diagnosticEnabled, setDiagnosticEnabled] = useState(true);
   const [askReferralSource, setAskReferralSource] = useState(false);
   const [askDiscoverySource, setAskDiscoverySource] = useState(false);
+  const [queueType, setQueueType] = useState("fifo");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -50,6 +54,7 @@ export default function ClinicFeaturesStep({
         setDiagnosticEnabled(loc.diagnostic_enabled ?? true);
         setAskReferralSource(loc.ask_referral_source ?? false);
         setAskDiscoverySource(loc.ask_discovery_source ?? false);
+        setQueueType(loc.queue_type ?? "fifo");
       }
       setLoaded(true);
     });
@@ -69,6 +74,7 @@ export default function ClinicFeaturesStep({
       vitalsEnabled: true,
       reviewSmsEnabled: true,
       diagnosticEnabled: true,
+      queueType,
     });
     setSaving(false);
     onComplete({ nurse: false, vitals: true, vaccines: false, skipAi: false, reviewSms: true, diagnostic: true });
@@ -89,6 +95,7 @@ export default function ClinicFeaturesStep({
         diagnosticEnabled,
         askReferralSource,
         askDiscoverySource,
+        queueType,
       });
 
       if (!result.success) {
@@ -126,12 +133,62 @@ export default function ClinicFeaturesStep({
   return (
     <div className="max-w-md mx-auto">
       <h2 className="text-xl font-bold text-ink mb-1 text-center">
-        Customize Your Clinic
+        Configure Your Clinic
       </h2>
       <p className="text-sm text-slate mb-4 text-center">
-        Enable the features your workflow needs. You can change these later.
+        Set your queue type and enable the features your workflow needs. You can change these later.
       </p>
 
+      {/* Queue Type */}
+      <div className="mb-5">
+        <h3 className="text-sm font-semibold text-ink mb-2">Queue Type</h3>
+        <div className="space-y-1.5">
+          {QUEUE_TYPES.map((qt) => {
+            const isLocked = qt.requiresRaven && !hasRaven;
+            const isSelected = queueType === qt.value;
+            return (
+              <button
+                key={qt.value}
+                type="button"
+                disabled={isLocked}
+                onClick={() => setQueueType(qt.value)}
+                className={`w-full rounded-xl border p-2.5 text-left transition-colors ${
+                  isLocked
+                    ? "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                    : isSelected
+                    ? "border-hilt-blue bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className={`text-sm font-semibold ${isLocked ? "text-ash" : "text-ink"}`}>
+                    {qt.label}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {qt.requiresRaven && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-ash">
+                        {isLocked ? <Lock className="h-3 w-3" /> : <CalendarClock className="h-3 w-3" />}
+                        Raven
+                      </span>
+                    )}
+                    <div className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                      isSelected ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"
+                    }`}>
+                      {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </div>
+                  </div>
+                </div>
+                <p className={`text-xs mt-0.5 ${isLocked ? "text-ash" : "text-slate"}`}>
+                  {qt.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Features */}
+      <h3 className="text-sm font-semibold text-ink mb-2">Features</h3>
       <div className="grid grid-cols-2 gap-2 mb-5">
         {/* Nurse Triage */}
         <FeatureTile

@@ -320,7 +320,9 @@ export default function CheckinFlow({
 
       // Token unused: pre-fill form
       setPreCheckinToken(urlToken);
-      setPreCheckinName({ first: data.first_name, last: data.last_name });
+      if (data.name_match_mode !== "none" && data.first_name && data.last_name) {
+        setPreCheckinName({ first: data.first_name, last: data.last_name });
+      }
       setTokenValidating(false);
     })();
   }, [locationId, locationData.active, kiosk]); // eslint-disable-line react-hooks/exhaustive-deps

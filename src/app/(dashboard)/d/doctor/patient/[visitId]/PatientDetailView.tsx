@@ -60,6 +60,7 @@ interface VisitDetail {
     diagnostic_enabled: boolean;
     nurse_reviewed?: boolean;
     nurse_notes?: string;
+    ai_session_instructions?: string;
   };
   patient: {
     id: string;
@@ -241,6 +242,14 @@ export default function PatientDetailView({
           <div className="mt-4 rounded-lg bg-teal-50 border border-teal-200 p-4">
             <h4 className="text-sm font-semibold text-teal-800 mb-1">Nurse Notes</h4>
             <p className="text-sm text-ink whitespace-pre-wrap">{visit.nurse_notes}</p>
+          </div>
+        )}
+
+        {/* Session instructions from receptionist */}
+        {visit.ai_session_instructions && (
+          <div className="mt-4 rounded-lg bg-amber-50 border border-amber-200 p-4">
+            <h4 className="text-sm font-semibold text-amber-800 mb-1">Session Instructions Given to AI</h4>
+            <p className="text-sm text-ink whitespace-pre-wrap">{visit.ai_session_instructions}</p>
           </div>
         )}
 

@@ -2,6 +2,7 @@ import { requireAuth, getMyRoles, getMyOrg, getStaffUser } from "@/lib/auth";
 import { RoleProvider } from "@/contexts/RoleContext";
 import { Toaster } from "sonner";
 import SubscriptionWarningBanner from "@/components/dashboard/SubscriptionWarningBanner";
+import OnboardingBanner from "@/components/dashboard/OnboardingBanner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default async function DashboardLayout({
@@ -28,6 +29,7 @@ export default async function DashboardLayout({
       }}
     >
       <SubscriptionWarningBanner />
+      <OnboardingBanner />
       <ErrorBoundary>
         {children}
       </ErrorBoundary>

@@ -119,15 +119,17 @@ BEGIN
   -- before arriving at the clinic.
 
   -- =====================================================
-  -- FUZZY NAME MATCH (pg_trgm)
+  -- FUZZY NAME MATCH (pg_trgm) — only when name matching is enabled
   -- =====================================================
-  v_name_sim := (
-    public.similarity(lower(v_clean_first), lower(v_tok.first_name)) +
-    public.similarity(lower(v_clean_last), lower(v_tok.last_name))
-  ) / 2.0;
+  IF v_tok.name_match_mode = 'name' THEN
+    v_name_sim := (
+      public.similarity(lower(v_clean_first), lower(v_tok.first_name)) +
+      public.similarity(lower(v_clean_last), lower(v_tok.last_name))
+    ) / 2.0;
 
-  IF v_name_sim < 0.4 THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Name does not match the invitation');
+    IF v_name_sim < 0.4 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Name does not match the invitation');
+    END IF;
   END IF;
 
   -- =====================================================
@@ -282,24 +284,28 @@ BEGIN
       INSERT INTO public.visits (
         org_id, location_id, patient_id, has_previous_visits,
         phone_verification_pending, is_return_visit,
-        status, ai_skipped, entered_queue_at
+        status, ai_skipped, entered_queue_at,
+        ai_session_instructions
       )
       VALUES (
         v_org_id, v_location_id, v_patient.id, v_has_previous,
         false, v_has_previous,
-        'waiting_doctor_claim', true, now()
+        'waiting_doctor_claim', true, now(),
+        v_tok.ai_session_instructions
       )
       RETURNING * INTO v_new_visit;
     ELSE
       INSERT INTO public.visits (
         org_id, location_id, patient_id, has_previous_visits,
         phone_verification_pending, is_return_visit,
-        status, ai_started_at, ai_model_override
+        status, ai_started_at, ai_model_override,
+        ai_session_instructions
       )
       VALUES (
         v_org_id, v_location_id, v_patient.id, v_has_previous,
         false, v_has_previous,
-        'still_answering_ai', now(), v_resolved_model
+        'still_answering_ai', now(), v_resolved_model,
+        v_tok.ai_session_instructions
       )
       RETURNING * INTO v_new_visit;
     END IF;
@@ -319,7 +325,8 @@ BEGIN
         'name_similarity', round(v_name_sim::numeric, 2),
         'ai_skipped', v_resolved_skip,
         'ai_model_override', v_resolved_model,
-        'ai_model_fallback', v_ai_fallback
+        'ai_model_fallback', v_ai_fallback,
+        'name_match_mode', v_tok.name_match_mode
       )
     );
 

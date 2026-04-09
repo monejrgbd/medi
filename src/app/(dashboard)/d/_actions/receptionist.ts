@@ -272,6 +272,20 @@ export async function fetchAuditTrail(
   };
 }
 
+export async function setVisitAiSessionInstructions(visitId: string, instructions: string) {
+  await requireAuth();
+  if (!validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
+
+  const clean = stripHtml(instructions).slice(0, 2000);
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_visit_ai_session_instructions", {
+    p_visit_id: visitId,
+    p_instructions: clean,
+  });
+  if (error) return { success: false, error: error.message };
+  return data;
+}
+
 export async function setVisitAiOverride(visitId: string, aiModel: string | null) {
   await requireAuth();
   if (!validUUID(visitId)) return { success: false, error: "Invalid visit ID" };

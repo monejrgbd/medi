@@ -254,6 +254,16 @@ export default function DoctorMockup() {
         </div>
       </div>
 
+      {/* Session instructions */}
+      <div className="border-b border-gray-100 px-4 py-3">
+        <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5">
+          <p className="text-[9px] font-semibold text-amber-800 mb-0.5">Session Instructions Given to AI</p>
+          <p className="text-[10px] text-ink leading-relaxed">
+            Make sure to ask about morning stiffness duration, whether pain is symmetric, and family history of arthritis.
+          </p>
+        </div>
+      </div>
+
       {/* Tabs + content */}
       <div className="p-4">
         {/* Interactive hint, pulses until user clicks a tab */}

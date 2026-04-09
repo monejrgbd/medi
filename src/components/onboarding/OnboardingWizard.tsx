@@ -4,16 +4,16 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { createClient } from "@/lib/supabase/client";
-import { createLocation, updateLocation } from "@/app/(dashboard)/d/_actions/locations";
+import { createLocation } from "@/app/(dashboard)/d/_actions/locations";
 import {
   completeOnboarding,
   setupOnboardingDemo,
   approveOnboardingVisit,
   updateOrganizationProfile,
 } from "@/app/(dashboard)/d/_actions/onboarding";
-import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
+import { ALLOWED_SPECIALTIES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Lock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink, ChevronLeft, ArrowLeftRight } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink, ChevronLeft, ArrowLeftRight } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
@@ -43,7 +43,7 @@ export default function OnboardingWizard({
   const storageKey = `hilt_onboarding_${org.id}`;
   const [hydrated, setHydrated] = useState(false);
 
-  const [step, setStep] = useState(existingLocations.length > 0 ? 7 : 0);
+  const [step, setStep] = useState(existingLocations.length > 0 ? 6 : 0);
 
   // Step 2 state (Raven Scheduler)
   const [ravenApiKey, setRavenApiKey] = useState("");
@@ -51,11 +51,7 @@ export default function OnboardingWizard({
   const [showRavenInput, setShowRavenInput] = useState(false);
   const [ravenError, setRavenError] = useState("");
 
-  // Step 3 state (Queue Type)
-  const [queueType, setQueueType] = useState("fifo");
-  const [savingQueue, setSavingQueue] = useState(false);
-
-  // Step 4 state (Customize Clinic)
+  // Step 3 state (Configure Clinic)
   const [nurseEnabled, setNurseEnabled] = useState(false);
   const [vitalsEnabled, setVitalsEnabled] = useState(true);
   const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
@@ -111,7 +107,7 @@ export default function OnboardingWizard({
     } catch {}
   }, [hydrated, step, locationId, createdLocationName, ravenApiKey, storageKey]);
 
-  // Step 7 (Try It) state
+  // Step 6 (Try It) state
   const [demoReady, setDemoReady] = useState(false);
   const [demoError, setDemoError] = useState("");
   type TryItPhase = "ready" | "detected" | "success";
@@ -123,20 +119,9 @@ export default function OnboardingWizard({
   const [approving, setApproving] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Load queue type from DB when entering step 3 (prevents resetting to "fifo" on back navigation)
-  useEffect(() => {
-    if (step !== 3 || !locationId) return;
-    const supabase = createClient();
-    supabase.rpc("get_location_detail", { p_location_id: locationId }).then(({ data }) => {
-      if (data?.location?.queue_type) {
-        setQueueType(data.location.queue_type);
-      }
-    });
-  }, [step, locationId]);
-
   // Set up demo (create owner staff account + check in as receptionist)
   useEffect(() => {
-    if (step !== 7 || !locationId || demoReady) return;
+    if (step !== 6 || !locationId || demoReady) return;
 
     let cancelled = false;
     setupOnboardingDemo(locationId).then((result) => {
@@ -153,7 +138,7 @@ export default function OnboardingWizard({
 
   // QR rendering
   useEffect(() => {
-    if (step === 7 && locationId && demoReady && canvasRef.current) {
+    if (step === 6 && locationId && demoReady && canvasRef.current) {
       QRCode.toCanvas(
         canvasRef.current,
         `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
@@ -164,7 +149,7 @@ export default function OnboardingWizard({
 
   // Realtime subscription — starts immediately when step 6 is ready
   useEffect(() => {
-    if (step !== 7 || !locationId || !demoReady || tryPhase !== "ready") return;
+    if (step !== 6 || !locationId || !demoReady || tryPhase !== "ready") return;
 
     const supabase = createClient();
     const channel = supabase
@@ -234,13 +219,6 @@ export default function OnboardingWizard({
     setSavingRaven(false);
     setRavenError("This is not a valid Raven Scheduler API key. You can get your key from the Raven dashboard at ravenscheduler.com.");
   }, [ravenApiKey]);
-
-  const handleSaveQueue = useCallback(async () => {
-    setSavingQueue(true);
-    await updateLocation({ locationId, queueType });
-    setSavingQueue(false);
-    setStep(4); // Features step
-  }, [locationId, queueType]);
 
   const handleApprove = useCallback(async () => {
     if (!detectedVisit) return;
@@ -631,79 +609,100 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 3: Queue Type */}
+      {/* Step 3: Configure Clinic */}
       {step === 3 && locationId && (
-        <div className="max-w-md mx-auto">
-          <h2 className="text-xl font-bold text-ink mb-1 text-center">
-            Choose Your Queue Type
-          </h2>
-          <p className="text-sm text-slate mb-5 text-center">
-            This applies to <span className="font-medium">{createdLocationName}</span>. You can change it later in location settings.
-          </p>
+        <ClinicFeaturesStep
+          locationId={locationId}
+          hasRaven={!!ravenApiKey.trim()}
+          onBack={() => setStep(2)}
+          onComplete={(features) => {
+            setNurseEnabled(features.nurse);
+            setVitalsEnabled(features.vitals);
+            setVaccinesEnabled(features.vaccines);
+            setStep(4);
+          }}
+        />
+      )}
 
-          <div className="space-y-2 mb-5">
-            {QUEUE_TYPES.map((qt) => {
-              const isLocked = qt.requiresRaven && !ravenApiKey.trim();
-              const isSelected = queueType === qt.value;
-              return (
-                <button
-                  key={qt.value}
-                  type="button"
-                  disabled={isLocked}
-                  onClick={() => setQueueType(qt.value)}
-                  className={`w-full rounded-xl border p-3 text-left transition-colors ${
-                    isLocked
-                      ? "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
-                      : isSelected
-                      ? "border-hilt-blue bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 cursor-pointer"
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className={`text-sm font-semibold ${isLocked ? "text-ash" : "text-ink"}`}>
-                      {qt.label}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {qt.requiresRaven && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-ash">
-                          {isLocked ? <Lock className="h-3 w-3" /> : <CalendarClock className="h-3 w-3" />}
-                          Raven Scheduler
-                        </span>
-                      )}
-                      <div className={`flex h-4 w-4 items-center justify-center rounded-full border ${
-                        isSelected ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"
-                      }`}>
-                        {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                      </div>
-                    </div>
-                  </div>
-                  <p className={`text-xs mt-1 ${isLocked ? "text-ash" : "text-slate"}`}>
-                    {qt.description}
-                  </p>
-                </button>
-              );
-            })}
+      {/* Step 4: Add Staff */}
+      {step === 4 && locationId && (
+        <AddStaffStep
+          orgId={org.id}
+          orgSlug={org.slug}
+          locationId={locationId}
+          locationName={createdLocationName}
+          nurseEnabled={nurseEnabled}
+          onContinue={() => setStep(5)}
+          onBack={() => setStep(3)}
+        />
+      )}
+
+      {/* Step 5: Data Transfer */}
+      {step === 5 && (
+        <div className="max-w-lg mx-auto">
+          <div className="text-center mb-6">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1">
+              <ArrowLeftRight className="h-3.5 w-3.5 text-emerald-600" />
+              <span className="text-xs font-medium text-emerald-700">Free with every plan</span>
+            </div>
+            <h2 className="text-xl font-bold text-ink mb-1">
+              Data Transfer
+            </h2>
+            <p className="text-sm text-slate">
+              Switching from another system? We handle the entire migration for you, at no extra cost.
+            </p>
           </div>
 
-          <button
-            onClick={handleSaveQueue}
-            disabled={savingQueue}
-            className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 mb-5">
+            <p className="text-sm text-ink mb-3 font-medium">
+              Our team will transfer all your data from your current system, including:
+            </p>
+            <ul className="space-y-2.5">
+              <li className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                </div>
+                <span className="text-sm text-slate">Patient records, demographics, and contact information</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                </div>
+                <span className="text-sm text-slate">Visit history, notes, and documents</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                </div>
+                <span className="text-sm text-slate">Staff accounts and role assignments</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                  <Check className="h-3 w-3 text-emerald-600" />
+                </div>
+                <span className="text-sm text-slate">Any other data from your current EMR or intake system</span>
+              </li>
+            </ul>
+          </div>
+
+          <a
+            href="https://cal.com/102937474/hilt-health-meeting"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 text-center mb-3 transition-colors"
           >
-            {savingQueue ? "Saving..." : "Continue"}
+            Book a Meeting
+          </a>
+
+          <button
+            onClick={() => setStep(6)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors mb-1.5"
+          >
+            Continue without transfer
           </button>
 
           <button
             onClick={() => setStep(4)}
-            disabled={savingQueue}
-            className="w-full text-sm text-slate hover:text-ink transition-colors py-2 mt-2"
-          >
-            Skip
-          </button>
-
-          <button
-            onClick={() => setStep(2)}
-            disabled={savingQueue}
             className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2 mt-1"
           >
             <ChevronLeft className="h-4 w-4" />
@@ -712,35 +711,8 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 4: Customize Clinic */}
-      {step === 4 && locationId && (
-        <ClinicFeaturesStep
-          locationId={locationId}
-          onBack={() => setStep(3)}
-          onComplete={(features) => {
-            setNurseEnabled(features.nurse);
-            setVitalsEnabled(features.vitals);
-            setVaccinesEnabled(features.vaccines);
-            setStep(5);
-          }}
-        />
-      )}
-
-      {/* Step 5: Add Staff */}
-      {step === 5 && locationId && (
-        <AddStaffStep
-          orgId={org.id}
-          orgSlug={org.slug}
-          locationId={locationId}
-          locationName={createdLocationName}
-          nurseEnabled={nurseEnabled}
-          onContinue={() => setStep(6)}
-          onBack={() => setStep(4)}
-        />
-      )}
-
-      {/* Step 7: Try the Check-in */}
-      {step === 7 && (
+      {/* Step 6: Try the Check-in */}
+      {step === 6 && (
         <div className="max-w-md mx-auto text-center">
           <h2 className="text-xl font-bold text-ink mb-1">
             Try the Check in

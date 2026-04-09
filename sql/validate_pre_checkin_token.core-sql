@@ -59,7 +59,8 @@ BEGIN
     'used', false,
     'first_name', v_tok.first_name,
     'last_name', v_tok.last_name,
-    'location_id', v_tok.location_id
+    'location_id', v_tok.location_id,
+    'name_match_mode', v_tok.name_match_mode
   );
 END;
 $$;

@@ -51,6 +51,7 @@ CREATE TABLE public.visits (
   self_reported_referral boolean DEFAULT false,
   self_reported_referrer text,
   discovery_source      text,
+  ai_session_instructions text DEFAULT NULL,
   updated_at            timestamptz DEFAULT now(),
   created_at            timestamptz DEFAULT now()
 );

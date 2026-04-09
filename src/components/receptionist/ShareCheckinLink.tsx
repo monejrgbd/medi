@@ -20,17 +20,21 @@ export default function ShareCheckinLink({
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [aiConfig, setAiConfig] = useState<AiConfig>("standard");
+  const [nameMatchMode, setNameMatchMode] = useState<"name" | "none">("name");
+  const [aiInstructions, setAiInstructions] = useState("");
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function handleGenerate() {
-    const trimFirst = firstName.trim();
-    const trimLast = lastName.trim();
-    if (!trimFirst || !trimLast) {
-      toast.error("Please enter first and last name");
-      return;
+    if (nameMatchMode === "name") {
+      const trimFirst = firstName.trim();
+      const trimLast = lastName.trim();
+      if (!trimFirst || !trimLast) {
+        toast.error("Please enter first and last name");
+        return;
+      }
     }
 
     if (demoMode) {
@@ -42,10 +46,12 @@ export default function ShareCheckinLink({
     startTransition(async () => {
       const result = await generateCheckinLink(
         locationId,
-        trimFirst,
-        trimLast,
+        firstName.trim(),
+        lastName.trim(),
         aiConfig === "premium" ? "advanced" : null,
-        aiConfig === "skip"
+        aiConfig === "skip",
+        aiInstructions.trim() || null,
+        nameMatchMode
       );
       if (result.success && result.link) {
         setLink(result.link);
@@ -78,31 +84,66 @@ export default function ShareCheckinLink({
         {!link ? (
           <>
             <div className="space-y-3 mb-4">
+              {/* Name Matching Mode */}
               <div>
-                <label className="text-xs font-medium text-slate mb-1 block">
-                  First Name
+                <label className="text-xs font-medium text-slate mb-1.5 block">
+                  Name Matching
                 </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value.slice(0, 100))}
-                  placeholder="Patient first name"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none"
-                  autoFocus
-                />
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setNameMatchMode("name")}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      nameMatchMode === "name"
+                        ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    Match Name
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNameMatchMode("none")}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                      nameMatchMode === "none"
+                        ? "bg-gray-200 text-gray-700 ring-1 ring-gray-400"
+                        : "bg-gray-50 text-slate hover:bg-gray-100"
+                    }`}
+                  >
+                    No Matching
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-medium text-slate mb-1 block">
-                  Last Name
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value.slice(0, 100))}
-                  placeholder="Patient last name"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none"
-                />
-              </div>
+
+              {nameMatchMode === "name" && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-slate mb-1 block">
+                      First Name
+                    </label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value.slice(0, 100))}
+                      placeholder="Patient first name"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none"
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate mb-1 block">
+                      Last Name
+                    </label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value.slice(0, 100))}
+                      placeholder="Patient last name"
+                      className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* AI Config */}
               <div>
@@ -145,6 +186,23 @@ export default function ShareCheckinLink({
                   </button>
                 </div>
               </div>
+
+              {/* Session Instructions */}
+              {aiConfig !== "skip" && (
+                <div>
+                  <label className="text-xs font-medium text-slate mb-1 block">
+                    Session Instructions <span className="font-normal text-ash">(optional)</span>
+                  </label>
+                  <textarea
+                    value={aiInstructions}
+                    onChange={(e) => setAiInstructions(e.target.value.slice(0, 2000))}
+                    placeholder="Add instructions for this session only..."
+                    rows={2}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-none"
+                  />
+                  <p className="mt-0.5 text-[10px] text-ash text-right">{aiInstructions.length}/2000</p>
+                </div>
+              )}
             </div>
 
             {error && (
@@ -163,7 +221,7 @@ export default function ShareCheckinLink({
               </button>
               <button
                 onClick={handleGenerate}
-                disabled={isPending || !firstName.trim() || !lastName.trim()}
+                disabled={isPending || (nameMatchMode === "name" && (!firstName.trim() || !lastName.trim()))}
                 className={`flex-1 rounded-lg px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50 transition-colors ${
                   aiConfig === "premium"
                     ? "bg-purple-600 hover:bg-purple-700"
@@ -180,9 +238,13 @@ export default function ShareCheckinLink({
           <>
             <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-3">
               <p className="text-xs font-medium text-green-800 mb-2">
-                Link generated for {firstName.trim()} {lastName.trim()}
+                {nameMatchMode === "name"
+                  ? <>Link generated for {firstName.trim()} {lastName.trim()}</>
+                  : <>Link generated (no name matching)</>
+                }
                 {aiConfig === "premium" && <span className="ml-1 text-purple-700">(Premium AI)</span>}
                 {aiConfig === "skip" && <span className="ml-1 text-gray-600">(No AI)</span>}
+                {aiInstructions.trim() && <span className="ml-1 text-amber-700">(Session instructions)</span>}
               </p>
               <div className="rounded-md bg-white border border-gray-200 px-3 py-2 text-xs text-ink break-all font-mono">
                 {link}

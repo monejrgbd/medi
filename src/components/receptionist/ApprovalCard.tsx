@@ -55,7 +55,7 @@ type AiConfig = "standard" | "skip" | "premium";
 interface ApprovalCardProps {
   visit: PendingVisit;
   orgId: string;
-  onApprove: (visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }, aiConfig?: AiConfig) => void;
+  onApprove: (visitId: string, followUpInfo?: { followUpOfVisitId: string; followUpId: string }, aiConfig?: AiConfig, aiSessionInstructions?: string) => void;
   onDeny: (visitId: string) => void;
   approving: boolean;
   denying: boolean;
@@ -79,6 +79,7 @@ export default function ApprovalCard({
 
   const [aiConfig, setAiConfig] = useState<AiConfig>("standard");
   const [showAiOptions, setShowAiOptions] = useState(false);
+  const [aiInstructions, setAiInstructions] = useState("");
 
   // Edit mode state
   const [editing, setEditing] = useState(false);
@@ -468,48 +469,67 @@ export default function ApprovalCard({
               </button>
 
               {showAiOptions && (
-                <div className="mt-1.5 flex gap-1.5">
-                  <button
-                    onClick={() => setAiConfig("standard")}
-                    disabled={busy}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                      aiConfig === "standard"
-                        ? "bg-green-100 text-green-700 ring-1 ring-green-300"
-                        : "bg-gray-50 text-slate hover:bg-gray-100"
-                    }`}
-                  >
-                    Standard AI
-                  </button>
-                  <button
-                    onClick={() => setAiConfig("skip")}
-                    disabled={busy}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                      aiConfig === "skip"
-                        ? "bg-gray-200 text-gray-700 ring-1 ring-gray-400"
-                        : "bg-gray-50 text-slate hover:bg-gray-100"
-                    }`}
-                  >
-                    Skip AI
-                  </button>
-                  <button
-                    onClick={() => setAiConfig("premium")}
-                    disabled={busy}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
-                      aiConfig === "premium"
-                        ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
-                        : "bg-gray-50 text-slate hover:bg-gray-100"
-                    }`}
-                  >
-                    Premium AI
-                  </button>
-                </div>
+                <>
+                  <div className="mt-1.5 flex gap-1.5">
+                    <button
+                      onClick={() => setAiConfig("standard")}
+                      disabled={busy}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                        aiConfig === "standard"
+                          ? "bg-green-100 text-green-700 ring-1 ring-green-300"
+                          : "bg-gray-50 text-slate hover:bg-gray-100"
+                      }`}
+                    >
+                      Standard AI
+                    </button>
+                    <button
+                      onClick={() => setAiConfig("skip")}
+                      disabled={busy}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                        aiConfig === "skip"
+                          ? "bg-gray-200 text-gray-700 ring-1 ring-gray-400"
+                          : "bg-gray-50 text-slate hover:bg-gray-100"
+                      }`}
+                    >
+                      Skip AI
+                    </button>
+                    <button
+                      onClick={() => setAiConfig("premium")}
+                      disabled={busy}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
+                        aiConfig === "premium"
+                          ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
+                          : "bg-gray-50 text-slate hover:bg-gray-100"
+                      }`}
+                    >
+                      Premium AI
+                    </button>
+                  </div>
+
+                  {/* Session Instructions */}
+                  {aiConfig !== "skip" && (
+                    <div className="mt-2">
+                      <textarea
+                        value={aiInstructions}
+                        onChange={(e) => setAiInstructions(e.target.value.slice(0, 2000))}
+                        placeholder="Session instructions (optional)..."
+                        rows={2}
+                        disabled={busy}
+                        className="w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none resize-none disabled:opacity-50"
+                      />
+                      {aiInstructions.length > 0 && (
+                        <p className="mt-0.5 text-[9px] text-ash text-right">{aiInstructions.length}/2000</p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
 
           <div className="flex gap-2">
             <button
-              onClick={() => onApprove(visit.visit_id, undefined, aiConfig)}
+              onClick={() => onApprove(visit.visit_id, undefined, aiConfig, aiInstructions.trim() || undefined)}
               disabled={busy}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
                 aiConfig === "premium"
