@@ -93,11 +93,11 @@ export default function CreditDashboard() {
       enterprise: { sms: 10000, scan: 1000000, premiumAi: 1000, premiumAiCost: 4 },
     };
     const caps = featureCaps[data.subscription_plan] || { sms: 0, scan: 0, premiumAi: 0 };
-    const fu = (data as unknown as { feature_usage?: { sms_used: number; scan_used: number; opus_used: number } }).feature_usage;
+    const fu = (data as unknown as { feature_usage?: { sms_used: number; scan_used: number; premium_ai_used: number } }).feature_usage;
     const smsUsed = Math.round((fu?.sms_used || 0) / 0.1); // credits → SMS count
     const scanUsed = Math.round((fu?.scan_used || 0) * 1000); // credits → patient count
     const premiumAiCost = caps.premiumAiCost || 4;
-    const premiumAiUsed = Math.round((fu?.opus_used || 0) / premiumAiCost); // credits → conversation count
+    const premiumAiUsed = Math.round((fu?.premium_ai_used || 0) / premiumAiCost); // credits → conversation count
     const topupsRemaining = Math.round((data as unknown as { topups_remaining?: number }).topups_remaining || 0);
     const trialScreeningsUsed = (data as unknown as { trial_screenings_used?: number }).trial_screenings_used;
     const trialScreeningsLimit = (data as unknown as { trial_screenings_limit?: number }).trial_screenings_limit;

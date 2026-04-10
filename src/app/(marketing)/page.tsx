@@ -130,7 +130,7 @@ function ChatMockup() {
       {/* Summary confirmation card */}
       <div>
         <div className="w-[300px] sm:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5">
-          <p className="text-[10px] font-semibold text-green-700 mb-2">Summary for your approval</p>
+          <p className="text-[10px] font-semibold text-green-700 mb-2">Patient approves summary the doctor will read</p>
           <p className="text-sm leading-relaxed text-green-900 mb-3">
             Returning patient with worsening knee pain, new morning stiffness in hands lasting about 1 hour, and knuckle swelling. Ibuprofen provides partial relief. Fatigue reported. Family history of rheumatoid arthritis.
           </p>

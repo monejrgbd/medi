@@ -84,7 +84,7 @@ BEGIN
       SELECT jsonb_build_object(
         'sms_used', GREATEST(COALESCE(-SUM(CASE WHEN cl.credit_type = 'marketing_sms' THEN cl.credits_amount ELSE 0 END), 0), 0),
         'scan_used', GREATEST(COALESCE(-SUM(CASE WHEN cl.credit_type = 'marketing_scan' THEN cl.credits_amount ELSE 0 END), 0), 0),
-        'opus_used', GREATEST(COALESCE(-SUM(CASE WHEN cl.credit_type = 'premium_ai' OR (cl.credit_type = 'conversation' AND cl.ai_model = 'advanced') THEN cl.credits_amount ELSE 0 END), 0), 0)
+        'premium_ai_used', GREATEST(COALESCE(-SUM(CASE WHEN cl.credit_type = 'premium_ai' OR (cl.credit_type = 'conversation' AND cl.ai_model = 'advanced') THEN cl.credits_amount ELSE 0 END), 0), 0)
       )
       FROM public.credits_log cl
       WHERE cl.org_id = v_org.id

@@ -22,7 +22,7 @@ function SummaryTab() {
           <p className="text-[9px] text-ash">6 min conversation</p>
         </div>
         <p className="text-[11px] leading-relaxed text-ink">
-          Returning patient, previously seen for right knee pain. Now reports bilateral knee involvement and morning stiffness in hands lasting approximately 1 hour daily, with knuckle swelling. Ibuprofen provides partial relief. Reports recent fatigue. Family history of rheumatoid arthritis (mother).
+          Returning patient with worsening knee pain, new morning stiffness in hands lasting about 1 hour, and knuckle swelling. Ibuprofen provides partial relief. Fatigue reported. Family history of rheumatoid arthritis.
         </p>
       </div>
       <p className="mt-2 text-[9px] italic text-ash">
