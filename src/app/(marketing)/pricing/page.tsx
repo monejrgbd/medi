@@ -52,9 +52,8 @@ const EVERY_PLAN_FEATURES = [
 const PLAN_FEATURES = {
   starter: {
     features: [
-      "Unlimited Standard AI intake and summaries",
-      "Unlimited Standard AI diagnostics",
-      "20 messages per intake conversation limit",
+      "Unlimited Standard AI intake",
+      "30 messages per intake conversation limit",
     ],
     premiumAi: [
       "1 Premium AI intake/mo",
@@ -66,9 +65,8 @@ const PLAN_FEATURES = {
   },
   professional: {
     features: [
-      "Unlimited Advanced AI intake and summaries",
-      "Unlimited Premium AI diagnostics",
-      "35 messages per intake conversation limit",
+      "Unlimited Advanced AI intake",
+      "60 messages per intake conversation limit",
     ],
     premiumAi: [
       "5 Premium AI intakes/mo",
@@ -80,9 +78,8 @@ const PLAN_FEATURES = {
   },
   business: {
     features: [
-      "Unlimited Precision AI intake and summaries",
-      "Unlimited Premium AI diagnostics",
-      "50 messages per intake conversation limit",
+      "Unlimited Precision AI intake",
+      "100 messages per intake conversation limit",
       "Embeddable widget for your website",
     ],
     premiumAi: [

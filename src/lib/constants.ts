@@ -1,8 +1,8 @@
-// Per-provider pricing with AI model differentiation
+// Per-provider plan pricing. The AI tier for each plan lives in src/lib/ai-plans.ts (PLAN_AI).
 export const PLAN_CONFIG = {
-  starter:      { ai: "standard" as const,  price: 79,  annual: 63,  credits: 20,  label: "Starter" },
-  professional: { ai: "advanced" as const, price: 149, annual: 119, credits: 100, label: "Professional" },
-  business:     { ai: "precision" as const, price: 249, annual: 199, credits: 300, label: "Business" },
+  starter:      { price: 79,  annual: 63,  credits: 20,  label: "Starter" },
+  professional: { price: 149, annual: 119, credits: 100, label: "Professional" },
+  business:     { price: 249, annual: 199, credits: 300, label: "Business" },
 } as const;
 
 export const PROVIDER_ROLES = ["doctor", "nurse"] as const;

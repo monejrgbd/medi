@@ -61,7 +61,7 @@ BEGIN
   END IF;
 
   -- Validate ai_model
-  IF p_ai_model IS NOT NULL AND p_ai_model NOT IN ('standard', 'advanced') THEN
+  IF p_ai_model IS NOT NULL AND p_ai_model NOT IN ('standard', 'advanced', 'precision', 'premium') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid AI model');
   END IF;
 
@@ -105,7 +105,7 @@ BEGIN
   END IF;
 
   -- Premium AI budget pre-flight check (read-only, no deduction)
-  IF p_ai_model = 'advanced' THEN
+  IF p_ai_model = 'premium' THEN
     DECLARE
       v_org record;
       v_cap numeric;

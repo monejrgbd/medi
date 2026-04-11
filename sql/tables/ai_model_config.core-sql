@@ -1,0 +1,79 @@
+-- One row per tier. Each row is a "combo" of 3 task configs (intake, summary, diagnostic).
+-- Edited atomically by platform super admin. Clinic owners never see or touch this.
+-- Ops can swap providers per task per tier without any deploy.
+CREATE TABLE IF NOT EXISTS public.ai_model_config (
+  tier text PRIMARY KEY
+    CHECK (tier IN ('standard', 'advanced', 'precision', 'premium')),
+  display_name text NOT NULL,
+  credit_cost numeric NOT NULL DEFAULT 0,
+
+  -- Intake (patient-facing conversation, streaming)
+  intake_provider text NOT NULL
+    CHECK (intake_provider IN ('anthropic', 'google_vertex', 'openai')),
+  intake_model text NOT NULL,
+  intake_model_display text NOT NULL,
+  intake_max_tokens int NOT NULL DEFAULT 1024,
+  intake_temperature numeric NOT NULL DEFAULT 0.7,
+
+  -- Summary (JSON extraction after conversation completes)
+  summary_provider text NOT NULL
+    CHECK (summary_provider IN ('anthropic', 'google_vertex', 'openai')),
+  summary_model text NOT NULL,
+  summary_model_display text NOT NULL,
+  summary_max_tokens int NOT NULL DEFAULT 2048,
+  summary_temperature numeric NOT NULL DEFAULT 0.5,
+
+  -- Diagnostic (doctor-facing diagnostic suggestion)
+  diagnostic_provider text NOT NULL
+    CHECK (diagnostic_provider IN ('anthropic', 'google_vertex', 'openai')),
+  diagnostic_model text NOT NULL,
+  diagnostic_model_display text NOT NULL,
+  diagnostic_max_tokens int NOT NULL DEFAULT 2048,
+  diagnostic_temperature numeric NOT NULL DEFAULT 0.3,
+
+  notes text,
+  updated_at timestamptz DEFAULT now(),
+  updated_by uuid REFERENCES auth.users(id)
+);
+
+ALTER TABLE public.ai_model_config ENABLE ROW LEVEL SECURITY;
+
+-- Authenticated reads (edge functions use service role which bypasses RLS anyway; this is for the admin UI)
+DROP POLICY IF EXISTS "ai_model_config_read" ON public.ai_model_config;
+CREATE POLICY "ai_model_config_read" ON public.ai_model_config
+  FOR SELECT TO authenticated USING (true);
+
+-- Platform super admin writes only (via JWT app_metadata claim)
+DROP POLICY IF EXISTS "ai_model_config_write" ON public.ai_model_config;
+CREATE POLICY "ai_model_config_write" ON public.ai_model_config
+  FOR ALL TO authenticated
+  USING ((auth.jwt()->'app_metadata'->>'is_platform_admin')::boolean = true)
+  WITH CHECK ((auth.jwt()->'app_metadata'->>'is_platform_admin')::boolean = true);
+
+-- Seed: 4 combos, all on Anthropic (preserves current production behavior)
+INSERT INTO public.ai_model_config (
+  tier, display_name, credit_cost,
+  intake_provider, intake_model, intake_model_display, intake_max_tokens, intake_temperature,
+  summary_provider, summary_model, summary_model_display, summary_max_tokens, summary_temperature,
+  diagnostic_provider, diagnostic_model, diagnostic_model_display, diagnostic_max_tokens, diagnostic_temperature
+) VALUES
+  ('standard',  'Standard Combo', 1,
+   'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 1024, 0.7,
+   'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.5,
+   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.3),
+
+  ('advanced',  'Advanced Combo', 1.5,
+   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  1024, 0.7,
+   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.5,
+   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3),
+
+  ('precision', 'Precision Combo', 1.5,
+   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  1024, 0.7,
+   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.5,
+   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3),
+
+  ('premium',   'Premium Combo', 4,
+   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    1024, 0.7,
+   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.5,
+   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3)
+ON CONFLICT (tier) DO NOTHING;

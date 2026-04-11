@@ -14,6 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_model_config: {
+        Row: {
+          credit_cost: number
+          diagnostic_max_tokens: number
+          diagnostic_model: string
+          diagnostic_model_display: string
+          diagnostic_provider: string
+          diagnostic_temperature: number
+          display_name: string
+          intake_max_tokens: number
+          intake_model: string
+          intake_model_display: string
+          intake_provider: string
+          intake_temperature: number
+          notes: string | null
+          summary_max_tokens: number
+          summary_model: string
+          summary_model_display: string
+          summary_provider: string
+          summary_temperature: number
+          tier: string
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          credit_cost?: number
+          diagnostic_max_tokens?: number
+          diagnostic_model: string
+          diagnostic_model_display: string
+          diagnostic_provider: string
+          diagnostic_temperature?: number
+          display_name: string
+          intake_max_tokens?: number
+          intake_model: string
+          intake_model_display: string
+          intake_provider: string
+          intake_temperature?: number
+          notes?: string | null
+          summary_max_tokens?: number
+          summary_model: string
+          summary_model_display: string
+          summary_provider: string
+          summary_temperature?: number
+          tier: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          credit_cost?: number
+          diagnostic_max_tokens?: number
+          diagnostic_model?: string
+          diagnostic_model_display?: string
+          diagnostic_provider?: string
+          diagnostic_temperature?: number
+          display_name?: string
+          intake_max_tokens?: number
+          intake_model?: string
+          intake_model_display?: string
+          intake_provider?: string
+          intake_temperature?: number
+          notes?: string | null
+          summary_max_tokens?: number
+          summary_model?: string
+          summary_model_display?: string
+          summary_provider?: string
+          summary_temperature?: number
+          tier?: string
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       approval_codes: {
         Row: {
           code: string
@@ -3141,6 +3213,7 @@ export type Database = {
         Args: { p_nurse_notes: string; p_visit_id: string }
         Returns: Json
       }
+      private_get_vault_secret: { Args: { p_name: string }; Returns: string }
       purchase_feature_topup: {
         Args: { p_credits: number; p_feature: string }
         Returns: Json
@@ -3356,6 +3429,10 @@ export type Database = {
       }
       trigger_review_sms: { Args: { p_visit_id: string }; Returns: Json }
       trigger_visit_summary_sms: { Args: { p_visit_id: string }; Returns: Json }
+      update_ai_model_config: {
+        Args: { p_combo: Json; p_tier: string }
+        Returns: Json
+      }
       update_allergies: {
         Args: { p_allergies: string[]; p_patient_id: string }
         Returns: Json

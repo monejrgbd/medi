@@ -289,7 +289,13 @@ export async function setVisitAiSessionInstructions(visitId: string, instruction
 export async function setVisitAiOverride(visitId: string, aiModel: string | null) {
   await requireAuth();
   if (!validUUID(visitId)) return { success: false, error: "Invalid visit ID" };
-  if (aiModel !== null && aiModel !== "standard" && aiModel !== "advanced")
+  if (
+    aiModel !== null &&
+    aiModel !== "standard" &&
+    aiModel !== "advanced" &&
+    aiModel !== "precision" &&
+    aiModel !== "premium"
+  )
     return { success: false, error: "Invalid AI model" };
 
   const supabase = await createClient();

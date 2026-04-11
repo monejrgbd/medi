@@ -2,7 +2,7 @@
 CREATE OR REPLACE FUNCTION private.set_visit_ai_override(
   p_caller_auth_uid uuid,
   p_visit_id uuid,
-  p_ai_model text  -- 'advanced' for Premium AI, NULL to remove override
+  p_ai_model text  -- 'premium' for Opus override, NULL to remove override
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -16,7 +16,7 @@ DECLARE
   v_budget_result jsonb;
 BEGIN
   -- Validate
-  IF p_ai_model IS NOT NULL AND p_ai_model NOT IN ('standard', 'advanced') THEN
+  IF p_ai_model IS NOT NULL AND p_ai_model NOT IN ('standard', 'advanced', 'precision', 'premium') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid AI model');
   END IF;
 
@@ -53,8 +53,8 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
   END IF;
 
-  -- If setting to advanced (Premium AI), check budget availability
-  IF p_ai_model = 'advanced' THEN
+  -- If setting to premium (Opus), check budget availability
+  IF p_ai_model = 'premium' THEN
     -- Quick budget check: compute remaining Premium AI capacity
     DECLARE
       v_cap numeric;

@@ -1,8 +1,9 @@
 // Deploy with: --no-verify-jwt (internal-only, auth via x-internal-secret)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiModelToTier, getAdapter, loadTierConfig, pickTaskCall } from "../_ai-providers/index.ts";
+import type { TierConfig } from "../_ai-providers/index.ts";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const EDGE_FUNCTION_URL = Deno.env.get("SUPABASE_URL") + "/functions/v1";
 
 Deno.serve(async (req) => {
@@ -60,9 +61,10 @@ Deno.serve(async (req) => {
       .join("\n\n");
 
     // Load visit details for display_format, ai_model, and nurse data
+    // Include ai_model_override + ai_model_used so summary tier matches what intake actually ran on
     const { data: visitRow } = await supabase
       .from("visits")
-      .select("org_id, patient_id, session_token, location_id, nurse_notes, nurse_reviewed")
+      .select("org_id, patient_id, session_token, location_id, nurse_notes, nurse_reviewed, ai_model_override, ai_model_used")
       .eq("id", visit_id)
       .single();
 
@@ -81,7 +83,15 @@ Deno.serve(async (req) => {
       .eq("id", visitRow.location_id)
       .single();
 
-    const aiModel = locationRow?.ai_model || "standard";
+    // Tier resolution order (most specific wins):
+    //   1. visits.ai_model_used    (set by deduct_credits after the visit ran)
+    //   2. visits.ai_model_override (receptionist bumped the tier for this visit)
+    //   3. locations.ai_model       (location default)
+    const aiModel =
+      visitRow.ai_model_used ||
+      visitRow.ai_model_override ||
+      locationRow?.ai_model ||
+      "standard";
     const displayFormat = locationRow?.display_format || "summary";
 
     // Get subscription plan for model selection
@@ -150,72 +160,42 @@ Produce a JSON object with these fields:
 
 Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
 
-    // Summary model: Opus only when conversation also uses Opus (Business/Enterprise + advanced location)
-    const summaryUsesOpus = ["business", "enterprise", "pay_as_you_go", "standard_trial", "premium_trial"].includes(subscriptionPlan) && aiModel === "advanced";
-    const claudeModel = summaryUsesOpus
-      ? "claude-opus-4-20250514"
-      : "claude-sonnet-4-20250514";
-
-    let claudeResponse: Response | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY!,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: claudeModel,
-            max_tokens: 2048,
-            messages: [{ role: "user", content: summaryPrompt }],
-          }),
-        });
-
-        if (claudeResponse.ok) break;
-
-        console.error(`Claude API error (attempt ${attempt + 1}/3):`, claudeResponse.status);
-        claudeResponse = null;
-      } catch (err) {
-        console.error(`Claude API fetch error (attempt ${attempt + 1}/3):`, err);
-        claudeResponse = null;
-      }
-
-      if (attempt < 2) {
-        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
-      }
-    }
-
-    if (!claudeResponse || !claudeResponse.ok) {
-      console.error("Claude API failed after 3 attempts for visit:", visit_id);
-      // Move patient to doctor queue so they don't stay stuck
+    // Resolve tier + load the combo row once. Both summary and diagnostic come from this.
+    const tier = aiModelToTier(aiModel);
+    let tierConfig: TierConfig;
+    try {
+      tierConfig = await loadTierConfig(supabase, tier);
+    } catch (err) {
+      console.error("Failed to load ai_model_config:", err);
       await supabase.rpc("move_to_queue_on_error", {
         p_visit_id: visit_id,
         p_session_token: visitRow.session_token,
       });
-      return new Response(JSON.stringify({ error: "AI summarization failed after retries" }), {
+      return new Response(JSON.stringify({ error: "AI config missing" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const claudeResult = await claudeResponse.json();
-    const rawText = claudeResult.content?.[0]?.text || "";
+    // Summary call via adapter
+    const summaryCall = pickTaskCall(tierConfig, "summary");
+    const summaryAdapter = getAdapter(summaryCall.provider, supabase);
 
-    // Parse JSON response — strip any markdown fences if present
-    let parsed;
+    let parsed: Record<string, unknown> & { summary?: unknown; structured_card?: unknown; medications?: unknown; allergies?: unknown; chronic_conditions?: unknown; pets_at_home?: unknown };
     try {
-      const cleaned = rawText.replace(/^```json?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-      parsed = JSON.parse(cleaned);
-    } catch {
-      console.error("Failed to parse Claude JSON:", rawText);
-      // Move patient forward — don't leave them stuck on "generating summary"
+      const result = await summaryAdapter.structuredOutput({
+        call: summaryCall,
+        system: "You are a clinical summarization assistant. Respond ONLY with valid JSON.",
+        messages: [{ role: "user", content: summaryPrompt }],
+      });
+      parsed = result.json as typeof parsed;
+    } catch (err) {
+      console.error("Summary adapter error:", err);
       await supabase.rpc("move_to_queue_on_error", {
         p_visit_id: visit_id,
         p_session_token: visitRow.session_token,
       });
-      return new Response(JSON.stringify({ error: "Failed to parse AI response" }), {
+      return new Response(JSON.stringify({ error: "AI summarization failed" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -379,43 +359,24 @@ Respond ONLY with valid JSON, no markdown, no code fences:
 
 Doctor reference only. Not shown to patients.`;
 
-          let diagResponse: Response | null = null;
-          for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-              diagResponse = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "x-api-key": ANTHROPIC_API_KEY!,
-                  "anthropic-version": "2023-06-01",
-                },
-                body: JSON.stringify({
-                  model: ["professional", "business", "enterprise", "pay_as_you_go", "standard_trial", "premium_trial"].includes(subscriptionPlan)
-                    ? "claude-opus-4-20250514"
-                    : "claude-sonnet-4-20250514",
-                  max_tokens: 256,
-                  messages: [{ role: "user", content: diagnosticPrompt }],
-                }),
-              });
-              if (diagResponse.ok) break;
-              diagResponse = null;
-            } catch {
-              diagResponse = null;
-            }
-            if (attempt < 2) await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
-          }
-
-          if (diagResponse?.ok) {
-            const diagResult = await diagResponse.json();
-            const diagnosticText = diagResult.content?.[0]?.text || "";
+          // Diagnostic call via adapter — uses the same tier as the conversation
+          try {
+            const diagCall = pickTaskCall(tierConfig, "diagnostic");
+            const diagAdapter = getAdapter(diagCall.provider, supabase);
+            const diagResult = await diagAdapter.structuredOutput({
+              call: diagCall,
+              system: "You are a senior clinical consultant. Respond ONLY with valid JSON.",
+              messages: [{ role: "user", content: diagnosticPrompt }],
+            });
+            const diagnosticText = diagResult.rawText || JSON.stringify(diagResult.json);
             if (diagnosticText) {
               await supabase
                 .from("visits")
                 .update({ ai_diagnostic: diagnosticText, updated_at: new Date().toISOString() })
                 .eq("id", visit_id);
             }
-          } else {
-            console.error("Diagnostic Opus call failed for visit:", visit_id);
+          } catch (diagInnerErr) {
+            console.error("Diagnostic adapter call failed for visit:", visit_id, diagInnerErr);
           }
         }
       }

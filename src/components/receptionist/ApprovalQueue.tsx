@@ -105,7 +105,7 @@ export default function ApprovalQueue({
         setError("Premium AI is not available in the demo. Please select Standard AI or Skip AI.");
         return;
       }
-      const overrideResult = await setVisitAiOverride(visitId, "advanced");
+      const overrideResult = await setVisitAiOverride(visitId, "premium");
       if (!overrideResult?.success) {
         setActionState((prev) => { const next = { ...prev }; delete next[visitId]; return next; });
         setError(overrideResult?.error ?? "Premium AI not available. Budget may be exhausted.");

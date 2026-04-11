@@ -228,7 +228,7 @@ BEGIN
     END IF;
 
     -- Premium AI fallback: re-check budget at use time
-    IF NOT v_resolved_skip AND v_tok.ai_model_override = 'advanced' THEN
+    IF NOT v_resolved_skip AND v_tok.ai_model_override = 'premium' THEN
       DECLARE
         v_org_budget record;
         v_cap numeric;
@@ -269,9 +269,9 @@ BEGIN
         END IF;
 
         IF v_budget_ok THEN
-          v_resolved_model := 'advanced';
+          v_resolved_model := 'premium';
         ELSE
-          v_resolved_model := NULL; -- Silent fallback to standard
+          v_resolved_model := NULL; -- Silent fallback to the location default
           v_ai_fallback := true;
         END IF;
       END;

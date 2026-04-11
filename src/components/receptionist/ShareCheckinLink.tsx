@@ -48,7 +48,7 @@ export default function ShareCheckinLink({
         locationId,
         firstName.trim(),
         lastName.trim(),
-        aiConfig === "premium" ? "advanced" : null,
+        aiConfig === "premium" ? "premium" : null,
         aiConfig === "skip",
         aiInstructions.trim() || null,
         nameMatchMode

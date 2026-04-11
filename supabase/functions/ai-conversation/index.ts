@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { aiModelToTier, getAdapter, loadTaskCall } from "../_ai-providers/index.ts";
+import { PLAN_AI } from "../_ai-providers/plan-config.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE_CLOUD_API_KEY");
 // Dynamic CORS: echo the request Origin so embedded widgets on clinic sites work.
@@ -169,16 +170,8 @@ Deno.serve(async (req) => {
     const subscriptionPlan = orgRow?.subscription_plan || "starter";
 
     // Message limit: per-location override (capped by plan max) > plan default > 30
-    const planMsgConfig: Record<string, { def: number; max: number }> = {
-      starter: { def: 20, max: 20 },
-      professional: { def: 35, max: 35 },
-      business: { def: 50, max: 50 },
-      enterprise: { def: 50, max: 50 },
-      pay_as_you_go: { def: 30, max: 50 },
-      standard_trial: { def: 30, max: 30 },
-      premium_trial: { def: 30, max: 50 },
-    };
-    const msgConfig = planMsgConfig[subscriptionPlan] ?? { def: 30, max: 30 };
+    const planConfig = PLAN_AI[subscriptionPlan] ?? { messageLimit: { def: 30, max: 30 }, included: [], creditBased: [] };
+    const msgConfig = planConfig.messageLimit;
     const messageLimit = locationRow?.ai_message_limit
       ? Math.min(locationRow.ai_message_limit, msgConfig.max)
       : msgConfig.def;
@@ -209,32 +202,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Model selection based on subscription plan (must be before credit deduction)
-    let claudeModel: string;
-    let shouldDeductCredits = false;
+    // Resolve the tier + load the intake combo row, then pick the adapter
+    const tier = aiModelToTier(aiModel);
+    const { call: intakeCall } = await loadTaskCall(supabase, tier, "intake");
+    const intakeAdapter = getAdapter(intakeCall.provider, supabase);
 
-    if (subscriptionPlan === "starter" && aiModel !== "advanced") {
-      claudeModel = "claude-haiku-4-5-20251001";
-    } else if (subscriptionPlan === "starter" && aiModel === "advanced") {
-      // Premium AI taste: 1 conversation included
-      claudeModel = "claude-opus-4-20250514";
-      shouldDeductCredits = true;
-    } else if (subscriptionPlan === "professional" && aiModel === "advanced") {
-      // Premium AI taste: 5 conversations included
-      claudeModel = "claude-opus-4-20250514";
-      shouldDeductCredits = true;
-    } else if ((subscriptionPlan === "business" || subscriptionPlan === "enterprise") && aiModel === "advanced") {
-      claudeModel = "claude-opus-4-20250514";
-      shouldDeductCredits = subscriptionPlan === "business";
-    } else if (subscriptionPlan === "pay_as_you_go" || subscriptionPlan === "standard_trial" || subscriptionPlan === "premium_trial") {
-      claudeModel = aiModel === "advanced" ? "claude-opus-4-20250514" : "claude-sonnet-4-20250514";
-      shouldDeductCredits = true;
-    } else {
-      // professional (standard location), business (standard location), enterprise (standard)
-      claudeModel = subscriptionPlan === "starter" ? "claude-haiku-4-5-20251001" : "claude-sonnet-4-20250514";
-    }
+    // Credit deduction: only tiers in creditBased for this plan deduct
+    // (enterprise has empty creditBased → free; PAYG/trials have all 4 → always deduct)
+    const shouldDeductCredits = planConfig.creditBased.includes(tier);
 
-    // Credit deduction: only for PAyG, trials, and Business+Opus
     if (shouldDeductCredits && existingPatientCount === 0) {
       const { data: creditResult } = await supabase.rpc("deduct_credits", {
         p_org_id: visitRow.org_id,
@@ -334,114 +310,68 @@ Deno.serve(async (req) => {
       systemPrompt += `\n\nURGENT PACING NOTICE: The patient has approximately ${messagesRemaining} messages remaining. If you have not yet covered current medications, known allergies, chronic conditions, or pets at home, ask about ALL remaining uncovered items in your NEXT response. Move toward wrapping up the conversation.`;
     }
 
-    // Call Claude API with streaming
-    let claudeResponse: Response | null = null;
-    let retries = 0;
-
-    while (retries < 3) {
-      try {
-        claudeResponse = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": ANTHROPIC_API_KEY!,
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: claudeModel,
-            max_tokens: 1024,
-            system: systemPrompt,
-            stream: true,
-            messages: claudeMessages,
-          }),
-        });
-
-        if (claudeResponse.ok) break;
-
-        if (claudeResponse.status === 500 || claudeResponse.status === 503) {
-          retries++;
-          if (retries < 3) {
-            await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, retries)));
-            continue;
-          }
-        } else {
-          break;
-        }
-      } catch {
-        retries++;
-        if (retries < 3) {
-          await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, retries)));
-        }
-      }
-    }
-
-    if (!claudeResponse || !claudeResponse.ok) {
-      // Move to queue with proper status guard (only transitions from still_answering_ai)
-      await supabase.rpc("move_to_queue_on_error", {
-        p_visit_id: visit_id,
-        p_session_token: session_token,
-      });
-
-      return new Response(
-        JSON.stringify({ error: "AI service unavailable" }),
-        { status: 503, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
-      );
-    }
+    // Call intake adapter (provider chosen by ai_model_config for this tier)
+    // The adapter handles its own retries + streaming.
+    // It yields normalized {type: 'delta'|'done'|'error'} chunks.
+    const stream = intakeAdapter.streamChat({
+      call: intakeCall,
+      system: systemPrompt,
+      messages: claudeMessages.map((m) => ({
+        role: m.role === "assistant" ? "assistant" : "user",
+        content: m.content,
+      })),
+    });
 
     // Stream SSE response to client
     let accumulatedText = "";
+    let streamError: string | null = null;
     const isNonEnglish = patientLanguage !== "en";
 
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();
     const encoder = new TextEncoder();
 
-    // Process Claude stream in background
+    // Process adapter stream in background
     (async () => {
       try {
-        const reader = claudeResponse!.body!.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
+        for await (const chunk of stream) {
+          if (chunk.type === "error") {
+            streamError = chunk.error ?? "AI provider error";
+            break;
+          }
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            const data = line.slice(6).trim();
-            if (data === "[DONE]") continue;
-
-            try {
-              const event = JSON.parse(data);
-
-              if (event.type === "content_block_delta" && event.delta?.text) {
-                accumulatedText += event.delta.text;
-                // For non-English: buffer text, don't stream deltas (translate after completion)
-                // For English: stream deltas in real-time
-                if (!isNonEnglish) {
-                  await writer.write(
-                    encoder.encode(`data: ${JSON.stringify({ type: "delta", text: event.delta.text })}\n\n`)
-                  );
-                }
-              }
-
-              if (event.type === "message_stop") {
-                // For English: send done event immediately
-                if (!isNonEnglish) {
-                  await writer.write(
-                    encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`)
-                  );
-                }
-              }
-            } catch {
-              // Skip unparseable lines
+          if (chunk.type === "delta" && chunk.text) {
+            accumulatedText += chunk.text;
+            // For non-English: buffer text, don't stream deltas (translate after completion)
+            // For English: stream deltas in real-time
+            if (!isNonEnglish) {
+              await writer.write(
+                encoder.encode(`data: ${JSON.stringify({ type: "delta", text: chunk.text })}\n\n`)
+              );
             }
           }
+
+          if (chunk.type === "done") {
+            // For English: send done event immediately
+            if (!isNonEnglish) {
+              await writer.write(
+                encoder.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`)
+              );
+            }
+          }
+        }
+
+        if (streamError) {
+          // Move to queue with proper status guard
+          await supabase.rpc("move_to_queue_on_error", {
+            p_visit_id: visit_id,
+            p_session_token: session_token,
+          });
+          await writer.write(
+            encoder.encode(`data: ${JSON.stringify({ type: "error", error: "AI service unavailable" })}\n\n`)
+          );
+          await writer.close();
+          return;
         }
 
         // Post-stream processing

@@ -74,3 +74,78 @@ export async function createPremiumCode(params: {
   if (error) return { success: false, error: error.message };
   return data;
 }
+
+/** Load all 4 AI tier combos from ai_model_config (platform admin only). */
+export async function fetchAiModelConfig() {
+  await requireAuth();
+  const adminCheck = await isPlatformAdmin();
+  if (!adminCheck) return { success: false, error: "Not authorized" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_model_config")
+    .select("*")
+    .order("tier");
+  if (error) return { success: false, error: error.message };
+  return { success: true, data };
+}
+
+const ALLOWED_PROVIDERS = ["anthropic", "google_vertex", "openai"] as const;
+const ALLOWED_TIERS = ["standard", "advanced", "precision", "premium"] as const;
+
+export interface AiComboInput {
+  tier: string;
+  display_name: string;
+  credit_cost: number;
+  intake_provider: string;
+  intake_model: string;
+  intake_model_display: string;
+  intake_max_tokens: number;
+  intake_temperature: number;
+  summary_provider: string;
+  summary_model: string;
+  summary_model_display: string;
+  summary_max_tokens: number;
+  summary_temperature: number;
+  diagnostic_provider: string;
+  diagnostic_model: string;
+  diagnostic_model_display: string;
+  diagnostic_max_tokens: number;
+  diagnostic_temperature: number;
+  notes?: string | null;
+}
+
+function validateCombo(input: AiComboInput): string | null {
+  if (!ALLOWED_TIERS.includes(input.tier as typeof ALLOWED_TIERS[number])) return "Invalid tier";
+  for (const task of ["intake", "summary", "diagnostic"] as const) {
+    const provider = input[`${task}_provider` as keyof AiComboInput] as string;
+    const model = input[`${task}_model` as keyof AiComboInput] as string;
+    const display = input[`${task}_model_display` as keyof AiComboInput] as string;
+    if (!ALLOWED_PROVIDERS.includes(provider as typeof ALLOWED_PROVIDERS[number]))
+      return `Invalid ${task} provider`;
+    if (!model || typeof model !== "string" || model.length > 200) return `Invalid ${task} model`;
+    if (!display || typeof display !== "string" || display.length > 200) return `Invalid ${task} display name`;
+  }
+  if (typeof input.credit_cost !== "number" || input.credit_cost < 0 || input.credit_cost > 100)
+    return "Invalid credit cost";
+  return null;
+}
+
+/** Update one tier's full combo atomically (platform admin only). */
+export async function updateAiModelConfig(combo: AiComboInput) {
+  await requireAuth();
+  const adminCheck = await isPlatformAdmin();
+  if (!adminCheck) return { success: false, error: "Not authorized" };
+
+  const validationError = validateCombo(combo);
+  if (validationError) return { success: false, error: validationError };
+
+  const supabase = await createClient();
+  const { tier, ...fields } = combo;
+  const { data, error } = await supabase.rpc("update_ai_model_config", {
+    p_tier: tier,
+    p_combo: fields,
+  });
+  if (error) return { success: false, error: error.message };
+  return data;
+}

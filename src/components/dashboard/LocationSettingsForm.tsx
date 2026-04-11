@@ -522,11 +522,11 @@ export default function LocationSettingsForm({
               }));
             }}
             min={10}
-            max={50}
+            max={100}
             placeholder="30 (default)"
             className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
           />
-          <p className="text-xs text-ash mt-1">Maximum patient messages per conversation (10 to 50). The AI will pace itself to cover critical fields within this limit.</p>
+          <p className="text-xs text-ash mt-1">Maximum patient messages per conversation (10 to 100, capped by your plan). The AI will pace itself to cover critical fields within this limit.</p>
         </div>
       </div>
 

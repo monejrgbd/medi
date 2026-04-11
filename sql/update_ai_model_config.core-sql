@@ -1,0 +1,88 @@
+-- Platform super admin RPC to atomically update one tier's full combo.
+-- Called by the /d/admin/ai-config page.
+CREATE OR REPLACE FUNCTION private.update_ai_model_config(
+  p_caller_auth_uid uuid,
+  p_tier text,
+  p_combo jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_is_admin boolean;
+BEGIN
+  SELECT (raw_app_meta_data->>'is_platform_admin')::boolean
+    INTO v_is_admin
+  FROM auth.users
+  WHERE id = p_caller_auth_uid;
+
+  IF v_is_admin IS NOT TRUE THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  IF p_tier NOT IN ('standard', 'advanced', 'precision', 'premium') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid tier');
+  END IF;
+
+  UPDATE public.ai_model_config SET
+    display_name             = COALESCE(p_combo->>'display_name', display_name),
+    credit_cost              = COALESCE((p_combo->>'credit_cost')::numeric, credit_cost),
+    intake_provider          = COALESCE(p_combo->>'intake_provider', intake_provider),
+    intake_model             = COALESCE(p_combo->>'intake_model', intake_model),
+    intake_model_display     = COALESCE(p_combo->>'intake_model_display', intake_model_display),
+    intake_max_tokens        = COALESCE((p_combo->>'intake_max_tokens')::int, intake_max_tokens),
+    intake_temperature       = COALESCE((p_combo->>'intake_temperature')::numeric, intake_temperature),
+    summary_provider         = COALESCE(p_combo->>'summary_provider', summary_provider),
+    summary_model            = COALESCE(p_combo->>'summary_model', summary_model),
+    summary_model_display    = COALESCE(p_combo->>'summary_model_display', summary_model_display),
+    summary_max_tokens       = COALESCE((p_combo->>'summary_max_tokens')::int, summary_max_tokens),
+    summary_temperature      = COALESCE((p_combo->>'summary_temperature')::numeric, summary_temperature),
+    diagnostic_provider      = COALESCE(p_combo->>'diagnostic_provider', diagnostic_provider),
+    diagnostic_model         = COALESCE(p_combo->>'diagnostic_model', diagnostic_model),
+    diagnostic_model_display = COALESCE(p_combo->>'diagnostic_model_display', diagnostic_model_display),
+    diagnostic_max_tokens    = COALESCE((p_combo->>'diagnostic_max_tokens')::int, diagnostic_max_tokens),
+    diagnostic_temperature   = COALESCE((p_combo->>'diagnostic_temperature')::numeric, diagnostic_temperature),
+    notes                    = COALESCE(p_combo->>'notes', notes),
+    updated_at               = now(),
+    updated_by               = p_caller_auth_uid
+  WHERE tier = p_tier;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'tier not found');
+  END IF;
+
+  -- Audit is tracked via the table's own updated_by/updated_at columns.
+  -- audit_trail requires a NOT NULL org_id which this platform-level action does not have.
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper: any authenticated user can CALL the function, but the admin check inside
+-- is what actually enforces authorization.
+CREATE OR REPLACE FUNCTION public.update_ai_model_config(
+  p_tier text,
+  p_combo jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+
+  RETURN private.update_ai_model_config(v_uid, p_tier, p_combo);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.update_ai_model_config(text, jsonb) FROM anon;

@@ -1,6 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import {
+  ALL_TIERS,
+  PLAN_AI,
+  PLAN_DISPLAY_NAME,
+  TIER_DESC,
+  TIER_INCLUDED_IN,
+  TIER_LABEL,
+  type AiTier,
+} from "@/lib/ai-plans";
 
 interface AiTierSelectorProps {
   value: string;
@@ -8,109 +17,52 @@ interface AiTierSelectorProps {
   plan: string;
 }
 
-type TierId = "standard" | "advanced" | "precision" | "premium";
-
-interface Tier {
-  id: TierId;
-  label: string;
-  desc: string;
-  dbValue: string;
-  includedIn: string;
-  accent: string;
-}
-
-const TIERS: Tier[] = [
-  {
-    id: "standard",
-    label: "Standard AI",
-    desc: "Fast intake for routine visits",
-    dbValue: "standard",
-    includedIn: "starter",
-    accent: "text-slate",
-  },
-  {
-    id: "advanced",
-    label: "Advanced AI",
-    desc: "Deeper reasoning and thorough follow ups",
-    dbValue: "standard",
-    includedIn: "professional",
-    accent: "text-hilt-blue",
-  },
-  {
-    id: "precision",
-    label: "Precision AI",
-    desc: "Superior clinical depth for Business clinics",
-    dbValue: "precision",
-    includedIn: "business",
-    accent: "bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent",
-  },
-  {
-    id: "premium",
-    label: "Premium AI",
-    desc: "Deepest reasoning, 4 credits per conversation",
-    dbValue: "advanced",
-    includedIn: "",
-    accent: "bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent",
-  },
-];
-
-const PLAN_TIER_ORDER: Record<string, number> = {
-  starter: 0,
-  standard_trial: 1,
-  pay_as_you_go: 1,
-  professional: 1,
-  premium_trial: 2,
-  business: 2,
-  enterprise: 2,
+const TIER_ACCENT: Record<AiTier, string> = {
+  standard: "text-slate font-semibold",
+  advanced: "text-hilt-blue font-bold",
+  precision: "font-extrabold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent",
+  premium: "font-extrabold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent",
 };
 
-const PLAN_LABELS: Record<string, string> = {
-  starter: "Starter",
-  professional: "Professional",
-  business: "Business",
+const TIER_RANK: Record<AiTier, number> = {
+  standard: 0,
+  advanced: 1,
+  precision: 2,
+  premium: 3,
 };
 
-function planTier(plan: string): number {
-  return PLAN_TIER_ORDER[plan] ?? 1;
-}
-
-function includedTierId(plan: string): TierId {
-  if (plan === "starter") return "standard";
-  if (plan === "business" || plan === "enterprise" || plan === "premium_trial") return "precision";
-  return "advanced";
+function tierRank(tier: AiTier): number {
+  return TIER_RANK[tier];
 }
 
 export default function AiTierSelector({ value, onChange, plan }: AiTierSelectorProps) {
-  const currentPlanRank = planTier(plan);
-  const includedId = includedTierId(plan);
+  const config = PLAN_AI[plan] ?? PLAN_AI.starter;
+  const defaultTier = config.defaultTier;
+  const defaultRank = tierRank(defaultTier);
 
-  // Determine which tier is currently "selected" based on DB value + plan
-  const selectedId: TierId = (() => {
-    if (value === "advanced") return "premium";
-    if (value === "precision") return "precision";
-    return includedId;
-  })();
+  // Show: the plan's default tier + everything higher (includes or credit-based or locked upgrade).
+  // Hide lower tiers (don't clutter the UI with tiers the owner has moved past).
+  const visible = ALL_TIERS.filter((tier) => tierRank(tier) >= defaultRank);
 
-  // Build the visible list: included tier + higher tiers + premium
-  const visible = TIERS.filter((tier) => {
-    if (tier.id === "premium") return true;
-    const tierRank = PLAN_TIER_ORDER[tier.includedIn] ?? 0;
-    return tierRank >= currentPlanRank;
-  });
+  // Resolve the selected tier. If DB value isn't in the visible set, fall back to default.
+  const selectedTier: AiTier = (["standard", "advanced", "precision", "premium"] as AiTier[]).includes(value as AiTier)
+    ? (value as AiTier)
+    : defaultTier;
+  const effectiveSelected: AiTier = visible.includes(selectedTier) ? selectedTier : defaultTier;
 
   return (
     <div className="space-y-2">
       {visible.map((tier) => {
-        const isSelected = selectedId === tier.id;
-        const isPremium = tier.id === "premium";
-        const tierRank = PLAN_TIER_ORDER[tier.includedIn] ?? 0;
-        const isLocked = !isPremium && tierRank > currentPlanRank;
-        const isSelectable = !isLocked;
+        const isIncluded = config.included.includes(tier);
+        const isCreditBased = config.creditBased.includes(tier);
+        const isLocked = !isIncluded && !isCreditBased;
+        const isSelected = effectiveSelected === tier;
+        const upgradePlanKey = TIER_INCLUDED_IN[tier];
 
         if (isLocked) {
           return (
             <Link
-              key={tier.id}
+              key={tier}
               href="/d/owner/billing"
               className="block rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 transition-colors hover:bg-gray-100"
             >
@@ -120,12 +72,12 @@ export default function AiTierSelector({ value, onChange, plan }: AiTierSelector
                     <svg className="h-3.5 w-3.5 shrink-0 text-ash" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
                     </svg>
-                    <span className={`text-sm font-semibold ${tier.accent}`}>{tier.label}</span>
+                    <span className={`text-sm ${TIER_ACCENT[tier]}`}>{TIER_LABEL[tier]}</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-ash truncate">{tier.desc}</p>
+                  <p className="mt-0.5 text-xs text-ash truncate">{TIER_DESC[tier]}</p>
                 </div>
                 <span className="shrink-0 rounded-full bg-hilt-blue/10 px-2 py-0.5 text-[10px] font-semibold text-hilt-blue">
-                  {PLAN_LABELS[tier.includedIn] ?? "Upgrade"}
+                  {PLAN_DISPLAY_NAME[upgradePlanKey] ?? "Upgrade"}
                 </span>
               </div>
             </Link>
@@ -134,9 +86,9 @@ export default function AiTierSelector({ value, onChange, plan }: AiTierSelector
 
         return (
           <button
-            key={tier.id}
+            key={tier}
             type="button"
-            onClick={() => isSelectable && onChange(tier.dbValue)}
+            onClick={() => onChange(tier)}
             className={`block w-full rounded-lg border px-3 py-2.5 text-left transition-all ${
               isSelected
                 ? "border-hilt-blue bg-blue-50 ring-1 ring-hilt-blue"
@@ -151,16 +103,16 @@ export default function AiTierSelector({ value, onChange, plan }: AiTierSelector
                       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
                     </svg>
                   )}
-                  <span className={`text-sm font-semibold ${tier.accent}`}>{tier.label}</span>
-                  {tier.id === includedId && (
+                  <span className={`text-sm ${TIER_ACCENT[tier]}`}>{TIER_LABEL[tier]}</span>
+                  {isIncluded && tier === defaultTier && (
                     <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-green-700">
                       Included
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-xs text-slate truncate">{tier.desc}</p>
+                <p className="mt-0.5 text-xs text-slate truncate">{TIER_DESC[tier]}</p>
               </div>
-              {isPremium && (
+              {isCreditBased && !isIncluded && (
                 <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
                   Credit based
                 </span>

@@ -8,7 +8,7 @@ CREATE TABLE public.locations (
   logo_url              text,
   qr_code_url           text,
   ai_model              text DEFAULT 'standard'
-    CHECK (ai_model = ANY (ARRAY['standard', 'advanced', 'precision'])),
+    CHECK (ai_model = ANY (ARRAY['standard', 'advanced', 'precision', 'premium'])),
   display_format        text DEFAULT 'summary'
     CHECK (display_format = ANY (ARRAY['summary', 'structured_card'])),
   referral_email        text,
