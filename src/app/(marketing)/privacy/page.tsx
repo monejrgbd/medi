@@ -74,7 +74,7 @@ export default function PrivacyPage() {
               <li>AI-generated pre-screening summaries</li>
               <li>Medications, allergies, and chronic conditions reported by the patient</li>
               <li>Date and time of the pre-screening session</li>
-              <li>SMS message delivery records (visit summaries, follow-up reminders, review requests)</li>
+              <li>SMS message delivery records (visit summaries, review requests)</li>
               <li>Device and browser information used during the session</li>
             </ul>
 

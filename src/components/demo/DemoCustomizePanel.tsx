@@ -6,8 +6,6 @@ import { useDemoFeatures, type DemoFeatures } from "@/contexts/DemoFeatureContex
 
 const TOGGLES: { key: keyof DemoFeatures; label: string; desc: string; inverted?: boolean }[] = [
   { key: "nurseEnabled", label: "Nurse Triage", desc: "Nurses screen patients before the doctor" },
-  { key: "vitalsEnabled", label: "Vitals Tracking", desc: "Record weight, height, blood pressure, and more" },
-  { key: "vaccinesEnabled", label: "Vaccine Management", desc: "Track administered vaccines and schedules" },
   { key: "skipAi", label: "AI Intake", desc: "AI screens patients before the doctor. Turn off to skip.", inverted: true },
   { key: "reviewCollection", label: "Review Collection", desc: "Collect patient feedback after visits" },
   { key: "askReferralSource", label: "Referral Tracking", desc: "Ask patients if they were referred by another provider" },

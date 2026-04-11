@@ -39,8 +39,8 @@ const PLANS = [
   {
     key: "business",
     name: "Business",
-    description: "Advanced + Premium AI, embeddable widget",
-    aiLabel: "Advanced + Premium AI",
+    description: "Precision + Premium AI, embeddable widget",
+    aiLabel: "Precision + Premium AI",
   },
 ];
 

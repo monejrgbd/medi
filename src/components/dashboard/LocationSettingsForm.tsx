@@ -6,6 +6,7 @@ import { updateLocation, uploadLocationLogo } from "@/app/(dashboard)/d/_actions
 import { ALLOWED_SPECIALTIES, QUEUE_TYPES } from "@/lib/constants";
 import { useRole } from "@/contexts/RoleContext";
 import SearchableSelect from "@/components/ui/SearchableSelect";
+import AiTierSelector from "@/components/dashboard/AiTierSelector";
 import { Upload, Loader2 } from "lucide-react";
 
 interface LocationData {
@@ -20,8 +21,6 @@ interface LocationData {
   tablet_count: number;
   timezone: string;
   nurse_enabled?: boolean;
-  vitals_enabled?: boolean;
-  vaccines_enabled?: boolean;
   ai_custom_instructions?: string | null;
   ai_message_limit?: number | null;
   skip_ai?: boolean;
@@ -81,7 +80,6 @@ export default function LocationSettingsForm({
 }) {
   const router = useRouter();
   const { org } = useRole();
-  const isBusiness = org?.subscription_plan === "business" || org?.subscription_plan === "enterprise";
   const [form, setForm] = useState({
     name: location.name,
     address: location.address || "",
@@ -95,8 +93,6 @@ export default function LocationSettingsForm({
       return acc;
     }, {} as Record<string, string>),
     nurseEnabled: location.nurse_enabled ?? false,
-    vitalsEnabled: location.vitals_enabled ?? false,
-    vaccinesEnabled: location.vaccines_enabled ?? false,
     aiCustomInstructions: location.ai_custom_instructions || "",
     aiMessageLimit: location.ai_message_limit ?? null as number | null,
     skipAi: location.skip_ai ?? false,
@@ -162,8 +158,6 @@ export default function LocationSettingsForm({
       tabletCount: form.tabletCount,
       timezone: form.timezone,
       nurseEnabled: form.nurseEnabled,
-      vitalsEnabled: form.vitalsEnabled,
-      vaccinesEnabled: form.vaccinesEnabled,
       aiCustomInstructions: form.aiCustomInstructions,
       aiMessageLimit: form.aiMessageLimit,
       skipAi: form.skipAi,
@@ -296,40 +290,25 @@ export default function LocationSettingsForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {(() => {
-          const plan = org?.subscription_plan;
-          const defaultLabel = plan === "starter" ? "Standard AI (included)" : "Advanced AI (included)";
-          const tasteNote = plan === "starter" ? "1 free/month" : plan === "professional" ? "5 free/month" : "";
-          const premiumLabel = isBusiness
-            ? "Premium AI (4 credits per conversation)"
-            : `Premium AI (${tasteNote}, then 4 credits each)`;
-          return (
-            <div>
-              <label className="block text-sm font-medium text-ink mb-1">AI Model</label>
-              <select
-                value={form.aiModel}
-                onChange={(e) => update("aiModel", e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-              >
-                <option value="standard">{defaultLabel}</option>
-                <option value="advanced">{premiumLabel}</option>
-              </select>
-            </div>
-          );
-        })()}
+      <div>
+        <label className="block text-sm font-medium text-ink mb-2">AI Model</label>
+        <AiTierSelector
+          value={form.aiModel}
+          onChange={(v) => update("aiModel", v)}
+          plan={org?.subscription_plan ?? "starter"}
+        />
+      </div>
 
-        <div>
-          <label className="block text-sm font-medium text-ink mb-1">Display Format</label>
-          <select
-            value={form.displayFormat}
-            onChange={(e) => update("displayFormat", e.target.value)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
-          >
-            <option value="summary">Summary</option>
-            <option value="structured_card">Detailed</option>
-          </select>
-        </div>
+      <div>
+        <label className="block text-sm font-medium text-ink mb-1">Display Format</label>
+        <select
+          value={form.displayFormat}
+          onChange={(e) => update("displayFormat", e.target.value)}
+          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+        >
+          <option value="summary">Summary</option>
+          <option value="structured_card">Detailed</option>
+        </select>
       </div>
 
       <div>
@@ -438,26 +417,6 @@ export default function LocationSettingsForm({
             type="checkbox"
             checked={form.nurseEnabled}
             onChange={(e) => setForm((prev) => ({ ...prev, nurseEnabled: e.target.checked }))}
-            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
-          />
-        </label>
-
-        <label className="flex items-center justify-between">
-          <span className="text-sm text-ink">Enable Vitals Tracking</span>
-          <input
-            type="checkbox"
-            checked={form.vitalsEnabled}
-            onChange={(e) => setForm((prev) => ({ ...prev, vitalsEnabled: e.target.checked }))}
-            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
-          />
-        </label>
-
-        <label className="flex items-center justify-between">
-          <span className="text-sm text-ink">Enable Vaccine Tracking</span>
-          <input
-            type="checkbox"
-            checked={form.vaccinesEnabled}
-            onChange={(e) => setForm((prev) => ({ ...prev, vaccinesEnabled: e.target.checked }))}
             className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
           />
         </label>

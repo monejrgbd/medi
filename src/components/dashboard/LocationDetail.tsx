@@ -20,8 +20,6 @@ interface LocationData {
   tablet_count: number;
   timezone: string;
   nurse_enabled?: boolean;
-  vitals_enabled?: boolean;
-  vaccines_enabled?: boolean;
   skip_ai?: boolean;
   ai_custom_instructions?: string | null;
   ai_message_limit?: number | null;

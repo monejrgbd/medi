@@ -42,7 +42,6 @@ export default async function ManagerPage() {
       locations={locations}
       orgId={orgId}
       isOwner={ownerCheck}
-      followupAddonEnabled={true}
     />
   );
 }

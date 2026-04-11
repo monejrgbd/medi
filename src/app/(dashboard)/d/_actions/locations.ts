@@ -12,8 +12,6 @@ export async function createLocation(formData: {
   specialty?: string;
   operatingHours?: Record<string, unknown>;
   nurseEnabled?: boolean;
-  vitalsEnabled?: boolean;
-  vaccinesEnabled?: boolean;
   skipAi?: boolean;
   reviewSmsEnabled?: boolean;
   diagnosticEnabled?: boolean;
@@ -35,8 +33,6 @@ export async function createLocation(formData: {
     p_specialty: formData.specialty || null,
     p_operating_hours: formData.operatingHours || null,
     p_nurse_enabled: formData.nurseEnabled ?? false,
-    p_vitals_enabled: formData.vitalsEnabled ?? true,
-    p_vaccines_enabled: formData.vaccinesEnabled ?? false,
     p_skip_ai: formData.skipAi ?? false,
     p_review_sms_enabled: formData.reviewSmsEnabled ?? true,
     p_diagnostic_enabled: formData.diagnosticEnabled ?? true,
@@ -64,8 +60,6 @@ export async function updateLocation(formData: {
   timezone?: string;
   logoUrl?: string;
   nurseEnabled?: boolean;
-  vaccinesEnabled?: boolean;
-  vitalsEnabled?: boolean;
   aiCustomInstructions?: string;
   aiMessageLimit?: number | null;
   skipAi?: boolean;
@@ -99,8 +93,6 @@ export async function updateLocation(formData: {
   if (formData.timezone !== undefined) params.p_timezone = formData.timezone;
   if (formData.logoUrl !== undefined) params.p_logo_url = formData.logoUrl;
   if (formData.nurseEnabled !== undefined) params.p_nurse_enabled = formData.nurseEnabled;
-  if (formData.vaccinesEnabled !== undefined) params.p_vaccines_enabled = formData.vaccinesEnabled;
-  if (formData.vitalsEnabled !== undefined) params.p_vitals_enabled = formData.vitalsEnabled;
   if (formData.aiCustomInstructions !== undefined) params.p_ai_custom_instructions = formData.aiCustomInstructions;
   if (formData.aiMessageLimit !== undefined) params.p_ai_message_limit = formData.aiMessageLimit === null ? 0 : formData.aiMessageLimit;
   if (formData.skipAi !== undefined) params.p_skip_ai = formData.skipAi;

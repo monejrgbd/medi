@@ -28,7 +28,6 @@ interface Props {
   locations: { id: string; name: string }[];
   orgId: string;
   isOwner: boolean;
-  followupAddonEnabled: boolean;
 }
 
 function formatDate(d: Date) {
@@ -96,7 +95,6 @@ export default function ManagerDashboard({
   locations,
   orgId,
   isOwner,
-  followupAddonEnabled,
 }: Props) {
   const [selectedLocation, setSelectedLocation] = useState(locations[0]?.id || "");
   const [activeTab, setActiveTab] = useState<Tab>("employees");
@@ -167,7 +165,7 @@ export default function ManagerDashboard({
     { key: "patients", label: "Patients" },
     { key: "waittimes", label: "Wait Times" },
     { key: "returns", label: "Returns" },
-    { key: "followups", label: "Follow-ups", hidden: !followupAddonEnabled },
+    { key: "followups", label: "Follow-ups" },
     { key: "referrals", label: "Referrals", ownerOnly: true },
   ];
 

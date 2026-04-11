@@ -291,7 +291,7 @@ function HeroSection() {
           </div>
         </FadeIn>
 
-        {/* Post-visit flow: review + follow-up SMS mockups */}
+        {/* Post-visit flow: marketing + review + continuity mockups */}
         <FadeIn>
           <div className="mt-16">
             {/* Arrow connector */}
@@ -371,7 +371,7 @@ function HeroSection() {
                 </div>
               </FadeIn>
 
-              {/* Follow-up SMS */}
+              {/* Continuity of care / smart follow ups */}
               <FadeIn delay={0.3}>
                 <div className="h-full rounded-2xl border border-green-200 bg-gradient-to-b from-green-50/80 to-white p-5 shadow-xl ring-1 ring-green-900/5">
                   <div className="mb-3 flex items-center gap-2">
@@ -770,10 +770,7 @@ function BuiltForYourClinicSection() {
               <div className="space-y-2.5">
                 {[
                   { label: "Nurse triage", desc: "Nurses screen before doctor", on: true },
-                  { label: "Vitals tracking", desc: "Custom vitals per visit", on: true },
-                  { label: "Vaccine management", desc: "Schedule, record, track", on: true },
                   { label: "Queue display", desc: "Waiting room TV with live numbers", on: false },
-                  { label: "Smart follow ups", desc: "AI linked cross session care", on: true },
                   { label: "Review collection", desc: "Post visit feedback routing", on: false },
                   { label: "AI intake", desc: "AI screens patients before doctor", on: true },
                   { label: "Referral tracking", desc: "Ask patients who referred them", on: true },

@@ -72,7 +72,7 @@
   "phone.sending": "发送中...",
   "phone.retry": "重新发送验证码",
   "phone.noPhone": "我没有电话",
-  "phone.terms": "我同意接收短信，包括验证码、就诊摘要和后续提醒。可能会收取短信和数据费用。",
+  "phone.terms": "我同意接收短信，包括验证码和就诊摘要。可能会收取短信和数据费用。",
   "verify.title": "输入验证码",
   "verify.subtitle": "我们已向 {phone} 发送了6位数验证码",
   "verify.button": "验证",

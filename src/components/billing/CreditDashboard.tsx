@@ -79,7 +79,7 @@ export default function CreditDashboard() {
   const planLabels: Record<string, { name: string; ai: string; msgLimit: number }> = {
     starter: { name: "Starter", ai: "Standard AI", msgLimit: 20 },
     professional: { name: "Professional", ai: "Advanced AI", msgLimit: 35 },
-    business: { name: "Business", ai: "Advanced + Premium AI", msgLimit: 50 },
+    business: { name: "Business", ai: "Precision + Premium AI", msgLimit: 50 },
     enterprise: { name: "Enterprise", ai: "Custom", msgLimit: 50 },
   };
   const planInfo = planLabels[data.subscription_plan] || null;

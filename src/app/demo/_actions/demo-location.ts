@@ -6,8 +6,6 @@ export async function syncDemoLocationFeatures(
   locationId: string,
   features: {
     nurseEnabled: boolean;
-    vitalsEnabled: boolean;
-    vaccinesEnabled: boolean;
     reviewCollection: boolean;
   }
 ) {
@@ -17,8 +15,8 @@ export async function syncDemoLocationFeatures(
   const { data, error } = await supabase.rpc("sync_demo_location_features", {
     p_location_id: locationId,
     p_nurse_enabled: features.nurseEnabled,
-    p_vitals_enabled: features.vitalsEnabled,
-    p_vaccines_enabled: features.vaccinesEnabled,
+    p_vitals_enabled: true,
+    p_vaccines_enabled: true,
     p_review_sms_enabled: features.reviewCollection,
   });
 

@@ -72,7 +72,7 @@
   "phone.sending": "Enviando...",
   "phone.retry": "Reintentar envío de código",
   "phone.noPhone": "No tengo teléfono",
-  "phone.terms": "Acepto recibir mensajes de texto incluyendo códigos de verificación, resúmenes de visita y recordatorios de seguimiento. Pueden aplicarse tarifas de mensajes y datos.",
+  "phone.terms": "Acepto recibir mensajes de texto incluyendo códigos de verificación y resúmenes de visita. Pueden aplicarse tarifas de mensajes y datos.",
   "verify.title": "Ingrese el código de verificación",
   "verify.subtitle": "Enviamos un código de 6 dígitos a {phone}",
   "verify.button": "Verificar",

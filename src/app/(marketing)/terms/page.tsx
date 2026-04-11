@@ -169,13 +169,11 @@ export default function TermsPage() {
             </p>
             <ul>
               <li><strong>Visit summary SMS</strong> — a link to the patient&rsquo;s visit summary after their appointment is completed</li>
-              <li><strong>Follow-up reminder SMS</strong> — automated reminders for follow-up visits tagged by the treating physician</li>
               <li><strong>Phone verification SMS</strong> — one-time codes to verify phone number ownership</li>
             </ul>
             <p>
               These messages are directly related to the patient&rsquo;s healthcare and are sent at
-              the direction of the Clinic (the Health Information Custodian). Patients may opt out of
-              follow-up reminder SMS by contacting the Clinic directly.
+              the direction of the Clinic (the Health Information Custodian).
             </p>
 
             <h3>Review Request Messages</h3>
@@ -194,7 +192,7 @@ export default function TermsPage() {
             <p>
               Unsubscribe requests are processed within <strong>10 business days</strong> as required
               by CASL s.11. Unsubscribing from review requests does not affect transactional messages
-              (visit summaries and follow-up reminders).
+              (visit summaries).
             </p>
 
             <h3>Marketing and Promotional Messages</h3>
@@ -208,7 +206,7 @@ export default function TermsPage() {
               Each marketing SMS includes identification of the sending Clinic and a functional
               opt out mechanism. Patients can reply STOP to any marketing message to unsubscribe
               from future promotional communications. Opting out of marketing messages does not affect
-              transactional messages (visit summaries, follow up reminders, or phone verification codes).
+              transactional messages (visit summaries or phone verification codes).
             </p>
             <p>
               Marketing SMS constitutes a commercial electronic message under CASL. The patient&rsquo;s
@@ -236,7 +234,7 @@ export default function TermsPage() {
             <h3>Trial</h3>
             <p>
               New Clinics receive a 30-day free trial with $200 worth of credits (200 credits). No
-              credit card is required for the trial. Add-on features (SMS, Follow-up SMS) are included
+              credit card is required for the trial. Add-on features (SMS) are included
               free during the trial period to demonstrate value.
             </p>
 
@@ -265,7 +263,6 @@ export default function TermsPage() {
             </p>
             <ul>
               <li><strong>SMS Add-On</strong> — $49/month per location. Enables phone number collection, visit summary SMS, and review funnel SMS.</li>
-              <li><strong>Follow-Up SMS Add-On</strong> — $49/month per location. Enables automated follow-up reminder messages to patients.</li>
             </ul>
           </section>
 

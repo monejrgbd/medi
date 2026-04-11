@@ -93,8 +93,6 @@ const STEP_LABELS = ["", "Check In", "Approve", "AI Screening", "Nurse Triage", 
 
 interface DemoFeatures {
   nurseEnabled?: boolean;
-  vitalsEnabled?: boolean;
-  vaccinesEnabled?: boolean;
   skipAi?: boolean;
   reviewCollection?: boolean;
   askReferralSource?: boolean;
@@ -244,7 +242,7 @@ function SessionCard({ session }: { session: Session }) {
       {session.demoFeatures && (
         <div className="px-4 pt-3 flex flex-wrap gap-1">
           {Object.entries(session.demoFeatures).map(([key, val]) => {
-            const label = key === "skipAi" ? "AI Intake" : key === "nurseEnabled" ? "Nurse" : key === "vitalsEnabled" ? "Vitals" : key === "vaccinesEnabled" ? "Vaccines" : key === "reviewCollection" ? "Reviews" : key === "askReferralSource" ? "Referrals" : key === "askDiscoverySource" ? "Discovery" : key;
+            const label = key === "skipAi" ? "AI Intake" : key === "nurseEnabled" ? "Nurse" : key === "reviewCollection" ? "Reviews" : key === "askReferralSource" ? "Referrals" : key === "askDiscoverySource" ? "Discovery" : key;
             const isOn = key === "skipAi" ? !val : val;
             return (
               <span key={key} className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${isOn ? "bg-green-50 text-green-600" : "bg-red-50 text-red-400"}`}>

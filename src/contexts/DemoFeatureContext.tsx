@@ -4,8 +4,6 @@ import { syncDemoLocationFeatures } from "@/app/demo/_actions/demo-location";
 
 interface DemoFeatures {
   nurseEnabled: boolean;
-  vitalsEnabled: boolean;
-  vaccinesEnabled: boolean;
   skipAi: boolean;
   reviewCollection: boolean;
   askReferralSource: boolean;
@@ -15,8 +13,6 @@ interface DemoFeatures {
 
 const DEFAULTS: DemoFeatures = {
   nurseEnabled: true,
-  vitalsEnabled: true,
-  vaccinesEnabled: true,
   skipAi: false,
   reviewCollection: true,
   askReferralSource: true,
@@ -45,8 +41,6 @@ const DemoFeatureContext = createContext<DemoFeatureContextType>({
 function syncToLocation(locationId: string, features: DemoFeatures) {
   syncDemoLocationFeatures(locationId, {
     nurseEnabled: features.nurseEnabled,
-    vitalsEnabled: features.vitalsEnabled,
-    vaccinesEnabled: features.vaccinesEnabled,
     reviewCollection: features.reviewCollection,
   }).catch(() => { /* best effort */ });
 }

@@ -20,7 +20,7 @@ const PLAN_IDS: Record<string, string> = (() => {
 const PLANS = [
   { key: "starter", name: "Starter", ai: "Standard AI", hasTrial: true, trialRequiresPremium: false },
   { key: "professional", name: "Professional", ai: "Advanced AI", hasTrial: true, trialRequiresPremium: true },
-  { key: "business", name: "Business", ai: "Advanced + Premium AI", hasTrial: false, trialRequiresPremium: false },
+  { key: "business", name: "Business", ai: "Precision + Premium AI", hasTrial: false, trialRequiresPremium: false },
 ];
 
 export default function SubscribePage() {

@@ -20,7 +20,6 @@ interface PerDoctor {
 }
 
 interface ComplianceData {
-  addon_enabled: boolean;
   funnel?: Funnel;
   per_doctor?: PerDoctor[];
 }
@@ -34,19 +33,6 @@ type SortKey = "full_name" | "tagged" | "returned" | "compliance_rate";
 export default function FollowUpComplianceFunnel({ data }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("compliance_rate");
   const [sortAsc, setSortAsc] = useState(false);
-
-  if (!data.addon_enabled) {
-    return (
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
-        <p className="text-sm text-blue-700 font-medium">
-          Follow-up SMS add-on is not enabled
-        </p>
-        <p className="text-xs text-blue-600 mt-1">
-          Contact your account manager to enable follow-up tracking and reminders.
-        </p>
-      </div>
-    );
-  }
 
   if (!data.funnel || data.funnel.tagged === 0) {
     return (

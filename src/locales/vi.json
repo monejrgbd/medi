@@ -72,7 +72,7 @@
   "phone.sending": "Đang gửi...",
   "phone.retry": "Gửi lại mã",
   "phone.noPhone": "Tôi không có điện thoại",
-  "phone.terms": "Tôi đồng ý nhận tin nhắn bao gồm mã xác minh, tóm tắt khám và nhắc nhở theo dõi. Có thể áp dụng phí tin nhắn và dữ liệu.",
+  "phone.terms": "Tôi đồng ý nhận tin nhắn bao gồm mã xác minh và tóm tắt khám. Có thể áp dụng phí tin nhắn và dữ liệu.",
   "verify.title": "Nhập mã xác minh",
   "verify.subtitle": "Chúng tôi đã gửi mã 6 chữ số đến {phone}",
   "verify.button": "Xác minh",

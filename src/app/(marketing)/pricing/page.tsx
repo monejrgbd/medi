@@ -12,7 +12,7 @@ type BillingCycle = "monthly" | "annual";
 const PLANS = [
   { name: "Starter", key: "starter" as const, persona: "For solo practices", ai: "Standard AI", highlight: false },
   { name: "Professional", key: "professional" as const, persona: "For growing clinics", ai: "Advanced AI", highlight: true },
-  { name: "Business", key: "business" as const, persona: "For multi location organizations", ai: "Advanced + Premium AI", highlight: false },
+  { name: "Business", key: "business" as const, persona: "For multi location organizations", ai: "Precision + Premium AI", highlight: false },
 ];
 
 
@@ -36,7 +36,6 @@ const EVERY_PLAN_FEATURES = [
   "Manager analytics and wait time heatmaps",
   "Referral system with PDF generation",
   "Review SMS funnel with platform rotation",
-  "Follow up SMS reminders",
   "Patient search across locations",
   "Unlimited locations with unique QR codes",
   "Waiting room queue display for TVs",
@@ -81,7 +80,7 @@ const PLAN_FEATURES = {
   },
   business: {
     features: [
-      "Unlimited Advanced AI intake and summaries",
+      "Unlimited Precision AI intake and summaries",
       "Unlimited Premium AI diagnostics",
       "50 messages per intake conversation limit",
       "Embeddable widget for your website",
@@ -97,7 +96,7 @@ const PLAN_FEATURES = {
 };
 
 function StyledFeature({ text }: { text: string }) {
-  const parts = text.split(/(Standard AI|Advanced AI|Premium AI)/g);
+  const parts = text.split(/(Standard AI|Advanced AI|Precision AI|Premium AI)/g);
   return (
     <span className="text-xs text-slate leading-snug">
       {parts.map((part, i) => {
@@ -106,6 +105,9 @@ function StyledFeature({ text }: { text: string }) {
         }
         if (part === "Advanced AI") {
           return <span key={i} className="font-bold text-hilt-blue">{part}</span>;
+        }
+        if (part === "Precision AI") {
+          return <span key={i} className="font-extrabold bg-gradient-to-r from-teal-600 to-cyan-500 bg-clip-text text-transparent">{part}</span>;
         }
         if (part === "Premium AI") {
           return <span key={i} className="font-extrabold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">{part}</span>;
@@ -123,7 +125,7 @@ const FAQS = [
   },
   {
     q: "What is the difference between the AI tiers?",
-    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Diagnostics use Premium AI on Professional and Business plans for deeper clinical insight. Starter diagnostics use Advanced AI.",
+    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Precision AI is the Business tier, delivering superior clinical depth for high volume clinics. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Diagnostics use Premium AI on Professional and Business plans for deeper clinical insight. Starter diagnostics use Advanced AI.",
   },
   {
     q: "Who pays per seat?",
@@ -504,7 +506,7 @@ function PremiumAiExplainer() {
           <div>
             <p className="text-sm font-semibold text-ink mb-1">When to use it</p>
             <p className="text-sm text-slate">
-              For complex, multi symptom cases where deeper reasoning matters. Enable it per location and your doctors can choose Premium AI when a patient needs the most thorough intake. Standard cases continue using Advanced AI at no extra cost.
+              For complex, multi symptom cases where deeper reasoning matters. Enable it per location and your doctors can choose Premium AI when a patient needs the most thorough intake. Standard cases continue using Advanced or Precision AI at no extra cost.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

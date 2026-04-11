@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope, UserPlus, Search, Lock, CalendarClock } from "lucide-react";
+import { HeartPulse, FastForward, MessageSquare, Stethoscope, UserPlus, Search, Lock, CalendarClock } from "lucide-react";
 import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
-import { initializeOrgDefaultVitals } from "@/app/(dashboard)/d/_actions/nurse";
 import { createClient } from "@/lib/supabase/client";
 import { QUEUE_TYPES } from "@/lib/constants";
 
@@ -12,8 +11,6 @@ interface ClinicFeaturesStepProps {
   hasRaven?: boolean;
   onComplete: (features: {
     nurse: boolean;
-    vitals: boolean;
-    vaccines: boolean;
     skipAi: boolean;
     reviewSms: boolean;
     diagnostic: boolean;
@@ -29,8 +26,6 @@ export default function ClinicFeaturesStep({
 }: ClinicFeaturesStepProps) {
   const [loaded, setLoaded] = useState(false);
   const [nurseEnabled, setNurseEnabled] = useState(false);
-  const [vitalsEnabled, setVitalsEnabled] = useState(true);
-  const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
   const [skipAi, setSkipAi] = useState(false); // inverted in UI: "AI Intake" ON = skipAi false
   const [reviewSmsEnabled, setReviewSmsEnabled] = useState(true);
   const [diagnosticEnabled, setDiagnosticEnabled] = useState(true);
@@ -47,8 +42,6 @@ export default function ClinicFeaturesStep({
       const loc = data?.location;
       if (loc) {
         setNurseEnabled(loc.nurse_enabled ?? false);
-        setVitalsEnabled(loc.vitals_enabled ?? true);
-        setVaccinesEnabled(loc.vaccines_enabled ?? false);
         setSkipAi(loc.skip_ai ?? false);
         setReviewSmsEnabled(loc.review_sms_enabled ?? true);
         setDiagnosticEnabled(loc.diagnostic_enabled ?? true);
@@ -62,22 +55,18 @@ export default function ClinicFeaturesStep({
 
   function handleNurseToggle(checked: boolean) {
     setNurseEnabled(checked);
-    if (checked && !vitalsEnabled) {
-      setVitalsEnabled(true);
-    }
   }
 
   async function handleSkip() {
     setSaving(true);
     await updateLocation({
       locationId,
-      vitalsEnabled: true,
       reviewSmsEnabled: true,
       diagnosticEnabled: true,
       queueType,
     });
     setSaving(false);
-    onComplete({ nurse: false, vitals: true, vaccines: false, skipAi: false, reviewSms: true, diagnostic: true });
+    onComplete({ nurse: false, skipAi: false, reviewSms: true, diagnostic: true });
   }
 
   async function handleContinue() {
@@ -88,8 +77,6 @@ export default function ClinicFeaturesStep({
       const result = await updateLocation({
         locationId,
         nurseEnabled,
-        vitalsEnabled,
-        vaccinesEnabled,
         skipAi,
         reviewSmsEnabled,
         diagnosticEnabled,
@@ -104,14 +91,8 @@ export default function ClinicFeaturesStep({
         return;
       }
 
-      if (vitalsEnabled) {
-        await initializeOrgDefaultVitals();
-      }
-
       onComplete({
         nurse: nurseEnabled,
-        vitals: vitalsEnabled,
-        vaccines: vaccinesEnabled,
         skipAi,
         reviewSms: reviewSmsEnabled,
         diagnostic: diagnosticEnabled,
@@ -199,28 +180,6 @@ export default function ClinicFeaturesStep({
           description="Nurses screen patients first."
           enabled={nurseEnabled}
           onToggle={(v) => handleNurseToggle(v)}
-        />
-
-        {/* Vitals Tracking */}
-        <FeatureTile
-          icon={<Activity className="h-4 w-4 text-blue-600" />}
-          bg="bg-blue-50"
-          activeClass="bg-blue-500"
-          label="Vitals Tracking"
-          description="Weight, BP, and more."
-          enabled={vitalsEnabled}
-          onToggle={setVitalsEnabled}
-        />
-
-        {/* Vaccine Management */}
-        <FeatureTile
-          icon={<Syringe className="h-4 w-4 text-green-600" />}
-          bg="bg-green-50"
-          activeClass="bg-green-500"
-          label="Vaccines"
-          description="Track shots and schedules."
-          enabled={vaccinesEnabled}
-          onToggle={setVaccinesEnabled}
         />
 
         {/* AI Intake */}

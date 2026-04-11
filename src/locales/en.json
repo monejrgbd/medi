@@ -72,7 +72,7 @@
   "phone.sending": "Sending...",
   "phone.retry": "Retry sending code",
   "phone.noPhone": "I don't have a phone",
-  "phone.terms": "I agree to receive text messages including verification codes, visit summaries, and follow up reminders. Message and data rates may apply.",
+  "phone.terms": "I agree to receive text messages including verification codes and visit summaries. Message and data rates may apply.",
   "verify.title": "Enter Verification Code",
   "verify.subtitle": "We sent a 6-digit code to {phone}",
   "verify.button": "Verify",

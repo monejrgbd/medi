@@ -53,8 +53,6 @@ export default function OnboardingWizard({
 
   // Step 3 state (Configure Clinic)
   const [nurseEnabled, setNurseEnabled] = useState(false);
-  const [vitalsEnabled, setVitalsEnabled] = useState(true);
-  const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
 
   // Step 0 state (Profile)
   const [profileFullName, setProfileFullName] = useState("");
@@ -617,8 +615,6 @@ export default function OnboardingWizard({
           onBack={() => setStep(2)}
           onComplete={(features) => {
             setNurseEnabled(features.nurse);
-            setVitalsEnabled(features.vitals);
-            setVaccinesEnabled(features.vaccines);
             setStep(4);
           }}
         />

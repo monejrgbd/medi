@@ -50,6 +50,18 @@ BEGIN
       recharge_used = 0
   WHERE id = v_org.id;
 
+  -- Keep location ai_model consistent with plan branding.
+  -- Business/Enterprise use 'precision' as included tier label, other plans use 'standard'.
+  IF p_new_plan = 'business' THEN
+    UPDATE public.locations
+    SET ai_model = 'precision'
+    WHERE org_id = v_org.id AND ai_model = 'standard';
+  ELSIF v_org.subscription_plan = 'business' AND p_new_plan <> 'business' THEN
+    UPDATE public.locations
+    SET ai_model = 'standard'
+    WHERE org_id = v_org.id AND ai_model = 'precision';
+  END IF;
+
   -- If switching TO PAyG with existing recharge_limit, start a fresh cycle
   IF p_new_plan = 'pay_as_you_go' THEN
     UPDATE public.organizations

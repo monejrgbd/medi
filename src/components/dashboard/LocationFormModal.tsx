@@ -6,7 +6,7 @@ import { useRole } from "@/contexts/RoleContext";
 import { createLocation } from "@/app/(dashboard)/d/_actions/locations";
 import { ALLOWED_SPECIALTIES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { HeartPulse, Activity, Syringe, FastForward, MessageSquare, Stethoscope } from "lucide-react";
+import { HeartPulse, FastForward, MessageSquare, Stethoscope } from "lucide-react";
 
 export default function LocationFormModal({
   open,
@@ -25,8 +25,6 @@ export default function LocationFormModal({
 
   // Step 2 feature toggles
   const [nurseEnabled, setNurseEnabled] = useState(false);
-  const [vitalsEnabled, setVitalsEnabled] = useState(true);
-  const [vaccinesEnabled, setVaccinesEnabled] = useState(false);
   const [skipAi, setSkipAi] = useState(false);
   const [reviewSmsEnabled, setReviewSmsEnabled] = useState(true);
   const [diagnosticEnabled, setDiagnosticEnabled] = useState(true);
@@ -37,12 +35,11 @@ export default function LocationFormModal({
 
   function handleNurseToggle(checked: boolean) {
     setNurseEnabled(checked);
-    if (checked && !vitalsEnabled) setVitalsEnabled(true);
   }
 
   function handleClose() {
     setName(""); setAddress(""); setSpecialty("");
-    setNurseEnabled(false); setVitalsEnabled(true); setVaccinesEnabled(false);
+    setNurseEnabled(false);
     setSkipAi(false); setReviewSmsEnabled(true); setDiagnosticEnabled(true);
     setStep(1); setError("");
     onClose();
@@ -58,8 +55,6 @@ export default function LocationFormModal({
       address: address || undefined,
       specialty: specialty || undefined,
       nurseEnabled,
-      vitalsEnabled,
-      vaccinesEnabled,
       skipAi,
       reviewSmsEnabled,
       diagnosticEnabled,
@@ -175,26 +170,6 @@ export default function LocationFormModal({
                 description="Nurses screen patients before doctors."
                 enabled={nurseEnabled}
                 onToggle={(v) => handleNurseToggle(v)}
-              />
-
-              <FeatureRow
-                icon={<Activity className="h-4 w-4 text-blue-600" />}
-                bg="bg-blue-50"
-                activeClass="bg-blue-500"
-                label="Vitals Tracking"
-                description="Record weight, blood pressure, and more."
-                enabled={vitalsEnabled}
-                onToggle={setVitalsEnabled}
-              />
-
-              <FeatureRow
-                icon={<Syringe className="h-4 w-4 text-green-600" />}
-                bg="bg-green-50"
-                activeClass="bg-green-500"
-                label="Vaccine Management"
-                description="Track administered vaccines and schedules."
-                enabled={vaccinesEnabled}
-                onToggle={setVaccinesEnabled}
               />
 
               <FeatureRow
