@@ -20,14 +20,16 @@ DECLARE
   v_from_recharge numeric := 0;
   v_recharge_remaining numeric;
 BEGIN
-  -- Determine credit amount based on tier
-  -- standard (Haiku) = 1, advanced/precision (Sonnet) = 1.5, premium (Opus) = 4
+  -- Determine credit amount based on tier (bundled cost: intake + summary + diagnostic)
+  -- standard = 1, advanced = 1.5, precision = 2.5, premium = 4
   IF p_ai_model = 'premium' THEN
     v_amount := 4;
+  ELSIF p_ai_model = 'precision' THEN
+    v_amount := 2.5;
   ELSIF p_ai_model = 'standard' THEN
     v_amount := 1;
   ELSE
-    v_amount := 1.5;  -- advanced OR precision
+    v_amount := 1.5;  -- advanced
   END IF;
 
   -- Lock org row FIRST to prevent race conditions

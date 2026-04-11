@@ -67,7 +67,7 @@ INSERT INTO public.ai_model_config (
    'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.5,
    'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3),
 
-  ('precision', 'Precision Combo', 1.5,
+  ('precision', 'Precision Combo', 2.5,
    'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  1024, 0.7,
    'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.5,
    'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3),

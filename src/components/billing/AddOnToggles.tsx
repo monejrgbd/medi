@@ -123,7 +123,7 @@ export default function AddOnToggles({
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-ink">AI Features</h3>
             <span className="text-xs text-slate bg-gray-50 px-2 py-1 rounded-full">
-              0.5 credits per visit
+              Included
             </span>
           </div>
           <div className="space-y-3">

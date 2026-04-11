@@ -94,14 +94,6 @@ Deno.serve(async (req) => {
       "standard";
     const displayFormat = locationRow?.display_format || "summary";
 
-    // Get subscription plan for model selection
-    const { data: orgRow } = await supabase
-      .from("organizations")
-      .select("subscription_plan")
-      .eq("id", visitRow.org_id)
-      .single();
-    const subscriptionPlan = orgRow?.subscription_plan || "starter";
-
     // Load nurse vitals if available
     let nurseContext = "";
     if (visitRow.nurse_reviewed) {
@@ -275,7 +267,7 @@ Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
       await Promise.all(medPromises);
     }
 
-    // --- Diagnostic addon: separate Opus call if enabled ---
+    // --- Diagnostic (bundled into tier cost — no separate charge) ---
     try {
       const { data: locDiag } = await supabase
         .from("locations")
@@ -284,25 +276,7 @@ Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
         .single();
 
       if (locDiag?.diagnostic_enabled) {
-        // PAYG + trials: charge 0.5 credits for diagnostic
-        const isPAyG = ["pay_as_you_go", "standard_trial", "premium_trial"].includes(subscriptionPlan);
-        let diagnosticAllowed = true;
-
-        if (isPAyG) {
-          const { data: diagCreditResult } = await supabase.rpc("deduct_diagnostic_credits", {
-            p_org_id: visitRow.org_id,
-            p_visit_id: visit_id,
-          });
-
-          if (!diagCreditResult?.success && !diagCreditResult?.already_deducted) {
-            console.error("Diagnostic credit deduction failed for visit:", visit_id, diagCreditResult?.error);
-            diagnosticAllowed = false;
-          }
-        }
-        // Subscription plans: diagnostic included (no charge)
-
-        if (diagnosticAllowed) {
-          // Load full patient context for diagnostic
+        // Load full patient context for diagnostic
           const { data: patientCtx } = await supabase
             .from("patients")
             .select("birthday, sex")
@@ -378,7 +352,6 @@ Doctor reference only. Not shown to patients.`;
           } catch (diagInnerErr) {
             console.error("Diagnostic adapter call failed for visit:", visit_id, diagInnerErr);
           }
-        }
       }
     } catch (diagErr) {
       console.error("Diagnostic generation error (non-blocking):", diagErr);

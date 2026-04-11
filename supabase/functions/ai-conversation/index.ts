@@ -304,6 +304,12 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Snapshot the stable system prompt length BEFORE appending the dynamic pacing
+    // notice. This is the portion adapters can safely prompt-cache across turns
+    // (Anthropic splits on this boundary; Gemini 3.x handles it automatically via
+    // implicit caching; OpenAI caches prompts >1024 tokens automatically).
+    const stableSystemPromptLen = systemPrompt.length;
+
     // Wrap-up nudge: when approaching message limit, tell AI to prioritize remaining fields
     const messagesRemaining = messageLimit - patientMessageCount;
     if (messagesRemaining <= 4 && messagesRemaining >= 0) {
@@ -316,6 +322,7 @@ Deno.serve(async (req) => {
     const stream = intakeAdapter.streamChat({
       call: intakeCall,
       system: systemPrompt,
+      systemCachePrefix: stableSystemPromptLen,
       messages: claudeMessages.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.content,

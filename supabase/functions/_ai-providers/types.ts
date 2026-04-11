@@ -53,12 +53,20 @@ export interface ProviderAdapter {
   streamChat(opts: {
     call: ModelCall;
     system: string;
+    /**
+     * Optional: number of characters at the start of `system` that are stable
+     * across turns and should be prompt-cached. Anthropic uses this to set a
+     * cache breakpoint; other providers get implicit/automatic caching and
+     * ignore this hint.
+     */
+    systemCachePrefix?: number;
     messages: ChatMessage[];
   }): AsyncIterable<StreamChunk>;
 
   structuredOutput(opts: {
     call: ModelCall;
     system: string;
+    systemCachePrefix?: number;
     messages: ChatMessage[];
   }): Promise<{ json: unknown; rawText: string }>;
 }

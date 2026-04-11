@@ -201,7 +201,7 @@ export default function LocationFormModal({
                 description="AI suggests diagnoses based on symptoms."
                 enabled={diagnosticEnabled}
                 onToggle={setDiagnosticEnabled}
-                cost={{ text: "0.5 credits per use", className: "text-rose-600" }}
+                cost={{ text: "Included in tier cost", className: "text-rose-600" }}
               />
             </div>
 

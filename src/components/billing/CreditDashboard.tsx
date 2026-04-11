@@ -77,10 +77,10 @@ export default function CreditDashboard() {
     usedPct >= 0.9 ? "#ef4444" : usedPct >= 0.7 ? "#f59e0b" : "#22c55e";
 
   const planLabels: Record<string, { name: string; ai: string; msgLimit: number }> = {
-    starter: { name: "Starter", ai: "Standard AI", msgLimit: 20 },
-    professional: { name: "Professional", ai: "Advanced AI", msgLimit: 35 },
-    business: { name: "Business", ai: "Precision + Premium AI", msgLimit: 50 },
-    enterprise: { name: "Enterprise", ai: "Custom", msgLimit: 50 },
+    starter: { name: "Starter", ai: "Standard AI", msgLimit: 30 },
+    professional: { name: "Professional", ai: "Advanced AI", msgLimit: 60 },
+    business: { name: "Business", ai: "Precision + Premium AI", msgLimit: 100 },
+    enterprise: { name: "Enterprise", ai: "Custom", msgLimit: 100 },
   };
   const planInfo = planLabels[data.subscription_plan] || null;
 

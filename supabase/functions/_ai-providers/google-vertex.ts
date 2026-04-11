@@ -128,6 +128,14 @@ export class GoogleVertexAdapter implements ProviderAdapter {
   async *streamChat(opts: {
     call: ModelCall;
     system: string;
+    // systemCachePrefix is intentionally ignored for Vertex.
+    // Implicit caching is enabled by default on all Google Cloud projects and
+    // automatically gives a 90% discount on cached tokens for Gemini 3.x and
+    // Gemini 2.5+ — same discount as Anthropic's explicit cache_control, but
+    // without any per-request plumbing or per-visit state tracking. Explicit
+    // caching via /v1/cachedContents would only duplicate what implicit already
+    // provides for our short system prompts.
+    systemCachePrefix?: number;
     messages: ChatMessage[];
   }): AsyncIterable<StreamChunk> {
     let token: string;
@@ -213,6 +221,7 @@ export class GoogleVertexAdapter implements ProviderAdapter {
   async structuredOutput(opts: {
     call: ModelCall;
     system: string;
+    systemCachePrefix?: number;  // ignored, see streamChat note
     messages: ChatMessage[];
   }): Promise<{ json: unknown; rawText: string }> {
     const { token, project } = await getAccessToken(this.supabase);

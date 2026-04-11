@@ -7,6 +7,9 @@ export class OpenAIAdapter implements ProviderAdapter {
   async *streamChat(opts: {
     call: ModelCall;
     system: string;
+    // systemCachePrefix is ignored for OpenAI: prompts over 1024 tokens are
+    // automatically cached server-side with no opt-in needed.
+    systemCachePrefix?: number;
     messages: ChatMessage[];
   }): AsyncIterable<StreamChunk> {
     if (!OPENAI_API_KEY) {
@@ -90,6 +93,7 @@ export class OpenAIAdapter implements ProviderAdapter {
   async structuredOutput(opts: {
     call: ModelCall;
     system: string;
+    systemCachePrefix?: number;  // ignored, see streamChat note
     messages: ChatMessage[];
   }): Promise<{ json: unknown; rawText: string }> {
     if (!OPENAI_API_KEY) throw new Error("OPENAI_API_KEY not configured");

@@ -450,7 +450,7 @@ export default function LocationSettingsForm({
         <label className="flex items-center justify-between">
           <div>
             <span className="text-sm text-ink">Diagnostic AI</span>
-            <p className="text-xs text-ash">AI suggests possible diagnoses based on patient symptoms. Uses 0.5 credits per use.</p>
+            <p className="text-xs text-ash">AI suggests possible diagnoses based on patient symptoms. Included in the per visit tier cost, no extra charge.</p>
           </div>
           <input
             type="checkbox"

@@ -122,7 +122,7 @@ const FAQS = [
   },
   {
     q: "What is the difference between the AI tiers?",
-    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Precision AI is the Business tier, delivering superior clinical depth for high volume clinics. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Diagnostics use Premium AI on Professional and Business plans for deeper clinical insight. Starter diagnostics use Advanced AI.",
+    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Precision AI is the Business tier, delivering superior clinical depth for high volume clinics. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Every tier also generates a doctor facing diagnostic suggestion at the end of each visit at no extra cost, bundled into the per visit credit cost.",
   },
   {
     q: "Who pays per seat?",
@@ -432,12 +432,13 @@ function PlanCards() {
             </div>
           </div>
 
-          {/* PAYG credit costs */}
-          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {/* PAYG credit costs — matches the 4 tier slots in ai_model_config plus flat service costs */}
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {[
-              { service: "AI Conversation", cost: "1.5 credits" },
-              { service: "AI Diagnostic", cost: "0.5 credits" },
-              { service: "Premium AI Intake", cost: "4 credits" },
+              { service: "Standard AI", cost: "1 credit" },
+              { service: "Advanced AI", cost: "1.5 credits" },
+              { service: "Precision AI", cost: "2.5 credits" },
+              { service: "Premium AI", cost: "4 credits" },
               { service: "Review SMS", cost: "0.1 credits" },
               { service: "Marketing SMS", cost: "0.1 credits" },
               { service: "Marketing AI Scan", cost: "1 credit/1K" },

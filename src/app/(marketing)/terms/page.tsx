@@ -225,8 +225,11 @@ export default function TermsPage() {
               a patient is denied or abandons check-in before the AI conversation starts.
             </p>
             <ul>
-              <li><strong>Standard AI</strong> — 1.5 credits per patient session</li>
-              <li><strong>Advanced AI</strong> — 4 credits per patient session</li>
+              <li><strong>Standard AI</strong> — 1 credit per patient session</li>
+              <li><strong>Advanced AI</strong> — 1.5 credits per patient session</li>
+              <li><strong>Precision AI</strong> — 2.5 credits per patient session</li>
+              <li><strong>Premium AI</strong> — 4 credits per patient session</li>
+              <li>AI diagnostic suggestions for doctors are included at no extra credit cost when enabled for a location</li>
               <li>Credits expire at the end of each billing cycle and do not roll over</li>
               <li>Overage credits are available at $1.00 CAD per credit</li>
             </ul>

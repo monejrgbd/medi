@@ -2951,10 +2951,6 @@ export type Database = {
         Args: { p_ai_model: string; p_org_id: string; p_visit_id: string }
         Returns: Json
       }
-      deduct_diagnostic_credits: {
-        Args: { p_org_id: string; p_visit_id: string }
-        Returns: Json
-      }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       deny_patient: { Args: { p_visit_id: string }; Returns: Json }
       edit_patient_record: {
