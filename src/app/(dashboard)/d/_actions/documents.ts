@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth } from "@/lib/auth";
+import { requireAuth, isOwner, getMyOrg } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 const UUID_RE =
@@ -292,4 +292,158 @@ export async function fetchDocumentTemplates() {
     return { success: false, error: "Failed to fetch document templates" };
 
   return { success: true, templates: data ?? [] };
+}
+
+/* ── Owner: Clinician & Letterhead Settings ──────────── */
+
+function sanitizeText(val: string, maxLen: number): string {
+  return val.replace(/<[^>]*>/g, "").trim().slice(0, maxLen);
+}
+
+export async function updateClinicianInfo(formData: {
+  licenseNumber: string;
+  npi: string;
+  credentials: string;
+}) {
+  const user = await requireAuth();
+  const ownerCheck = await isOwner(user.id);
+  if (!ownerCheck) return { success: false, error: "Not authorized" };
+
+  const org = await getMyOrg();
+  if (!org?.id) return { success: false, error: "Organization not found" };
+
+  const licenseNumber = sanitizeText(formData.licenseNumber, 50);
+  const npi = sanitizeText(formData.npi, 20);
+  const credentials = sanitizeText(formData.credentials, 30);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organizations")
+    .update({
+      clinician_license_number: licenseNumber || null,
+      clinician_npi: npi || null,
+      clinician_credentials: credentials || null,
+    })
+    .eq("id", org.id);
+
+  if (error) return { success: false, error: "Failed to update clinician info" };
+
+  revalidatePath("/d/owner/templates");
+  return { success: true };
+}
+
+export async function uploadClinicianSignature(formData: FormData) {
+  const user = await requireAuth();
+  const ownerCheck = await isOwner(user.id);
+  if (!ownerCheck) return { success: false, error: "Not authorized" };
+
+  const file = formData.get("file") as File | null;
+  if (!file) return { success: false, error: "No file provided" };
+
+  if (file.type !== "image/png") {
+    return { success: false, error: "File must be a PNG image" };
+  }
+
+  if (file.size > 500 * 1024) {
+    return { success: false, error: "File must be under 500KB" };
+  }
+
+  const org = await getMyOrg();
+  if (!org?.id) return { success: false, error: "Organization not found" };
+
+  const supabase = await createClient();
+  const path = `${org.id}/clinician-signature.png`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("logos")
+    .upload(path, file, { upsert: true });
+
+  if (uploadError) return { success: false, error: "Failed to upload signature" };
+
+  const { data: urlData } = supabase.storage
+    .from("logos")
+    .getPublicUrl(path);
+
+  const signatureUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
+  const { error } = await supabase
+    .from("organizations")
+    .update({ clinician_signature_url: signatureUrl })
+    .eq("id", org.id);
+
+  if (error) return { success: false, error: "Failed to save signature URL" };
+
+  revalidatePath("/d/owner/templates");
+  return { success: true, signatureUrl };
+}
+
+export async function updateLetterhead(formData: {
+  disclaimer: string;
+}) {
+  const user = await requireAuth();
+  const ownerCheck = await isOwner(user.id);
+  if (!ownerCheck) return { success: false, error: "Not authorized" };
+
+  const org = await getMyOrg();
+  if (!org?.id) return { success: false, error: "Organization not found" };
+
+  const disclaimer = sanitizeText(formData.disclaimer, 500);
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("organizations")
+    .update({
+      letterhead_disclaimer: disclaimer || null,
+    })
+    .eq("id", org.id);
+
+  if (error) return { success: false, error: "Failed to update letterhead" };
+
+  revalidatePath("/d/owner/templates");
+  return { success: true };
+}
+
+export async function uploadLetterheadLogo(formData: FormData) {
+  const user = await requireAuth();
+  const ownerCheck = await isOwner(user.id);
+  if (!ownerCheck) return { success: false, error: "Not authorized" };
+
+  const file = formData.get("file") as File | null;
+  if (!file) return { success: false, error: "No file provided" };
+
+  if (!file.type.startsWith("image/")) {
+    return { success: false, error: "File must be an image" };
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    return { success: false, error: "File must be under 2MB" };
+  }
+
+  const org = await getMyOrg();
+  if (!org?.id) return { success: false, error: "Organization not found" };
+
+  const supabase = await createClient();
+  const path = `${org.id}/letterhead-logo`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("logos")
+    .upload(path, file, { upsert: true });
+
+  if (uploadError) return { success: false, error: "Failed to upload logo" };
+
+  const { data: urlData } = supabase.storage
+    .from("logos")
+    .getPublicUrl(path);
+
+  const logoUrl = `${urlData.publicUrl}?v=${Date.now()}`;
+
+  const { error } = await supabase
+    .from("organizations")
+    .update({ letterhead_logo_url: logoUrl })
+    .eq("id", org.id);
+
+  if (error) return { success: false, error: "Failed to save letterhead logo" };
+
+  revalidatePath("/d/owner/templates");
+  return { success: true, logoUrl };
 }

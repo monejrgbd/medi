@@ -1,0 +1,145 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.extend_document_token(
+  p_caller_auth_uid uuid,
+  p_document_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_owner_id uuid;
+  v_doc record;
+  v_template_lifetime_hours int;
+  v_max_expiry timestamptz;
+  v_new_expiry timestamptz;
+BEGIN
+  -- Get caller staff info
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  -- Load document
+  SELECT cd.id, cd.org_id, cd.location_id, cd.status, cd.signed_at,
+         cd.public_token_expires_at, cd.template_key
+  INTO v_doc
+  FROM public.clinical_documents cd
+  WHERE cd.id = p_document_id;
+
+  IF v_doc IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Verify document belongs to caller's org
+  IF v_doc.org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Only owner can extend tokens
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_caller_org_id;
+
+  IF v_owner_id <> p_caller_auth_uid THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only the organization owner can extend document tokens');
+  END IF;
+
+  -- Document must be signed or sent
+  IF v_doc.status NOT IN ('signed', 'sent') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only signed or sent documents can have their token extended');
+  END IF;
+
+  -- Must have an expiry to extend
+  IF v_doc.public_token_expires_at IS NULL OR v_doc.signed_at IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document does not have a public token expiry');
+  END IF;
+
+  -- Get template default lifetime for max extension calculation
+  SELECT dt.default_token_lifetime_hours
+  INTO v_template_lifetime_hours
+  FROM public.document_templates dt
+  WHERE dt.key = v_doc.template_key;
+
+  -- Default to 168 hours (7 days) if template not found
+  IF v_template_lifetime_hours IS NULL THEN
+    v_template_lifetime_hours := 168;
+  END IF;
+
+  -- Max 3 extensions: check if expires_at is more than 3x the template lifetime past signed_at
+  v_max_expiry := v_doc.signed_at + (v_template_lifetime_hours * interval '1 hour') + (3 * interval '7 days');
+
+  IF v_doc.public_token_expires_at >= v_max_expiry THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Maximum number of extensions reached (3)');
+  END IF;
+
+  -- Extend by 7 days
+  v_new_expiry := v_doc.public_token_expires_at + interval '7 days';
+
+  -- Cap at max expiry
+  IF v_new_expiry > v_max_expiry THEN
+    v_new_expiry := v_max_expiry;
+  END IF;
+
+  UPDATE public.clinical_documents
+  SET public_token_expires_at = v_new_expiry,
+      updated_at = now()
+  WHERE id = p_document_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, location_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_caller_org_id,
+    v_doc.location_id,
+    'clinical_document',
+    p_document_id,
+    v_caller_staff_id,
+    'owner',
+    'document_token_extended',
+    jsonb_build_object(
+      'previous_expiry', v_doc.public_token_expires_at,
+      'new_expiry', v_new_expiry
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'document_id', p_document_id,
+    'new_expiry', v_new_expiry
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.extend_document_token(
+  p_document_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.extend_document_token(v_auth_uid, p_document_id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.extend_document_token(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.extend_document_token(uuid) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.extend_document_token(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.extend_document_token(uuid) TO authenticated;

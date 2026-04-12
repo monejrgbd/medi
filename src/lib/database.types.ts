@@ -86,6 +86,54 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_plan_config: {
+        Row: {
+          document_max_tokens: number
+          document_model: string
+          document_model_display: string
+          document_provider: string
+          document_temperature: number
+          plan: string
+          scan_max_tokens: number
+          scan_model: string
+          scan_model_display: string
+          scan_provider: string
+          scan_temperature: number
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          document_max_tokens?: number
+          document_model?: string
+          document_model_display?: string
+          document_provider?: string
+          document_temperature?: number
+          plan: string
+          scan_max_tokens?: number
+          scan_model?: string
+          scan_model_display?: string
+          scan_provider?: string
+          scan_temperature?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          document_max_tokens?: number
+          document_model?: string
+          document_model_display?: string
+          document_provider?: string
+          document_temperature?: number
+          plan?: string
+          scan_max_tokens?: number
+          scan_model?: string
+          scan_model_display?: string
+          scan_provider?: string
+          scan_temperature?: number
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       approval_codes: {
         Row: {
           code: string
@@ -3346,6 +3394,7 @@ export type Database = {
         }
         Returns: Json
       }
+      extend_document_token: { Args: { p_document_id: string }; Returns: Json }
       finalize_campaign_scan: {
         Args: { p_campaign_id: string; p_total_scanned: number }
         Returns: Json
@@ -3847,6 +3896,10 @@ export type Database = {
       trigger_visit_summary_sms: { Args: { p_visit_id: string }; Returns: Json }
       update_ai_model_config: {
         Args: { p_combo: Json; p_tier: string }
+        Returns: Json
+      }
+      update_ai_plan_config: {
+        Args: { p_combo: Json; p_plan: string }
         Returns: Json
       }
       update_allergies: {

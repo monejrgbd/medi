@@ -42,6 +42,7 @@ interface LetterGeneratorModalProps {
   initialTemplateKey?: string;
   onClose: () => void;
   onComplete: () => void;
+  onRequestSoapEditor?: () => void;
 }
 
 const STEP_LABELS = ["Template", "Inputs", "Review", "Deliver"];
@@ -53,6 +54,7 @@ export default function LetterGeneratorModal({
   initialTemplateKey,
   onClose,
   onComplete,
+  onRequestSoapEditor,
 }: LetterGeneratorModalProps) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(
@@ -83,11 +85,7 @@ export default function LetterGeneratorModal({
     (async () => {
       const result = await fetchDocumentTemplates();
       if (result.success && result.templates) {
-        setTemplates(
-          (result.templates as Template[]).filter(
-            (t) => t.document_category === "letter"
-          )
-        );
+        setTemplates(result.templates as Template[]);
       } else {
         setError("Failed to load templates");
       }
@@ -95,16 +93,21 @@ export default function LetterGeneratorModal({
     })();
   }, []);
 
-  // Auto-select template if initialTemplateKey is provided (from quick shortcuts)
+  // Auto-select template if initialTemplateKey is provided
   useEffect(() => {
     if (initialTemplateKey && templates.length > 0 && !selectedTemplate) {
       const match = templates.find((t) => t.key === initialTemplateKey);
       if (match) {
+        // SOAP routes to the dedicated editor, parent handles
+        if (match.document_category === "clinical_note" && onRequestSoapEditor) {
+          onRequestSoapEditor();
+          return;
+        }
         setSelectedTemplate(match);
         setStep(2);
       }
     }
-  }, [initialTemplateKey, templates, selectedTemplate]);
+  }, [initialTemplateKey, templates, selectedTemplate, onRequestSoapEditor]);
 
   // Cleanup save timer on unmount
   useEffect(() => {
@@ -135,6 +138,12 @@ export default function LetterGeneratorModal({
   }, [selectedTemplate]);
 
   function handleSelectTemplate(template: Template) {
+    // SOAP notes use a dedicated full screen editor, not the modal wizard.
+    // Close this modal and let the parent open SoapNoteEditor.
+    if (template.document_category === "clinical_note" && onRequestSoapEditor) {
+      onRequestSoapEditor();
+      return;
+    }
     setSelectedTemplate(template);
     setError(null);
     setStep(2);

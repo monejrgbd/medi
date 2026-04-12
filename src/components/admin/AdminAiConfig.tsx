@@ -2,10 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-import { fetchAiModelConfig, updateAiModelConfig, type AiComboInput } from "@/app/(dashboard)/d/_actions/admin";
+import {
+  fetchAiModelConfig, updateAiModelConfig, type AiComboInput,
+  fetchAiPlanConfig, updateAiPlanConfig, type AiPlanComboInput,
+} from "@/app/(dashboard)/d/_actions/admin";
 
 type Provider = "anthropic" | "google_vertex" | "openai";
 type Task = "intake" | "summary" | "diagnostic";
+type PlanTask = "document" | "scan";
 
 interface Combo {
   tier: string;
@@ -49,15 +53,40 @@ const TASKS: { key: Task; label: string; desc: string }[] = [
   { key: "diagnostic", label: "Diagnostic", desc: "Doctor-facing diagnostic suggestion" },
 ];
 
+const PLAN_TASKS: { key: PlanTask; label: string; desc: string }[] = [
+  { key: "document", label: "Document", desc: "SOAP notes, letters, clinical docs" },
+  { key: "scan", label: "Marketing Scan", desc: "AI patient targeting for campaigns" },
+];
+
+interface PlanCombo {
+  plan: string;
+  document_provider: Provider;
+  document_model: string;
+  document_model_display: string;
+  document_max_tokens: number;
+  document_temperature: number;
+  scan_provider: Provider;
+  scan_model: string;
+  scan_model_display: string;
+  scan_max_tokens: number;
+  scan_temperature: number;
+  updated_at: string;
+}
+
 export default function AdminAiConfig() {
   const [combos, setCombos] = useState<Combo[]>([]);
+  const [planCombos, setPlanCombos] = useState<PlanCombo[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<Combo | null>(null);
+  const [editingPlan, setEditingPlan] = useState<PlanCombo | null>(null);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await fetchAiModelConfig();
+    const [res, planRes] = await Promise.all([fetchAiModelConfig(), fetchAiPlanConfig()]);
+    if (planRes.success && Array.isArray(planRes.data)) {
+      setPlanCombos(planRes.data);
+    }
     if (res.success && Array.isArray(res.data)) {
       const sorted = [...res.data].sort(
         (a: Combo, b: Combo) => (TIER_ORDER[a.tier] ?? 99) - (TIER_ORDER[b.tier] ?? 99)
@@ -166,6 +195,103 @@ export default function AdminAiConfig() {
           </article>
         ))}
       </div>
+
+      {/* ─── Plan-Level AI Config ─── */}
+      <header className="mt-10 mb-6">
+        <h2 className="text-xl font-semibold text-ink">Plan Level AI</h2>
+        <p className="mt-1 text-sm text-slate">
+          Per plan models for document generation and marketing scans. These are org level tasks, not per visit.
+        </p>
+      </header>
+
+      <div className="grid gap-4">
+        {planCombos.map((pc) => (
+          <article key={pc.plan} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-ink capitalize">{pc.plan.replace(/_/g, " ")}</h2>
+              <button
+                type="button"
+                onClick={() => setEditingPlan(pc)}
+                className="rounded-lg bg-hilt-blue px-4 py-2 text-sm font-medium text-white hover:bg-hilt-blue/90"
+              >
+                Edit
+              </button>
+            </div>
+            <div className="grid gap-2 text-sm">
+              <TaskRow label="Document" model={pc.document_model_display} provider={pc.document_provider} />
+              <TaskRow label="Scan" model={pc.scan_model_display} provider={pc.scan_provider} />
+            </div>
+          </article>
+        ))}
+      </div>
+
+      {editingPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-ink capitalize">Edit {editingPlan.plan.replace(/_/g, " ")}</h2>
+              <button type="button" onClick={() => setEditingPlan(null)} className="text-slate hover:text-ink" aria-label="Close">✕</button>
+            </div>
+            <div className="space-y-4">
+              {PLAN_TASKS.map((task) => (
+                <fieldset key={task.key} className="rounded-lg border border-gray-200 p-4">
+                  <legend className="px-2 text-sm font-semibold text-ink">{task.label}</legend>
+                  <p className="mb-3 text-xs text-slate">{task.desc}</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <LabeledSelect
+                      label="Provider"
+                      value={editingPlan[`${task.key}_provider`] as Provider}
+                      options={PROVIDERS}
+                      onChange={(v) => setEditingPlan({ ...editingPlan, [`${task.key}_provider`]: v as Provider })}
+                    />
+                    <LabeledInput label="Model ID" value={editingPlan[`${task.key}_model`] as string} onChange={(v) => setEditingPlan({ ...editingPlan, [`${task.key}_model`]: v })} />
+                    <LabeledInput label="Display name" value={editingPlan[`${task.key}_model_display`] as string} onChange={(v) => setEditingPlan({ ...editingPlan, [`${task.key}_model_display`]: v })} />
+                    <div className="grid grid-cols-2 gap-2">
+                      <LabeledNumber label="Max tokens" value={editingPlan[`${task.key}_max_tokens`] as number} onChange={(v) => setEditingPlan({ ...editingPlan, [`${task.key}_max_tokens`]: v })} />
+                      <LabeledNumber label="Temp" value={editingPlan[`${task.key}_temperature`] as number} onChange={(v) => setEditingPlan({ ...editingPlan, [`${task.key}_temperature`]: v })} step={0.1} />
+                    </div>
+                  </div>
+                </fieldset>
+              ))}
+            </div>
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button type="button" onClick={() => setEditingPlan(null)} disabled={saving} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-slate hover:bg-gray-50">Cancel</button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  const input: AiPlanComboInput = {
+                    plan: editingPlan.plan,
+                    document_provider: editingPlan.document_provider,
+                    document_model: editingPlan.document_model,
+                    document_model_display: editingPlan.document_model_display,
+                    document_max_tokens: editingPlan.document_max_tokens,
+                    document_temperature: editingPlan.document_temperature,
+                    scan_provider: editingPlan.scan_provider,
+                    scan_model: editingPlan.scan_model,
+                    scan_model_display: editingPlan.scan_model_display,
+                    scan_max_tokens: editingPlan.scan_max_tokens,
+                    scan_temperature: editingPlan.scan_temperature,
+                  };
+                  const res = await updateAiPlanConfig(input);
+                  setSaving(false);
+                  if (res?.success) {
+                    toast.success(`${editingPlan.plan} plan config saved`);
+                    setEditingPlan(null);
+                    await load();
+                  } else {
+                    toast.error(res?.error || "Save failed");
+                  }
+                }}
+                className="rounded-lg bg-hilt-blue px-4 py-2 text-sm font-medium text-white hover:bg-hilt-blue/90 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Plan Config"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">

@@ -149,3 +149,59 @@ export async function updateAiModelConfig(combo: AiComboInput) {
   if (error) return { success: false, error: error.message };
   return data;
 }
+
+// ─── Plan-Level AI Config (document + scan per plan) ────────────────
+
+/** Load all 7 plan rows from ai_plan_config (platform admin only). */
+export async function fetchAiPlanConfig() {
+  await requireAuth();
+  const adminCheck = await isPlatformAdmin();
+  if (!adminCheck) return { success: false, error: "Not authorized" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ai_plan_config")
+    .select("*")
+    .order("plan");
+  if (error) return { success: false, error: error.message };
+  return { success: true, data };
+}
+
+export interface AiPlanComboInput {
+  plan: string;
+  document_provider: string;
+  document_model: string;
+  document_model_display: string;
+  document_max_tokens: number;
+  document_temperature: number;
+  scan_provider: string;
+  scan_model: string;
+  scan_model_display: string;
+  scan_max_tokens: number;
+  scan_temperature: number;
+}
+
+/** Update one plan's document + scan config (platform admin only). */
+export async function updateAiPlanConfig(combo: AiPlanComboInput) {
+  await requireAuth();
+  const adminCheck = await isPlatformAdmin();
+  if (!adminCheck) return { success: false, error: "Not authorized" };
+
+  for (const task of ["document", "scan"] as const) {
+    const provider = combo[`${task}_provider` as keyof AiPlanComboInput] as string;
+    const model = combo[`${task}_model` as keyof AiPlanComboInput] as string;
+    if (!ALLOWED_PROVIDERS.includes(provider as typeof ALLOWED_PROVIDERS[number]))
+      return { success: false, error: `Invalid ${task} provider` };
+    if (!model || typeof model !== "string" || model.length > 200)
+      return { success: false, error: `Invalid ${task} model` };
+  }
+
+  const supabase = await createClient();
+  const { plan, ...fields } = combo;
+  const { data, error } = await supabase.rpc("update_ai_plan_config", {
+    p_plan: plan,
+    p_combo: fields,
+  });
+  if (error) return { success: false, error: error.message };
+  return data;
+}

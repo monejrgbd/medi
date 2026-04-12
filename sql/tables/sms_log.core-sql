@@ -5,7 +5,7 @@ CREATE TABLE public.sms_log (
   visit_id              uuid REFERENCES public.visits(id),
   patient_id            uuid REFERENCES public.patients(id),
   phone                 text NOT NULL,
-  sms_type              text NOT NULL CHECK (sms_type IN ('verification', 'summary', 'review', 'follow_up', 'marketing')),
+  sms_type              text NOT NULL CHECK (sms_type IN ('verification', 'summary', 'review', 'follow_up', 'marketing', 'document')),
   message_body          text,
   provider_sid          text,
   status                text DEFAULT 'sent' CHECK (status IN ('pending', 'sent', 'delivered', 'failed', 'undelivered')),

@@ -43,6 +43,7 @@ BEGIN
   FROM (
     SELECT jsonb_build_object(
       'id', cd.id,
+      'visit_id', cd.visit_id,
       'document_type', cd.document_type,
       'document_category', cd.document_category,
       'template_key', cd.template_key,

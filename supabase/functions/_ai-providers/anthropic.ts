@@ -187,6 +187,12 @@ export class AnthropicAdapter implements ProviderAdapter {
     const rawText = data.content?.[0]?.text ?? "";
     // Strip markdown fences if the model added them
     const cleaned = rawText.replace(/^```(?:json)?\n?/, "").replace(/```\s*$/, "").trim();
-    return { json: JSON.parse(cleaned), rawText };
+    return {
+      json: JSON.parse(cleaned),
+      rawText,
+      usage: data.usage
+        ? { input_tokens: data.usage.input_tokens ?? 0, output_tokens: data.usage.output_tokens ?? 0 }
+        : undefined,
+    };
   }
 }

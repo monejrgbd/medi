@@ -1,12 +1,8 @@
 // Internal function — deploy with --no-verify-jwt
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { loadPlanConfig, getAdapter, pickPlanTaskCall } from "../_ai-providers/index.ts";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY");
-const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
-
-// Default model for document generation (fast, cheap, good for structured letters)
-const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
 
 interface DocumentRow {
   id: string;
@@ -30,65 +26,6 @@ interface TemplateRow {
 }
 
 /**
- * Call Anthropic Messages API with retry (1s, 3s, 9s backoff).
- * Returns the parsed response body or throws on exhaustion.
- */
-async function callAnthropic(
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-  maxTokens: number,
-  temperature: number
-): Promise<{ text: string; input_tokens: number; output_tokens: number }> {
-  const delays = [1000, 3000, 9000];
-
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const response = await fetch(ANTHROPIC_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": ANTHROPIC_API_KEY!,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: maxTokens,
-          temperature,
-          system: systemPrompt,
-          messages: [{ role: "user", content: userMessage }],
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.content?.[0]?.text ?? "";
-        return {
-          text,
-          input_tokens: data.usage?.input_tokens ?? 0,
-          output_tokens: data.usage?.output_tokens ?? 0,
-        };
-      }
-
-      // Non-retryable status codes
-      if (response.status !== 500 && response.status !== 503 && response.status !== 529) {
-        const errorText = await response.text();
-        throw new Error(`Anthropic ${response.status}: ${errorText}`);
-      }
-    } catch (err) {
-      if (attempt === 2) throw err;
-    }
-
-    // Wait before retry
-    if (attempt < 2) {
-      await new Promise((r) => setTimeout(r, delays[attempt]));
-    }
-  }
-
-  throw new Error("Anthropic request failed after 3 retries");
-}
-
-/**
  * Replace {placeholder} tokens in a template string with values from a map.
  * Unmatched placeholders are replaced with empty string.
  */
@@ -105,13 +42,6 @@ Deno.serve(async (req) => {
     if (!secret || secret !== INTERNAL_SECRET) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    if (!ANTHROPIC_API_KEY) {
-      return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }), {
-        status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -200,10 +130,10 @@ Deno.serve(async (req) => {
             .eq("id", document.visit_id)
             .single()
         : Promise.resolve({ data: null, error: null }),
-      // Organization name
+      // Organization name + plan (plan drives document model selection via ai_plan_config)
       supabase
         .from("organizations")
-        .select("name")
+        .select("name, subscription_plan")
         .eq("id", document.org_id)
         .single(),
       // Location name
@@ -398,16 +328,29 @@ Deno.serve(async (req) => {
 
     const systemPrompt = replacePlaceholders(template.prompt_template, placeholders);
 
-    // 6. Call Anthropic API
-    const model = template.ai_model_override || DEFAULT_MODEL;
+    // 6. Load plan-based AI config and call adapter
+    const subscriptionPlan = orgRes.data?.subscription_plan || "pay_as_you_go";
+    const planConfig = await loadPlanConfig(supabase, subscriptionPlan);
+    const docCall = pickPlanTaskCall(planConfig, "document");
+    const adapter = getAdapter(docCall.provider, supabase);
+
     const userMessage =
       "Generate the document content following the output schema strictly. Return valid JSON only.";
 
-    let aiResponse: { text: string; input_tokens: number; output_tokens: number };
+    let parsed: Record<string, unknown>;
+    let aiInputTokens = 0;
+    let aiOutputTokens = 0;
     try {
-      aiResponse = await callAnthropic(model, systemPrompt, userMessage, 2000, 0.3);
+      const result = await adapter.structuredOutput({
+        call: docCall,
+        system: systemPrompt,
+        messages: [{ role: "user", content: userMessage }],
+      });
+      parsed = result.json as Record<string, unknown>;
+      aiInputTokens = result.usage?.input_tokens ?? 0;
+      aiOutputTokens = result.usage?.output_tokens ?? 0;
     } catch (err) {
-      console.error("Anthropic call failed for document:", document_id, err);
+      console.error("AI call failed for document:", document_id, err);
       await markFailed(supabase, document_id);
       return new Response(
         JSON.stringify({ success: false, error: `AI generation failed: ${(err as Error).message}` }),
@@ -415,42 +358,23 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 7. Parse JSON response
-    let parsed: Record<string, unknown>;
-    try {
-      // Strip markdown fences if the model added them
-      const cleaned = aiResponse.text
-        .replace(/^```(?:json)?\n?/, "")
-        .replace(/```\s*$/, "")
-        .trim();
-      parsed = JSON.parse(cleaned);
-    } catch (err) {
-      console.error("JSON parse failed for document:", document_id, err);
-      console.error("Raw AI response:", aiResponse.text.substring(0, 500));
-      await markFailed(supabase, document_id);
-      return new Response(
-        JSON.stringify({ success: false, error: "AI returned invalid JSON" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    // 8. Render content_body from render_template by substituting AI output fields
+    // 7. Render content_body from render_template by substituting AI output fields
     const renderValues: Record<string, string> = { ...placeholders };
     for (const [key, value] of Object.entries(parsed)) {
       renderValues[key] = typeof value === "string" ? value : JSON.stringify(value ?? "");
     }
     const contentBody = replacePlaceholders(template.render_template, renderValues);
 
-    // 9. Update the document with AI results
+    // 8. Update the document with AI results
     const { error: updateError } = await supabase
       .from("clinical_documents")
       .update({
         ai_draft: parsed,
         content_body: contentBody,
         status: "drafted",
-        ai_model: model,
-        ai_input_tokens: aiResponse.input_tokens,
-        ai_output_tokens: aiResponse.output_tokens,
+        ai_model: docCall.model,
+        ai_input_tokens: aiInputTokens,
+        ai_output_tokens: aiOutputTokens,
         updated_at: new Date().toISOString(),
       })
       .eq("id", document_id);

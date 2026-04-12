@@ -1,0 +1,58 @@
+-- Per-plan AI config for org-level tasks (document generation, marketing scan).
+-- Separate from ai_model_config (per-tier, per-visit tasks).
+-- 7 rows, one per subscription plan. Edited by platform super admin.
+CREATE TABLE IF NOT EXISTS public.ai_plan_config (
+  plan text PRIMARY KEY,
+
+  -- Document generation (SOAP notes, letters, clinical docs)
+  document_provider text NOT NULL DEFAULT 'anthropic'
+    CHECK (document_provider IN ('anthropic', 'google_vertex', 'openai')),
+  document_model text NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
+  document_model_display text NOT NULL DEFAULT 'Claude Haiku 4.5',
+  document_max_tokens int NOT NULL DEFAULT 2000,
+  document_temperature numeric NOT NULL DEFAULT 0.3,
+
+  -- Marketing scan (AI patient targeting)
+  scan_provider text NOT NULL DEFAULT 'anthropic'
+    CHECK (scan_provider IN ('anthropic', 'google_vertex', 'openai')),
+  scan_model text NOT NULL DEFAULT 'claude-haiku-4-5-20251001',
+  scan_model_display text NOT NULL DEFAULT 'Claude Haiku 4.5',
+  scan_max_tokens int NOT NULL DEFAULT 2048,
+  scan_temperature numeric NOT NULL DEFAULT 0.3,
+
+  updated_at timestamptz DEFAULT now(),
+  updated_by uuid REFERENCES auth.users(id)
+);
+
+ALTER TABLE public.ai_plan_config ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "ai_plan_config_read" ON public.ai_plan_config;
+CREATE POLICY "ai_plan_config_read" ON public.ai_plan_config
+  FOR SELECT TO authenticated USING (true);
+
+DROP POLICY IF EXISTS "ai_plan_config_write" ON public.ai_plan_config;
+CREATE POLICY "ai_plan_config_write" ON public.ai_plan_config
+  FOR ALL TO authenticated
+  USING ((auth.jwt()->'app_metadata'->>'is_platform_admin')::boolean = true)
+  WITH CHECK ((auth.jwt()->'app_metadata'->>'is_platform_admin')::boolean = true);
+
+-- Seed: all Haiku by default. Ops upgrades individual plans via admin UI.
+INSERT INTO public.ai_plan_config (plan,
+  document_provider, document_model, document_model_display, document_max_tokens, document_temperature,
+  scan_provider, scan_model, scan_model_display, scan_max_tokens, scan_temperature
+) VALUES
+  ('starter',        'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2000, 0.3,
+                     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.3),
+  ('professional',   'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2000, 0.3,
+                     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.3),
+  ('business',       'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2000, 0.3,
+                     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.3),
+  ('enterprise',     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2000, 0.3,
+                     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.3),
+  ('pay_as_you_go',  'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2000, 0.3,
+                     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.3),
+  ('standard_trial', 'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2000, 0.3,
+                     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.3),
+  ('premium_trial',  'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2000, 0.3,
+                     'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.3)
+ON CONFLICT (plan) DO NOTHING;

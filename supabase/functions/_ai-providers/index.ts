@@ -5,11 +5,12 @@ import type {
   AiTask,
   AiTier,
   ModelCall,
+  PlanConfig,
   Provider,
   ProviderAdapter,
   TierConfig,
 } from "./types.ts";
-import { pickTaskCall } from "./types.ts";
+import { pickTaskCall, pickPlanTaskCall } from "./types.ts";
 
 /** Load the full combo row for a tier. Throws if missing. */
 export async function loadTierConfig(supabase: any, tier: AiTier): Promise<TierConfig> {
@@ -46,12 +47,34 @@ export function getAdapter(provider: Provider, supabase: any): ProviderAdapter {
   }
 }
 
-export { aiModelToTier, pickTaskCall } from "./types.ts";
+/** Load the plan-level config row for org-level tasks (document, scan).
+ *  Falls back to pay_as_you_go config for transitional plan states (expired, suspended, read_only). */
+export async function loadPlanConfig(supabase: any, plan: string): Promise<PlanConfig> {
+  const { data, error } = await supabase
+    .from("ai_plan_config")
+    .select("*")
+    .eq("plan", plan)
+    .single();
+  if (!error && data) return data as PlanConfig;
+
+  // Fallback for plans without a config row (expired, suspended, read_only, etc.)
+  const { data: fallback } = await supabase
+    .from("ai_plan_config")
+    .select("*")
+    .eq("plan", "pay_as_you_go")
+    .single();
+  if (fallback) return fallback as PlanConfig;
+
+  throw new Error(`Plan config missing for '${plan}' and no fallback: ${error?.message ?? "not found"}`);
+}
+
+export { aiModelToTier, pickTaskCall, pickPlanTaskCall } from "./types.ts";
 export type {
   AiTask,
   AiTier,
   ChatMessage,
   ModelCall,
+  PlanConfig,
   Provider,
   StreamChunk,
   TierConfig,

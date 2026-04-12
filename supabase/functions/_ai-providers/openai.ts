@@ -136,6 +136,12 @@ export class OpenAIAdapter implements ProviderAdapter {
 
     const data = await response.json();
     const rawText = data.choices?.[0]?.message?.content ?? "";
-    return { json: JSON.parse(rawText), rawText };
+    return {
+      json: JSON.parse(rawText),
+      rawText,
+      usage: data.usage
+        ? { input_tokens: data.usage.prompt_tokens ?? 0, output_tokens: data.usage.completion_tokens ?? 0 }
+        : undefined,
+    };
   }
 }

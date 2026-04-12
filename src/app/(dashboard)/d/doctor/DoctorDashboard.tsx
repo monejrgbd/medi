@@ -13,6 +13,7 @@ import {
   toggleNotificationSound,
 } from "@/app/(dashboard)/d/_actions/preferences";
 import DoctorHeader from "@/components/doctor/DoctorHeader";
+import PendingDocumentApprovals from "@/components/doctor/PendingDocumentApprovals";
 import QueueList from "@/components/doctor/QueueList";
 import ClaimedPatientCard from "@/components/doctor/ClaimedPatientCard";
 import CompletedVisitCard from "@/components/doctor/CompletedVisitCard";
@@ -402,6 +403,14 @@ export default function DoctorDashboard({
 
       <div className="px-4 py-4 lg:px-6">
         <NotificationPermission />
+
+        <PendingDocumentApprovals
+          onReview={(approval) => {
+            if (approval.visit_id) {
+              router.push(`/d/doctor/patient/${approval.visit_id}?tab=documents`);
+            }
+          }}
+        />
 
         {locationId && !demoMode && <StaleSessionAlert locationId={locationId} />}
 

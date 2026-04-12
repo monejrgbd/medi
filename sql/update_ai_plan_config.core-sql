@@ -1,0 +1,69 @@
+-- Platform super admin RPC to update one plan's document + scan config atomically.
+CREATE OR REPLACE FUNCTION private.update_ai_plan_config(
+  p_caller_auth_uid uuid,
+  p_plan text,
+  p_combo jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_is_admin boolean;
+BEGIN
+  SELECT (raw_app_meta_data->>'is_platform_admin')::boolean
+    INTO v_is_admin
+  FROM auth.users
+  WHERE id = p_caller_auth_uid;
+
+  IF v_is_admin IS NOT TRUE THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  UPDATE public.ai_plan_config SET
+    document_provider      = COALESCE(p_combo->>'document_provider', document_provider),
+    document_model         = COALESCE(p_combo->>'document_model', document_model),
+    document_model_display = COALESCE(p_combo->>'document_model_display', document_model_display),
+    document_max_tokens    = COALESCE((p_combo->>'document_max_tokens')::int, document_max_tokens),
+    document_temperature   = COALESCE((p_combo->>'document_temperature')::numeric, document_temperature),
+    scan_provider          = COALESCE(p_combo->>'scan_provider', scan_provider),
+    scan_model             = COALESCE(p_combo->>'scan_model', scan_model),
+    scan_model_display     = COALESCE(p_combo->>'scan_model_display', scan_model_display),
+    scan_max_tokens        = COALESCE((p_combo->>'scan_max_tokens')::int, scan_max_tokens),
+    scan_temperature       = COALESCE((p_combo->>'scan_temperature')::numeric, scan_temperature),
+    updated_at             = now(),
+    updated_by             = p_caller_auth_uid
+  WHERE plan = p_plan;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'plan not found');
+  END IF;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.update_ai_plan_config(
+  p_plan text,
+  p_combo jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid;
+BEGIN
+  v_uid := auth.uid();
+  IF v_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.update_ai_plan_config(v_uid, p_plan, p_combo);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.update_ai_plan_config(text, jsonb) FROM anon;

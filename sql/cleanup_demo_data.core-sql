@@ -23,7 +23,6 @@ BEGIN
     DELETE FROM public.visit_notes WHERE visit_id = ANY(v_visit_ids);
     DELETE FROM public.visit_attachments WHERE visit_id = ANY(v_visit_ids);
     DELETE FROM public.visit_addendums WHERE visit_id = ANY(v_visit_ids);
-    DELETE FROM public.ai_conversations WHERE visit_id = ANY(v_visit_ids);
     DELETE FROM public.follow_ups WHERE visit_id = ANY(v_visit_ids);
     DELETE FROM public.credits_log WHERE visit_id = ANY(v_visit_ids);
     DELETE FROM public.reviews WHERE visit_id = ANY(v_visit_ids);
@@ -42,14 +41,49 @@ BEGIN
     -- audit_trail references visits by entity_id (text)
     DELETE FROM public.audit_trail
     WHERE org_id = v_demo_org_id
-      AND entity_id = ANY(SELECT unnest(v_visit_ids)::text);
+      AND entity_id = ANY(v_visit_ids);
 
     DELETE FROM public.sms_log
     WHERE visit_id = ANY(v_visit_ids);
 
+    -- Pre check in tokens reference visits via visit_id FK
+    DELETE FROM public.pre_checkin_tokens
+    WHERE visit_id = ANY(v_visit_ids);
+
+    -- Clinical documents: delete access log, delivery log, PDFs in storage, then the documents themselves
+    DELETE FROM public.document_access_log
+    WHERE document_id IN (
+      SELECT id FROM public.clinical_documents WHERE visit_id = ANY(v_visit_ids)
+    );
+    DELETE FROM public.document_delivery_log
+    WHERE document_id IN (
+      SELECT id FROM public.clinical_documents WHERE visit_id = ANY(v_visit_ids)
+    );
+    DELETE FROM public.clinical_documents WHERE visit_id = ANY(v_visit_ids);
+
     -- Delete the visits themselves
     DELETE FROM public.visits WHERE id = ANY(v_visit_ids);
   END IF;
+
+  -- Orphaned clinical documents from the demo org (no visit or older than cutoff)
+  DELETE FROM public.document_access_log
+  WHERE document_id IN (
+    SELECT id FROM public.clinical_documents
+    WHERE org_id = v_demo_org_id AND created_at < v_cutoff
+  );
+  DELETE FROM public.document_delivery_log
+  WHERE document_id IN (
+    SELECT id FROM public.clinical_documents
+    WHERE org_id = v_demo_org_id AND created_at < v_cutoff
+  );
+  DELETE FROM public.clinical_documents
+  WHERE org_id = v_demo_org_id AND created_at < v_cutoff;
+
+  -- Note: PDFs in the clinical-documents storage bucket are NOT deleted here.
+  -- Supabase blocks direct DELETE on storage.objects via the protect_delete trigger.
+  -- Orphaned PDFs accumulate in demo storage. Matches existing patterns (logos,
+  -- attachments are also not cleaned up in SQL). A separate storage janitor using
+  -- the Storage HTTP API can clean these up on a longer cadence if needed.
 
   -- Delete orphan patient child records then patients
   DELETE FROM public.patient_pets WHERE patient_id IN (
@@ -65,6 +99,43 @@ BEGIN
       AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
   );
   DELETE FROM public.patient_chronic_conditions WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  -- Additional orphan tables that reference patients and must be cleared first
+  DELETE FROM public.patient_notes WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.patient_vaccines WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.patient_vitals WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.sms_campaign_recipients WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.clinical_documents WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.sms_log WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.follow_ups WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.doctor_note_preferences WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.phone_verifications WHERE patient_id IN (
     SELECT id FROM public.patients WHERE org_id = v_demo_org_id
       AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
   );

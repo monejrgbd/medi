@@ -263,6 +263,12 @@ export class GoogleVertexAdapter implements ProviderAdapter {
 
     const data = await response.json();
     const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-    return { json: JSON.parse(rawText), rawText };
+    return {
+      json: JSON.parse(rawText),
+      rawText,
+      usage: data.usageMetadata
+        ? { input_tokens: data.usageMetadata.promptTokenCount ?? 0, output_tokens: data.usageMetadata.candidatesTokenCount ?? 0 }
+        : undefined,
+    };
   }
 }

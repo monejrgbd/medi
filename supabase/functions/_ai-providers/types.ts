@@ -3,7 +3,42 @@
 
 export type Provider = 'anthropic' | 'google_vertex' | 'openai';
 export type AiTier = 'standard' | 'advanced' | 'precision' | 'premium';
-export type AiTask = 'intake' | 'summary' | 'diagnostic';
+export type AiTask = 'intake' | 'summary' | 'diagnostic' | 'document' | 'scan';
+
+/** One row from ai_plan_config — per-plan config for org-level tasks. */
+export interface PlanConfig {
+  plan: string;
+  document_provider: Provider;
+  document_model: string;
+  document_model_display: string;
+  document_max_tokens: number;
+  document_temperature: number;
+  scan_provider: Provider;
+  scan_model: string;
+  scan_model_display: string;
+  scan_max_tokens: number;
+  scan_temperature: number;
+}
+
+/** Extract a ModelCall for a plan-level task from a PlanConfig row. */
+export function pickPlanTaskCall(config: PlanConfig, task: 'document' | 'scan'): ModelCall {
+  switch (task) {
+    case 'document':
+      return {
+        provider: config.document_provider,
+        model: config.document_model,
+        max_tokens: config.document_max_tokens,
+        temperature: config.document_temperature,
+      };
+    case 'scan':
+      return {
+        provider: config.scan_provider,
+        model: config.scan_model,
+        max_tokens: config.scan_max_tokens,
+        temperature: config.scan_temperature,
+      };
+  }
+}
 
 /** One row from ai_model_config — the full combo for a tier. */
 export interface TierConfig {
@@ -68,7 +103,11 @@ export interface ProviderAdapter {
     system: string;
     systemCachePrefix?: number;
     messages: ChatMessage[];
-  }): Promise<{ json: unknown; rawText: string }>;
+  }): Promise<{
+    json: unknown;
+    rawText: string;
+    usage?: { input_tokens: number; output_tokens: number };
+  }>;
 }
 
 /** Resolve a DB ai_model value to a tier. Defaults to standard for unknown/null. */

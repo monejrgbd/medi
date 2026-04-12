@@ -1,7 +1,21 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 import { cookies, headers } from "next/headers";
 import { createHash } from "crypto";
 import type { Metadata } from "next";
+import { isBot } from "@/lib/botDetection";
+
+async function signPdfUrl(path: string): Promise<string | null> {
+  const service = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+  const { data } = await service.storage
+    .from("clinical-documents")
+    .createSignedUrl(path, 3600);
+  return data?.signedUrl ?? null;
+}
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -24,6 +38,16 @@ async function getDocument(
     ? createHash("sha256").update(rawIp).digest("hex")
     : null;
   const userAgent = headerStore.get("user-agent") ?? null;
+
+  // SMS link preview bots (iMessage, WhatsApp, Slack, etc.) auto-fetch URLs.
+  // Return a minimal preview without burning the token's rate limit or access log.
+  if (isBot(userAgent)) {
+    return {
+      reason: "bot_preview",
+      template_display_name: "Clinical Document",
+      clinic_name: "Hilt Health",
+    };
+  }
 
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -307,13 +331,28 @@ export default async function DocumentPage({ params, searchParams }: PageProps) 
     );
   }
 
+  // Bot link-preview: return a minimal placeholder page so SMS/messaging apps
+  // can show a card without hitting the rate limit or fetching sensitive data.
+  if (reason === "bot_preview") {
+    return (
+      <ErrorState
+        title="Clinical Document"
+        description="Open this link on your phone to view and download the document from your clinic."
+      />
+    );
+  }
+
   // Success: render the document
   const clinicName = doc.clinic_name as string;
   const clinicLogoUrl = doc.clinic_logo_url as string | undefined;
   const doctorName = doc.doctor_name as string | undefined;
   const templateName = doc.template_display_name as string;
   const body = doc.body as string;
-  const pdfUrl = doc.pdf_url as string | undefined;
+  const pdfPath = doc.pdf_url as string | undefined;
+  // The bucket is private. Generate a short lived signed URL so the anonymous
+  // patient can download the PDF. Path is the storage object path returned by
+  // get_document_public (e.g. "{org_id}/{document_type}/{document_id}.pdf").
+  const pdfUrl = pdfPath ? await signPdfUrl(pdfPath) : null;
   const signedAt = doc.signed_at as string | undefined;
   const patientLang = (doc.patient_language as string) || "en";
   const isRtl = patientLang === "ar";

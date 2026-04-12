@@ -18,8 +18,8 @@ import AttachmentsSection from "@/components/doctor/AttachmentsSection";
 import ReferralForm from "@/components/doctor/ReferralForm";
 import ReferralHistory from "@/components/doctor/ReferralHistory";
 import LetterGeneratorModal from "@/components/doctor/LetterGeneratorModal";
+import SoapNoteEditor from "@/components/doctor/SoapNoteEditor";
 import DocumentHistory from "@/components/doctor/DocumentHistory";
-import QuickDocShortcuts from "@/components/doctor/QuickDocShortcuts";
 
 interface VisitNote {
   id: string;
@@ -105,7 +105,7 @@ export default function PatientDetailView({
   const [showDiagnosis, setShowDiagnosis] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
   const [showLetterModal, setShowLetterModal] = useState(false);
-  const [letterTemplateKey, setLetterTemplateKey] = useState<string | null>(null);
+  const [showSoapEditor, setShowSoapEditor] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(false);
   const supabaseRef = useRef(createClient());
@@ -372,15 +372,11 @@ export default function PatientDetailView({
             >
               Refer
             </button>
-            <QuickDocShortcuts
-              onOpenLetter={(key) => { setLetterTemplateKey(key); setShowLetterModal(true); }}
-              onOpenSoap={() => { setLetterTemplateKey("clinical_note_soap"); setShowLetterModal(true); }}
-            />
             <button
               onClick={() => setShowLetterModal(true)}
               className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors"
             >
-              Document
+              Create Document
             </button>
           </div>
         </div>
@@ -411,9 +407,23 @@ export default function PatientDetailView({
           visitId={visit.id}
           patientId={patient.id}
           locationId={visit.location_id}
-          initialTemplateKey={letterTemplateKey ?? undefined}
-          onClose={() => { setShowLetterModal(false); setLetterTemplateKey(null); }}
-          onComplete={() => { setShowLetterModal(false); setLetterTemplateKey(null); }}
+          onClose={() => setShowLetterModal(false)}
+          onComplete={() => setShowLetterModal(false)}
+          onRequestSoapEditor={() => {
+            setShowLetterModal(false);
+            setShowSoapEditor(true);
+          }}
+        />
+      )}
+
+      {/* SOAP note full-screen editor */}
+      {showSoapEditor && (
+        <SoapNoteEditor
+          visitId={visit.id}
+          patientId={patient.id}
+          locationId={visit.location_id}
+          onClose={() => setShowSoapEditor(false)}
+          onComplete={() => setShowSoapEditor(false)}
         />
       )}
     </div>
