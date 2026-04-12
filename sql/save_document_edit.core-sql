@@ -1,0 +1,109 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.save_document_edit(
+  p_caller_auth_uid uuid,
+  p_document_id uuid,
+  p_content_body text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_owner_id uuid;
+  v_has_role boolean := false;
+  v_doc record;
+BEGIN
+  -- Get caller staff info
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  -- Load document
+  SELECT cd.id, cd.org_id, cd.location_id, cd.status, cd.created_by
+  INTO v_doc
+  FROM public.clinical_documents cd
+  WHERE cd.id = p_document_id;
+
+  IF v_doc IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Verify document belongs to caller's org
+  IF v_doc.org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Status must be 'draft', 'drafted', or 'editing'
+  IF v_doc.status NOT IN ('draft', 'drafted', 'editing') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document cannot be edited in current status');
+  END IF;
+
+  -- Authorization: owner OR doctor OR the staff who created it
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_caller_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can edit
+  ELSIF v_doc.created_by = v_caller_staff_id THEN
+    NULL; -- Creator can edit their own draft
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'doctor'
+    ) INTO v_has_role;
+
+    IF NOT v_has_role THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  -- Update document content; transition 'drafted' to 'editing'
+  UPDATE public.clinical_documents
+  SET content_body = p_content_body,
+      status = CASE WHEN status = 'drafted' THEN 'editing' ELSE status END,
+      updated_at = now()
+  WHERE id = p_document_id;
+
+  -- No audit trail for auto-save (too noisy)
+
+  RETURN jsonb_build_object('success', true, 'document_id', p_document_id);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.save_document_edit(
+  p_document_id uuid,
+  p_content_body text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.save_document_edit(v_auth_uid, p_document_id, p_content_body);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.save_document_edit(uuid, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.save_document_edit(uuid, text) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.save_document_edit(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.save_document_edit(uuid, text) TO authenticated;

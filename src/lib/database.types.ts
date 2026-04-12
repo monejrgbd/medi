@@ -136,6 +136,33 @@ export type Database = {
           },
         ]
       }
+      attestation_versions: {
+        Row: {
+          created_at: string
+          drafted_by: string | null
+          effective_from: string
+          effective_until: string | null
+          text: string
+          version_key: string
+        }
+        Insert: {
+          created_at?: string
+          drafted_by?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          text: string
+          version_key: string
+        }
+        Update: {
+          created_at?: string
+          drafted_by?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          text?: string
+          version_key?: string
+        }
+        Relationships: []
+      }
       audit_trail: {
         Row: {
           action: string
@@ -306,6 +333,170 @@ export type Database = {
         }
         Relationships: []
       }
+      clinical_documents: {
+        Row: {
+          ai_draft: Json | null
+          ai_input_tokens: number | null
+          ai_model: string | null
+          ai_output_tokens: number | null
+          attestation_version_key: string | null
+          content_body: string
+          content_language: string
+          created_at: string
+          created_by: string
+          delivered_via: string[]
+          document_category: string
+          document_type: string
+          id: string
+          input_fields: Json
+          location_id: string
+          org_id: string
+          patient_id: string
+          pdf_bucket_path: string | null
+          pdf_url: string | null
+          physical_exam_mode: string | null
+          physical_exam_raw: string | null
+          public_token: string | null
+          public_token_expires_at: string | null
+          public_token_revoked: boolean
+          requires_pin: boolean
+          sent_at: string | null
+          signed_at: string | null
+          signed_by: string | null
+          status: string
+          template_key: string
+          updated_at: string
+          visit_id: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          ai_draft?: Json | null
+          ai_input_tokens?: number | null
+          ai_model?: string | null
+          ai_output_tokens?: number | null
+          attestation_version_key?: string | null
+          content_body?: string
+          content_language?: string
+          created_at?: string
+          created_by: string
+          delivered_via?: string[]
+          document_category: string
+          document_type: string
+          id?: string
+          input_fields?: Json
+          location_id: string
+          org_id: string
+          patient_id: string
+          pdf_bucket_path?: string | null
+          pdf_url?: string | null
+          physical_exam_mode?: string | null
+          physical_exam_raw?: string | null
+          public_token?: string | null
+          public_token_expires_at?: string | null
+          public_token_revoked?: boolean
+          requires_pin?: boolean
+          sent_at?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          template_key: string
+          updated_at?: string
+          visit_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          ai_draft?: Json | null
+          ai_input_tokens?: number | null
+          ai_model?: string | null
+          ai_output_tokens?: number | null
+          attestation_version_key?: string | null
+          content_body?: string
+          content_language?: string
+          created_at?: string
+          created_by?: string
+          delivered_via?: string[]
+          document_category?: string
+          document_type?: string
+          id?: string
+          input_fields?: Json
+          location_id?: string
+          org_id?: string
+          patient_id?: string
+          pdf_bucket_path?: string | null
+          pdf_url?: string | null
+          physical_exam_mode?: string | null
+          physical_exam_raw?: string | null
+          public_token?: string | null
+          public_token_expires_at?: string | null
+          public_token_revoked?: boolean
+          requires_pin?: boolean
+          sent_at?: string | null
+          signed_at?: string | null
+          signed_by?: string | null
+          status?: string
+          template_key?: string
+          updated_at?: string
+          visit_id?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinical_documents_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_signed_by_fkey"
+            columns: ["signed_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinical_documents_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_submissions: {
         Row: {
           city: string | null
@@ -458,6 +649,154 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      document_access_log: {
+        Row: {
+          accessed_at: string
+          document_id: string
+          id: string
+          ip_hash: string | null
+          pin_verified: boolean
+          result: string
+          user_agent: string | null
+        }
+        Insert: {
+          accessed_at?: string
+          document_id: string
+          id?: string
+          ip_hash?: string | null
+          pin_verified?: boolean
+          result: string
+          user_agent?: string | null
+        }
+        Update: {
+          accessed_at?: string
+          document_id?: string
+          id?: string
+          ip_hash?: string | null
+          pin_verified?: boolean
+          result?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_access_log_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_delivery_log: {
+        Row: {
+          attempt_number: number
+          channel: string
+          created_at: string
+          document_id: string
+          error_message: string | null
+          id: string
+          provider_sid: string | null
+          recipient: string | null
+          status: string
+        }
+        Insert: {
+          attempt_number?: number
+          channel: string
+          created_at?: string
+          document_id: string
+          error_message?: string | null
+          id?: string
+          provider_sid?: string | null
+          recipient?: string | null
+          status?: string
+        }
+        Update: {
+          attempt_number?: number
+          channel?: string
+          created_at?: string
+          document_id?: string
+          error_message?: string | null
+          id?: string
+          provider_sid?: string | null
+          recipient?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_delivery_log_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_templates: {
+        Row: {
+          active: boolean
+          ai_model_override: string | null
+          ai_output_schema: Json
+          created_at: string
+          default_disclaimer: string | null
+          default_requires_pin: boolean
+          default_token_lifetime_hours: number
+          description: string
+          display_name: string
+          document_category: string
+          icon: string
+          input_schema: Json
+          key: string
+          prompt_template: string
+          render_template: string
+          requires_attestation: boolean
+          requires_verified_org: boolean
+          sanity_bounds: Json
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          ai_model_override?: string | null
+          ai_output_schema: Json
+          created_at?: string
+          default_disclaimer?: string | null
+          default_requires_pin?: boolean
+          default_token_lifetime_hours?: number
+          description: string
+          display_name: string
+          document_category: string
+          icon: string
+          input_schema: Json
+          key: string
+          prompt_template: string
+          render_template: string
+          requires_attestation?: boolean
+          requires_verified_org?: boolean
+          sanity_bounds?: Json
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          ai_model_override?: string | null
+          ai_output_schema?: Json
+          created_at?: string
+          default_disclaimer?: string | null
+          default_requires_pin?: boolean
+          default_token_lifetime_hours?: number
+          description?: string
+          display_name?: string
+          document_category?: string
+          icon?: string
+          input_schema?: Json
+          key?: string
+          prompt_template?: string
+          render_template?: string
+          requires_attestation?: boolean
+          requires_verified_org?: boolean
+          sanity_bounds?: Json
+          updated_at?: string
+        }
+        Relationships: []
       }
       email_captures: {
         Row: {
@@ -790,10 +1129,15 @@ export type Database = {
       }
       organizations: {
         Row: {
+          anthropic_baa_verified: boolean
           billing_cycle_start: string | null
           billing_interval: string | null
           cancel_at_period_end: string | null
           cancelled_at: string | null
+          clinician_credentials: string | null
+          clinician_license_number: string | null
+          clinician_npi: string | null
+          clinician_signature_url: string | null
           created_at: string | null
           credits_total: number | null
           credits_used: number | null
@@ -801,6 +1145,8 @@ export type Database = {
           data_retention_until: string | null
           id: string
           last_credit_alert_at: string | null
+          letterhead_disclaimer: string | null
+          letterhead_logo_url: string | null
           marketing_sms_addon: boolean | null
           name: string
           onboarding_completed_at: string | null
@@ -809,6 +1155,7 @@ export type Database = {
           payment_first_failed_at: string | null
           paypal_subscription_id: string | null
           purged: boolean | null
+          quick_doc_shortcuts: Json
           recharge_limit: number | null
           recharge_used: number | null
           slug: string
@@ -818,10 +1165,15 @@ export type Database = {
           verified: boolean | null
         }
         Insert: {
+          anthropic_baa_verified?: boolean
           billing_cycle_start?: string | null
           billing_interval?: string | null
           cancel_at_period_end?: string | null
           cancelled_at?: string | null
+          clinician_credentials?: string | null
+          clinician_license_number?: string | null
+          clinician_npi?: string | null
+          clinician_signature_url?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
@@ -829,6 +1181,8 @@ export type Database = {
           data_retention_until?: string | null
           id?: string
           last_credit_alert_at?: string | null
+          letterhead_disclaimer?: string | null
+          letterhead_logo_url?: string | null
           marketing_sms_addon?: boolean | null
           name: string
           onboarding_completed_at?: string | null
@@ -837,6 +1191,7 @@ export type Database = {
           payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
           purged?: boolean | null
+          quick_doc_shortcuts?: Json
           recharge_limit?: number | null
           recharge_used?: number | null
           slug: string
@@ -846,10 +1201,15 @@ export type Database = {
           verified?: boolean | null
         }
         Update: {
+          anthropic_baa_verified?: boolean
           billing_cycle_start?: string | null
           billing_interval?: string | null
           cancel_at_period_end?: string | null
           cancelled_at?: string | null
+          clinician_credentials?: string | null
+          clinician_license_number?: string | null
+          clinician_npi?: string | null
+          clinician_signature_url?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
@@ -857,6 +1217,8 @@ export type Database = {
           data_retention_until?: string | null
           id?: string
           last_credit_alert_at?: string | null
+          letterhead_disclaimer?: string | null
+          letterhead_logo_url?: string | null
           marketing_sms_addon?: boolean | null
           name?: string
           onboarding_completed_at?: string | null
@@ -865,6 +1227,7 @@ export type Database = {
           payment_first_failed_at?: string | null
           paypal_subscription_id?: string | null
           purged?: boolean | null
+          quick_doc_shortcuts?: Json
           recharge_limit?: number | null
           recharge_used?: number | null
           slug?: string
@@ -2868,6 +3231,16 @@ export type Database = {
         Returns: Json
       }
       count_active_providers: { Args: { p_org_id: string }; Returns: number }
+      create_document: {
+        Args: {
+          p_input_fields?: Json
+          p_location_id: string
+          p_patient_id: string
+          p_template_key: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
       create_follow_up: {
         Args: { p_ai_instructions?: string; p_visit_id: string }
         Returns: Json
@@ -2953,6 +3326,7 @@ export type Database = {
       }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       deny_patient: { Args: { p_visit_id: string }; Returns: Json }
+      draft_document_content: { Args: { p_document_id: string }; Returns: Json }
       edit_patient_record: {
         Args: {
           p_birthday?: string
@@ -3033,6 +3407,16 @@ export type Database = {
           p_location_id?: string
           p_org_id?: string
           p_start_date?: string
+        }
+        Returns: Json
+      }
+      get_document_for_staff: { Args: { p_document_id: string }; Returns: Json }
+      get_document_public: {
+        Args: {
+          p_ip_hash?: string
+          p_pin?: string
+          p_token: string
+          p_user_agent?: string
         }
         Returns: Json
       }
@@ -3188,6 +3572,12 @@ export type Database = {
         Args: { p_referral_id: string; p_visit_id: string }
         Returns: Json
       }
+      list_documents_for_patient: {
+        Args: { p_patient_id: string }
+        Returns: Json
+      }
+      list_documents_for_visit: { Args: { p_visit_id: string }; Returns: Json }
+      list_pending_document_approvals: { Args: never; Returns: Json }
       log_phi_access: {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: undefined
@@ -3250,6 +3640,16 @@ export type Database = {
         Args: { p_email: string; p_team_code?: string }
         Returns: Json
       }
+      request_document_as_receptionist: {
+        Args: {
+          p_input_fields?: Json
+          p_location_id: string
+          p_patient_id: string
+          p_template_key: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
       request_prelog_demo: { Args: { p_email: string }; Returns: Json }
       request_premium_code: {
         Args: {
@@ -3284,6 +3684,18 @@ export type Database = {
       rotate_review_platforms: { Args: never; Returns: undefined }
       save_campaign_matches: {
         Args: { p_campaign_id: string; p_matches: Json }
+        Returns: Json
+      }
+      save_document_edit: {
+        Args: { p_content_body: string; p_document_id: string }
+        Returns: Json
+      }
+      save_physical_exam: {
+        Args: {
+          p_document_id: string
+          p_physical_exam_mode: string
+          p_physical_exam_raw: string
+        }
         Returns: Json
       }
       save_summary: {
@@ -3350,6 +3762,14 @@ export type Database = {
       setup_onboarding_demo: { Args: { p_location_id: string }; Returns: Json }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sign_document: {
+        Args: {
+          p_content_body: string
+          p_delivery_channels?: string[]
+          p_document_id: string
+        }
+        Returns: Json
+      }
       skip_ai_to_queue: { Args: { p_visit_id: string }; Returns: Json }
       staff_check_in: {
         Args: { p_location_id: string; p_role: string }
@@ -3515,6 +3935,10 @@ export type Database = {
       }
       verify_phone_and_link: {
         Args: { p_phone: string; p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      void_document: {
+        Args: { p_document_id: string; p_reason: string }
         Returns: Json
       }
     }

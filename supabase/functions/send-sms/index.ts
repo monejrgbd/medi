@@ -38,6 +38,8 @@ const TEMPLATES: Record<string, (params: Record<string, string>) => string> = {
     `Hi ${p.first_name}, ${p.org_name} would appreciate your feedback: ${APP_BASE_URL}/review/${p.token}`,
   follow_up: (p) =>
     `Hi ${p.first_name}, ${p.org_name} recommends a follow-up visit. Please call the clinic to schedule.`,
+  document: (p) =>
+    `Hi ${p.first_name}, ${p.org_name} has a document for you: ${APP_BASE_URL}/doc/${p.token}`,
 };
 
 Deno.serve(async (req) => {

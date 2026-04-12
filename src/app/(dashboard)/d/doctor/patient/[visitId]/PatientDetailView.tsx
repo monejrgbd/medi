@@ -17,6 +17,9 @@ import NotesPanel from "@/components/doctor/NotesPanel";
 import AttachmentsSection from "@/components/doctor/AttachmentsSection";
 import ReferralForm from "@/components/doctor/ReferralForm";
 import ReferralHistory from "@/components/doctor/ReferralHistory";
+import LetterGeneratorModal from "@/components/doctor/LetterGeneratorModal";
+import DocumentHistory from "@/components/doctor/DocumentHistory";
+import QuickDocShortcuts from "@/components/doctor/QuickDocShortcuts";
 
 interface VisitNote {
   id: string;
@@ -54,6 +57,7 @@ interface VisitDetail {
     claimed_at: string | null;
     claimed_by: string | null;
     entered_queue_at: string | null;
+    location_id: string;
     updated_at: string;
     is_follow_up: boolean;
     follow_up_of: string | null;
@@ -87,7 +91,7 @@ interface PatientDetailViewProps {
   staffUserId: string | null;
 }
 
-type DetailTab = "transcript" | "summary" | "history" | "notes" | "attachments" | "referrals";
+type DetailTab = "transcript" | "summary" | "history" | "notes" | "attachments" | "referrals" | "documents";
 
 export default function PatientDetailView({
   detail: initialDetail,
@@ -100,6 +104,8 @@ export default function PatientDetailView({
   const [tab, setTab] = useState<DetailTab>("summary");
   const [showDiagnosis, setShowDiagnosis] = useState(false);
   const [showReferral, setShowReferral] = useState(false);
+  const [showLetterModal, setShowLetterModal] = useState(false);
+  const [letterTemplateKey, setLetterTemplateKey] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(false);
   const supabaseRef = useRef(createClient());
@@ -173,6 +179,7 @@ export default function PatientDetailView({
     },
     { key: "history", label: "History", show: true },
     { key: "referrals", label: "Referrals", show: true },
+    { key: "documents", label: "Documents", show: true },
   ];
 
   return (
@@ -331,6 +338,8 @@ export default function PatientDetailView({
           )}
 
           {tab === "referrals" && <ReferralHistory />}
+
+          {tab === "documents" && <DocumentHistory visitId={visit.id} />}
         </div>
       </div>
 
@@ -363,6 +372,16 @@ export default function PatientDetailView({
             >
               Refer
             </button>
+            <QuickDocShortcuts
+              onOpenLetter={(key) => { setLetterTemplateKey(key); setShowLetterModal(true); }}
+              onOpenSoap={() => { setLetterTemplateKey("clinical_note_soap"); setShowLetterModal(true); }}
+            />
+            <button
+              onClick={() => setShowLetterModal(true)}
+              className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors"
+            >
+              Document
+            </button>
           </div>
         </div>
       )}
@@ -383,6 +402,18 @@ export default function PatientDetailView({
           patientId={patient.id}
           onClose={() => setShowReferral(false)}
           onComplete={() => setShowReferral(false)}
+        />
+      )}
+
+      {/* Letter / document generator modal */}
+      {showLetterModal && (
+        <LetterGeneratorModal
+          visitId={visit.id}
+          patientId={patient.id}
+          locationId={visit.location_id}
+          initialTemplateKey={letterTemplateKey ?? undefined}
+          onClose={() => { setShowLetterModal(false); setLetterTemplateKey(null); }}
+          onComplete={() => { setShowLetterModal(false); setLetterTemplateKey(null); }}
         />
       )}
     </div>

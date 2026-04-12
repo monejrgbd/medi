@@ -7,6 +7,7 @@ const DoctorMockup = dynamic(() => import("@/components/marketing/DoctorMockup")
   loading: () => <div className="h-[500px] rounded-2xl border border-gray-200 bg-white" />,
 });
 import ContactLink from "@/components/marketing/ContactLink";
+import PaperworkSection from "@/components/marketing/PaperworkSection";
 import { getAllPosts } from "@/lib/blog";
 
 const SignUpForm = dynamic(() => import("@/components/SignUpForm"), {
@@ -17,6 +18,9 @@ const DemoQR = dynamic(() => import("@/components/marketing/DemoQR"), {
 });
 const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMockup"), {
   loading: () => <div className="h-[300px] rounded-2xl border border-gray-200 bg-gray-50" />,
+});
+const PaperworkMockup = dynamic(() => import("@/components/marketing/PaperworkMockup"), {
+  loading: () => <div className="h-[360px] rounded-2xl border border-gray-200 bg-gray-50" />,
 });
 const HeroEmailCTA = dynamic(() => import("@/components/marketing/HeroEmailCTA"), {
   loading: () => <div className="h-[52px]" />,
@@ -187,7 +191,7 @@ function HeroSection() {
               after every visit.</span>
             </h1>
             <p className="mb-8 text-lg text-slate sm:text-sm md:text-base lg:text-xl">
-              Intake in 130+ languages. Follow ups that remember. Reviews that grow. Marketing that knows. Analytics that show.
+              Intake in 130+ languages. Follow ups that remember. Reviews that grow. Paperwork that flows. Analytics that show.
             </p>
             {/* Start Trial CTA */}
             <HeroEmailCTA />
@@ -473,7 +477,22 @@ function HeroSection() {
 
             </div>
 
-            {/* Arrow: post-visit → analytics */}
+            {/* Arrow: post-visit → paperwork */}
+            <div className="flex justify-center mt-6 mb-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+                </svg>
+              </div>
+            </div>
+            <p className="mb-6 text-center text-sm font-medium text-slate">Paperwork generated from every visit</p>
+
+            {/* Paperwork mockup */}
+            <div className="mx-auto max-w-4xl">
+              <PaperworkMockup />
+            </div>
+
+            {/* Arrow: paperwork → analytics */}
             <div className="flex justify-center mt-6 mb-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
                 <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
@@ -1351,6 +1370,7 @@ export default async function Home() {
         <HowToSetUpSection />
         <HowItWorksSection />
         <BeyondTheVisitSection />
+        <PaperworkSection />
         <TrustAndControlSection />
         <PricingAndContactSection />
         <BlogSection />

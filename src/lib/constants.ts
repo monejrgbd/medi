@@ -102,3 +102,15 @@ export const MARKETING_SCAN_EXAMPLES = [
   "Patients taking blood pressure medication",
   "Anyone with chronic back pain or joint issues",
 ];
+
+export const DOCUMENT_TEMPLATES = [
+  { key: "letter_sick_note", label: "Sick note", icon: "file-text", category: "letter" },
+  { key: "letter_return_to_work", label: "Return to work", icon: "check-circle", category: "letter" },
+  { key: "letter_school_absence", label: "School absence", icon: "graduation-cap", category: "letter" },
+  { key: "letter_work_accommodation", label: "Work accommodation", icon: "shield", category: "letter" },
+  { key: "letter_light_duty", label: "Light duty", icon: "activity", category: "letter" },
+  { key: "letter_travel_medical", label: "Travel medical letter", icon: "plane", category: "letter" },
+  { key: "letter_disability_short", label: "Disability note", icon: "clipboard", category: "letter" },
+  { key: "letter_custom", label: "Custom letter", icon: "edit", category: "letter" },
+  { key: "clinical_note_soap", label: "SOAP note", icon: "stethoscope", category: "clinical_note" },
+] as const;

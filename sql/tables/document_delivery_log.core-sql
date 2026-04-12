@@ -1,0 +1,25 @@
+CREATE TABLE public.document_delivery_log (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id     uuid NOT NULL REFERENCES public.clinical_documents(id),
+  channel         text NOT NULL CHECK (channel IN ('sms', 'email', 'print', 'emr_paste')),
+  recipient       text,
+  status          text NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'sent', 'delivered', 'failed')),
+  provider_sid    text,
+  error_message   text,
+  attempt_number  int NOT NULL DEFAULT 1,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.document_delivery_log ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_member_read" ON public.document_delivery_log FOR SELECT
+  USING (
+    document_id IN (
+      SELECT id FROM public.clinical_documents WHERE org_id = requesting_org_id()
+    )
+  );
+
+CREATE INDEX idx_doc_delivery_document ON public.document_delivery_log (document_id);
+CREATE INDEX idx_doc_delivery_status ON public.document_delivery_log (status)
+  WHERE status = 'pending';

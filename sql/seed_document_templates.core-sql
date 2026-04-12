@@ -1,0 +1,356 @@
+INSERT INTO public.document_templates (key, document_category, display_name, description, icon, input_schema, ai_output_schema, prompt_template, render_template, requires_verified_org, sanity_bounds, default_token_lifetime_hours, default_requires_pin, ai_model_override)
+VALUES
+
+-- 1. Sick note
+('letter_sick_note', 'letter', 'Sick note', 'Work or school absence due to illness', 'file-text',
+  '{"type":"object","properties":{"days_off":{"type":"integer","minimum":1,"maximum":14,"description":"Days of rest recommended"},"include_diagnosis":{"type":"boolean","description":"Include the diagnosis on the letter"},"restrictions":{"type":"string","description":"Activity restrictions if any"}},"required":["days_off","include_diagnosis"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"},"return_date":{"type":"string"},"diagnosis_line":{"type":"string"}},"required":["letter_body","return_date"]}'::jsonb,
+  'You are drafting a medical sick note for a patient. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Diagnosis: {diagnosis}
+Days off requested: {days_off}
+Include diagnosis: {include_diagnosis}
+Restrictions: {restrictions}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided. Do not invent symptoms or details.
+2. If include_diagnosis is false, state "for medical reasons" instead of the diagnosis.
+3. Keep the letter under 150 words. Professional tone.
+4. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+This letter confirms that {patient_name} (DOB: {patient_dob}) was seen at {clinic_name} on {visit_date}.
+
+{letter_body}
+
+The patient is advised to rest until {return_date}.
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}',
+  false,
+  '{"max_days_off": 14}'::jsonb,
+  168, false, NULL),
+
+-- 2. Return to work
+('letter_return_to_work', 'letter', 'Return to work', 'Clearance to return to work or school', 'check-circle',
+  '{"type":"object","properties":{"return_date":{"type":"string","description":"Date cleared to return"},"restrictions":{"type":"string","description":"Any ongoing restrictions"},"full_duties":{"type":"boolean","description":"Cleared for full duties"}},"required":["return_date","full_duties"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"}},"required":["letter_body"]}'::jsonb,
+  'You are drafting a return to work clearance letter. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Return date: {return_date}
+Full duties: {full_duties}
+Restrictions: {restrictions}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided.
+2. State whether the patient is cleared for full duties or has restrictions.
+3. Keep the letter under 120 words. Professional tone.
+4. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+This letter confirms that {patient_name} (DOB: {patient_dob}) was evaluated at {clinic_name} on {visit_date}.
+
+{letter_body}
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}',
+  false, '{}'::jsonb, 168, false, NULL),
+
+-- 3. School absence
+('letter_school_absence', 'letter', 'School absence', 'Excuse for missed school days', 'graduation-cap',
+  '{"type":"object","properties":{"absence_start":{"type":"string","description":"First day absent"},"absence_end":{"type":"string","description":"Last day absent"},"return_date":{"type":"string","description":"Date cleared to return to school"}},"required":["absence_start","return_date"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"}},"required":["letter_body"]}'::jsonb,
+  'You are drafting a school absence excuse letter. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Absence start: {absence_start}
+Absence end: {absence_end}
+Return date: {return_date}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided. Do not include specific diagnosis.
+2. State the student was absent for medical reasons.
+3. Keep the letter under 100 words. Professional tone.
+4. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+This letter confirms that {patient_name} (DOB: {patient_dob}) was seen at {clinic_name} on {visit_date}.
+
+{letter_body}
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}',
+  false, '{}'::jsonb, 168, false, NULL),
+
+-- 4. Work accommodation
+('letter_work_accommodation', 'letter', 'Work accommodation', 'Request for workplace accommodations', 'shield',
+  '{"type":"object","properties":{"accommodations":{"type":"string","description":"Specific accommodations needed"},"duration":{"type":"string","description":"Duration of accommodation"},"include_diagnosis":{"type":"boolean","description":"Include diagnosis"}},"required":["accommodations","duration","include_diagnosis"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"}},"required":["letter_body"]}'::jsonb,
+  'You are drafting a workplace accommodation letter. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Diagnosis: {diagnosis}
+Accommodations requested: {accommodations}
+Duration: {duration}
+Include diagnosis: {include_diagnosis}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided.
+2. If include_diagnosis is false, state "due to a medical condition" instead.
+3. Be specific about what accommodations are medically necessary.
+4. Keep the letter under 200 words. Professional tone.
+5. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+This letter is to certify that {patient_name} (DOB: {patient_dob}) is under my medical care and was evaluated at {clinic_name} on {visit_date}.
+
+{letter_body}
+
+Please do not hesitate to contact our office if further information is needed.
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}',
+  false, '{}'::jsonb, 168, false, NULL),
+
+-- 5. Light duty
+('letter_light_duty', 'letter', 'Light duty', 'Recommendation for light or modified duties', 'activity',
+  '{"type":"object","properties":{"restrictions":{"type":"string","description":"Specific activity restrictions"},"duration_days":{"type":"integer","minimum":1,"maximum":90,"description":"Duration in days"},"review_date":{"type":"string","description":"When to reassess"}},"required":["restrictions","duration_days"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"}},"required":["letter_body"]}'::jsonb,
+  'You are drafting a light duty recommendation letter. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Diagnosis: {diagnosis}
+Restrictions: {restrictions}
+Duration: {duration_days} days
+Review date: {review_date}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided.
+2. Be specific about physical restrictions (lifting limits, standing limits, etc.).
+3. Do not include diagnosis unless the restrictions cannot be understood without it.
+4. Keep the letter under 150 words. Professional tone.
+5. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+This letter certifies that {patient_name} (DOB: {patient_dob}) was evaluated at {clinic_name} on {visit_date} and requires modified duties.
+
+{letter_body}
+
+This recommendation should be reassessed on {review_date}.
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}',
+  false, '{"max_duration_days": 90}'::jsonb, 168, false, NULL),
+
+-- 6. Travel medical letter
+('letter_travel_medical', 'letter', 'Travel medical letter', 'Fitness to travel or medication carry letter', 'plane',
+  '{"type":"object","properties":{"travel_destination":{"type":"string","description":"Travel destination"},"travel_date":{"type":"string","description":"Travel date"},"medications_to_carry":{"type":"string","description":"Medications the patient needs to carry"},"fit_to_travel":{"type":"boolean","description":"Patient is medically fit to travel"}},"required":["travel_date","fit_to_travel"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"}},"required":["letter_body"]}'::jsonb,
+  'You are drafting a travel medical letter. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Travel destination: {travel_destination}
+Travel date: {travel_date}
+Medications to carry: {medications_to_carry}
+Fit to travel: {fit_to_travel}
+Current medications: {current_medications}
+Chronic conditions: {chronic_conditions}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided.
+2. If the patient carries medications, list them and state they are medically necessary.
+3. If fit_to_travel is true, state the patient is medically cleared for air travel.
+4. Keep the letter under 150 words. Professional tone.
+5. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+This letter certifies that {patient_name} (DOB: {patient_dob}) is a patient at {clinic_name} and was evaluated on {visit_date}.
+
+{letter_body}
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}
+License: {license_number}',
+  false, '{}'::jsonb, 168, false, NULL),
+
+-- 7. Disability note (short form)
+('letter_disability_short', 'letter', 'Disability note', 'Short form disability or medical leave note', 'clipboard',
+  '{"type":"object","properties":{"disability_start":{"type":"string","description":"Start date of disability period"},"disability_end":{"type":"string","description":"Expected end date"},"functional_limitations":{"type":"string","description":"Functional limitations"},"include_diagnosis":{"type":"boolean","description":"Include diagnosis"}},"required":["disability_start","functional_limitations","include_diagnosis"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"}},"required":["letter_body"]}'::jsonb,
+  'You are drafting a short form disability note. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Diagnosis: {diagnosis}
+Disability period start: {disability_start}
+Disability period end: {disability_end}
+Functional limitations: {functional_limitations}
+Include diagnosis: {include_diagnosis}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided.
+2. If include_diagnosis is false, reference "a medical condition" instead.
+3. Be specific about functional limitations that prevent work.
+4. Keep the letter under 200 words. Professional, clinical tone.
+5. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+This letter certifies that {patient_name} (DOB: {patient_dob}) is under my medical care and was evaluated at {clinic_name} on {visit_date}.
+
+{letter_body}
+
+Please contact our office at {clinic_phone} for any questions regarding this medical determination.
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}
+License: {license_number}
+NPI: {npi}',
+  true,
+  '{}'::jsonb, 168, true, NULL),
+
+-- 8. Custom letter
+('letter_custom', 'letter', 'Custom letter', 'Free form medical letter with AI assistance', 'edit',
+  '{"type":"object","properties":{"recipient_type":{"type":"string","enum":["patient","employer","school","insurer","other"],"description":"Who is this letter for"},"subject":{"type":"string","description":"Letter subject or purpose"},"key_points":{"type":"string","description":"Key points to include"}},"required":["recipient_type","subject","key_points"]}'::jsonb,
+  '{"type":"object","properties":{"letter_body":{"type":"string"}},"required":["letter_body"]}'::jsonb,
+  'You are drafting a custom medical letter. Context:
+Patient name: {patient_name}
+Date of birth: {patient_dob}
+Visit date: {visit_date}
+Diagnosis: {diagnosis}
+Recipient type: {recipient_type}
+Subject: {subject}
+Key points from doctor: {key_points}
+Current medications: {current_medications}
+Chronic conditions: {chronic_conditions}
+Doctor name: {doctor_name}
+Clinic name: {clinic_name}
+
+Rules:
+1. Use ONLY the facts provided and the key points the doctor specified.
+2. Do not add medical details beyond what the doctor indicated.
+3. Keep the letter under 300 words. Professional tone.
+4. If recipient is "patient", write in warm but professional language.
+5. Output strict JSON matching the output schema.',
+  'To whom it may concern,
+
+Re: {subject}
+
+{letter_body}
+
+Sincerely,
+{doctor_name}, {credentials}
+{clinic_name}',
+  false, '{}'::jsonb, 168, false, NULL),
+
+-- 9. SOAP note
+('clinical_note_soap', 'clinical_note', 'SOAP note', 'Full clinical note from visit context and physical exam', 'stethoscope',
+  '{"type":"object","properties":{"physical_exam_mode":{"type":"string","enum":["voice","buttons","text"],"description":"How the doctor will input physical exam findings"}},"required":[]}'::jsonb,
+  '{"type":"object","properties":{"subjective":{"type":"object","properties":{"chief_complaint":{"type":"string"},"hpi":{"type":"string"},"ros":{"type":"string"},"pmh":{"type":"string"}}},"objective":{"type":"object","properties":{"vitals":{"type":"string"},"physical_exam":{"type":"string"}}},"assessment":{"type":"object","properties":{"primary_dx":{"type":"string"},"differentials":{"type":"array","items":{"type":"string"}}}},"plan":{"type":"string"},"missing_context":{"type":"array","items":{"type":"string"}}},"required":["subjective","objective","assessment","plan"]}'::jsonb,
+  'You are assembling a SOAP note from structured visit data. Context:
+
+PATIENT: {patient_name}, DOB {patient_dob}
+VISIT DATE: {visit_date}
+CHIEF COMPLAINT: {chief_complaint}
+
+TRANSCRIPT (AI pre-visit intake):
+{transcript_summary}
+
+MEDICATIONS: {current_medications}
+ALLERGIES: {allergies}
+CHRONIC CONDITIONS: {chronic_conditions}
+
+VITALS: {vitals}
+
+PHYSICAL EXAM (doctor dictation): {physical_exam_raw}
+
+DIAGNOSIS: {diagnosis}
+DIFFERENTIALS: {differentials}
+
+CARE INSTRUCTIONS: {care_instructions}
+DOCTOR NOTES: {doctor_notes}
+FOLLOW UP: {follow_up_instructions}
+
+Rules:
+1. Use ONLY the facts in the provided context. Do not invent symptoms, findings, diagnoses, or treatments.
+2. If a section has no data, write "Not documented" for that field. Do not fabricate content.
+3. Preserve the doctor physical exam dictation verbatim in the objective.physical_exam field, only cleaning up grammar and expanding common medical abbreviations.
+4. For the subjective section, synthesize the transcript into a coherent HPI narrative. Include pertinent positives and negatives from the conversation.
+5. For the plan section, combine care instructions, doctor notes, and follow up instructions into a coherent treatment plan.
+6. Flag any missing critical data in the missing_context array (e.g. "No physical exam provided", "No vitals recorded").
+7. Output strict JSON matching the output schema.',
+  'SOAP NOTE
+
+Patient: {patient_name}  DOB: {patient_dob}
+Date: {visit_date}
+Provider: {doctor_name}, {credentials}
+
+SUBJECTIVE
+Chief Complaint: {chief_complaint}
+
+HPI: {hpi}
+
+ROS: {ros}
+
+PMH: {pmh}
+
+OBJECTIVE
+Vitals: {vitals}
+
+Physical Exam:
+{physical_exam}
+
+ASSESSMENT
+Primary: {primary_dx}
+Differentials: {differentials}
+
+PLAN
+{plan}
+
+Electronically signed by {doctor_name}, {credentials}
+{clinic_name}
+License: {license_number} | NPI: {npi}',
+  false, '{}'::jsonb, 24, false, NULL)
+
+ON CONFLICT (key) DO UPDATE SET
+  display_name = EXCLUDED.display_name,
+  description = EXCLUDED.description,
+  icon = EXCLUDED.icon,
+  input_schema = EXCLUDED.input_schema,
+  ai_output_schema = EXCLUDED.ai_output_schema,
+  prompt_template = EXCLUDED.prompt_template,
+  render_template = EXCLUDED.render_template,
+  requires_verified_org = EXCLUDED.requires_verified_org,
+  sanity_bounds = EXCLUDED.sanity_bounds,
+  default_token_lifetime_hours = EXCLUDED.default_token_lifetime_hours,
+  default_requires_pin = EXCLUDED.default_requires_pin,
+  ai_model_override = EXCLUDED.ai_model_override,
+  updated_at = now();

@@ -1,0 +1,324 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.sign_document(
+  p_caller_auth_uid uuid,
+  p_document_id uuid,
+  p_content_body text,
+  p_delivery_channels text[] DEFAULT '{sms}'::text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_owner_id uuid;
+  v_is_doctor boolean := false;
+  v_doc record;
+  v_template record;
+  v_attestation_key text;
+  v_org record;
+  v_patient record;
+  v_token_expires_at timestamptz;
+  v_requires_pin boolean;
+  v_edge_url text;
+  v_edge_secret text;
+  v_anon_key text;
+  v_sms_log_id uuid;
+  v_delivery_log_id uuid;
+  v_channel text;
+  v_public_url text;
+BEGIN
+  -- Validate content_body
+  IF p_content_body IS NULL OR trim(p_content_body) = '' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Content body is required');
+  END IF;
+
+  -- Validate delivery channels
+  IF p_delivery_channels IS NOT NULL AND array_length(p_delivery_channels, 1) > 0 THEN
+    FOR i IN 1..array_length(p_delivery_channels, 1) LOOP
+      IF p_delivery_channels[i] NOT IN ('sms', 'email', 'print', 'emr_paste') THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Invalid delivery channel: ' || p_delivery_channels[i]);
+      END IF;
+    END LOOP;
+  END IF;
+
+  -- Get caller staff info
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  -- Load the document
+  SELECT cd.id, cd.org_id, cd.location_id, cd.patient_id, cd.visit_id,
+         cd.template_key, cd.status, cd.public_token, cd.document_type,
+         cd.document_category
+  INTO v_doc
+  FROM public.clinical_documents cd
+  WHERE cd.id = p_document_id;
+
+  IF v_doc IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Validate document belongs to caller's org
+  IF v_doc.org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Validate document status allows signing
+  IF v_doc.status NOT IN ('draft', 'drafting', 'drafted', 'editing') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document cannot be signed in its current status');
+  END IF;
+
+  -- Authorization: caller must be owner OR doctor at document's location
+  SELECT o.owner_id, o.name, o.verified
+  INTO v_org
+  FROM public.organizations o
+  WHERE o.id = v_caller_org_id;
+
+  v_owner_id := v_org.owner_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can sign
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_roles sr
+      WHERE sr.staff_user_id = v_caller_staff_id
+        AND sr.role = 'doctor'
+        AND sr.location_id = v_doc.location_id
+    ) INTO v_is_doctor;
+
+    IF NOT v_is_doctor THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized to sign documents');
+    END IF;
+  END IF;
+
+  -- Load the template
+  SELECT dt.key, dt.requires_attestation, dt.requires_verified_org,
+         dt.default_token_lifetime_hours, dt.default_requires_pin
+  INTO v_template
+  FROM public.document_templates dt
+  WHERE dt.key = v_doc.template_key;
+
+  IF v_template IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Template not found');
+  END IF;
+
+  -- If template requires verified org, check
+  IF v_template.requires_verified_org AND NOT v_org.verified THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization must be verified to sign this document type');
+  END IF;
+
+  -- Get attestation version if required
+  IF v_template.requires_attestation THEN
+    SELECT av.version_key INTO v_attestation_key
+    FROM public.attestation_versions av
+    WHERE av.effective_until IS NULL
+    ORDER BY av.effective_from DESC
+    LIMIT 1;
+
+    IF v_attestation_key IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'No active attestation version found');
+    END IF;
+  END IF;
+
+  -- Calculate token expiry and pin requirement
+  v_token_expires_at := now() + (v_template.default_token_lifetime_hours * interval '1 hour');
+  v_requires_pin := v_template.default_requires_pin;
+
+  -- Update clinical document to signed
+  UPDATE public.clinical_documents
+  SET content_body            = p_content_body,
+      status                  = 'signed',
+      signed_by               = v_caller_staff_id,
+      signed_at               = now(),
+      attestation_version_key = v_attestation_key,
+      public_token_expires_at = v_token_expires_at,
+      requires_pin            = v_requires_pin,
+      delivered_via           = p_delivery_channels,
+      updated_at              = now()
+  WHERE id = p_document_id;
+
+  -- Read vault secrets for async calls
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+  SELECT decrypted_secret INTO v_edge_secret
+  FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  SELECT decrypted_secret INTO v_anon_key
+  FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+  -- Fire async PDF generation
+  IF v_edge_url IS NOT NULL AND v_edge_url <> ''
+     AND v_edge_secret IS NOT NULL AND v_edge_secret <> ''
+     AND v_anon_key IS NOT NULL THEN
+
+    PERFORM net.http_post(
+      url := v_edge_url || '/generate-document-pdf',
+      headers := jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || v_anon_key,
+        'x-internal-secret', v_edge_secret
+      ),
+      body := jsonb_build_object(
+        'document_id', p_document_id
+      )
+    );
+  END IF;
+
+  -- Build public URL for delivery
+  v_public_url := 'https://hilthealth.com/document/' || v_doc.public_token::text;
+
+  -- Get patient info for SMS/email delivery
+  SELECT p.id, p.phone, p.first_name, p.last_name
+  INTO v_patient
+  FROM public.patients p
+  WHERE p.id = v_doc.patient_id;
+
+  -- Process each delivery channel
+  IF p_delivery_channels IS NOT NULL AND array_length(p_delivery_channels, 1) > 0 THEN
+    FOREACH v_channel IN ARRAY p_delivery_channels
+    LOOP
+      -- Insert delivery log entry
+      INSERT INTO public.document_delivery_log (document_id, channel, recipient, status)
+      VALUES (
+        p_document_id,
+        v_channel,
+        CASE
+          WHEN v_channel = 'sms' THEN v_patient.phone
+          ELSE NULL
+        END,
+        'pending'
+      )
+      RETURNING id INTO v_delivery_log_id;
+
+      IF v_channel = 'sms' THEN
+        -- Fire SMS if patient has phone and secrets available
+        IF v_patient.phone IS NOT NULL
+           AND v_edge_url IS NOT NULL AND v_edge_url <> ''
+           AND v_edge_secret IS NOT NULL AND v_edge_secret <> ''
+           AND v_anon_key IS NOT NULL THEN
+
+          -- Pre-insert sms_log
+          INSERT INTO public.sms_log (org_id, location_id, visit_id, patient_id, phone, sms_type, status)
+          VALUES (v_doc.org_id, v_doc.location_id, v_doc.visit_id, v_doc.patient_id, v_patient.phone, 'summary', 'pending')
+          RETURNING id INTO v_sms_log_id;
+
+          PERFORM net.http_post(
+            url := v_edge_url || '/send-sms',
+            headers := jsonb_build_object(
+              'Content-Type', 'application/json',
+              'Authorization', 'Bearer ' || v_anon_key,
+              'x-internal-secret', v_edge_secret
+            ),
+            body := jsonb_build_object(
+              'to', v_patient.phone,
+              'template', 'document',
+              'template_params', jsonb_build_object(
+                'first_name', v_patient.first_name,
+                'org_name', v_org.name,
+                'token', v_doc.public_token
+              ),
+              'org_id', v_doc.org_id,
+              'location_id', v_doc.location_id,
+              'visit_id', v_doc.visit_id,
+              'patient_id', v_doc.patient_id,
+              'sms_type', 'summary',
+              'sms_log_id', v_sms_log_id
+            )
+          );
+        END IF;
+
+      ELSIF v_channel = 'email' THEN
+        -- Insert pending email for document delivery
+        INSERT INTO public.pending_emails (
+          to_email, subject, html_body, text_body, metadata, priority
+        ) VALUES (
+          '', -- No patient email column; edge function or process-email-queue handles lookup
+          'Your clinical document from ' || v_org.name,
+          '<p>Hello ' || v_patient.first_name || ',</p>'
+            || '<p>A clinical document has been prepared for you by ' || v_org.name || '.</p>'
+            || '<p><a href="' || v_public_url || '">View your document</a></p>'
+            || '<p>This link expires on ' || to_char(v_token_expires_at, 'Month DD, YYYY') || '.</p>',
+          'Hello ' || v_patient.first_name || ', a clinical document has been prepared for you by ' || v_org.name
+            || '. View it here: ' || v_public_url
+            || ' This link expires on ' || to_char(v_token_expires_at, 'Month DD, YYYY') || '.',
+          jsonb_build_object(
+            'type', 'document_delivery',
+            'document_id', p_document_id,
+            'patient_id', v_doc.patient_id,
+            'org_id', v_doc.org_id,
+            'delivery_log_id', v_delivery_log_id
+          ),
+          1  -- High priority
+        );
+
+      -- print and emr_paste: just logged via delivery_log, no async call needed
+      END IF;
+    END LOOP;
+  END IF;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, location_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_caller_org_id,
+    v_doc.location_id,
+    'clinical_document',
+    p_document_id,
+    v_caller_staff_id,
+    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END,
+    'document_signed',
+    jsonb_build_object(
+      'document_type', v_doc.document_type,
+      'template_key', v_doc.template_key,
+      'patient_id', v_doc.patient_id,
+      'delivery_channels', p_delivery_channels,
+      'attestation_version_key', v_attestation_key
+    )
+  );
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'document_id', p_document_id,
+    'public_token', v_doc.public_token,
+    'public_url', v_public_url
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.sign_document(
+  p_document_id uuid,
+  p_content_body text,
+  p_delivery_channels text[] DEFAULT '{sms}'::text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.sign_document(
+    v_auth_uid, p_document_id, p_content_body, p_delivery_channels
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.sign_document(uuid, text, text[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sign_document(uuid, text, text[]) TO authenticated;

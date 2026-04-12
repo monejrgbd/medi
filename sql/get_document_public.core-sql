@@ -1,0 +1,162 @@
+-- NO private/public wrapper — anon-callable (token is the capability)
+CREATE OR REPLACE FUNCTION public.get_document_public(
+  p_token uuid,
+  p_ip_hash text DEFAULT NULL,
+  p_user_agent text DEFAULT NULL,
+  p_pin text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_doc record;
+  v_expected_pin text;
+  v_pin_failures int;
+  v_rate_count int;
+BEGIN
+  -- 1. Look up document by public_token
+  SELECT
+    cd.id,
+    cd.org_id,
+    cd.location_id,
+    cd.patient_id,
+    cd.document_type,
+    cd.document_category,
+    cd.template_key,
+    cd.content_body,
+    cd.content_language,
+    cd.status,
+    cd.signed_by,
+    cd.signed_at,
+    cd.pdf_url,
+    cd.requires_pin,
+    cd.public_token_expires_at,
+    cd.public_token_revoked
+  INTO v_doc
+  FROM public.clinical_documents cd
+  WHERE cd.public_token = p_token;
+
+  -- 2. Not found
+  IF v_doc IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'reason', 'not_found');
+  END IF;
+
+  -- 3. Revoked or voided
+  IF v_doc.public_token_revoked = true OR v_doc.status = 'void' THEN
+    INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, result)
+    VALUES (v_doc.id, p_ip_hash, p_user_agent, 'revoked');
+
+    RETURN jsonb_build_object('success', false, 'reason', 'revoked');
+  END IF;
+
+  -- 4. Expired
+  IF v_doc.public_token_expires_at IS NOT NULL
+     AND v_doc.public_token_expires_at < now() THEN
+    INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, result)
+    VALUES (v_doc.id, p_ip_hash, p_user_agent, 'expired');
+
+    RETURN jsonb_build_object('success', false, 'reason', 'expired');
+  END IF;
+
+  -- 5. Rate limit: max 20 successful views per IP per hour
+  IF p_ip_hash IS NOT NULL THEN
+    SELECT count(*)
+    INTO v_rate_count
+    FROM public.document_access_log
+    WHERE document_id = v_doc.id
+      AND ip_hash = p_ip_hash
+      AND accessed_at > now() - interval '1 hour'
+      AND result = 'ok';
+
+    IF v_rate_count >= 20 THEN
+      INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, result)
+      VALUES (v_doc.id, p_ip_hash, p_user_agent, 'rate_limited');
+
+      RETURN jsonb_build_object('success', false, 'reason', 'rate_limited');
+    END IF;
+  END IF;
+
+  -- 6. PIN verification
+  IF v_doc.requires_pin = true THEN
+    -- 6a. PIN not provided
+    IF p_pin IS NULL THEN
+      INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, result)
+      VALUES (v_doc.id, p_ip_hash, p_user_agent, 'pin_required');
+
+      RETURN jsonb_build_object('success', false, 'reason', 'pin_required');
+    END IF;
+
+    -- 6b. Compute expected PIN from patient birthday
+    SELECT to_char(p.birthday, 'MMDD')
+    INTO v_expected_pin
+    FROM public.patients p
+    WHERE p.id = v_doc.patient_id;
+
+    -- 6c. Wrong PIN
+    IF p_pin IS DISTINCT FROM v_expected_pin THEN
+      -- Check lockout: 5 wrong attempts in 60 minutes
+      SELECT count(*)
+      INTO v_pin_failures
+      FROM public.document_access_log
+      WHERE document_id = v_doc.id
+        AND accessed_at > now() - interval '60 minutes'
+        AND result = 'pin_wrong';
+
+      IF v_pin_failures >= 5 THEN
+        INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, result)
+        VALUES (v_doc.id, p_ip_hash, p_user_agent, 'rate_limited');
+
+        RETURN jsonb_build_object('success', false, 'reason', 'rate_limited');
+      END IF;
+
+      INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, result)
+      VALUES (v_doc.id, p_ip_hash, p_user_agent, 'pin_wrong');
+
+      RETURN jsonb_build_object('success', false, 'reason', 'pin_wrong');
+    END IF;
+
+    -- 6d. PIN correct — log with pin_verified
+    INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, pin_verified, result)
+    VALUES (v_doc.id, p_ip_hash, p_user_agent, true, 'ok');
+  ELSE
+    -- 7. No PIN required — log success
+    INSERT INTO public.document_access_log (document_id, ip_hash, user_agent, result)
+    VALUES (v_doc.id, p_ip_hash, p_user_agent, 'ok');
+  END IF;
+
+  -- 8-11. Build and return the full document payload
+  RETURN (
+    SELECT jsonb_build_object(
+      'success', true,
+      'document_id', v_doc.id,
+      'document_type', v_doc.document_type,
+      'document_category', v_doc.document_category,
+      'content_body', v_doc.content_body,
+      'content_language', v_doc.content_language,
+      'signed_at', v_doc.signed_at,
+      'pdf_url', v_doc.pdf_url,
+      'void', false,
+      'clinic_name', o.name,
+      'clinic_logo_url', l.logo_url,
+      'doctor_name', doc.full_name,
+      'patient_name', pat.first_name || ' ' || pat.last_name,
+      'patient_language', COALESCE(pat.language, 'en'),
+      'template_display_name', dt.display_name
+    )
+    FROM public.organizations o
+    JOIN public.locations l ON l.id = v_doc.location_id
+    JOIN public.patients pat ON pat.id = v_doc.patient_id
+    LEFT JOIN public.staff_users doc ON doc.id = v_doc.signed_by
+    LEFT JOIN public.document_templates dt ON dt.key = v_doc.template_key
+    WHERE o.id = v_doc.org_id
+  );
+END;
+$$;
+
+-- Anon-callable: grant to both anon and authenticated
+REVOKE ALL ON FUNCTION public.get_document_public(uuid, text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_document_public(uuid, text, text, text) TO anon;
+GRANT EXECUTE ON FUNCTION public.get_document_public(uuid, text, text, text) TO authenticated;

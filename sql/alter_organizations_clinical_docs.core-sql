@@ -1,0 +1,9 @@
+ALTER TABLE public.organizations
+  ADD COLUMN IF NOT EXISTS clinician_license_number text,
+  ADD COLUMN IF NOT EXISTS clinician_npi text,
+  ADD COLUMN IF NOT EXISTS clinician_credentials text,
+  ADD COLUMN IF NOT EXISTS clinician_signature_url text,
+  ADD COLUMN IF NOT EXISTS letterhead_logo_url text,
+  ADD COLUMN IF NOT EXISTS letterhead_disclaimer text,
+  ADD COLUMN IF NOT EXISTS anthropic_baa_verified boolean NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS quick_doc_shortcuts jsonb NOT NULL DEFAULT '["letter_sick_note","clinical_note_soap","letter_return_to_work"]'::jsonb;

@@ -1,0 +1,128 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.void_document(
+  p_caller_auth_uid uuid,
+  p_document_id uuid,
+  p_reason text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_owner_id uuid;
+  v_is_signing_doctor boolean := false;
+  v_doc record;
+  v_clean_reason text;
+BEGIN
+  -- Sanitize reason
+  v_clean_reason := regexp_replace(trim(COALESCE(p_reason, '')), '<[^>]*>', '', 'g');
+  IF length(v_clean_reason) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Void reason is required');
+  END IF;
+  IF length(v_clean_reason) > 500 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Void reason exceeds maximum length');
+  END IF;
+
+  -- Get caller staff info
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  -- Load document
+  SELECT cd.id, cd.org_id, cd.location_id, cd.status, cd.signed_by
+  INTO v_doc
+  FROM public.clinical_documents cd
+  WHERE cd.id = p_document_id;
+
+  IF v_doc IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Verify document belongs to caller's org
+  IF v_doc.org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  -- Status must be 'signed' or 'sent'
+  IF v_doc.status NOT IN ('signed', 'sent') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only signed or sent documents can be voided');
+  END IF;
+
+  -- Authorization: owner OR the doctor who signed it
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_caller_org_id;
+
+  IF v_owner_id = p_caller_auth_uid THEN
+    NULL; -- Owner can void
+  ELSIF v_doc.signed_by = v_caller_staff_id THEN
+    NULL; -- Signing doctor can void
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Void the document
+  UPDATE public.clinical_documents
+  SET status = 'void',
+      voided_at = now(),
+      voided_by = v_caller_staff_id,
+      void_reason = v_clean_reason,
+      public_token_revoked = true,
+      updated_at = now()
+  WHERE id = p_document_id;
+
+  -- Audit trail
+  INSERT INTO public.audit_trail (org_id, location_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_caller_org_id,
+    v_doc.location_id,
+    'clinical_document',
+    p_document_id,
+    v_caller_staff_id,
+    CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END,
+    'document_voided',
+    jsonb_build_object(
+      'reason', v_clean_reason,
+      'previous_status', v_doc.status
+    )
+  );
+
+  RETURN jsonb_build_object('success', true, 'document_id', p_document_id);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.void_document(
+  p_document_id uuid,
+  p_reason text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.void_document(v_auth_uid, p_document_id, p_reason);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.void_document(uuid, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.void_document(uuid, text) TO authenticated;
+
+REVOKE ALL ON FUNCTION public.void_document(uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.void_document(uuid, text) TO authenticated;

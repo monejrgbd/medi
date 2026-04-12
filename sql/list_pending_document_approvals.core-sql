@@ -1,0 +1,91 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.list_pending_document_approvals(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_doctor_locations uuid[];
+  v_rows jsonb;
+BEGIN
+  -- Get caller staff info
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
+  END IF;
+
+  -- Get all location_ids where caller has doctor role
+  SELECT array_agg(sr.location_id)
+  INTO v_doctor_locations
+  FROM public.staff_roles sr
+  WHERE sr.staff_user_id = v_caller_staff_id
+    AND sr.role = 'doctor';
+
+  IF v_doctor_locations IS NULL THEN
+    RETURN jsonb_build_object('success', true, 'documents', '[]'::jsonb);
+  END IF;
+
+  -- Fetch pending documents
+  SELECT COALESCE(jsonb_agg(row_data), '[]'::jsonb)
+  INTO v_rows
+  FROM (
+    SELECT jsonb_build_object(
+      'id', cd.id,
+      'document_type', cd.document_type,
+      'document_category', cd.document_category,
+      'template_key', cd.template_key,
+      'status', cd.status,
+      'patient_name', COALESCE(pat.first_name || ' ' || pat.last_name, 'Unknown'),
+      'creator_name', COALESCE(creator.full_name, 'Unknown'),
+      'created_at', cd.created_at,
+      'input_fields', cd.input_fields
+    ) AS row_data
+    FROM public.clinical_documents cd
+    LEFT JOIN public.patients pat ON pat.id = cd.patient_id
+    LEFT JOIN public.staff_users creator ON creator.id = cd.created_by
+    WHERE cd.org_id = v_caller_org_id
+      AND cd.location_id = ANY(v_doctor_locations)
+      AND cd.status IN ('draft', 'drafted', 'editing')
+      AND cd.created_by <> v_caller_staff_id
+    ORDER BY cd.created_at ASC
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'documents', v_rows
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.list_pending_document_approvals()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.list_pending_document_approvals(v_auth_uid);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.list_pending_document_approvals() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.list_pending_document_approvals() TO authenticated;

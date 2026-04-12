@@ -1,0 +1,99 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.list_documents_for_patient(
+  p_caller_auth_uid uuid,
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_patient_org_id uuid;
+  v_rows jsonb;
+BEGIN
+  -- Get caller staff info
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
+  END IF;
+
+  -- Validate patient belongs to caller's org
+  SELECT p.org_id INTO v_patient_org_id
+  FROM public.patients p
+  WHERE p.id = p_patient_id;
+
+  IF v_patient_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+  END IF;
+
+  IF v_patient_org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Fetch documents
+  SELECT COALESCE(jsonb_agg(row_data), '[]'::jsonb)
+  INTO v_rows
+  FROM (
+    SELECT jsonb_build_object(
+      'id', cd.id,
+      'document_type', cd.document_type,
+      'document_category', cd.document_category,
+      'template_key', cd.template_key,
+      'status', cd.status,
+      'content_preview', left(cd.content_body, 200),
+      'created_by', cd.created_by,
+      'creator_name', COALESCE(creator.full_name, 'Unknown'),
+      'signed_by', cd.signed_by,
+      'signer_name', COALESCE(signer.full_name, NULL),
+      'signed_at', cd.signed_at,
+      'created_at', cd.created_at,
+      'pdf_url', cd.pdf_url,
+      'voided_at', cd.voided_at
+    ) AS row_data
+    FROM public.clinical_documents cd
+    LEFT JOIN public.staff_users creator ON creator.id = cd.created_by
+    LEFT JOIN public.staff_users signer ON signer.id = cd.signed_by
+    WHERE cd.patient_id = p_patient_id
+      AND cd.org_id = v_caller_org_id
+    ORDER BY cd.created_at DESC
+  ) sub;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'documents', v_rows
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.list_documents_for_patient(
+  p_patient_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.list_documents_for_patient(v_auth_uid, p_patient_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.list_documents_for_patient(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.list_documents_for_patient(uuid) TO authenticated;

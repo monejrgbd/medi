@@ -1,0 +1,170 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_document_for_staff(
+  p_caller_auth_uid uuid,
+  p_document_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_doc record;
+  v_result jsonb;
+  v_delivery_log jsonb;
+  v_access_count int;
+  v_attestation_text text;
+BEGIN
+  -- Get caller staff info
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff user not found');
+  END IF;
+
+  -- Load document
+  SELECT cd.*
+  INTO v_doc
+  FROM public.clinical_documents cd
+  WHERE cd.id = p_document_id;
+
+  IF v_doc IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Document not found');
+  END IF;
+
+  IF v_doc.org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Delivery log
+  SELECT COALESCE(jsonb_agg(
+    jsonb_build_object(
+      'id', ddl.id,
+      'channel', ddl.channel,
+      'recipient', ddl.recipient,
+      'status', ddl.status,
+      'provider_sid', ddl.provider_sid,
+      'error_message', ddl.error_message,
+      'attempt_number', ddl.attempt_number,
+      'created_at', ddl.created_at
+    ) ORDER BY ddl.created_at DESC
+  ), '[]'::jsonb)
+  INTO v_delivery_log
+  FROM public.document_delivery_log ddl
+  WHERE ddl.document_id = p_document_id;
+
+  -- Access count
+  SELECT count(*)
+  INTO v_access_count
+  FROM public.document_access_log dal
+  WHERE dal.document_id = p_document_id
+    AND dal.result = 'ok';
+
+  -- Attestation text
+  IF v_doc.attestation_version_key IS NOT NULL THEN
+    SELECT av.text INTO v_attestation_text
+    FROM public.attestation_versions av
+    WHERE av.version_key = v_doc.attestation_version_key;
+  END IF;
+
+  -- Build full result (all LEFT JOINs from a guaranteed base row)
+  SELECT jsonb_build_object(
+    'id', v_doc.id,
+    'org_id', v_doc.org_id,
+    'location_id', v_doc.location_id,
+    'visit_id', v_doc.visit_id,
+    'patient_id', v_doc.patient_id,
+    'document_type', v_doc.document_type,
+    'document_category', v_doc.document_category,
+    'template_key', v_doc.template_key,
+    'input_fields', v_doc.input_fields,
+    'ai_draft', v_doc.ai_draft,
+    'content_body', v_doc.content_body,
+    'content_language', v_doc.content_language,
+    'physical_exam_raw', v_doc.physical_exam_raw,
+    'physical_exam_mode', v_doc.physical_exam_mode,
+    'status', v_doc.status,
+    'created_by', v_doc.created_by,
+    'creator_name', COALESCE(creator.full_name, 'Unknown'),
+    'signed_by', v_doc.signed_by,
+    'signer_name', COALESCE(signer.full_name, NULL),
+    'signed_at', v_doc.signed_at,
+    'attestation_version_key', v_doc.attestation_version_key,
+    'attestation_text', v_attestation_text,
+    'public_token', v_doc.public_token,
+    'requires_pin', v_doc.requires_pin,
+    'public_token_expires_at', v_doc.public_token_expires_at,
+    'public_token_revoked', v_doc.public_token_revoked,
+    'pdf_url', v_doc.pdf_url,
+    'pdf_bucket_path', v_doc.pdf_bucket_path,
+    'delivered_via', v_doc.delivered_via,
+    'sent_at', v_doc.sent_at,
+    'voided_at', v_doc.voided_at,
+    'voided_by', v_doc.voided_by,
+    'void_reason', v_doc.void_reason,
+    'ai_model', v_doc.ai_model,
+    'ai_input_tokens', v_doc.ai_input_tokens,
+    'ai_output_tokens', v_doc.ai_output_tokens,
+    'created_at', v_doc.created_at,
+    'updated_at', v_doc.updated_at,
+    -- Joined: patient
+    'patient_name', COALESCE(pat.first_name || ' ' || pat.last_name, 'Unknown'),
+    'patient_dob', pat.birthday,
+    'patient_phone', pat.phone,
+    'patient_language', pat.language,
+    -- Joined: template
+    'template_display_name', dt.display_name,
+    'template_description', dt.description,
+    -- Joined: org + location
+    'clinic_name', org.name,
+    'clinic_address', loc.address,
+    'clinician_credentials', org.clinician_credentials,
+    'clinician_license_number', org.clinician_license_number,
+    'clinician_npi', org.clinician_npi,
+    -- Aggregated
+    'delivery_log', v_delivery_log,
+    'access_count', v_access_count
+  )
+  INTO v_result
+  FROM (SELECT 1) AS base
+    LEFT JOIN public.staff_users creator ON creator.id = v_doc.created_by
+    LEFT JOIN public.staff_users signer ON signer.id = v_doc.signed_by
+    LEFT JOIN public.patients pat ON pat.id = v_doc.patient_id
+    LEFT JOIN public.document_templates dt ON dt.key = v_doc.template_key
+    LEFT JOIN public.organizations org ON org.id = v_doc.org_id
+    LEFT JOIN public.locations loc ON loc.id = v_doc.location_id;
+
+  RETURN jsonb_build_object('success', true, 'document', v_result);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_document_for_staff(
+  p_document_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_document_for_staff(v_auth_uid, p_document_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_document_for_staff(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_document_for_staff(uuid) TO authenticated;

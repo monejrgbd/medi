@@ -1,0 +1,59 @@
+CREATE TABLE public.clinical_documents (
+  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id                  uuid NOT NULL REFERENCES public.organizations(id),
+  location_id             uuid NOT NULL REFERENCES public.locations(id),
+  visit_id                uuid REFERENCES public.visits(id),
+  patient_id              uuid NOT NULL REFERENCES public.patients(id),
+  document_type           text NOT NULL
+    CHECK (document_type IN (
+      'letter_sick_note', 'letter_return_to_work', 'letter_school_absence',
+      'letter_work_accommodation', 'letter_light_duty', 'letter_travel_medical',
+      'letter_disability_short', 'letter_custom', 'clinical_note_soap',
+      'prior_auth_medication', 'prior_auth_procedure', 'prior_auth_dme'
+    )),
+  document_category       text NOT NULL
+    CHECK (document_category IN ('letter', 'clinical_note', 'prior_auth', 'certificate', 'instructions')),
+  template_key            text NOT NULL,
+  input_fields            jsonb NOT NULL DEFAULT '{}'::jsonb,
+  ai_draft                jsonb,
+  content_body            text NOT NULL DEFAULT '',
+  content_language        text NOT NULL DEFAULT 'en',
+  physical_exam_raw       text,
+  physical_exam_mode      text CHECK (physical_exam_mode IS NULL OR physical_exam_mode IN ('voice', 'buttons', 'text')),
+  status                  text NOT NULL DEFAULT 'draft'
+    CHECK (status IN ('draft', 'drafting', 'drafted', 'editing', 'signed', 'sent', 'void', 'failed')),
+  created_by              uuid NOT NULL REFERENCES public.staff_users(id),
+  signed_by               uuid REFERENCES public.staff_users(id),
+  signed_at               timestamptz,
+  attestation_version_key text,
+  public_token            uuid UNIQUE DEFAULT gen_random_uuid(),
+  requires_pin            boolean NOT NULL DEFAULT false,
+  public_token_expires_at timestamptz,
+  public_token_revoked    boolean NOT NULL DEFAULT false,
+  pdf_url                 text,
+  pdf_bucket_path         text,
+  delivered_via           text[] NOT NULL DEFAULT '{}'::text[],
+  sent_at                 timestamptz,
+  voided_at               timestamptz,
+  voided_by               uuid REFERENCES public.staff_users(id),
+  void_reason             text,
+  ai_model                text,
+  ai_input_tokens         int,
+  ai_output_tokens        int,
+  created_at              timestamptz NOT NULL DEFAULT now(),
+  updated_at              timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.clinical_documents ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_member_read" ON public.clinical_documents FOR SELECT
+  USING (org_id = requesting_org_id());
+
+CREATE INDEX idx_clinical_docs_org ON public.clinical_documents (org_id, created_at DESC);
+CREATE INDEX idx_clinical_docs_patient ON public.clinical_documents (patient_id, created_at DESC);
+CREATE INDEX idx_clinical_docs_visit ON public.clinical_documents (visit_id);
+CREATE INDEX idx_clinical_docs_token ON public.clinical_documents (public_token);
+CREATE INDEX idx_clinical_docs_pending ON public.clinical_documents (status)
+  WHERE status IN ('drafting', 'drafted', 'editing');
+CREATE INDEX idx_clinical_docs_expiry ON public.clinical_documents (public_token_expires_at)
+  WHERE public_token_revoked = false;

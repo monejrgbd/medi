@@ -1,0 +1,27 @@
+CREATE TABLE public.document_templates (
+  key                       text PRIMARY KEY,
+  document_category         text NOT NULL
+    CHECK (document_category IN ('letter', 'clinical_note', 'prior_auth', 'certificate', 'instructions')),
+  display_name              text NOT NULL,
+  description               text NOT NULL,
+  icon                      text NOT NULL,
+  input_schema              jsonb NOT NULL,
+  ai_output_schema          jsonb NOT NULL,
+  prompt_template           text NOT NULL,
+  render_template           text NOT NULL,
+  requires_verified_org     boolean NOT NULL DEFAULT false,
+  requires_attestation      boolean NOT NULL DEFAULT true,
+  sanity_bounds             jsonb NOT NULL DEFAULT '{}'::jsonb,
+  default_disclaimer        text,
+  default_token_lifetime_hours int NOT NULL DEFAULT 168,
+  default_requires_pin      boolean NOT NULL DEFAULT false,
+  ai_model_override         text,
+  active                    boolean NOT NULL DEFAULT true,
+  created_at                timestamptz NOT NULL DEFAULT now(),
+  updated_at                timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.document_templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "anyone_read" ON public.document_templates FOR SELECT
+  USING (true);

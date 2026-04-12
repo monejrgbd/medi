@@ -1,0 +1,21 @@
+CREATE TABLE public.attestation_versions (
+  version_key     text PRIMARY KEY,
+  text            text NOT NULL,
+  effective_from  timestamptz NOT NULL DEFAULT now(),
+  effective_until timestamptz,
+  drafted_by      text,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.attestation_versions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "authenticated_read" ON public.attestation_versions FOR SELECT
+  TO authenticated
+  USING (true);
+
+INSERT INTO public.attestation_versions (version_key, text, drafted_by)
+VALUES (
+  'v1_2026_04',
+  'I confirm this clinical document is accurate, complete, and reflects my clinical judgment. I take full responsibility for its content. I understand that AI drafting is a tool to assist documentation, not a substitute for medical decision making.',
+  'initial_system'
+);
