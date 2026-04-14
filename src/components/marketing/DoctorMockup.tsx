@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 
-type Tab = "summary" | "transcript" | "notes" | "vitals" | "vaccines" | "history";
+type Tab = "summary" | "transcript" | "notes" | "paperwork" | "vitals" | "vaccines" | "history";
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "summary", label: "Summary" },
   { key: "transcript", label: "Transcript" },
   { key: "notes", label: "Notes" },
+  { key: "paperwork", label: "Documents (3)" },
   { key: "vitals", label: "Vitals (5)" },
   { key: "vaccines", label: "Vaccines (1)" },
   { key: "history", label: "History" },
@@ -81,6 +82,66 @@ function NotesTab() {
       </div>
       <div className="rounded-lg border border-dashed border-gray-200 py-2.5 text-center">
         <p className="text-[10px] text-ash">+ Add note</p>
+      </div>
+    </div>
+  );
+}
+
+function PaperworkTab() {
+  const docs = [
+    {
+      type: "Sick note",
+      status: "sent" as const,
+      time: "Today, 9:14 AM",
+      preview: "This letter confirms Sarah Martinez was evaluated today and is advised to rest from work for 3 days due to acute joint symptoms pending further workup.",
+    },
+    {
+      type: "Work accommodation letter",
+      status: "sent" as const,
+      time: "Today, 9:12 AM",
+      preview: "Sarah Martinez has been evaluated for joint symptoms requiring temporary accommodations. Recommend reduced typing tasks for 2 weeks pending workup.",
+    },
+    {
+      type: "SOAP note",
+      status: "drafted" as const,
+      time: "Today, 9:11 AM",
+      preview: "S: Returning patient, worsening knee pain, new bilateral hand stiffness 1hr AM, knuckle swelling. O: Vitals stable. A: Suspected early RA. P: RF, anti-CCP, ESR, CRP.",
+    },
+  ];
+
+  const statusStyle: Record<string, { bg: string; text: string; label: string }> = {
+    drafted: { bg: "bg-amber-100", text: "text-amber-700", label: "AI Draft" },
+    sent: { bg: "bg-blue-100", text: "text-blue-700", label: "Sent" },
+  };
+
+  return (
+    <div className="space-y-2">
+      <p className="mb-1.5 text-[9px] text-ash">Click Create Document, pick a template, AI drafts from the visit context, then Sign and Deliver to the patient by SMS in seconds</p>
+      {docs.map((d, i) => {
+        const s = statusStyle[d.status];
+        return (
+          <div key={i} className="rounded-lg border border-gray-200 bg-white p-2.5">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <p className="text-[10px] font-medium text-ink truncate">{d.type}</p>
+                <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[8px] font-medium ${s.bg} ${s.text}`}>{s.label}</span>
+              </div>
+              <span className="text-[8px] text-ash whitespace-nowrap">{d.time}</span>
+            </div>
+            <p className="text-[9px] leading-relaxed text-slate line-clamp-2">{d.preview}</p>
+            <div className="mt-1.5 flex items-center gap-2">
+              {d.status === "drafted" && (
+                <span className="text-[9px] font-semibold text-hilt-blue">Review, Sign and Deliver</span>
+              )}
+              {d.status === "sent" && (
+                <span className="text-[9px] font-medium text-hilt-blue">View PDF</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+      <div className="mt-2 rounded-lg border border-dashed border-gray-200 py-2 text-center text-[9px] font-medium text-slate">
+        + Create document
       </div>
     </div>
   );
@@ -293,6 +354,7 @@ export default function DoctorMockup() {
           {tab === "summary" && <SummaryTab />}
           {tab === "transcript" && <TranscriptTab />}
           {tab === "notes" && <NotesTab />}
+          {tab === "paperwork" && <PaperworkTab />}
           {tab === "vitals" && <VitalsTab />}
           {tab === "vaccines" && <VaccinesTab />}
           {tab === "history" && <HistoryTab />}
@@ -300,12 +362,18 @@ export default function DoctorMockup() {
       </div>
 
       {/* Action bar */}
-      <div className="border-t border-gray-100 p-3 flex gap-2">
-        <div className="rounded-lg border border-gray-200 px-3 py-1.5 text-center text-[10px] font-medium text-slate">
-          Cancel
-        </div>
+      <div className="border-t border-gray-100 p-3 flex gap-1.5">
         <div className="flex-1 rounded-lg bg-green-600 py-1.5 text-center text-[10px] font-semibold text-white">
           Complete Visit
+        </div>
+        <div className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-center text-[10px] font-medium text-slate">
+          Cancel Claim
+        </div>
+        <div className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-center text-[10px] font-medium text-slate">
+          Refer
+        </div>
+        <div className="rounded-lg border border-hilt-blue/40 bg-blue-50/60 px-2.5 py-1.5 text-center text-[10px] font-semibold text-hilt-blue">
+          Create Document
         </div>
       </div>
     </div>

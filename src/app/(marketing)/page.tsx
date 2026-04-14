@@ -485,7 +485,7 @@ function HeroSection() {
                 </svg>
               </div>
             </div>
-            <p className="mb-6 text-center text-sm font-medium text-slate">Paperwork generated from every visit</p>
+            <p className="mb-6 text-center text-sm font-medium text-slate">Paperwork handled in seconds</p>
 
             {/* Paperwork mockup */}
             <div className="mx-auto max-w-4xl">
@@ -613,8 +613,8 @@ function BeforeAfterSection() {
         <div className="mt-10 space-y-6">
           <FadeIn delay={0.08}>
             <p className="text-lg leading-relaxed text-gray-300">
-              Five minutes per patient on the same intake questions, even for returning patients. Non English speakers take twice as long or get half the detail. Fifty patients a day.{" "}
-              <span className="text-white font-semibold">Over four hours of doctor time, gone.</span>
+              At least ten minutes per patient on the same intake questions and paperwork, even for returning patients. Non English speakers take twice as long or get half the detail. Fifty patients a day.{" "}
+              <span className="text-white font-semibold">Over eight hours of doctor time, gone.</span>
             </p>
           </FadeIn>
           <FadeIn delay={0.24}>
@@ -638,8 +638,8 @@ function BeforeAfterSection() {
             </p>
             <div className="space-y-3">
               <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Four hours back, and better intake.</span>{" "}
-                AI handles intake in 130+ languages while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Every doctor reads the summary in their preferred language before they open the door.
+                <span className="text-blue-300 font-medium">Eight hours back, better intake, and paperwork in seconds.</span>{" "}
+                AI handles intake in 130+ languages while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Every doctor reads the summary in their preferred language before they open the door, then signs the sick note, work letter, or SOAP note already drafted from the visit.
               </p>
               <p className="text-lg leading-relaxed text-gray-400">
                 <span className="text-blue-300 font-medium">After the visit, everything is handled.</span>{" "}

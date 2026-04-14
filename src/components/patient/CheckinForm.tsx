@@ -181,8 +181,8 @@ export default function CheckinForm({
         </div>
 
         {/* Row 2: Birthday + Sex */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="min-w-0">
+        <div className="flex flex-wrap gap-3">
+          <div className="flex-1 min-w-[180px]">
             <label className="block text-sm font-medium text-ink mb-1">
               {t("checkin.birthday")}
             </label>
@@ -196,7 +196,7 @@ export default function CheckinForm({
             />
           </div>
 
-          <div>
+          <div className="flex-1 min-w-[180px]">
             <label className="block text-sm font-medium text-ink mb-1">
               {t("checkin.sex")}
             </label>

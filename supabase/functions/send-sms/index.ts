@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
           recipients: [to],
           content: body,
           msg_type: "text",
-          data_coding: "text",
+          data_coding: "auto",
         }],
         message_globals: {
           originator: "HiltHealth",

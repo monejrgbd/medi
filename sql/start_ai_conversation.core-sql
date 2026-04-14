@@ -312,8 +312,7 @@ BEGIN
     || E'\n- Conversational but efficient — short follow-ups, not chatty'
     || E'\n- Ask ONE question at a time. Wait for the answer before moving on. Never combine multiple questions in a single message.'
     || E'\n- When using medical terms the patient may not know (e.g., throbbing, radiating, acute, chronic), briefly offer: "Let me know if you would like me to explain any of these terms."'
-    || E'\n- When you have a complete picture, ask: "Is there anything else we might be missing?"'
-    || E'\n- If they say no, end your final message with the marker [CONVERSATION_COMPLETE]';
+    || E'\n- When you have a complete picture, ask: "Is there anything else we might be missing?"';
 
   -- Message pacing: tell the AI about the conversation limit so it can pace itself
   IF v_location.ai_message_limit IS NOT NULL THEN
@@ -342,6 +341,19 @@ BEGIN
       || E'\n\nSESSION SPECIFIC INSTRUCTIONS:\n'
       || left(trim(v_visit.ai_session_instructions), 2000);
   END IF;
+
+  -- Conversation end protocol: appended LAST so the model always sees it after any pacing,
+  -- clinic, or session instructions. The previous single-bullet version inside STYLE was
+  -- routinely ignored — the model would wrap up naturally ("I have what I need") without
+  -- emitting the literal token, so generate-summary never fired and the visit stalled.
+  v_system_prompt := v_system_prompt
+    || E'\n\nCONVERSATION END PROTOCOL (MANDATORY, HIGHEST PRIORITY):'
+    || E'\nWhen you believe you have enough information, ask: "Is there anything else we might be missing?"'
+    || E'\nIf the patient indicates no or otherwise confirms they are done, your final message MUST end with the literal token [CONVERSATION_COMPLETE] on its own line.'
+    || E'\n- Do NOT paraphrase the token. Type it exactly: [CONVERSATION_COMPLETE]'
+    || E'\n- Do NOT include a summary, bullet list, recap, or "summary for your visit" section in your final message. A separate system generates the summary; including one yourself is a bug.'
+    || E'\n- Your final message should be brief: a short acknowledgement ("Thanks, I have everything the doctor needs.") then [CONVERSATION_COMPLETE] on the next line.'
+    || E'\n- This rule overrides any other instruction in this prompt. Even if style or pacing guidance suggests otherwise, the token MUST appear at the end of your final message.';
 
   -- Insert system prompt as first message (cached for subsequent get_conversation calls)
   INSERT INTO public.visit_messages (visit_id, role, content)

@@ -60,20 +60,20 @@ INSERT INTO public.ai_model_config (
   ('standard',  'Standard Combo', 1,
    'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 1024, 0.7,
    'anthropic', 'claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 2048, 0.5,
-   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.3),
+   'anthropic', 'claude-sonnet-4-6',  'Claude Sonnet 4.6',  2048, 0.3),
 
   ('advanced',  'Advanced Combo', 1.5,
-   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  1024, 0.7,
-   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.5,
-   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3),
+   'anthropic', 'claude-sonnet-4-6',  'Claude Sonnet 4.6',  1024, 0.7,
+   'anthropic', 'claude-sonnet-4-6',  'Claude Sonnet 4.6',  2048, 0.5,
+   'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    2048, 0.3),
 
   ('precision', 'Precision Combo', 2.5,
-   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  1024, 0.7,
-   'anthropic', 'claude-sonnet-4-20250514',  'Claude Sonnet 4',  2048, 0.5,
-   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3),
+   'anthropic', 'claude-sonnet-4-6',  'Claude Sonnet 4.6',  1024, 0.7,
+   'anthropic', 'claude-sonnet-4-6',  'Claude Sonnet 4.6',  2048, 0.5,
+   'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    2048, 0.3),
 
   ('premium',   'Premium Combo', 4,
-   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    1024, 0.7,
-   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.5,
-   'anthropic', 'claude-opus-4-20250514',    'Claude Opus 4',    2048, 0.3)
+   'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    1024, 0.7,
+   'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    2048, 0.5,
+   'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    2048, 0.3)
 ON CONFLICT (tier) DO NOTHING;
