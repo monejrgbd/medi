@@ -421,19 +421,29 @@ export default function ApprovalCard({
               <button
                 key={fu.id}
                 onClick={() => onApprove(visit.visit_id, { followUpOfVisitId: fu.visit_id, followUpId: fu.id })}
-                disabled={busy}
+                disabled={busy || isPending}
+                title={isPending ? "Waiting for phone verification before approving" : undefined}
                 className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
               >
-                {approving ? "Approving..." : `Follow-up (Dr. ${fu.doctor_name})`}
+                {approving
+                  ? "Approving..."
+                  : isPending
+                    ? "Waiting for phone verification"
+                    : `Follow-up (Dr. ${fu.doctor_name})`}
               </button>
             ))}
             <div className="flex gap-2">
               <button
                 onClick={() => onApprove(visit.visit_id)}
-                disabled={busy}
+                disabled={busy || isPending}
+                title={isPending ? "Waiting for phone verification before approving" : undefined}
                 className="flex-1 rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
               >
-                {approving ? "Approving..." : "New Visit"}
+                {approving
+                  ? "Approving..."
+                  : isPending
+                    ? "Waiting for phone verification"
+                    : "New Visit"}
               </button>
               <button
                 onClick={() => onDeny(visit.visit_id)}
@@ -530,7 +540,8 @@ export default function ApprovalCard({
           <div className="flex gap-2">
             <button
               onClick={() => onApprove(visit.visit_id, undefined, aiConfig, aiInstructions.trim() || undefined)}
-              disabled={busy}
+              disabled={busy || isPending}
+              title={isPending ? "Waiting for phone verification before approving" : undefined}
               className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors disabled:opacity-50 ${
                 aiConfig === "premium"
                   ? "bg-purple-600 hover:bg-purple-700"
@@ -541,11 +552,13 @@ export default function ApprovalCard({
             >
               {approving
                 ? "Approving..."
-                : aiConfig === "premium"
-                  ? "Approve (Premium AI)"
-                  : aiConfig === "skip"
-                    ? "Approve (No AI)"
-                    : "Approve"}
+                : isPending
+                  ? "Waiting for phone verification"
+                  : aiConfig === "premium"
+                    ? "Approve (Premium AI)"
+                    : aiConfig === "skip"
+                      ? "Approve (No AI)"
+                      : "Approve"}
             </button>
             <button
               onClick={() => onDeny(visit.visit_id)}

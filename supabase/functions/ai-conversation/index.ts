@@ -195,7 +195,7 @@ Deno.serve(async (req) => {
       (m: { role: string }) => m.role === "patient"
     ).length;
 
-    if (existingPatientCount >= messageLimit) {
+    if (existingPatientCount >= messageLimit * 2) {
       return new Response(
         JSON.stringify({ error: "message_limit_reached" }),
         { status: 400, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }

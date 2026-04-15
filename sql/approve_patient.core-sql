@@ -33,6 +33,13 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Visit is not pending approval');
   END IF;
 
+  -- Block approval while the patient is still confirming their phone via OTP.
+  -- Otherwise an unverified phone match could link the visit to the wrong patient record.
+  -- No-phone visits have phone_verification_pending = FALSE, so they are unaffected.
+  IF v_visit.phone_verification_pending THEN
+    RETURN jsonb_build_object('success', false, 'error', 'phone_verification_pending');
+  END IF;
+
   -- Get caller staff id (scoped to visit's org)
   SELECT su.id INTO v_caller_staff_id
   FROM public.staff_users su
