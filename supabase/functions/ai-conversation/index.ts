@@ -327,6 +327,8 @@ Deno.serve(async (req) => {
     const messagesRemaining = messageLimit - patientMessageCount;
     if (messagesRemaining <= 4 && messagesRemaining >= 0) {
       systemPrompt += `\n\nURGENT PACING NOTICE: The patient has approximately ${messagesRemaining} messages remaining. If you have not yet covered current medications, known allergies, chronic conditions, or pets at home, ask about ALL remaining uncovered items in your NEXT response. Move toward wrapping up the conversation.`;
+    } else if (messagesRemaining < 0) {
+      systemPrompt += `\n\nOVER LIMIT: You are past the message limit. Wrap up the conversation immediately.`;
     }
 
     // Call intake adapter (provider chosen by ai_model_config for this tier)

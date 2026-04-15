@@ -102,7 +102,7 @@ export default function ShareCheckinLink({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
-        <h2 className="text-lg font-bold text-ink mb-1">Share Check-in Link</h2>
+        <h2 className="text-lg font-bold text-ink mb-1">Share Custom Check in Link</h2>
         <p className="text-xs text-slate mb-4">
           Generate a one time link with a custom check in configuration for a specific patient, independent of the location defaults.
         </p>
