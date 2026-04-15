@@ -17,12 +17,12 @@ import NurseQueueList from "@/components/nurse/NurseQueueList";
 import NurseClaimedCard from "@/components/nurse/NurseClaimedCard";
 import NursePatientView from "@/components/nurse/NursePatientView";
 import CheckInOutButton from "@/components/doctor/CheckInOutButton";
-import { claimPatientAsNurse } from "@/app/(dashboard)/d/_actions/nurse";
 import RoleSwitchBar from "@/components/dashboard/RoleSwitchBar";
 import NotificationPermission from "@/components/dashboard/NotificationPermission";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
 import PatientSearch from "@/components/dashboard/PatientSearch";
+import { claimPatientAsNurse } from "@/app/(dashboard)/d/_actions/nurse";
 
 export interface QueueVisit {
   visit_id: string;
@@ -140,7 +140,6 @@ export default function NurseDashboard({
   const [hasMoreLeft, setHasMoreLeft] = useState(initialHasMoreLeft);
   const [loadingMore, setLoadingMore] = useState(false);
   const [focusMode, setFocusMode] = useState(() => {
-    if (demoMode) return true;
     if (typeof window !== 'undefined') {
       return localStorage.getItem('nurse_focus_mode') === 'true';
     }
@@ -164,15 +163,6 @@ export default function NurseDashboard({
     await toggleNotificationSound(newVal);
   }
 
-  const handleNotification = useCallback(
-    (notification: DoctorNotification) => {
-      if (notification.type === "urgent" && notification.patientName) {
-        setUrgentPatient(notification.patientName);
-      }
-    },
-    []
-  );
-
   function handleFocusModeToggle() {
     const next = !focusMode;
     setFocusMode(next);
@@ -192,6 +182,15 @@ export default function NurseDashboard({
       setActiveVisitId(null);
     }
   }
+
+  const handleNotification = useCallback(
+    (notification: DoctorNotification) => {
+      if (notification.type === "urgent" && notification.patientName) {
+        setUrgentPatient(notification.patientName);
+      }
+    },
+    []
+  );
 
   // Sync state when server component re-renders with new props (via router.refresh())
   useEffect(() => {
@@ -217,14 +216,15 @@ export default function NurseDashboard({
     }
   }, [demoMode, demoVisitId, router]);
 
-  // Demo: auto-claim first queue item when it appears
+  // Demo: auto-claim first queue item when focus mode is on
   useEffect(() => {
-    if (demoMode && queue.length > 0 && !activeVisitId) {
+    if (demoMode && focusMode && queue.length > 0 && !activeVisitId) {
       doClaimNext();
     }
-  }, [demoMode, queue.length, activeVisitId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [demoMode, focusMode, queue.length, activeVisitId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Demo: auto-restore NursePatientView for already-claimed visits (page refresh mid-triage)
+  // Demo: auto-restore NursePatientView for already-claimed visits (page refresh mid-triage,
+  // or right after NurseClaimButton triggers router.refresh() in the Pending tab).
   useEffect(() => {
     if (demoMode && claimed.length > 0 && !activeVisitId && queue.length === 0) {
       setActiveVisitId(claimed[0].visit_id);
@@ -510,20 +510,18 @@ export default function NurseDashboard({
         showRoomToPatients={locationShowRoomToPatients}
       />
 
-      {!demoMode && (
-        <div className="px-4 pt-3 lg:px-6 flex justify-end">
-          <button
-            onClick={handleFocusModeToggle}
-            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-              focusMode
-                ? "bg-teal-600 text-white"
-                : "bg-gray-100 text-slate hover:bg-gray-200"
-            }`}
-          >
-            {focusMode ? "Focus Mode On" : "Focus Mode"}
-          </button>
-        </div>
-      )}
+      <div className="px-4 pt-3 lg:px-6 flex justify-end">
+        <button
+          onClick={handleFocusModeToggle}
+          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+            focusMode
+              ? "bg-teal-600 text-white"
+              : "bg-gray-100 text-slate hover:bg-gray-200"
+          }`}
+        >
+          {focusMode ? "Focus Mode On" : "Focus Mode"}
+        </button>
+      </div>
 
       <div className="px-4 py-4 lg:px-6">
         {!demoMode && <NotificationPermission />}
@@ -570,7 +568,12 @@ export default function NurseDashboard({
 
         {/* Tab content */}
         {tab === "pending" && (
-          <NurseQueueList queue={queue} onClaimed={() => router.refresh()} />
+          <NurseQueueList queue={queue} onClaimed={() => {
+            if (demoMode) {
+              setFocusMode(true);
+            }
+            router.refresh();
+          }} />
         )}
 
         {tab === "claimed" && (

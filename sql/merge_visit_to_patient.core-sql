@@ -76,9 +76,24 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Visit is already linked to this patient');
   END IF;
 
-  -- Update visit to point to target patient
+  -- Update visit to point to target patient.
+  -- Also recompute has_previous_visits and is_return_visit from the target patient's
+  -- history so the NEW / RETURNING badge in the receptionist pending list flips correctly
+  -- (match_type in get_pending_approvals is derived from has_previous_visits).
   UPDATE public.visits
-  SET patient_id = p_target_patient_id
+  SET patient_id = p_target_patient_id,
+      has_previous_visits = EXISTS (
+        SELECT 1 FROM public.visits v2
+        WHERE v2.patient_id = p_target_patient_id
+          AND v2.status = 'completed'
+          AND v2.id <> p_visit_id
+      ),
+      is_return_visit = EXISTS (
+        SELECT 1 FROM public.visits v2
+        WHERE v2.patient_id = p_target_patient_id
+          AND v2.status = 'completed'
+          AND v2.id <> p_visit_id
+      )
   WHERE id = p_visit_id;
 
   -- Mark old patient as orphaned if no other active visits remain

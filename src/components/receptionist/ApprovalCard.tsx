@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { fetchSimilarPatients, editPatientRecord, mergeVisitToPatient } from "@/app/(dashboard)/d/_actions/receptionist";
 import FollowUpIndicator from "./FollowUpIndicator";
 import { formatQueueNumber } from "@/lib/queueUtils";
@@ -76,6 +77,8 @@ export default function ApprovalCard({
   const [expanded, setExpanded] = useState(false);
   const [similarPatients, setSimilarPatients] = useState<SimilarPatient[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
+
+  const router = useRouter();
 
   const [aiConfig, setAiConfig] = useState<AiConfig>("standard");
   const [showAiOptions, setShowAiOptions] = useState(false);
@@ -206,6 +209,9 @@ export default function ApprovalCard({
     if (result.success) {
       setMergeSuccess(`Visit linked to ${result.target_patient_name ?? "existing patient"}.`);
       setTimeout(() => setMergeSuccess(""), 3000);
+      // Re-fetch the pending list so the badge, displayed patient info,
+      // and match_type reflect the newly linked patient.
+      router.refresh();
     } else {
       setEditError(result.error ?? "Failed to merge.");
     }

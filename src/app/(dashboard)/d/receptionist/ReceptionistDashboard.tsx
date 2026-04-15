@@ -275,6 +275,18 @@ export default function ReceptionistDashboard({
         router.refresh();
       }
 
+      // UPDATE — check for merge into an existing patient (patient_id rewritten,
+      // or has_previous_visits recomputed). Both come from merge_visit_to_patient
+      // and require re-fetching the pending list so the card shows the target
+      // patient's info and the NEW/RETURNING badge flips.
+      if (
+        visit.status === "pending_approval" &&
+        (oldVisit.patient_id !== visit.patient_id ||
+          oldVisit.has_previous_visits !== visit.has_previous_visits)
+      ) {
+        router.refresh();
+      }
+
       // UPDATE — diff old vs new status to update counts
       const oldStatus = oldVisit.status as string;
       const newStatus = visit.status as string;

@@ -35,7 +35,7 @@ const ALL_STEPS = [
     label: "Nurse",
     role: "You are the nurse",
     todo: "Record vitals, add triage notes, then release the patient to the doctor.",
-    info: "The nurse reviews the AI intake, records vitals and vaccines, writes observations, then releases the patient to the doctor queue.",
+    info: "The nurse reviews the AI intake, records vitals and vaccines, writes observations, then releases the patient to the doctor queue or completes the visit.",
     featureGate: "nurseEnabled",
     mapsToDemoStep: null as number | null,
   },
