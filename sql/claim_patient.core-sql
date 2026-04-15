@@ -23,7 +23,7 @@ DECLARE
   -- v_claimer_name removed (m10: don't leak doctor names)
 BEGIN
   -- Get visit details
-  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.nurse_reviewed, v.ai_completed_at, v.ai_summary
+  SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.nurse_reviewed, v.ai_completed_at, v.ai_summary, v.ai_diagnostic
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -141,37 +141,77 @@ BEGIN
       staff_room = v_staff_room
   WHERE id = p_visit_id;
 
-  -- If AI conversation completed but summary not yet generated (nurse-enabled flow),
-  -- trigger generate-summary now that the doctor has claimed
-  IF v_visit.ai_completed_at IS NOT NULL AND v_visit.ai_summary IS NULL THEN
-    DECLARE
-      v_anon_key text;
-    BEGIN
-      SELECT decrypted_secret INTO v_edge_url
-      FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+  -- Two possible recovery triggers, gated independently:
+  --   1. Backwards-compat fallback: if a previous generate-summary call failed and
+  --      ai_summary is still NULL, retry on claim with the default "full" mode. With the
+  --      new ai-conversation flow this should be rare (summary fires on AI complete) but
+  --      keeps the system self-healing.
+  --   2. Doctor-direct diagnostic (Rule C): if a doctor (with no nurse role at this
+  --      location) claims a nurse-enabled visit before any nurse touched it, the diagnostic
+  --      was deliberately deferred at AI-complete time. Fire it now in diagnostic_only mode
+  --      so the doctor isn't stuck without a diagnostic suggestion.
+  DECLARE
+    v_anon_key text;
+    v_caller_is_nurse_only boolean := false;
+    v_caller_has_nurse_role boolean := false;
+  BEGIN
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+    SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
 
-      SELECT decrypted_secret INTO v_edge_secret
-      FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
-
-      SELECT decrypted_secret INTO v_anon_key
-      FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
-
+    -- Trigger 1: backwards-compat full-mode summary if missing
+    IF v_visit.ai_completed_at IS NOT NULL AND v_visit.ai_summary IS NULL THEN
       IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
-        PERFORM net.http_post(
-          url := v_edge_url || '/generate-summary',
-          headers := jsonb_build_object(
-            'Content-Type', 'application/json',
-            'Authorization', 'Bearer ' || v_anon_key,
-            'x-internal-secret', v_edge_secret
-          ),
-          body := jsonb_build_object('visit_id', p_visit_id)
-        );
+        BEGIN
+          PERFORM net.http_post(
+            url := v_edge_url || '/generate-summary',
+            headers := jsonb_build_object(
+              'Content-Type', 'application/json',
+              'Authorization', 'Bearer ' || v_anon_key,
+              'x-internal-secret', v_edge_secret
+            ),
+            body := jsonb_build_object('visit_id', p_visit_id, 'mode', 'full')
+          );
+        EXCEPTION WHEN OTHERS THEN
+          RAISE WARNING 'generate-summary fallback trigger failed: %', SQLERRM;
+        END;
       END IF;
-    EXCEPTION WHEN OTHERS THEN
-      -- Fire-and-forget: don't fail the claim if summary trigger fails
-      RAISE WARNING 'generate-summary trigger failed: %', SQLERRM;
-    END;
-  END IF;
+    END IF;
+
+    -- Trigger 2: doctor-direct diagnostic for nurse-enabled visit (Rule C).
+    -- Caller is "doctor only" if they have a doctor role at the location AND no nurse role
+    -- there. Owners (no staff_roles row) are also treated as doctor (matches audit logic).
+    IF v_visit.ai_diagnostic IS NULL AND v_visit.ai_summary IS NOT NULL AND v_nurse_enabled = true THEN
+      SELECT EXISTS(
+        SELECT 1 FROM public.staff_roles
+        WHERE staff_user_id = v_caller_staff_id
+          AND role = 'nurse'
+          AND location_id = v_visit.location_id
+      ) INTO v_caller_has_nurse_role;
+
+      v_caller_is_nurse_only := v_caller_has_nurse_role;
+      -- Owner with no staff record: definitely not a nurse claim
+      IF v_caller_staff_id IS NULL THEN
+        v_caller_is_nurse_only := false;
+      END IF;
+
+      IF NOT v_caller_is_nurse_only AND v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
+        BEGIN
+          PERFORM net.http_post(
+            url := v_edge_url || '/generate-summary',
+            headers := jsonb_build_object(
+              'Content-Type', 'application/json',
+              'Authorization', 'Bearer ' || v_anon_key,
+              'x-internal-secret', v_edge_secret
+            ),
+            body := jsonb_build_object('visit_id', p_visit_id, 'mode', 'diagnostic_only')
+          );
+        EXCEPTION WHEN OTHERS THEN
+          RAISE WARNING 'generate-summary diagnostic_only trigger failed in claim_patient: %', SQLERRM;
+        END;
+      END IF;
+    END IF;
+  END;
 
   RETURN jsonb_build_object('success', true);
 END;

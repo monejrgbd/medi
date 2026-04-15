@@ -181,26 +181,31 @@ export default function PatientQueueView({
         {t("queue.liveUpdate")}
       </p>
 
-      {/* Notification request */}
-      {!notifRequested && canShowNotifButton && (
-        <button
-          onClick={requestNotification}
-          className="mt-4 text-sm text-hilt-blue hover:underline"
-        >
-          {t("queue.enableNotif")}
-        </button>
-      )}
+      <div className="mt-4 flex flex-col items-center gap-3">
+        {/* Notification request */}
+        {!notifRequested && canShowNotifButton && (
+          <button
+            onClick={requestNotification}
+            className="text-sm text-hilt-blue hover:underline"
+          >
+            {t("queue.enableNotif")}
+          </button>
+        )}
 
-      {/* View on TV button (demo only) */}
-      {showTvPreview && queueDisplay && !showingTv && (
-        <button
-          onClick={() => setShowingTv(true)}
-          className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-hilt-blue hover:underline"
-        >
-          <Monitor className="h-3.5 w-3.5" />
-          View on TV
-        </button>
-      )}
+        {/* View on TV button (demo only) */}
+        {showTvPreview && queueDisplay && !showingTv && (
+          <div className="flex flex-col items-center gap-0.5">
+            <button
+              onClick={() => setShowingTv(true)}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-hilt-blue hover:underline"
+            >
+              <Monitor className="h-3.5 w-3.5" />
+              View on TV
+            </button>
+            <p className="text-[10px] text-ash">Your clinic can display this on a lobby TV with custom video</p>
+          </div>
+        )}
+      </div>
 
       {/* Add more details — visible card instead of hidden link */}
       <div className="mt-6">

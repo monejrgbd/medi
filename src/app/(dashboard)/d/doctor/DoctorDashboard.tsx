@@ -478,7 +478,7 @@ export default function DoctorDashboard({
       />
 
       <div className="px-4 py-4 lg:px-6">
-        <NotificationPermission />
+        {!demoMode && <NotificationPermission />}
 
         <PendingDocumentApprovals
           onReview={(approval) => {

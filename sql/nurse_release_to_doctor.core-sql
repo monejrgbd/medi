@@ -16,6 +16,9 @@ DECLARE
   v_caller_staff_id uuid;
   v_nurse_enabled boolean;
   v_clean_notes text;
+  v_edge_url text;
+  v_edge_secret text;
+  v_anon_key text;
 BEGIN
   -- Get visit details
   SELECT v.id, v.status, v.claimed_by, v.location_id, v.org_id, v.nurse_reviewed, v.entered_queue_at
@@ -89,6 +92,31 @@ BEGIN
       nurse_reviewed = true,
       nurse_notes = v_clean_notes
   WHERE id = p_visit_id;
+
+  -- Trigger AI diagnostic regeneration with nurse data folded in. The summary itself was
+  -- generated earlier (on AI complete) without nurse data — that is by design (summary =
+  -- "what the patient said"). The diagnostic, by contrast, needs the full picture, so we
+  -- (re)generate it now that nurse_reviewed = true and nurse_notes is set. Fire-and-forget
+  -- with EXCEPTION wrapper so a failed diagnostic trigger never blocks the release.
+  BEGIN
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+    SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
+      PERFORM net.http_post(
+        url := v_edge_url || '/generate-summary',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'Authorization', 'Bearer ' || v_anon_key,
+          'x-internal-secret', v_edge_secret
+        ),
+        body := jsonb_build_object('visit_id', p_visit_id, 'mode', 'diagnostic_only')
+      );
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'generate-summary diagnostic_only trigger failed in nurse_release_to_doctor: %', SQLERRM;
+  END;
 
   RETURN jsonb_build_object('success', true);
 END;

@@ -104,7 +104,7 @@ export default function ShareCheckinLink({
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-lg">
         <h2 className="text-lg font-bold text-ink mb-1">Share Check-in Link</h2>
         <p className="text-xs text-slate mb-4">
-          Generate a one time link for a patient to start check in from home. They will skip the approval step.
+          Generate a one time link with a custom check in configuration for a specific patient, independent of the location defaults.
         </p>
 
         {!link ? (

@@ -45,14 +45,18 @@ BEGIN
 
   -- Get messages: service_role gets all (including cached system prompt);
   -- patient gets all except the first system-role message (the cached prompt)
+  -- Tie-breaker on id is required: the system prompt and greeting are inserted in the
+  -- same SQL function call and often share a microsecond-identical timestamp. Without
+  -- the tie-breaker, ordering can flip and ai-conversation would receive the greeting
+  -- as the cached system prompt, dropping the actual rules entirely.
   IF v_is_service_role THEN
-    SELECT COALESCE(jsonb_agg(row_to_json(m) ORDER BY m.created_at ASC), '[]'::jsonb)
+    SELECT COALESCE(jsonb_agg(row_to_json(m) ORDER BY m.created_at ASC, m.id ASC), '[]'::jsonb)
     INTO v_messages
     FROM (
       SELECT vm.id, vm.role, vm.content, vm.content_original, vm.created_at
       FROM public.visit_messages vm
       WHERE vm.visit_id = p_visit_id
-      ORDER BY vm.created_at ASC
+      ORDER BY vm.created_at ASC, vm.id ASC
       LIMIT 500
     ) m;
   ELSE

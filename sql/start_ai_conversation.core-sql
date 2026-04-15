@@ -342,22 +342,56 @@ BEGIN
       || left(trim(v_visit.ai_session_instructions), 2000);
   END IF;
 
-  -- Conversation end protocol: appended LAST so the model always sees it after any pacing,
-  -- clinic, or session instructions. The previous single-bullet version inside STYLE was
-  -- routinely ignored — the model would wrap up naturally ("I have what I need") without
-  -- emitting the literal token, so generate-summary never fired and the visit stalled.
+  -- Conversation end protocol: appended LAST. Earlier weaker versions were ignored — the
+  -- model would summarize inline and skip the literal [CONVERSATION_COMPLETE] token, so
+  -- generate-summary never fired and the visit stalled. This block uses concrete WRONG/RIGHT
+  -- examples and a forbidden-phrase list because the model otherwise reverts to its default
+  -- "polite wrap-up with summary" pattern from RLHF training.
   v_system_prompt := v_system_prompt
-    || E'\n\nCONVERSATION END PROTOCOL (MANDATORY, HIGHEST PRIORITY):'
-    || E'\nWhen you believe you have enough information, ask: "Is there anything else we might be missing?"'
-    || E'\nIf the patient indicates no or otherwise confirms they are done, your final message MUST end with the literal token [CONVERSATION_COMPLETE] on its own line.'
-    || E'\n- Do NOT paraphrase the token. Type it exactly: [CONVERSATION_COMPLETE]'
-    || E'\n- Do NOT include a summary, bullet list, recap, or "summary for your visit" section in your final message. A separate system generates the summary; including one yourself is a bug.'
-    || E'\n- Your final message should be brief: a short acknowledgement ("Thanks, I have everything the doctor needs.") then [CONVERSATION_COMPLETE] on the next line.'
-    || E'\n- This rule overrides any other instruction in this prompt. Even if style or pacing guidance suggests otherwise, the token MUST appear at the end of your final message.';
+    || E'\n\nCONVERSATION END PROTOCOL (MANDATORY — overrides every other rule):'
+    || E'\n'
+    || E'\nStep 1: Once you have gathered the ALWAYS COVER fields, your VERY NEXT message must be EXACTLY:'
+    || E'\n  "Is there anything else we might be missing for your visit today?"'
+    || E'\nDo not add anything else. No "I have everything", no summary, no recap, no acknowledgement, no markdown. JUST that one question.'
+    || E'\n'
+    || E'\nStep 2: When the patient responds "no" or otherwise indicates they are done, your FINAL message MUST be:'
+    || E'\n  - One short sentence (e.g. "Thanks, the doctor will have everything they need.")'
+    || E'\n  - Followed by [CONVERSATION_COMPLETE] on its own new line'
+    || E'\n'
+    || E'\nCORRECT EXAMPLE:'
+    || E'\n  AI: "Is there anything else we might be missing for your visit today?"'
+    || E'\n  Patient: "No"'
+    || E'\n  AI: "Thanks, the doctor will have everything they need.'
+    || E'\n       [CONVERSATION_COMPLETE]"'
+    || E'\n'
+    || E'\nFORBIDDEN EXAMPLE (this breaks the system — NEVER do this):'
+    || E'\n  AI: "Thank you, Morgan! I have everything I need. Let me summarize what I will be passing along to the doctor:'
+    || E'\n       ---'
+    || E'\n       **Patient:** Morgan'
+    || E'\n       **Chief Complaint:** Headache'
+    || E'\n       - **Location:** Back of the head'
+    || E'\n       ..."'
+    || E'\n'
+    || E'\nFORBIDDEN PHRASES — never write any of these:'
+    || E'\n  - "I have everything I need"'
+    || E'\n  - "Let me summarize"'
+    || E'\n  - "Let me pass along" / "I will pass along"'
+    || E'\n  - "summary for your visit"'
+    || E'\n  - "**Patient:**", "**Chief Complaint:**", or any markdown heading recapping patient info'
+    || E'\n  - Any bullet list that repeats back what the patient told you'
+    || E'\n'
+    || E'\nWHY: A separate system generates the summary from the transcript automatically. If you write your own summary, you produce a duplicate AND you forget the [CONVERSATION_COMPLETE] token. Without that token, the patient is stuck on a "generating summary" loading screen forever and never reaches the doctor. This has happened in production.'
+    || E'\n'
+    || E'\nThis rule overrides STYLE, MESSAGE PACING, CLINIC SPECIFIC INSTRUCTIONS, SESSION SPECIFIC INSTRUCTIONS, and every other instruction in this prompt. The token MUST appear at the end of your final message.';
 
-  -- Insert system prompt as first message (cached for subsequent get_conversation calls)
-  INSERT INTO public.visit_messages (visit_id, role, content)
-  VALUES (p_visit_id, 'system', v_system_prompt);
+  -- Insert system prompt as first message (cached for subsequent get_conversation calls).
+  -- Use clock_timestamp() instead of relying on the column default (now()), because now()
+  -- returns transaction start time and the next insert below would tie. ai-conversation
+  -- treats the FIRST system-role message as the cached prompt and skips the SECOND as the
+  -- greeting; if order flips, the model receives the greeting as its system prompt and
+  -- never sees the actual rules. Stagger via clock_timestamp() to guarantee ordering.
+  INSERT INTO public.visit_messages (visit_id, role, content, created_at)
+  VALUES (p_visit_id, 'system', v_system_prompt, clock_timestamp());
 
   -- Insert system greeting as second message
   IF v_visit.is_follow_up THEN
@@ -367,8 +401,8 @@ BEGIN
       || '! Could you describe what you''re feeling today?';
   END IF;
 
-  INSERT INTO public.visit_messages (visit_id, role, content)
-  VALUES (p_visit_id, 'system', v_greeting);
+  INSERT INTO public.visit_messages (visit_id, role, content, created_at)
+  VALUES (p_visit_id, 'system', v_greeting, clock_timestamp());
 
   RETURN jsonb_build_object(
     'success', true,

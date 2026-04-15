@@ -523,7 +523,7 @@ export default function ReceptionistDashboard({
       />
 
       <div className="px-4 py-4 lg:px-6">
-        <NotificationPermission />
+        {!demoMode && <NotificationPermission />}
 
         {locationId && !demoMode && <StaleSessionAlert locationId={locationId} />}
 
@@ -558,7 +558,7 @@ export default function ReceptionistDashboard({
           </div>
           <div>
             <p className="text-sm font-medium text-hilt-blue">Share Check-in Link</p>
-            <p className="text-xs text-slate">Send a patient a link to start intake from home</p>
+            <p className="text-xs text-slate">Custom check in configuration for a specific patient</p>
           </div>
         </button>
 

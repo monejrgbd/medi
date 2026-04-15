@@ -64,6 +64,7 @@ export default function OnboardingWizard({
   // Step 1 state
   const [locationName, setLocationName] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [presetRoomsText, setPresetRoomsText] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -194,10 +195,15 @@ export default function OnboardingWizard({
     }
     setCreating(true);
     setCreateError("");
+    const presetRooms = presetRoomsText
+      .split(/\r?\n/)
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0 && r.length <= 60);
     const result = await createLocation({
       orgId: org.id,
       name: locationName.trim(),
       specialty: specialty || undefined,
+      presetRooms,
     });
     setCreating(false);
     if (result.success && result.locationId) {
@@ -207,7 +213,7 @@ export default function OnboardingWizard({
     } else {
       setCreateError(result.error || "Failed to create location");
     }
-  }, [locationName, specialty, org.id]);
+  }, [locationName, specialty, presetRoomsText, org.id]);
 
   const handleSaveRaven = useCallback(async () => {
     if (!ravenApiKey.trim()) return;
@@ -427,6 +433,21 @@ export default function OnboardingWizard({
                     placeholder="Search specialties..."
                     emptyLabel="Select a specialty"
                   />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-ink">
+                    Exam rooms{" "}
+                    <span className="font-normal text-ash">(optional)</span>
+                  </label>
+                  <textarea
+                    value={presetRoomsText}
+                    onChange={(e) => setPresetRoomsText(e.target.value)}
+                    rows={3}
+                    placeholder={"Room 1\nRoom 2\nExam A"}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+                  />
+                  <p className="mt-1 text-xs text-ash">One room per line. Doctors and nurses pick from this list at check in. Leave blank to let them type their room.</p>
                 </div>
 
                 {createError && (

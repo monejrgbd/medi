@@ -6,6 +6,26 @@ import { updateLocation } from "@/app/(dashboard)/d/_actions/locations";
 import { createClient } from "@/lib/supabase/client";
 import { QUEUE_TYPES } from "@/lib/constants";
 
+type CheckinMode = "approve_to_start" | "approve_on_arrival" | "self_service_on_arrival";
+
+const CHECKIN_MODE_OPTIONS: { value: CheckinMode; label: string; description: string }[] = [
+  {
+    value: "approve_to_start",
+    label: "Approve before chat",
+    description: "Receptionist approves before the AI chat starts. Queue order uses chat completion.",
+  },
+  {
+    value: "approve_on_arrival",
+    label: "Approve on arrival",
+    description: "Patient chats anywhere, taps I Have Arrived on-site, receptionist approves into the queue. Queue order uses arrival time.",
+  },
+  {
+    value: "self_service_on_arrival",
+    label: "Self service on arrival",
+    description: "Patient chats anywhere, taps I Have Arrived on-site and enters the queue automatically. Queue order uses arrival time.",
+  },
+];
+
 interface ClinicFeaturesStepProps {
   locationId: string;
   hasRaven?: boolean;
@@ -32,6 +52,7 @@ export default function ClinicFeaturesStep({
   const [askReferralSource, setAskReferralSource] = useState(false);
   const [askDiscoverySource, setAskDiscoverySource] = useState(false);
   const [queueType, setQueueType] = useState("fifo");
+  const [checkinMode, setCheckinMode] = useState<CheckinMode>("approve_to_start");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,6 +69,7 @@ export default function ClinicFeaturesStep({
         setAskReferralSource(loc.ask_referral_source ?? false);
         setAskDiscoverySource(loc.ask_discovery_source ?? false);
         setQueueType(loc.queue_type ?? "fifo");
+        setCheckinMode((loc.checkin_mode ?? "approve_to_start") as CheckinMode);
       }
       setLoaded(true);
     });
@@ -64,6 +86,7 @@ export default function ClinicFeaturesStep({
       reviewSmsEnabled: true,
       diagnosticEnabled: true,
       queueType,
+      checkinMode,
     });
     setSaving(false);
     onComplete({ nurse: false, skipAi: false, reviewSms: true, diagnostic: true });
@@ -83,6 +106,7 @@ export default function ClinicFeaturesStep({
         askReferralSource,
         askDiscoverySource,
         queueType,
+        checkinMode,
       });
 
       if (!result.success) {
@@ -119,6 +143,38 @@ export default function ClinicFeaturesStep({
       <p className="text-sm text-slate mb-4 text-center">
         Set your queue type and enable the features your workflow needs. You can change these later.
       </p>
+
+      {/* Check-in Flow */}
+      <div className="mb-5">
+        <h3 className="text-sm font-semibold text-ink mb-2">Check-in Flow</h3>
+        <div className="space-y-1.5">
+          {CHECKIN_MODE_OPTIONS.map((opt) => {
+            const isSelected = checkinMode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setCheckinMode(opt.value)}
+                className={`w-full rounded-xl border p-2.5 text-left transition-colors ${
+                  isSelected
+                    ? "border-hilt-blue bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-ink">{opt.label}</span>
+                  <div className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                    isSelected ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"
+                  }`}>
+                    {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+                <p className="text-xs mt-0.5 text-slate">{opt.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Queue Type */}
       <div className="mb-5">

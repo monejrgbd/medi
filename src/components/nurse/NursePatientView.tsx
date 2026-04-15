@@ -212,14 +212,6 @@ export default function NursePatientView({
           </div>
         )}
 
-        {/* AI Summary quick look */}
-        {!visit.ai_skipped && visit.ai_summary && (
-          <div className="mt-4 rounded-lg border border-teal-100 bg-teal-50 p-4">
-            <h3 className="text-sm font-semibold text-teal-800 mb-1">AI Summary</h3>
-            <p className="text-sm text-teal-900 whitespace-pre-wrap line-clamp-4">{visit.ai_summary}</p>
-          </div>
-        )}
-
         {/* Transcript toggle (hidden when AI skipped) */}
         {!visit.ai_skipped && <button
           onClick={() => setTranscriptOpen(!transcriptOpen)}

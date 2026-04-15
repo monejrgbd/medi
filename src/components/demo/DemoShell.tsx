@@ -9,7 +9,7 @@ import DemoTabBar, { type Tab, type TabDef } from "@/components/demo/DemoTabBar"
 import DemoTimeline from "@/components/demo/DemoTimeline";
 import DemoComplete from "@/components/demo/DemoComplete";
 import DemoFAQ from "@/components/demo/DemoFAQ";
-import { DemoIntroCard, DemoGearButton } from "@/components/demo/DemoCustomizePanel";
+import { DemoIntroCard } from "@/components/demo/DemoCustomizePanel";
 import { setVisitDemoFeatures } from "@/app/demo/_actions/demo-features";
 import { skipAiToQueue } from "@/app/(dashboard)/d/_actions/receptionist";
 import NurseDashboard from "@/app/(dashboard)/d/nurse/NurseDashboard";
@@ -757,6 +757,7 @@ function DemoShellInner({
             demoMode={true}
             demoVisitId={demoVisitId}
             nurseEnabled={features.nurseEnabled}
+            currentRoom="Room C"
           />
         </div>
 
@@ -864,8 +865,6 @@ function DemoShellInner({
         </div>
       </div>
 
-      {/* Gear button for feature customization */}
-      <DemoGearButton />
     </div>
   );
 }

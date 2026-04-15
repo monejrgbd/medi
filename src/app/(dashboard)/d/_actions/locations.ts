@@ -17,12 +17,21 @@ export async function createLocation(formData: {
   diagnosticEnabled?: boolean;
   queueType?: string;
   ravenApiKey?: string;
+  presetRooms?: string[];
 }) {
   await requireAuth();
   const name = stripHtml(formData.name).slice(0, 100);
   if (!name) {
     return { success: false, error: "Location name is required" };
   }
+
+  const sanitizedPresetRooms = Array.from(
+    new Set(
+      (formData.presetRooms ?? [])
+        .map((r) => r.trim())
+        .filter((r) => r.length > 0 && r.length <= 60)
+    )
+  );
 
   const supabase = await createClient();
 
@@ -38,6 +47,7 @@ export async function createLocation(formData: {
     p_diagnostic_enabled: formData.diagnosticEnabled ?? true,
     p_queue_type: formData.queueType ?? "fifo",
     p_raven_api_key: formData.ravenApiKey || null,
+    p_preset_rooms: sanitizedPresetRooms,
   });
 
   if (error) return { success: false, error: "Failed to create location" };
@@ -107,7 +117,15 @@ export async function updateLocation(formData: {
   if (formData.askDiscoverySource !== undefined) params.p_ask_discovery_source = formData.askDiscoverySource;
   if (formData.queueDisplayEnabled !== undefined) params.p_queue_display_enabled = formData.queueDisplayEnabled;
   if (formData.showDoctorRoomToPatients !== undefined) params.p_show_doctor_room_to_patients = formData.showDoctorRoomToPatients;
-  if (formData.presetRooms !== undefined) params.p_preset_rooms = formData.presetRooms;
+  if (formData.presetRooms !== undefined) {
+    params.p_preset_rooms = Array.from(
+      new Set(
+        formData.presetRooms
+          .map((r) => r.trim())
+          .filter((r) => r.length > 0 && r.length <= 60)
+      )
+    );
+  }
   if (formData.checkinMode !== undefined) params.p_checkin_mode = formData.checkinMode;
 
   const { data, error } = await supabase.rpc("update_location", params);

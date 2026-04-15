@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const SUPABASE_HOST = "https://sdzeoeturtpkqlagobwj.supabase.co";
 const SUPABASE_WSS = "wss://sdzeoeturtpkqlagobwj.supabase.co";
 const PAYPAL_HOSTS = "https://www.paypal.com https://www.sandbox.paypal.com";
-const GOOGLE_HOSTS = "https://google.com https://*.google.com https://google.ca https://*.google.ca https://googletagmanager.com https://*.googletagmanager.com https://google-analytics.com https://*.google-analytics.com https://doubleclick.net https://*.doubleclick.net https://*.googleapis.com";
+const GOOGLE_HOSTS = "https://google.com https://*.google.com https://google.ca https://*.google.ca https://googletagmanager.com https://*.googletagmanager.com https://google-analytics.com https://*.google-analytics.com https://doubleclick.net https://*.doubleclick.net https://*.googleapis.com https://googleadservices.com https://*.googleadservices.com https://googlesyndication.com https://*.googlesyndication.com";
 
 const cspBase = [
   "default-src 'self'",

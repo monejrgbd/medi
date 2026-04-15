@@ -1,7 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { Settings, X } from "lucide-react";
 import { useDemoFeatures, type DemoFeatures } from "@/contexts/DemoFeatureContext";
 
 const TOGGLES: { key: keyof DemoFeatures; label: string; desc: string; inverted?: boolean }[] = [
@@ -85,52 +83,3 @@ export function DemoIntroCard() {
   );
 }
 
-/** Gear button + slide out panel shown during the demo. */
-export function DemoGearButton() {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <>
-      {/* Gear button */}
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white border border-gray-200 shadow-lg hover:bg-gray-50 transition-colors"
-        aria-label="Customize demo features"
-      >
-        <Settings className="h-5 w-5 text-slate" />
-      </button>
-
-      {/* Backdrop */}
-      {open && (
-        <div
-          className="fixed inset-0 z-50 bg-black/20"
-          onClick={() => setOpen(false)}
-        />
-      )}
-
-      {/* Slide out panel */}
-      <div
-        className={`fixed top-0 left-0 z-50 h-full w-80 max-w-[90vw] bg-white shadow-2xl border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${
-          open ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3">
-          <h3 className="text-sm font-semibold text-ink">Demo Features</h3>
-          <button
-            onClick={() => setOpen(false)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Close panel"
-          >
-            <X className="h-4 w-4 text-slate" />
-          </button>
-        </div>
-        <div className="p-4 overflow-y-auto h-[calc(100%-52px)]">
-          <ToggleList />
-          <p className="mt-6 text-xs text-ash text-center">
-            Changes apply immediately. Some features only affect new visits.
-          </p>
-        </div>
-      </div>
-    </>
-  );
-}

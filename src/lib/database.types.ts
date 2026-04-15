@@ -3405,6 +3405,7 @@ export type Database = {
           p_nurse_enabled?: boolean
           p_operating_hours?: Json
           p_org_id: string
+          p_preset_rooms?: string[]
           p_queue_type?: string
           p_raven_api_key?: string
           p_review_sms_enabled?: boolean

@@ -279,14 +279,27 @@ Deno.serve(async (req) => {
         if (systemMessageIndex === 0) {
           // First system message is the cached prompt
           systemPrompt = msg.content;
-        } else if (systemMessageIndex >= 2) {
+        } else if (systemMessageIndex === 1) {
+          // Greeting already shown to the patient via SystemGreeting.tsx. Replay it
+          // as a prior assistant turn so the model knows it already greeted and
+          // continues the conversation instead of greeting again on the first reply.
+          // Strip the patient first name so Claude does not learn PII (the system
+          // prompt declares "you do NOT know the patient's name"). Greeting formats
+          // are owned by start_ai_conversation.core-sql.
+          const sanitizedGreeting = msg.content
+            .replace(/^Hello [^,]+,/, "Hello,")
+            .replace(/^Welcome back, [^!]+!/, "Welcome back!");
+          claudeMessages.push({
+            role: "assistant",
+            content: sanitizedGreeting,
+          });
+        } else {
           // System hints (e.g. rejection continuation) — send as user message so AI sees them
           claudeMessages.push({
             role: "user",
             content: `<system_instruction>${msg.content}</system_instruction>`,
           });
         }
-        // systemMessageIndex === 1 is the greeting — skip from Claude messages
         systemMessageIndex++;
         continue;
       }
@@ -452,74 +465,40 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Conversation complete — trigger summary generation or move to queue
+        // Conversation complete — trigger summary generation. Status stays
+        // 'still_answering_ai' until the patient approves on the summary review screen
+        // (Rule A: patient gates the queue in BOTH nurse-enabled and non-nurse flows).
+        // For nurse-enabled locations, the diagnostic is deferred until nurse_release_to_doctor
+        // (Rule B) — pass mode=summary_only so generate-summary skips the diagnostic block.
         if (hasCompletion) {
           await writer.write(
             encoder.encode(`data: ${JSON.stringify({ type: "conversation_complete" })}\n\n`)
           );
 
           const nurseEnabled = locationRow?.nurse_enabled === true;
-
-          if (nurseEnabled) {
-            // Nurse triage enabled: skip summary generation, move patient straight to queue.
-            // Summary will be generated when the doctor claims (includes nurse notes + vitals).
-            // Direct update instead of move_to_queue_on_error (which sets timeout_flagged = true).
-            try {
-              await supabase
-                .from("visits")
-                .update({
-                  status: "waiting_doctor_claim",
-                  ai_completed_at: new Date().toISOString(),
-                  entered_queue_at: new Date().toISOString(),
-                })
-                .eq("id", visit_id)
-                .eq("status", "still_answering_ai");
-
-              // Broadcast status change so patient's CheckinFlow updates immediately
-              const broadcastUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/broadcast-visit-update";
-              fetch(broadcastUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                  "x-internal-secret": INTERNAL_SECRET!,
-                },
-                body: JSON.stringify({
-                  visit_id,
-                  session_token,
-                  old_status: "still_answering_ai",
-                  new_status: "waiting_doctor_claim",
-                  timeout_flagged: false,
-                }),
-              }).catch(() => { /* best effort */ });
-            } catch (err) {
-              console.error("Failed to move nurse-enabled visit to queue:", err);
+          const summaryMode = nurseEnabled ? "summary_only" : "full";
+          const edgeFunctionUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/generate-summary";
+          try {
+            const summaryRes = await fetch(edgeFunctionUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                "x-internal-secret": INTERNAL_SECRET!,
+              },
+              body: JSON.stringify({ visit_id, mode: summaryMode }),
+            });
+            if (!summaryRes.ok) {
+              console.error("generate-summary returned error:", summaryRes.status);
             }
-          } else {
-            // No nurse: generate summary immediately for efficiency
-            const edgeFunctionUrl = Deno.env.get("SUPABASE_URL") + "/functions/v1/generate-summary";
+          } catch (summaryErr) {
+            console.error("generate-summary invoke error:", summaryErr);
             try {
-              const summaryRes = await fetch(edgeFunctionUrl, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-                  "x-internal-secret": INTERNAL_SECRET!,
-                },
-                body: JSON.stringify({ visit_id }),
+              await supabase.rpc("move_to_queue_on_error", {
+                p_visit_id: visit_id,
+                p_session_token: session_token,
               });
-              if (!summaryRes.ok) {
-                console.error("generate-summary returned error:", summaryRes.status);
-              }
-            } catch (summaryErr) {
-              console.error("generate-summary invoke error:", summaryErr);
-              try {
-                await supabase.rpc("move_to_queue_on_error", {
-                  p_visit_id: visit_id,
-                  p_session_token: session_token,
-                });
-              } catch { /* best effort */ }
-            }
+            } catch { /* best effort */ }
           }
         }
       } catch (err) {

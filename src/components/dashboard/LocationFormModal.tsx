@@ -22,6 +22,7 @@ export default function LocationFormModal({
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [specialty, setSpecialty] = useState("");
+  const [presetRoomsText, setPresetRoomsText] = useState("");
 
   // Step 2 feature toggles
   const [nurseEnabled, setNurseEnabled] = useState(false);
@@ -38,7 +39,7 @@ export default function LocationFormModal({
   }
 
   function handleClose() {
-    setName(""); setAddress(""); setSpecialty("");
+    setName(""); setAddress(""); setSpecialty(""); setPresetRoomsText("");
     setNurseEnabled(false);
     setSkipAi(false); setReviewSmsEnabled(true); setDiagnosticEnabled(true);
     setStep(1); setError("");
@@ -49,6 +50,11 @@ export default function LocationFormModal({
     setLoading(true);
     setError("");
 
+    const presetRooms = presetRoomsText
+      .split(/\r?\n/)
+      .map((r) => r.trim())
+      .filter((r) => r.length > 0 && r.length <= 60);
+
     const result = await createLocation({
       orgId: org.id,
       name,
@@ -58,6 +64,7 @@ export default function LocationFormModal({
       skipAi,
       reviewSmsEnabled,
       diagnosticEnabled,
+      presetRooms,
     });
 
     setLoading(false);
@@ -133,6 +140,20 @@ export default function LocationFormModal({
                 placeholder="Search specialties..."
                 emptyLabel="Select specialty..."
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-ink mb-1">
+                Exam rooms <span className="font-normal text-ash">(optional)</span>
+              </label>
+              <textarea
+                value={presetRoomsText}
+                onChange={(e) => setPresetRoomsText(e.target.value)}
+                rows={3}
+                placeholder={"Room 1\nRoom 2\nExam A"}
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+              />
+              <p className="text-xs text-ash mt-1">One room per line. When filled in, doctors and nurses pick from this list at check in instead of typing. Leave blank to let staff type their room.</p>
             </div>
 
             <div className="flex gap-3 justify-end pt-2">
