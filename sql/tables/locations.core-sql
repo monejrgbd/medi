@@ -27,11 +27,26 @@ CREATE TABLE public.locations (
   ask_referral_source   boolean DEFAULT false,
   ask_discovery_source  boolean DEFAULT false,
   queue_display_enabled boolean DEFAULT false,
+  show_doctor_room_to_patients boolean NOT NULL DEFAULT true,
+  preset_rooms          text[] NOT NULL DEFAULT '{}',
   queue_type            text NOT NULL DEFAULT 'fifo'
     CHECK (queue_type IN ('fifo', 'priority', 'appointment_priority', 'appointment_fifo', 'critical_appointment_fifo')),
+  checkin_mode          text NOT NULL DEFAULT 'approve_to_start'
+    CHECK (checkin_mode IN ('approve_to_start', 'approve_on_arrival', 'self_service_on_arrival')),
   raven_api_key         text DEFAULT NULL,
   created_at            timestamptz DEFAULT now()
 );
+
+-- TV display columns (lobby video playlist feature)
+ALTER TABLE public.locations
+  ADD COLUMN IF NOT EXISTS tv_display_mode text NOT NULL DEFAULT 'none'
+    CHECK (tv_display_mode IN ('none','alternating','batched')),
+  ADD COLUMN IF NOT EXISTS tv_overlay_position text NOT NULL DEFAULT 'top-left'
+    CHECK (tv_overlay_position IN ('top-left','top-right')),
+  ADD COLUMN IF NOT EXISTS tv_overlay_visible boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS tv_queue_duration_seconds int NOT NULL DEFAULT 10
+    CHECK (tv_queue_duration_seconds BETWEEN 3 AND 60),
+  ADD COLUMN IF NOT EXISTS tv_audio_muted boolean NOT NULL DEFAULT true;
 
 ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
 

@@ -23,12 +23,14 @@ BEGIN
          v.priority, v.location_id, v.phone_verification_pending,
          v.pending_phone, v.queue_number,
          v.entered_queue_at, v.patient_denied, v.patient_id,
+         v.staff_room, v.checkin_mode, v.arrived_at,
          p.first_name AS patient_first_name, p.language, p.consent_given,
          p.birthday AS patient_birthday,
          p.sex,
          p.phone_verified AS patient_phone_verified,
          (p.phone IS NOT NULL) AS patient_has_phone,
-         l.name AS location_name, l.estimated_wait_minutes
+         l.name AS location_name, l.estimated_wait_minutes,
+         l.show_doctor_room_to_patients
   INTO v_visit
   FROM public.visits v
   JOIN public.patients p ON p.id = v.patient_id
@@ -107,7 +109,10 @@ BEGIN
     'medications', v_meds,
     'allergies', v_allergies,
     'chronic_conditions', v_chronic,
-    'pets', v_pets
+    'pets', v_pets,
+    'staff_room', CASE WHEN v_visit.show_doctor_room_to_patients THEN v_visit.staff_room ELSE NULL END,
+    'checkin_mode', v_visit.checkin_mode,
+    'arrived_at', v_visit.arrived_at
   );
 END;
 $$;

@@ -11,12 +11,14 @@ SET search_path TO ''
 AS $$
 DECLARE
   v_visit record;
+  v_new_status text;
+  v_new_entered_queue_at timestamptz;
   v_edge_url text;
   v_edge_secret text;
   v_anon_key text;
 BEGIN
   -- Verify session token
-  SELECT id, status, session_token, org_id
+  SELECT id, status, session_token, org_id, checkin_mode, entered_queue_at
   INTO v_visit
   FROM public.visits
   WHERE id = p_visit_id;
@@ -33,17 +35,29 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Visit is not in AI conversation state');
   END IF;
 
-  -- Move to queue
+  -- Route timeout target based on check-in mode:
+  --   approve_to_start -> queue directly (current behavior)
+  --   approve_on_arrival / self_service_on_arrival -> arrival gate so patient
+  --     still has to confirm physical arrival before being seen
+  IF v_visit.checkin_mode = 'approve_to_start' THEN
+    v_new_status := 'waiting_doctor_claim';
+    v_new_entered_queue_at := now();
+  ELSE
+    v_new_status := 'awaiting_arrival';
+    v_new_entered_queue_at := v_visit.entered_queue_at;
+  END IF;
+
   UPDATE public.visits
-  SET status = 'waiting_doctor_claim',
+  SET status = v_new_status,
       timeout_flagged = true,
-      entered_queue_at = now()
+      entered_queue_at = v_new_entered_queue_at,
+      updated_at = now()
   WHERE id = p_visit_id;
 
   -- Audit trail
   INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, details)
   VALUES (v_visit.org_id, NULL, 'system', 'ai_error',
-    jsonb_build_object('visit_id', p_visit_id));
+    jsonb_build_object('visit_id', p_visit_id, 'target_status', v_new_status));
 
   -- Broadcast status change
   SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
@@ -62,7 +76,7 @@ BEGIN
         'visit_id', p_visit_id,
         'session_token', p_session_token,
         'old_status', 'still_answering_ai',
-        'new_status', 'waiting_doctor_claim',
+        'new_status', v_new_status,
         'timeout_flagged', true
       )
     );

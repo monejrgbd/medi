@@ -78,11 +78,14 @@ BEGIN
   PERFORM set_config('app.audit_actor_type', 'nurse', true);
   PERFORM set_config('app.audit_action', 'nurse_released', true);
 
-  -- Release to doctor queue: keep entered_queue_at unchanged for fair re-entry
+  -- Release to doctor queue: keep entered_queue_at unchanged for fair re-entry.
+  -- Clear staff_room so the nurse's room does not linger once the patient
+  -- is back in the unclaimed queue waiting for a doctor.
   UPDATE public.visits
   SET status = 'waiting_doctor_claim',
       claimed_by = NULL,
       claimed_at = NULL,
+      staff_room = NULL,
       nurse_reviewed = true,
       nurse_notes = v_clean_notes
   WHERE id = p_visit_id;

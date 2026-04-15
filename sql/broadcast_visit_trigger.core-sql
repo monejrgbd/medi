@@ -35,7 +35,8 @@ BEGIN
         'old_status', OLD.status,
         'new_status', NEW.status,
         'location_id', NEW.location_id,
-        'timeout_flagged', NEW.timeout_flagged
+        'timeout_flagged', NEW.timeout_flagged,
+        'staff_room', NEW.staff_room
       )
     );
   END IF;
@@ -44,10 +45,15 @@ BEGIN
 END;
 $$;
 
--- Trigger: fires on status column update (after audit trigger)
+-- Trigger: fires when status OR staff_room changes so the patient claimed
+-- screen gets the room in the same broadcast that transitions state, and
+-- mid-shift room edits propagate without waiting for the 5s poll fallback.
 DROP TRIGGER IF EXISTS trg_visit_broadcast ON public.visits;
 CREATE TRIGGER trg_visit_broadcast
-  AFTER UPDATE OF status ON public.visits
+  AFTER UPDATE OF status, staff_room ON public.visits
   FOR EACH ROW
-  WHEN (OLD.status IS DISTINCT FROM NEW.status)
+  WHEN (
+    OLD.status IS DISTINCT FROM NEW.status
+    OR OLD.staff_room IS DISTINCT FROM NEW.staff_room
+  )
   EXECUTE FUNCTION private.notify_visit_status_change();

@@ -5,6 +5,30 @@ import { generateCheckinLink } from "@/app/(dashboard)/d/_actions/checkin-link";
 import { toast } from "sonner";
 
 type AiConfig = "standard" | "skip" | "premium";
+type CheckinModeSelection =
+  | "location_default"
+  | "approve_to_start"
+  | "approve_on_arrival"
+  | "self_service_on_arrival";
+
+const CHECKIN_MODE_LABELS: Record<CheckinModeSelection, { label: string; hint: string }> = {
+  location_default: {
+    label: "Use location default",
+    hint: "Follow whatever the location is configured for.",
+  },
+  approve_to_start: {
+    label: "Approve before chat",
+    hint: "Receptionist must approve the patient in person before the AI chat starts.",
+  },
+  approve_on_arrival: {
+    label: "Approve on arrival",
+    hint: "Patient can chat from anywhere, then taps I Have Arrived for a receptionist to approve into the queue.",
+  },
+  self_service_on_arrival: {
+    label: "Self-service on arrival",
+    hint: "Patient chats from anywhere and enters the queue by tapping I Have Arrived. No receptionist step.",
+  },
+};
 
 interface ShareCheckinLinkProps {
   locationId: string;
@@ -22,6 +46,7 @@ export default function ShareCheckinLink({
   const [aiConfig, setAiConfig] = useState<AiConfig>("standard");
   const [nameMatchMode, setNameMatchMode] = useState<"name" | "none">("name");
   const [aiInstructions, setAiInstructions] = useState("");
+  const [checkinMode, setCheckinMode] = useState<CheckinModeSelection>("location_default");
   const [link, setLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +76,8 @@ export default function ShareCheckinLink({
         aiConfig === "premium" ? "premium" : null,
         aiConfig === "skip",
         aiInstructions.trim() || null,
-        nameMatchMode
+        nameMatchMode,
+        checkinMode === "location_default" ? null : checkinMode
       );
       if (result.success && result.link) {
         setLink(result.link);
@@ -187,6 +213,25 @@ export default function ShareCheckinLink({
                 </div>
               </div>
 
+              {/* Check-in Mode */}
+              <div>
+                <label className="text-xs font-medium text-slate mb-1.5 block">
+                  Check-in Flow
+                </label>
+                <select
+                  value={checkinMode}
+                  onChange={(e) => setCheckinMode(e.target.value as CheckinModeSelection)}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink focus:border-hilt-blue focus:outline-none"
+                >
+                  {(Object.keys(CHECKIN_MODE_LABELS) as CheckinModeSelection[]).map((k) => (
+                    <option key={k} value={k}>
+                      {CHECKIN_MODE_LABELS[k].label}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[10px] text-ash">{CHECKIN_MODE_LABELS[checkinMode].hint}</p>
+              </div>
+
               {/* Session Instructions */}
               {aiConfig !== "skip" && (
                 <div>
@@ -245,6 +290,9 @@ export default function ShareCheckinLink({
                 {aiConfig === "premium" && <span className="ml-1 text-purple-700">(Premium AI)</span>}
                 {aiConfig === "skip" && <span className="ml-1 text-gray-600">(No AI)</span>}
                 {aiInstructions.trim() && <span className="ml-1 text-amber-700">(Session instructions)</span>}
+                {checkinMode !== "location_default" && (
+                  <span className="ml-1 text-blue-700">({CHECKIN_MODE_LABELS[checkinMode].label})</span>
+                )}
               </p>
               <div className="rounded-md bg-white border border-gray-200 px-3 py-2 text-xs text-ink break-all font-mono">
                 {link}

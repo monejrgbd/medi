@@ -1,0 +1,72 @@
+-- reorder_location_videos: owner reorders the playlist. All ids must belong to the given location.
+
+CREATE OR REPLACE FUNCTION private.reorder_location_videos(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_video_ids uuid[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_count_in_loc int;
+  i int;
+BEGIN
+  SELECT l.org_id INTO v_org_id FROM public.locations l WHERE l.id = p_location_id;
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found.');
+  END IF;
+
+  SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_org_id;
+  IF p_caller_auth_uid IS NULL OR p_caller_auth_uid <> v_owner_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only the owner can manage TV videos.');
+  END IF;
+
+  -- All given ids must belong to this location
+  SELECT count(*) INTO v_count_in_loc
+  FROM public.location_videos
+  WHERE location_id = p_location_id
+    AND id = ANY(p_video_ids);
+
+  IF v_count_in_loc <> array_length(p_video_ids, 1) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'One or more videos do not belong to this location.');
+  END IF;
+
+  FOR i IN 1..array_length(p_video_ids, 1) LOOP
+    UPDATE public.location_videos
+       SET sort_order = i - 1
+     WHERE id = p_video_ids[i];
+  END LOOP;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.reorder_location_videos(
+  p_location_id uuid,
+  p_video_ids uuid[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.reorder_location_videos(v_auth_uid, p_location_id, p_video_ids);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.reorder_location_videos(uuid, uuid[]) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.reorder_location_videos(uuid, uuid[]) TO authenticated;

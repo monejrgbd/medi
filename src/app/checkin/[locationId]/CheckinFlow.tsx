@@ -12,6 +12,7 @@ import ChatInterface from "@/components/patient/ChatInterface";
 import SummaryReview from "@/components/patient/SummaryReview";
 import CreditWarning from "@/components/patient/CreditWarning";
 import PatientQueueView from "@/components/patient/PatientQueueView";
+import ArrivalConfirmScreen from "@/components/patient/ArrivalConfirmScreen";
 import DoctorClaimedNotice from "@/components/patient/DoctorClaimedNotice";
 import PhoneVerification from "@/components/patient/PhoneVerification";
 import PatientLeftScreen from "@/components/patient/PatientLeftScreen";
@@ -37,6 +38,7 @@ type FlowState =
   | "chatting"
   | "generating_summary"
   | "summary_review"
+  | "awaiting_arrival"
   | "queued"
   | "claimed"
   | "timeout"
@@ -123,6 +125,7 @@ export default function CheckinFlow({
   const [queuePosition, setQueuePosition] = useState<number | null>(null);
   const [estimatedWait, setEstimatedWait] = useState<number | null>(null);
   const [queueNumber, setQueueNumber] = useState<number | null>(null);
+  const [staffRoom, setStaffRoom] = useState<string | null>(null);
 
   // Phone verification state
   const [patientPhone, setPatientPhone] = useState<string | null>(null);
@@ -296,12 +299,16 @@ export default function CheckinFlow({
                 setState("chatting");
               }
               break;
+            case "awaiting_arrival":
+              setState("awaiting_arrival");
+              break;
             case "waiting_doctor_claim":
               if (session.queue_position !== undefined) setQueuePosition(session.queue_position);
               if (session.estimated_wait_minutes !== undefined) setEstimatedWait(session.estimated_wait_minutes);
               setState(session.timeout_flagged ? "timeout" : "queued");
               break;
             case "claimed_by_doctor":
+              setStaffRoom(session.staff_room ?? null);
               setState("claimed");
               break;
             case "completed":
@@ -408,12 +415,16 @@ export default function CheckinFlow({
             setState("chatting");
           }
           break;
+        case "awaiting_arrival":
+          setState("awaiting_arrival");
+          break;
         case "waiting_doctor_claim":
           if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
           if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
           setState(data.timeout_flagged ? "timeout" : "queued");
           break;
         case "claimed_by_doctor":
+          setStaffRoom(data.staff_room ?? null);
           setState("claimed");
           break;
         case "left":
@@ -479,6 +490,26 @@ export default function CheckinFlow({
         return;
       }
 
+      if (status === "awaiting_arrival") {
+        const current = stateRef.current;
+        if (current === "summary_review" || current === "generating_summary") {
+          return;
+        }
+        setState("awaiting_arrival");
+        return;
+      }
+
+      if (status === "pending_approval") {
+        // Mode-2 arrival: patient tapped "I have arrived" on a remote visit and
+        // is now back in the approval queue. Transition from the arrival screen
+        // to the waiting-for-approval screen. Also safe as a no-op if we are
+        // already in "waiting" (e.g. mode-1 kiosk flow).
+        const current = stateRef.current;
+        if (current === "phone_verification") return;
+        setState("waiting");
+        return;
+      }
+
       if (status === "waiting_doctor_claim") {
         // Skip if summary_review, generating_summary, or phone_verification —
         // those flows handle their own transitions
@@ -498,6 +529,14 @@ export default function CheckinFlow({
       if (status === "claimed_by_doctor") {
         const current = stateRef.current;
         if (current === "phone_verification") {
+          return;
+        }
+        if (event.payload.staff_room !== undefined) {
+          setStaffRoom(event.payload.staff_room ?? null);
+        }
+        // Mid-shift room edits also arrive as status_change with status still
+        // claimed_by_doctor; do not replay the claim alert in that case.
+        if (current === "claimed") {
           return;
         }
         setState("claimed");
@@ -549,7 +588,7 @@ export default function CheckinFlow({
     [visitId]
   );
 
-  // Activate realtime during waiting, chatting, generating_summary, summary_review, queued, timeout, phone states
+  // Activate realtime during waiting, chatting, generating_summary, summary_review, awaiting_arrival, queued, timeout, phone states
   const realtimeActive =
     state === "waiting" ||
     state === "first_timer" ||
@@ -557,6 +596,7 @@ export default function CheckinFlow({
     state === "chatting" ||
     state === "generating_summary" ||
     state === "summary_review" ||
+    state === "awaiting_arrival" ||
     state === "queued" ||
     state === "claimed" ||
     state === "timeout" ||
@@ -624,15 +664,28 @@ export default function CheckinFlow({
           if (session.queue_number != null) setQueueNumber(session.queue_number);
           if (onVisitCreated && session.visit_id) onVisitCreated(session.visit_id);
           switch (session.status) {
+            case "pending_approval":
+              setState("waiting");
+              break;
             case "still_answering_ai":
               if (!session.consent_given) setState("first_timer");
               else setState("chatting");
               break;
+            case "awaiting_arrival":
+              setState("awaiting_arrival");
+              break;
             case "waiting_doctor_claim":
-              setState("queued");
+              setState(session.timeout_flagged ? "timeout" : "queued");
               break;
             case "claimed_by_doctor":
+              setStaffRoom(session.staff_room ?? null);
               setState("claimed");
+              break;
+            case "left":
+              setState(session.patient_denied ? "denied" : "patient_left");
+              break;
+            case "completed":
+              setState("visit_completed");
               break;
             default:
               setState("chatting");
@@ -647,10 +700,23 @@ export default function CheckinFlow({
       localStorage.setItem(STORAGE_KEY, tokenData.session_token);
       if (onVisitCreated && tokenData.visit_id) onVisitCreated(tokenData.visit_id);
 
-      if (tokenData.ai_skipped) {
-        setState("queued");
-      } else {
-        setState("first_timer");
+      // Branch on the server-resolved initial status so that check-in modes
+      // behave correctly (approve_to_start -> waiting for receptionist,
+      // approve_on_arrival/self_service with skip_ai -> straight to arrival gate,
+      // otherwise -> enter chat flow).
+      switch (tokenData.status) {
+        case "pending_approval":
+          setState("waiting");
+          break;
+        case "awaiting_arrival":
+          setState("awaiting_arrival");
+          break;
+        case "waiting_doctor_claim":
+          setState("queued");
+          break;
+        case "still_answering_ai":
+        default:
+          setState("first_timer");
       }
       return;
     }
@@ -742,11 +808,14 @@ export default function CheckinFlow({
             } else {
               setState("chatting");
             }
+          } else if (session.status === "awaiting_arrival") {
+            setState("awaiting_arrival");
           } else if (session.status === "waiting_doctor_claim") {
             if (session.queue_position !== undefined) setQueuePosition(session.queue_position);
             if (session.estimated_wait_minutes !== undefined) setEstimatedWait(session.estimated_wait_minutes);
             setState(session.timeout_flagged ? "timeout" : "queued");
           } else if (session.status === "claimed_by_doctor") {
+            setStaffRoom(session.staff_room ?? null);
             setState("claimed");
           } else if (session.status === "left") {
             setState("patient_left");
@@ -894,6 +963,7 @@ export default function CheckinFlow({
 
   async function handleSummaryApprove() {
     const supabase = createClient();
+    let nextStatus: string | null = null;
     if (sessionToken) {
       const { data } = await supabase.rpc("get_patient_session", {
         p_session_token: sessionToken,
@@ -901,10 +971,17 @@ export default function CheckinFlow({
       if (data?.success) {
         if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
         if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
+        nextStatus = (data.status as string) ?? null;
       }
     }
     if (onPhoneComplete) onPhoneComplete();
-    setState("queued");
+    // In approve_on_arrival / self_service_on_arrival modes, the server routes
+    // the post-summary visit to awaiting_arrival, not the doctor queue.
+    if (nextStatus === "awaiting_arrival") {
+      setState("awaiting_arrival");
+    } else {
+      setState("queued");
+    }
   }
 
   function handleSummaryReject() {
@@ -1138,11 +1215,14 @@ export default function CheckinFlow({
                     } else {
                       setState("chatting");
                     }
+                  } else if (status === "awaiting_arrival") {
+                    setState("awaiting_arrival");
                   } else if (status === "waiting_doctor_claim") {
                     if (data.queue_position !== undefined) setQueuePosition(data.queue_position as number);
                     if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes as number | null);
                     setState((data.timeout_flagged as boolean) ? "timeout" : "queued");
                   } else if (status === "claimed_by_doctor") {
+                    setStaffRoom((data.staff_room as string | null | undefined) ?? null);
                     setState("claimed");
                   } else if (status === "left") {
                     setState((data.patient_denied as boolean) ? "denied" : "patient_left");
@@ -1250,6 +1330,23 @@ export default function CheckinFlow({
         </div>
       ) : null;
 
+    case "awaiting_arrival":
+      return visitId && sessionToken ? (
+        <ArrivalConfirmScreen
+          visitId={visitId}
+          sessionToken={sessionToken}
+          locationName={locationData.location_name || "the clinic"}
+          onArrived={(nextStatus) => {
+            if (nextStatus === "pending_approval") {
+              setState("waiting");
+            } else if (nextStatus === "waiting_doctor_claim") {
+              fetchQueuePosition();
+              setState("queued");
+            }
+          }}
+        />
+      ) : null;
+
     case "queued":
       return visitId && sessionToken ? (
         <PatientQueueView
@@ -1263,7 +1360,7 @@ export default function CheckinFlow({
       ) : null;
 
     case "claimed":
-      return <DoctorClaimedNotice />;
+      return <DoctorClaimedNotice staffRoom={staffRoom} />;
 
     case "timeout": {
       const timeoutContent = (

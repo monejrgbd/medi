@@ -9,6 +9,7 @@ interface StatusChangePayload {
   old_status: string;
   timeout_flagged?: boolean;
   denied?: boolean;
+  staff_room?: string | null;
 }
 
 interface SummaryReadyPayload {
@@ -66,6 +67,7 @@ export function usePatientRealtime(
 
     // Fallback: poll every 5s (only fire on actual status change)
     let lastPolledStatus: string | null = null;
+    let lastPolledRoom: string | null = null;
     let summaryEmitted = false;
     const interval = setInterval(async () => {
       const { data } = await supabase.rpc("get_patient_session", {
@@ -76,12 +78,14 @@ export function usePatientRealtime(
       // Skip first poll to establish baseline (avoids initial spurious event)
       if (lastPolledStatus === null) {
         lastPolledStatus = data.status;
+        lastPolledRoom = data.staff_room ?? null;
         return;
       }
 
       // Fire on status change
       if (data.status && data.status !== lastPolledStatus) {
         lastPolledStatus = data.status;
+        lastPolledRoom = data.staff_room ?? null;
         summaryEmitted = false;
         callbackRef.current({
           type: "status_change",
@@ -91,6 +95,24 @@ export function usePatientRealtime(
             old_status: "",
             timeout_flagged: data.timeout_flagged,
             denied: data.patient_denied,
+            staff_room: data.staff_room ?? null,
+          },
+        });
+      } else if (
+        data.status === "claimed_by_doctor" &&
+        (data.staff_room ?? null) !== lastPolledRoom
+      ) {
+        // Room changed while claimed (doctor moved rooms mid-shift)
+        lastPolledRoom = data.staff_room ?? null;
+        callbackRef.current({
+          type: "status_change",
+          payload: {
+            visit_id: data.visit_id,
+            status: data.status,
+            old_status: data.status,
+            timeout_flagged: data.timeout_flagged,
+            denied: data.patient_denied,
+            staff_room: data.staff_room ?? null,
           },
         });
       }

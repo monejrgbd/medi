@@ -1,0 +1,97 @@
+-- Private implementation — called by patient from the browser when they
+-- tap "I have arrived" after finishing the pre-screening chat.
+CREATE OR REPLACE FUNCTION private.confirm_arrival(
+  p_visit_id uuid,
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_new_status text;
+BEGIN
+  SELECT v.id, v.status, v.session_token, v.created_at, v.patient_id,
+         v.org_id, v.checkin_mode, v.arrived_at
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.session_token <> p_session_token THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+  END IF;
+
+  -- 24-hour session expiry (same window as other patient-facing RPCs)
+  IF v_visit.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+  END IF;
+
+  -- Idempotency: if arrival already recorded and the visit has moved on,
+  -- return success silently so a double-tap on mobile does not error.
+  IF v_visit.arrived_at IS NOT NULL
+     AND v_visit.status IN ('pending_approval','waiting_doctor_claim','claimed_by_doctor','completed') THEN
+    RETURN jsonb_build_object('success', true, 'status', v_visit.status, 'already_arrived', true);
+  END IF;
+
+  IF v_visit.status <> 'awaiting_arrival' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit is not awaiting arrival');
+  END IF;
+
+  -- Mode should never be approve_to_start here (that mode never produces
+  -- awaiting_arrival), but guard defensively.
+  IF v_visit.checkin_mode = 'approve_on_arrival' THEN
+    v_new_status := 'pending_approval';
+  ELSIF v_visit.checkin_mode = 'self_service_on_arrival' THEN
+    v_new_status := 'waiting_doctor_claim';
+  ELSE
+    RETURN jsonb_build_object('success', false, 'error', 'Unexpected check-in mode for arrival');
+  END IF;
+
+  -- Stamp arrival + queue entry at the same instant so ordering anchors on arrival time.
+  UPDATE public.visits
+  SET status = v_new_status,
+      arrived_at = now(),
+      entered_queue_at = now(),
+      updated_at = now()
+  WHERE id = p_visit_id;
+
+  PERFORM set_config('app.audit_actor_id', v_visit.patient_id::text, true);
+  PERFORM set_config('app.audit_actor_type', 'patient', true);
+  PERFORM set_config('app.audit_action', 'arrival_confirmed', true);
+
+  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_visit.org_id, 'visit', p_visit_id,
+    v_visit.patient_id, 'patient', 'arrival_confirmed',
+    jsonb_build_object('checkin_mode', v_visit.checkin_mode, 'new_status', v_new_status)
+  );
+
+  RETURN jsonb_build_object('success', true, 'status', v_new_status);
+END;
+$$;
+
+-- Public wrapper (anon-callable — patient has no auth)
+CREATE OR REPLACE FUNCTION public.confirm_arrival(
+  p_visit_id uuid,
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.confirm_arrival(p_visit_id, p_session_token);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.confirm_arrival(uuid, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.confirm_arrival(uuid, uuid) TO anon, authenticated;

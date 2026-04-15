@@ -1,0 +1,107 @@
+-- add_location_video: owner attaches a pre-uploaded video file to a location's playlist.
+-- Enforces 10-video cap per location via SELECT FOR UPDATE to prevent concurrent-admin race.
+
+CREATE OR REPLACE FUNCTION private.add_location_video(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_storage_path text,
+  p_file_name text,
+  p_file_size bigint,
+  p_mime_type text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_location record;
+  v_owner_id uuid;
+  v_count int;
+  v_next_order int;
+  v_video_id uuid;
+  v_expected_prefix text;
+BEGIN
+  IF p_mime_type NOT IN ('video/mp4','video/x-m4v','application/mp4') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Unsupported video type. Use MP4.');
+  END IF;
+
+  IF p_file_size <= 0 OR p_file_size > 524288000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'File size must be between 1 byte and 500MB.');
+  END IF;
+
+  IF length(p_file_name) = 0 OR length(p_file_name) > 255 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid file name.');
+  END IF;
+
+  SELECT l.id, l.org_id INTO v_location
+  FROM public.locations l
+  WHERE l.id = p_location_id;
+
+  IF v_location IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found.');
+  END IF;
+
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_location.org_id;
+
+  IF p_caller_auth_uid IS NULL OR p_caller_auth_uid <> v_owner_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only the owner can manage TV videos.');
+  END IF;
+
+  -- Path must live under this org+location (defence in depth vs. bucket RLS)
+  v_expected_prefix := v_location.org_id::text || '/' || p_location_id::text || '/';
+  IF position(v_expected_prefix IN p_storage_path) <> 1 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Storage path does not match this location.');
+  END IF;
+
+  -- Lock the location's rows to serialise the cap check across concurrent admins.
+  PERFORM 1 FROM public.location_videos
+   WHERE location_id = p_location_id
+     FOR UPDATE;
+
+  SELECT count(*) INTO v_count FROM public.location_videos WHERE location_id = p_location_id;
+  IF v_count >= 10 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Playlist full (10 videos maximum).');
+  END IF;
+
+  SELECT COALESCE(max(sort_order), -1) + 1 INTO v_next_order
+  FROM public.location_videos
+  WHERE location_id = p_location_id;
+
+  INSERT INTO public.location_videos (location_id, org_id, storage_path, file_name, file_size, mime_type, sort_order)
+  VALUES (p_location_id, v_location.org_id, p_storage_path, p_file_name, p_file_size, p_mime_type, v_next_order)
+  RETURNING id INTO v_video_id;
+
+  RETURN jsonb_build_object('success', true, 'video_id', v_video_id);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.add_location_video(
+  p_location_id uuid,
+  p_storage_path text,
+  p_file_name text,
+  p_file_size bigint,
+  p_mime_type text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.add_location_video(v_auth_uid, p_location_id, p_storage_path, p_file_name, p_file_size, p_mime_type);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.add_location_video(uuid, text, text, bigint, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.add_location_video(uuid, text, text, bigint, text) TO authenticated;

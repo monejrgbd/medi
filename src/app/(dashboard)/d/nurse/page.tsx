@@ -45,11 +45,14 @@ export default async function NursePage({
   // Check if checked in as nurse
   let checkedInLocationId: string | null = null;
   let locationName = "Clinic";
+  let locationPresetRooms: string[] = [];
+  let locationShowRoomToPatients = true;
+  let currentRoom: string | null = null;
 
   if (staffUser) {
     const { data: checkin } = await supabase
       .from("staff_checkins")
-      .select("location_id")
+      .select("location_id, current_room")
       .eq("staff_user_id", staffUser.id)
       .eq("role", "nurse")
       .is("checked_out_at", null)
@@ -58,14 +61,17 @@ export default async function NursePage({
       .single();
 
     checkedInLocationId = checkin?.location_id ?? null;
+    currentRoom = checkin?.current_room ?? null;
 
     if (checkedInLocationId) {
       const { data: locationRow } = await supabase
         .from("locations")
-        .select("name, nurse_enabled")
+        .select("name, nurse_enabled, preset_rooms, show_doctor_room_to_patients")
         .eq("id", checkedInLocationId)
         .single();
       locationName = locationRow?.name ?? "Clinic";
+      locationPresetRooms = locationRow?.preset_rooms ?? [];
+      locationShowRoomToPatients = locationRow?.show_doctor_room_to_patients ?? true;
 
       // Check if nurse features are enabled at this location
       if (locationRow && !locationRow.nurse_enabled) {
@@ -105,7 +111,7 @@ export default async function NursePage({
   // No location yet — show picker
   if (!checkedInLocationId) {
     const roles = await getMyRoles();
-    const nurseLocations = ownerCheck
+    const baseNurseLocations: { id: string; name: string }[] = ownerCheck
       ? allLocations
       : roles
           .filter((r: { role: string }) => r.role === "nurse")
@@ -113,6 +119,26 @@ export default async function NursePage({
             id: r.location_id,
             name: r.location_name,
           }));
+
+    const locationIds = baseNurseLocations.map((l) => l.id);
+    const { data: locationConfigs } = locationIds.length
+      ? await supabase
+          .from("locations")
+          .select("id, preset_rooms, show_doctor_room_to_patients")
+          .in("id", locationIds)
+      : { data: [] };
+    const configById = new Map(
+      (locationConfigs ?? []).map((c: { id: string; preset_rooms: string[]; show_doctor_room_to_patients: boolean }) => [c.id, c])
+    );
+    const nurseLocations = baseNurseLocations.map((l) => ({
+      id: l.id,
+      name: l.name,
+      preset_rooms: configById.get(l.id)?.preset_rooms ?? [],
+      show_doctor_room_to_patients: configById.get(l.id)?.show_doctor_room_to_patients ?? true,
+    }));
+
+    const recentRes = await supabase.rpc("get_recent_staff_rooms");
+    const recentRooms: string[] = recentRes.data?.success ? (recentRes.data.rooms ?? []) : [];
 
     return (
       <NurseDashboard
@@ -123,6 +149,7 @@ export default async function NursePage({
         orgId={orgId}
         locationId={null}
         suggestedLocationId={suggestedLocationId}
+        recentRooms={recentRooms}
         initialQueue={[]}
         initialClaimed={[]}
         initialCompleted={[]}
@@ -142,6 +169,9 @@ export default async function NursePage({
     }),
   ]);
 
+  const recentRes = await supabase.rpc("get_recent_staff_rooms");
+  const recentRooms: string[] = recentRes.data?.success ? (recentRes.data.rooms ?? []) : [];
+
   return (
     <NurseDashboard
       mode="dashboard"
@@ -151,6 +181,10 @@ export default async function NursePage({
       orgId={orgId}
       locationId={checkedInLocationId}
       locationName={locationName}
+      locationPresetRooms={locationPresetRooms}
+      locationShowRoomToPatients={locationShowRoomToPatients}
+      currentRoom={currentRoom}
+      recentRooms={recentRooms}
       initialQueue={queueRes.data?.queue ?? []}
       initialClaimed={claimedRes.data?.claimed ?? []}
       initialCompleted={completedLeftRes.data?.completed ?? []}

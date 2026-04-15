@@ -124,6 +124,27 @@ export function useReceptionistRealtime(
             }
           }
 
+          // Mode 2 arrival: patient transitions from awaiting_arrival to pending_approval
+          // when they tap "I have arrived" — the receptionist now needs to approve them.
+          if (
+            visit.status === "pending_approval" &&
+            old.status === "awaiting_arrival"
+          ) {
+            playNotificationChime(soundOn);
+
+            if (
+              typeof Notification !== "undefined" &&
+              Notification.permission === "granted"
+            ) {
+              new Notification("Patient arrived", {
+                body: "A pre-screened patient has arrived and is ready for approval.",
+                tag: `arrived-${visit.id}`,
+              });
+            }
+
+            optionsRef.current?.onNotification?.({ type: "new_patient" });
+          }
+
           // Patient entered queue
           if (
             visit.status === "waiting_doctor_claim" &&

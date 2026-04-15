@@ -209,16 +209,24 @@ BEGIN
   END IF;
 
   -- =====================================================
-  -- RESOLVE AI CONFIG (skip_ai + model override + fallback)
+  -- RESOLVE AI CONFIG (skip_ai + model override + fallback) + CHECKIN MODE
   -- =====================================================
   DECLARE
     v_loc_skip_ai boolean;
     v_resolved_skip boolean := false;
     v_resolved_model text := NULL;
     v_ai_fallback boolean := false;
+    v_loc_mode text;
+    v_effective_mode text;
+    v_initial_status text;
+    v_initial_ai_started_at timestamptz;
+    v_initial_entered_queue_at timestamptz;
   BEGIN
-    SELECT COALESCE(l.skip_ai, false) INTO v_loc_skip_ai
+    SELECT COALESCE(l.skip_ai, false), l.checkin_mode INTO v_loc_skip_ai, v_loc_mode
     FROM public.locations l WHERE l.id = v_location_id;
+
+    -- Per-link override wins over location default
+    v_effective_mode := COALESCE(v_tok.checkin_mode_override, v_loc_mode);
 
     -- Skip AI resolution (same priority as approve_patient)
     IF v_loc_skip_ai THEN
@@ -279,36 +287,40 @@ BEGIN
       v_resolved_model := v_tok.ai_model_override;
     END IF;
 
-    -- Create visit
-    IF v_resolved_skip THEN
-      INSERT INTO public.visits (
-        org_id, location_id, patient_id, has_previous_visits,
-        phone_verification_pending, is_return_visit,
-        status, ai_skipped, entered_queue_at,
-        ai_session_instructions
-      )
-      VALUES (
-        v_org_id, v_location_id, v_patient.id, v_has_previous,
-        false, v_has_previous,
-        'waiting_doctor_claim', true, now(),
-        v_tok.ai_session_instructions
-      )
-      RETURNING * INTO v_new_visit;
+    -- Resolve initial visit state based on effective check-in mode + skip_ai:
+    --   approve_to_start: receptionist must approve before anything happens
+    --   approve_on_arrival / self_service_on_arrival + skip_ai: straight to arrival gate
+    --   approve_on_arrival / self_service_on_arrival + !skip_ai: start chat immediately
+    IF v_effective_mode = 'approve_to_start' THEN
+      v_initial_status := 'pending_approval';
+      v_initial_ai_started_at := NULL;
+      v_initial_entered_queue_at := NULL;
+    ELSIF v_resolved_skip THEN
+      v_initial_status := 'awaiting_arrival';
+      v_initial_ai_started_at := NULL;
+      v_initial_entered_queue_at := NULL;
     ELSE
-      INSERT INTO public.visits (
-        org_id, location_id, patient_id, has_previous_visits,
-        phone_verification_pending, is_return_visit,
-        status, ai_started_at, ai_model_override,
-        ai_session_instructions
-      )
-      VALUES (
-        v_org_id, v_location_id, v_patient.id, v_has_previous,
-        false, v_has_previous,
-        'still_answering_ai', now(), v_resolved_model,
-        v_tok.ai_session_instructions
-      )
-      RETURNING * INTO v_new_visit;
+      v_initial_status := 'still_answering_ai';
+      v_initial_ai_started_at := now();
+      v_initial_entered_queue_at := NULL;
     END IF;
+
+    INSERT INTO public.visits (
+      org_id, location_id, patient_id, has_previous_visits,
+      phone_verification_pending, is_return_visit,
+      status, ai_skipped, ai_started_at, entered_queue_at,
+      ai_model_override, ai_session_instructions,
+      checkin_mode
+    )
+    VALUES (
+      v_org_id, v_location_id, v_patient.id, v_has_previous,
+      false, v_has_previous,
+      v_initial_status, v_resolved_skip, v_initial_ai_started_at, v_initial_entered_queue_at,
+      CASE WHEN v_resolved_skip THEN NULL ELSE v_resolved_model END,
+      v_tok.ai_session_instructions,
+      v_effective_mode
+    )
+    RETURNING * INTO v_new_visit;
 
     -- Mark token used + audit
     UPDATE public.pre_checkin_tokens
@@ -326,7 +338,8 @@ BEGIN
         'ai_skipped', v_resolved_skip,
         'ai_model_override', v_resolved_model,
         'ai_model_fallback', v_ai_fallback,
-        'name_match_mode', v_tok.name_match_mode
+        'name_match_mode', v_tok.name_match_mode,
+        'checkin_mode', v_effective_mode
       )
     );
 
@@ -338,7 +351,9 @@ BEGIN
       'queue_number', v_new_visit.queue_number,
       'has_previous_visits', v_has_previous,
       'phone_verified', false,
-      'ai_skipped', v_resolved_skip
+      'ai_skipped', v_resolved_skip,
+      'status', v_initial_status,
+      'checkin_mode', v_effective_mode
     );
   END;
 END;

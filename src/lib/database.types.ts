@@ -990,6 +990,57 @@ export type Database = {
           },
         ]
       }
+      location_videos: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_size: number
+          id: string
+          location_id: string
+          mime_type: string
+          org_id: string
+          sort_order: number
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_size: number
+          id?: string
+          location_id: string
+          mime_type: string
+          org_id: string
+          sort_order?: number
+          storage_path: string
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_size?: number
+          id?: string
+          location_id?: string
+          mime_type?: string
+          org_id?: string
+          sort_order?: number
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "location_videos_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "location_videos_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       locations: {
         Row: {
           address: string | null
@@ -998,6 +1049,7 @@ export type Database = {
           ai_model: string | null
           ask_discovery_source: boolean | null
           ask_referral_source: boolean | null
+          checkin_mode: string
           created_at: string | null
           diagnostic_enabled: boolean | null
           display_format: string | null
@@ -1008,16 +1060,23 @@ export type Database = {
           nurse_enabled: boolean | null
           operating_hours: Json | null
           org_id: string
+          preset_rooms: string[]
           qr_code_url: string | null
           queue_display_enabled: boolean | null
           queue_type: string
           raven_api_key: string | null
           referral_email: string | null
           review_sms_enabled: boolean | null
+          show_doctor_room_to_patients: boolean
           skip_ai: boolean | null
           specialty: string | null
           tablet_count: number | null
           timezone: string | null
+          tv_audio_muted: boolean
+          tv_display_mode: string
+          tv_overlay_position: string
+          tv_overlay_visible: boolean
+          tv_queue_duration_seconds: number
           vaccines_enabled: boolean | null
           vitals_enabled: boolean | null
         }
@@ -1028,6 +1087,7 @@ export type Database = {
           ai_model?: string | null
           ask_discovery_source?: boolean | null
           ask_referral_source?: boolean | null
+          checkin_mode?: string
           created_at?: string | null
           diagnostic_enabled?: boolean | null
           display_format?: string | null
@@ -1038,16 +1098,23 @@ export type Database = {
           nurse_enabled?: boolean | null
           operating_hours?: Json | null
           org_id: string
+          preset_rooms?: string[]
           qr_code_url?: string | null
           queue_display_enabled?: boolean | null
           queue_type?: string
           raven_api_key?: string | null
           referral_email?: string | null
           review_sms_enabled?: boolean | null
+          show_doctor_room_to_patients?: boolean
           skip_ai?: boolean | null
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
+          tv_audio_muted?: boolean
+          tv_display_mode?: string
+          tv_overlay_position?: string
+          tv_overlay_visible?: boolean
+          tv_queue_duration_seconds?: number
           vaccines_enabled?: boolean | null
           vitals_enabled?: boolean | null
         }
@@ -1058,6 +1125,7 @@ export type Database = {
           ai_model?: string | null
           ask_discovery_source?: boolean | null
           ask_referral_source?: boolean | null
+          checkin_mode?: string
           created_at?: string | null
           diagnostic_enabled?: boolean | null
           display_format?: string | null
@@ -1068,16 +1136,23 @@ export type Database = {
           nurse_enabled?: boolean | null
           operating_hours?: Json | null
           org_id?: string
+          preset_rooms?: string[]
           qr_code_url?: string | null
           queue_display_enabled?: boolean | null
           queue_type?: string
           raven_api_key?: string | null
           referral_email?: string | null
           review_sms_enabled?: boolean | null
+          show_doctor_room_to_patients?: boolean
           skip_ai?: boolean | null
           specialty?: string | null
           tablet_count?: number | null
           timezone?: string | null
+          tv_audio_muted?: boolean
+          tv_display_mode?: string
+          tv_overlay_position?: string
+          tv_overlay_visible?: boolean
+          tv_queue_duration_seconds?: number
           vaccines_enabled?: boolean | null
           vitals_enabled?: boolean | null
         }
@@ -1830,6 +1905,7 @@ export type Database = {
         Row: {
           ai_model_override: string | null
           ai_session_instructions: string | null
+          checkin_mode_override: string | null
           created_at: string
           created_by: string
           expires_at: string
@@ -1848,6 +1924,7 @@ export type Database = {
         Insert: {
           ai_model_override?: string | null
           ai_session_instructions?: string | null
+          checkin_mode_override?: string | null
           created_at?: string
           created_by: string
           expires_at?: string
@@ -1866,6 +1943,7 @@ export type Database = {
         Update: {
           ai_model_override?: string | null
           ai_session_instructions?: string | null
+          checkin_mode_override?: string | null
           created_at?: string
           created_by?: string
           expires_at?: string
@@ -2471,6 +2549,7 @@ export type Database = {
         Row: {
           checked_in_at: string | null
           checked_out_at: string | null
+          current_room: string | null
           id: string
           location_id: string
           role: string
@@ -2479,6 +2558,7 @@ export type Database = {
         Insert: {
           checked_in_at?: string | null
           checked_out_at?: string | null
+          current_room?: string | null
           id?: string
           location_id: string
           role: string
@@ -2487,6 +2567,7 @@ export type Database = {
         Update: {
           checked_in_at?: string | null
           checked_out_at?: string | null
+          current_room?: string | null
           id?: string
           location_id?: string
           role?: string
@@ -2899,7 +2980,9 @@ export type Database = {
           ai_structured_card: Json | null
           ai_summary: string | null
           ai_summary_translated: string | null
+          arrived_at: string | null
           care_instructions: string | null
+          checkin_mode: string
           claimed_at: string | null
           claimed_by: string | null
           completed_at: string | null
@@ -2935,6 +3018,7 @@ export type Database = {
           self_reported_referral: boolean | null
           self_reported_referrer: string | null
           session_token: string
+          staff_room: string | null
           status: string
           summary_show_diagnosis: boolean | null
           summary_sms_sent: boolean | null
@@ -2954,7 +3038,9 @@ export type Database = {
           ai_structured_card?: Json | null
           ai_summary?: string | null
           ai_summary_translated?: string | null
+          arrived_at?: string | null
           care_instructions?: string | null
+          checkin_mode?: string
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
@@ -2990,6 +3076,7 @@ export type Database = {
           self_reported_referral?: boolean | null
           self_reported_referrer?: string | null
           session_token?: string
+          staff_room?: string | null
           status?: string
           summary_show_diagnosis?: boolean | null
           summary_sms_sent?: boolean | null
@@ -3009,7 +3096,9 @@ export type Database = {
           ai_structured_card?: Json | null
           ai_summary?: string | null
           ai_summary_translated?: string | null
+          arrived_at?: string | null
           care_instructions?: string | null
+          checkin_mode?: string
           claimed_at?: string | null
           claimed_by?: string | null
           completed_at?: string | null
@@ -3045,6 +3134,7 @@ export type Database = {
           self_reported_referral?: boolean | null
           self_reported_referrer?: string | null
           session_token?: string
+          staff_room?: string | null
           status?: string
           summary_show_diagnosis?: boolean | null
           summary_sms_sent?: boolean | null
@@ -3140,6 +3230,16 @@ export type Database = {
       }
       add_addendum: {
         Args: { p_content: string; p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      add_location_video: {
+        Args: {
+          p_file_name: string
+          p_file_size: number
+          p_location_id: string
+          p_mime_type: string
+          p_storage_path: string
+        }
         Returns: Json
       }
       add_patient_note: {
@@ -3278,6 +3378,10 @@ export type Database = {
         Args: { p_location_id: string; p_platforms: Json }
         Returns: Json
       }
+      confirm_arrival: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
       count_active_providers: { Args: { p_org_id: string }; Returns: number }
       create_document: {
         Args: {
@@ -3323,6 +3427,7 @@ export type Database = {
         Args: {
           p_ai_model?: string
           p_ai_session_instructions?: string
+          p_checkin_mode_override?: string
           p_first_name: string
           p_last_name: string
           p_location_id: string
@@ -3372,6 +3477,7 @@ export type Database = {
         Args: { p_ai_model: string; p_org_id: string; p_visit_id: string }
         Returns: Json
       }
+      delete_location_video: { Args: { p_video_id: string }; Returns: Json }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       deny_patient: { Args: { p_visit_id: string }; Returns: Json }
       draft_document_content: { Args: { p_document_id: string }; Returns: Json }
@@ -3531,6 +3637,7 @@ export type Database = {
       get_pending_approvals: { Args: { p_location_id: string }; Returns: Json }
       get_queue: { Args: { p_location_id: string }; Returns: Json }
       get_queue_display: { Args: { p_location_id: string }; Returns: Json }
+      get_recent_staff_rooms: { Args: never; Returns: Json }
       get_receptionist_counts: {
         Args: { p_location_id: string }
         Returns: Json
@@ -3626,6 +3733,7 @@ export type Database = {
         Returns: Json
       }
       list_documents_for_visit: { Args: { p_visit_id: string }; Returns: Json }
+      list_location_videos: { Args: { p_location_id: string }; Returns: Json }
       list_pending_document_approvals: { Args: never; Returns: Json }
       log_phi_access: {
         Args: { p_entity_id: string; p_entity_type: string }
@@ -3683,6 +3791,10 @@ export type Database = {
       }
       remove_role: {
         Args: { p_location_id: string; p_role: string; p_staff_user_id: string }
+        Returns: Json
+      }
+      reorder_location_videos: {
+        Args: { p_location_id: string; p_video_ids: string[] }
         Returns: Json
       }
       request_demo_otp: {
@@ -3796,6 +3908,7 @@ export type Database = {
         Returns: Json
       }
       set_sensitive_flag: { Args: { p_visit_id: string }; Returns: Json }
+      set_staff_room: { Args: { p_room: string }; Returns: Json }
       set_visit_ai_override: {
         Args: { p_ai_model?: string; p_visit_id: string }
         Returns: Json
@@ -3821,7 +3934,7 @@ export type Database = {
       }
       skip_ai_to_queue: { Args: { p_visit_id: string }; Returns: Json }
       staff_check_in: {
-        Args: { p_location_id: string; p_role: string }
+        Args: { p_location_id: string; p_role: string; p_room?: string }
         Returns: Json
       }
       staff_check_out: {
@@ -3922,6 +4035,7 @@ export type Database = {
           p_ai_model?: string
           p_ask_discovery_source?: boolean
           p_ask_referral_source?: boolean
+          p_checkin_mode?: string
           p_diagnostic_enabled?: boolean
           p_display_format?: string
           p_location_id: string
@@ -3929,11 +4043,13 @@ export type Database = {
           p_name?: string
           p_nurse_enabled?: boolean
           p_operating_hours?: Json
+          p_preset_rooms?: string[]
           p_queue_display_enabled?: boolean
           p_queue_type?: string
           p_raven_api_key?: string
           p_referral_email?: string
           p_review_sms_enabled?: boolean
+          p_show_doctor_room_to_patients?: boolean
           p_skip_ai?: boolean
           p_specialty?: string
           p_tablet_count?: number
@@ -3955,6 +4071,17 @@ export type Database = {
       update_organization_name: { Args: { p_name: string }; Returns: undefined }
       update_pets: {
         Args: { p_patient_id: string; p_pets: string[] }
+        Returns: Json
+      }
+      update_tv_display_config: {
+        Args: {
+          p_audio_muted: boolean
+          p_location_id: string
+          p_mode: string
+          p_overlay_visible: boolean
+          p_position: string
+          p_queue_duration_seconds: number
+        }
         Returns: Json
       }
       update_visit_priority: {

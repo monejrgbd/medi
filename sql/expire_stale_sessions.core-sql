@@ -17,6 +17,13 @@ BEGIN
   WHERE status = 'waiting_doctor_claim'
     AND entered_queue_at < CURRENT_DATE;
 
+  -- 1b. Expire stale awaiting_arrival visits (remote check-ins that never arrived).
+  -- 24h window is long enough for same-day pre-checkins + overnight edge cases.
+  UPDATE public.visits
+  SET status = 'left', updated_at = now()
+  WHERE status = 'awaiting_arrival'
+    AND created_at < now() - interval '24 hours';
+
   -- 2. Expire 90-day overdue follow-ups
   UPDATE public.follow_ups
   SET status = 'expired'

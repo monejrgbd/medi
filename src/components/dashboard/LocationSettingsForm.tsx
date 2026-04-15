@@ -32,7 +32,30 @@ interface LocationData {
   ask_referral_source?: boolean;
   ask_discovery_source?: boolean;
   queue_display_enabled?: boolean;
+  show_doctor_room_to_patients?: boolean;
+  preset_rooms?: string[];
+  checkin_mode?: "approve_to_start" | "approve_on_arrival" | "self_service_on_arrival";
 }
+
+type CheckinMode = "approve_to_start" | "approve_on_arrival" | "self_service_on_arrival";
+
+const CHECKIN_MODE_OPTIONS: { value: CheckinMode; label: string; description: string }[] = [
+  {
+    value: "approve_to_start",
+    label: "Receptionist approves before chat starts",
+    description: "Patient fills the form, then waits for a receptionist to approve them before starting the AI chat. Queue order uses chat completion time.",
+  },
+  {
+    value: "approve_on_arrival",
+    label: "Patient chats anywhere, receptionist approves on arrival",
+    description: "Patient can complete the AI chat from home. When they get to the clinic, they tap I Have Arrived and the receptionist approves them into the doctor queue. Queue order uses arrival time.",
+  },
+  {
+    value: "self_service_on_arrival",
+    label: "Patient chats anywhere, auto enters queue on arrival",
+    description: "Patient can complete the AI chat from home. When they tap I Have Arrived they go straight into the doctor queue with no receptionist step. Queue order uses arrival time.",
+  },
+];
 
 const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -102,6 +125,9 @@ export default function LocationSettingsForm({
     ravenApiKey: location.raven_api_key || "",
     askReferralSource: location.ask_referral_source ?? false,
     askDiscoverySource: location.ask_discovery_source ?? false,
+    showDoctorRoomToPatients: location.show_doctor_room_to_patients ?? true,
+    presetRoomsText: (location.preset_rooms ?? []).join("\n"),
+    checkinMode: (location.checkin_mode ?? "approve_to_start") as CheckinMode,
   });
   const initialFormJson = useMemo(() => JSON.stringify(form), []);
   const isDirty = JSON.stringify(form) !== initialFormJson;
@@ -147,6 +173,11 @@ export default function LocationSettingsForm({
       if (val.trim()) hours[day] = val.trim();
     }
 
+    const presetRoomsArr = form.presetRoomsText
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0 && s.length <= 60);
+
     const result = await updateLocation({
       locationId: location.id,
       name: form.name,
@@ -167,6 +198,9 @@ export default function LocationSettingsForm({
       ravenApiKey: form.ravenApiKey,
       askReferralSource: form.askReferralSource,
       askDiscoverySource: form.askDiscoverySource,
+      showDoctorRoomToPatients: form.showDoctorRoomToPatients,
+      presetRooms: presetRoomsArr,
+      checkinMode: form.checkinMode,
     });
 
     setLoading(false);
@@ -407,6 +441,45 @@ export default function LocationSettingsForm({
         </div>
       </div>
 
+      {/* Check-in Flow */}
+      <div className="space-y-4 border-t border-gray-100 pt-5">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">Check-In Flow</h3>
+          <p className="text-xs text-ash mt-0.5">How patients get from form submit to the doctor queue.</p>
+        </div>
+
+        <div className="space-y-2">
+          {CHECKIN_MODE_OPTIONS.map((opt) => {
+            const isSelected = form.checkinMode === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setForm((prev) => ({ ...prev, checkinMode: opt.value }));
+                  setMessage(null);
+                }}
+                className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                  isSelected
+                    ? "border-hilt-blue bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 cursor-pointer"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-ink">{opt.label}</span>
+                  <div className={`flex h-4 w-4 items-center justify-center rounded-full border ${
+                    isSelected ? "border-hilt-blue bg-hilt-blue" : "border-gray-300"
+                  }`}>
+                    {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+                <p className="text-xs mt-1 text-slate">{opt.description}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Clinic Features */}
       <div className="space-y-4 border-t border-gray-100 pt-5">
         <h3 className="text-sm font-semibold text-ink">Clinic Features</h3>
@@ -459,6 +532,36 @@ export default function LocationSettingsForm({
             className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
           />
         </label>
+      </div>
+
+      {/* Doctor Rooms */}
+      <div className="space-y-4 border-t border-gray-100 pt-5">
+        <h3 className="text-sm font-semibold text-ink">Doctor Rooms</h3>
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Show doctor room to patients</span>
+            <p className="text-xs text-ash">When on, patients see the room on the claim screen and it appears on the TV queue display. Your receptionist always sees the room.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.showDoctorRoomToPatients}
+            onChange={(e) => setForm((prev) => ({ ...prev, showDoctorRoomToPatients: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <div>
+          <label className="block text-sm text-ink mb-1">Preset room names</label>
+          <textarea
+            value={form.presetRoomsText}
+            onChange={(e) => setForm((prev) => ({ ...prev, presetRoomsText: e.target.value }))}
+            rows={4}
+            placeholder={"Room 1\nRoom 2\nExam A"}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+          />
+          <p className="text-xs text-ash mt-1">One room per line. When filled in, staff pick a room from this list at check-in instead of typing free text.</p>
+        </div>
       </div>
 
       {/* Check-in Form */}

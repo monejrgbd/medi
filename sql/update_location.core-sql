@@ -24,7 +24,10 @@ CREATE OR REPLACE FUNCTION private.update_location(
   p_raven_api_key text DEFAULT NULL,
   p_ask_referral_source boolean DEFAULT NULL,
   p_ask_discovery_source boolean DEFAULT NULL,
-  p_queue_display_enabled boolean DEFAULT NULL
+  p_queue_display_enabled boolean DEFAULT NULL,
+  p_checkin_mode text DEFAULT NULL,
+  p_show_doctor_room_to_patients boolean DEFAULT NULL,
+  p_preset_rooms text[] DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -94,7 +97,14 @@ BEGIN
     raven_api_key = CASE WHEN p_raven_api_key IS NOT NULL THEN NULLIF(trim(p_raven_api_key), '') ELSE raven_api_key END,
     ask_referral_source = COALESCE(p_ask_referral_source, ask_referral_source),
     ask_discovery_source = COALESCE(p_ask_discovery_source, ask_discovery_source),
-    queue_display_enabled = COALESCE(p_queue_display_enabled, queue_display_enabled)
+    queue_display_enabled = COALESCE(p_queue_display_enabled, queue_display_enabled),
+    checkin_mode = CASE
+      WHEN p_checkin_mode IS NULL THEN checkin_mode
+      WHEN p_checkin_mode IN ('approve_to_start','approve_on_arrival','self_service_on_arrival') THEN p_checkin_mode
+      ELSE checkin_mode
+    END,
+    show_doctor_room_to_patients = COALESCE(p_show_doctor_room_to_patients, show_doctor_room_to_patients),
+    preset_rooms = COALESCE(p_preset_rooms, preset_rooms)
   WHERE id = p_location_id;
 
   -- Auto-initialize org vitals when vitals_enabled is turned on
@@ -115,6 +125,8 @@ DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, te
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean);
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text);
 DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean);
+DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean, boolean);
+DROP FUNCTION IF EXISTS public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean, boolean, text);
 
 CREATE OR REPLACE FUNCTION public.update_location(
   p_location_id uuid,
@@ -140,7 +152,10 @@ CREATE OR REPLACE FUNCTION public.update_location(
   p_raven_api_key text DEFAULT NULL,
   p_ask_referral_source boolean DEFAULT NULL,
   p_ask_discovery_source boolean DEFAULT NULL,
-  p_queue_display_enabled boolean DEFAULT NULL
+  p_queue_display_enabled boolean DEFAULT NULL,
+  p_checkin_mode text DEFAULT NULL,
+  p_show_doctor_room_to_patients boolean DEFAULT NULL,
+  p_preset_rooms text[] DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -151,9 +166,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url, p_nurse_enabled, p_vaccines_enabled, p_vitals_enabled, p_ai_custom_instructions, p_ai_message_limit, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled, p_queue_type, p_raven_api_key, p_ask_referral_source, p_ask_discovery_source, p_queue_display_enabled);
+  RETURN private.update_location(v_auth_uid, p_location_id, p_name, p_address, p_specialty, p_operating_hours, p_ai_model, p_display_format, p_referral_email, p_tablet_count, p_timezone, p_logo_url, p_nurse_enabled, p_vaccines_enabled, p_vitals_enabled, p_ai_custom_instructions, p_ai_message_limit, p_skip_ai, p_review_sms_enabled, p_diagnostic_enabled, p_queue_type, p_raven_api_key, p_ask_referral_source, p_ask_discovery_source, p_queue_display_enabled, p_checkin_mode, p_show_doctor_room_to_patients, p_preset_rooms);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean, boolean) FROM anon;
-GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean, boolean) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean, boolean, text, boolean, text[]) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_location(uuid, text, text, text, jsonb, text, text, text, int, text, text, boolean, boolean, boolean, text, integer, boolean, boolean, boolean, text, text, boolean, boolean, boolean, text, boolean, text[]) TO authenticated;

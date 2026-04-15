@@ -57,11 +57,14 @@ BEGIN
     END, true);
   PERFORM set_config('app.audit_action', 'unclaimed', true);
 
-  -- Release the claim — keep original entered_queue_at for fair re-entry
+  -- Release the claim — keep original entered_queue_at for fair re-entry.
+  -- Clear staff_room so a stale snapshot does not leak to receptionist UI
+  -- while the visit is back in the unclaimed queue.
   UPDATE public.visits
   SET status = 'waiting_doctor_claim',
       claimed_by = NULL,
-      claimed_at = NULL
+      claimed_at = NULL,
+      staff_room = NULL
   WHERE id = p_visit_id;
 
   RETURN jsonb_build_object('success', true);

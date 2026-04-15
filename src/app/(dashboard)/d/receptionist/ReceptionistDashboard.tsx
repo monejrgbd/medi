@@ -66,6 +66,7 @@ interface ActiveVisit {
   claimed_by: string | null;
   nurse_reviewed: boolean;
   claimed_is_nurse: boolean;
+  staff_room?: string | null;
   patients: {
     first_name: string;
     last_name: string;

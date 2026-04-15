@@ -3,6 +3,8 @@ DROP FUNCTION IF EXISTS private.create_pre_checkin_token(uuid, uuid, text, text)
 DROP FUNCTION IF EXISTS public.create_pre_checkin_token(uuid, text, text);
 DROP FUNCTION IF EXISTS private.create_pre_checkin_token(uuid, uuid, text, text, text, boolean);
 DROP FUNCTION IF EXISTS public.create_pre_checkin_token(uuid, text, text, text, boolean);
+DROP FUNCTION IF EXISTS private.create_pre_checkin_token(uuid, uuid, text, text, text, boolean, text, text);
+DROP FUNCTION IF EXISTS public.create_pre_checkin_token(uuid, text, text, text, boolean, text, text);
 
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.create_pre_checkin_token(
@@ -13,7 +15,8 @@ CREATE OR REPLACE FUNCTION private.create_pre_checkin_token(
   p_ai_model text DEFAULT NULL,
   p_skip_ai boolean DEFAULT false,
   p_ai_session_instructions text DEFAULT NULL,
-  p_name_match_mode text DEFAULT 'name'
+  p_name_match_mode text DEFAULT 'name',
+  p_checkin_mode_override text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -63,6 +66,12 @@ BEGIN
   -- Validate ai_model
   IF p_ai_model IS NOT NULL AND p_ai_model NOT IN ('standard', 'advanced', 'precision', 'premium') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid AI model');
+  END IF;
+
+  -- Validate checkin_mode_override
+  IF p_checkin_mode_override IS NOT NULL
+     AND p_checkin_mode_override NOT IN ('approve_to_start', 'approve_on_arrival', 'self_service_on_arrival') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid check-in mode');
   END IF;
 
   -- Resolve caller
@@ -153,8 +162,8 @@ BEGIN
   END IF;
 
   -- Create token
-  INSERT INTO public.pre_checkin_tokens (org_id, location_id, first_name, last_name, created_by, ai_model_override, skip_ai, ai_session_instructions, name_match_mode)
-  VALUES (v_caller_org_id, p_location_id, v_clean_first, v_clean_last, v_caller_staff_id, p_ai_model, COALESCE(p_skip_ai, false), v_clean_instructions, p_name_match_mode)
+  INSERT INTO public.pre_checkin_tokens (org_id, location_id, first_name, last_name, created_by, ai_model_override, skip_ai, ai_session_instructions, name_match_mode, checkin_mode_override)
+  VALUES (v_caller_org_id, p_location_id, v_clean_first, v_clean_last, v_caller_staff_id, p_ai_model, COALESCE(p_skip_ai, false), v_clean_instructions, p_name_match_mode, p_checkin_mode_override)
   RETURNING id, token INTO v_token_id, v_token;
 
   RETURN jsonb_build_object(
@@ -173,7 +182,8 @@ CREATE OR REPLACE FUNCTION public.create_pre_checkin_token(
   p_ai_model text DEFAULT NULL,
   p_skip_ai boolean DEFAULT false,
   p_ai_session_instructions text DEFAULT NULL,
-  p_name_match_mode text DEFAULT 'name'
+  p_name_match_mode text DEFAULT 'name',
+  p_checkin_mode_override text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -187,9 +197,9 @@ BEGIN
   IF v_auth_uid IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
   END IF;
-  RETURN private.create_pre_checkin_token(v_auth_uid, p_location_id, p_first_name, p_last_name, p_ai_model, p_skip_ai, p_ai_session_instructions, p_name_match_mode);
+  RETURN private.create_pre_checkin_token(v_auth_uid, p_location_id, p_first_name, p_last_name, p_ai_model, p_skip_ai, p_ai_session_instructions, p_name_match_mode, p_checkin_mode_override);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean, text, text) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean, text, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean, text, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_pre_checkin_token(uuid, text, text, text, boolean, text, text, text) TO authenticated;

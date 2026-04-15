@@ -20,6 +20,7 @@ interface ActiveVisit {
   claimed_by: string | null;
   nurse_reviewed: boolean;
   claimed_is_nurse: boolean;
+  staff_room?: string | null;
   queue_number?: number | null;
   patients: {
     id?: string;
@@ -123,6 +124,7 @@ export default function ActivePatientsList({
             const canMarkLeft = [
               "pending_approval",
               "still_answering_ai",
+              "awaiting_arrival",
               "waiting_doctor_claim",
               "claimed_by_doctor",
             ].includes(visit.status);
@@ -153,6 +155,11 @@ export default function ActivePatientsList({
                           {visit.claimed_is_nurse
                             ? `, Nurse: ${visit.claimed_doctor.full_name}`
                             : `, Dr. ${visit.claimed_doctor.full_name}`}
+                        </span>
+                      )}
+                      {visit.staff_room && (
+                        <span className="ml-2 inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">
+                          Room: {visit.staff_room}
                         </span>
                       )}
                     </p>

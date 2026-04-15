@@ -128,6 +128,7 @@ interface FocusModeProps {
   demoVisitId?: string | null;
   demoMode?: boolean;
   nurseEnabled?: boolean;
+  currentRoom?: string | null;
 }
 
 export default function FocusMode({
@@ -140,6 +141,7 @@ export default function FocusMode({
   demoVisitId,
   demoMode = false,
   nurseEnabled = false,
+  currentRoom = null,
 }: FocusModeProps) {
   const router = useRouter();
   const roleCtx = useRoleSafe();
@@ -458,6 +460,7 @@ export default function FocusMode({
             </div>
             <p className="text-xs text-slate">
               {locationName} | Focus Mode
+              {currentRoom && ` | Room: ${currentRoom}`}
               {!demoVisitId && queue.length > 0 && ` | ${queue.length} more in queue`}
             </p>
           </div>

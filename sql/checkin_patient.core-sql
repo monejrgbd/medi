@@ -32,6 +32,11 @@ DECLARE
   v_secondary record;
   v_phone_verified boolean;
   v_team_code text;
+  v_checkin_mode text;
+  v_loc_skip_ai boolean;
+  v_initial_status text;
+  v_initial_ai_started_at timestamptz;
+  v_initial_ai_skipped boolean;
 BEGIN
   -- Input validation: strip HTML, trim, enforce length
   v_clean_first := substring(trim(regexp_replace(p_first_name, '<[^>]*>', '', 'g')), 1, 100);
@@ -95,13 +100,32 @@ BEGIN
     v_team_code := NULL;
   END IF;
 
-  -- Validate location exists and get org_id
-  SELECT l.org_id, l.name INTO v_org_id, v_location_name
+  -- Validate location exists and get org_id + mode config
+  SELECT l.org_id, l.name, l.checkin_mode, COALESCE(l.skip_ai, false)
+  INTO v_org_id, v_location_name, v_checkin_mode, v_loc_skip_ai
   FROM public.locations l
   WHERE l.id = p_location_id;
 
   IF v_org_id IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  -- Resolve initial visit state based on check-in mode + skip_ai:
+  --   approve_to_start: wait for receptionist approval (current behavior)
+  --   approve_on_arrival / self_service_on_arrival + skip_ai: jump straight to arrival gate
+  --   approve_on_arrival / self_service_on_arrival + !skip_ai: start chat immediately
+  IF v_checkin_mode = 'approve_to_start' THEN
+    v_initial_status := 'pending_approval';
+    v_initial_ai_started_at := NULL;
+    v_initial_ai_skipped := false;
+  ELSIF v_loc_skip_ai THEN
+    v_initial_status := 'awaiting_arrival';
+    v_initial_ai_started_at := NULL;
+    v_initial_ai_skipped := true;
+  ELSE
+    v_initial_status := 'still_answering_ai';
+    v_initial_ai_started_at := now();
+    v_initial_ai_skipped := false;
   END IF;
 
   -- Check subscription status
@@ -215,13 +239,15 @@ BEGIN
     INSERT INTO public.visits (
       org_id, location_id, patient_id, has_previous_visits,
       phone_verification_pending, is_return_visit,
-      self_reported_referral, self_reported_referrer, team_code
+      self_reported_referral, self_reported_referrer, team_code,
+      checkin_mode, status, ai_started_at, ai_skipped
     )
     VALUES (
       v_org_id, p_location_id, v_patient.id, v_has_previous,
       NOT v_phone_verified,
       v_has_previous,
-      p_was_referred, v_clean_referred_by, v_team_code
+      p_was_referred, v_clean_referred_by, v_team_code,
+      v_checkin_mode, v_initial_status, v_initial_ai_started_at, v_initial_ai_skipped
     )
     RETURNING * INTO v_new_visit;
 
@@ -354,12 +380,14 @@ BEGIN
     INSERT INTO public.visits (
       org_id, location_id, patient_id, has_previous_visits,
       phone_verification_pending,
-      self_reported_referral, self_reported_referrer, team_code
+      self_reported_referral, self_reported_referrer, team_code,
+      checkin_mode, status, ai_started_at, ai_skipped
     )
     VALUES (
       v_org_id, p_location_id, v_new_patient_id, false,
       (v_clean_phone IS NOT NULL),
-      p_was_referred, v_clean_referred_by, v_team_code
+      p_was_referred, v_clean_referred_by, v_team_code,
+      v_checkin_mode, v_initial_status, v_initial_ai_started_at, v_initial_ai_skipped
     )
     RETURNING * INTO v_new_visit;
 
@@ -378,12 +406,14 @@ BEGIN
   INSERT INTO public.visits (
     org_id, location_id, patient_id, has_previous_visits,
     phone_verification_pending,
-    self_reported_referral, self_reported_referrer
+    self_reported_referral, self_reported_referrer,
+    checkin_mode, status, ai_started_at, ai_skipped
   )
   VALUES (
     v_org_id, p_location_id, v_new_patient_id, false,
     (v_clean_phone IS NOT NULL),
-    p_was_referred, v_clean_referred_by
+    p_was_referred, v_clean_referred_by,
+    v_checkin_mode, v_initial_status, v_initial_ai_started_at, v_initial_ai_skipped
   )
   RETURNING * INTO v_new_visit;
 

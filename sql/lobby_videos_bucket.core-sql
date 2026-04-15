@@ -1,0 +1,47 @@
+-- lobby-videos bucket (public) — lobby TV marketing/info videos
+-- Path pattern: {org_id}/{location_id}/{uuid}-{sanitized-name}.mp4
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'lobby-videos',
+  'lobby-videos',
+  true,
+  524288000,
+  ARRAY['video/mp4','video/x-m4v','application/mp4']
+)
+ON CONFLICT (id) DO UPDATE SET
+  public = EXCLUDED.public,
+  file_size_limit = EXCLUDED.file_size_limit,
+  allowed_mime_types = EXCLUDED.allowed_mime_types;
+
+-- SELECT: public
+DROP POLICY IF EXISTS "lobby_videos_public_read" ON storage.objects;
+CREATE POLICY "lobby_videos_public_read" ON storage.objects FOR SELECT
+  USING (bucket_id = 'lobby-videos');
+
+-- INSERT: authenticated, org match on first path segment
+DROP POLICY IF EXISTS "lobby_videos_org_insert" ON storage.objects;
+CREATE POLICY "lobby_videos_org_insert" ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'lobby-videos'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );
+
+-- UPDATE: authenticated, org match
+DROP POLICY IF EXISTS "lobby_videos_org_update" ON storage.objects;
+CREATE POLICY "lobby_videos_org_update" ON storage.objects FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'lobby-videos'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );
+
+-- DELETE: authenticated, org match
+DROP POLICY IF EXISTS "lobby_videos_org_delete" ON storage.objects;
+CREATE POLICY "lobby_videos_org_delete" ON storage.objects FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'lobby-videos'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );

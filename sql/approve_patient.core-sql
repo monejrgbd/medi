@@ -59,6 +59,28 @@ BEGIN
     END IF;
   END IF;
 
+  -- Reject approval attempts in self-service mode (no receptionist approval step)
+  IF v_visit.checkin_mode = 'self_service_on_arrival' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'This visit does not require approval');
+  END IF;
+
+  -- Mode 2: patient already chatted remotely and clicked "I have arrived".
+  -- entered_queue_at was stamped at arrival time and must NOT be overwritten
+  -- here, since arrival time is the canonical queue-order anchor for this mode.
+  IF v_visit.checkin_mode = 'approve_on_arrival' THEN
+    PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
+    PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
+    PERFORM set_config('app.audit_action', 'approved_on_arrival', true);
+
+    UPDATE public.visits
+    SET status = 'waiting_doctor_claim',
+        updated_at = now()
+    WHERE id = p_visit_id;
+
+    RETURN jsonb_build_object('success', true, 'mode', 'approve_on_arrival');
+  END IF;
+
+  -- Mode 1 (approve_to_start): existing behavior — approval gates chat start.
   -- Check if AI should be skipped at location level
   SELECT l.skip_ai INTO v_loc_skip_ai FROM public.locations l WHERE l.id = v_visit.location_id;
 

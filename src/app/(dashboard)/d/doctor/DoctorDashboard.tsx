@@ -68,6 +68,8 @@ interface Doctor {
 interface Location {
   id: string;
   name: string;
+  preset_rooms: string[];
+  show_doctor_room_to_patients: boolean;
 }
 
 interface DoctorDashboardProps {
@@ -79,6 +81,10 @@ interface DoctorDashboardProps {
   locationId: string | null;
   suggestedLocationId?: string | null;
   locationName?: string;
+  locationPresetRooms?: string[];
+  locationShowRoomToPatients?: boolean;
+  currentRoom?: string | null;
+  recentRooms?: string[];
   initialQueue: QueueVisit[];
   initialClaimed: ClaimedVisit[];
   initialCompleted: CompletedVisit[];
@@ -102,6 +108,10 @@ export default function DoctorDashboard({
   locationId,
   suggestedLocationId,
   locationName = "Clinic",
+  locationPresetRooms = [],
+  locationShowRoomToPatients = true,
+  currentRoom = null,
+  recentRooms = [],
   initialQueue,
   initialClaimed,
   initialCompleted,
@@ -131,6 +141,7 @@ export default function DoctorDashboard({
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     suggestedLocationId ?? (locations.length === 1 ? locations[0].id : null)
   );
+  const [roomInput, setRoomInput] = useState("");
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -243,6 +254,11 @@ export default function DoctorDashboard({
   // Location picker
   async function handleCheckIn(locId: string) {
     if (!staffUserId) return;
+    const trimmedRoom = roomInput.trim();
+    if (!trimmedRoom) {
+      setCheckinError("Please set your current room before checking in.");
+      return;
+    }
     setCheckingIn(true);
     setCheckinError(null);
 
@@ -251,6 +267,7 @@ export default function DoctorDashboard({
       const { data, error } = await supabase.rpc("staff_check_in", {
         p_location_id: locId,
         p_role: "doctor",
+        p_room: trimmedRoom,
       });
 
       if (error || (data && !(data as { success?: boolean }).success)) {
@@ -267,6 +284,13 @@ export default function DoctorDashboard({
       setCheckingIn(false);
     }
   }
+
+  const selectedLocation = locations.find((l) => l.id === selectedLocationId) ?? null;
+  const locationPresets = selectedLocation?.preset_rooms ?? [];
+  const locationShowRoom = selectedLocation?.show_doctor_room_to_patients ?? true;
+  const roomHelper = locationShowRoom
+    ? "Shown to your receptionist, on the queue display, and to patients when you claim them."
+    : "Shown only to your receptionist when a patient is claimed.";
 
   if (mode === "select_location") {
     return (
@@ -310,12 +334,59 @@ export default function DoctorDashboard({
             ))}
           </div>
 
+          {selectedLocationId && staffUserId && (
+            <div className="mt-4 space-y-2">
+              <label className="block text-sm font-semibold text-ink">Your current room</label>
+              {locationPresets.length > 0 ? (
+                <select
+                  value={roomInput}
+                  onChange={(e) => setRoomInput(e.target.value)}
+                  disabled={checkingIn}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+                >
+                  <option value="">Select a room...</option>
+                  {locationPresets.map((room) => (
+                    <option key={room} value={room}>{room}</option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={roomInput}
+                    onChange={(e) => setRoomInput(e.target.value)}
+                    disabled={checkingIn}
+                    maxLength={60}
+                    placeholder="e.g. Room 3"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+                  />
+                  {recentRooms.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {recentRooms.map((room) => (
+                        <button
+                          key={room}
+                          type="button"
+                          onClick={() => setRoomInput(room)}
+                          disabled={checkingIn}
+                          className="rounded-full border border-gray-300 bg-white px-3 py-1 text-xs text-slate hover:border-hilt-blue hover:text-hilt-blue disabled:opacity-50"
+                        >
+                          {room}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+              <p className="text-xs text-ash">{roomHelper}</p>
+            </div>
+          )}
+
           {selectedLocationId && (
             <>
               {staffUserId && (
                 <button
                   onClick={() => handleCheckIn(selectedLocationId)}
-                  disabled={checkingIn}
+                  disabled={checkingIn || !roomInput.trim()}
                   className="mt-4 w-full rounded-lg bg-hilt-blue px-4 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50 transition-colors"
                 >
                   {checkingIn ? "Checking in..." : "Begin Shift"}
@@ -374,6 +445,7 @@ export default function DoctorDashboard({
         demoVisitId={demoVisitId}
         demoMode={demoMode}
         nurseEnabled={nurseEnabled}
+        currentRoom={currentRoom}
       />
     );
   }
@@ -399,6 +471,10 @@ export default function DoctorDashboard({
         onToggleSound={handleToggleSound}
         focusMode={focusMode}
         onToggleFocusMode={() => setFocusMode(true)}
+        currentRoom={currentRoom}
+        presetRooms={locationPresetRooms}
+        recentRooms={recentRooms}
+        showRoomToPatients={locationShowRoomToPatients}
       />
 
       <div className="px-4 py-4 lg:px-6">

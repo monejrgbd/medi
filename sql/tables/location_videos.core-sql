@@ -1,0 +1,19 @@
+CREATE TABLE IF NOT EXISTS public.location_videos (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  location_id   uuid NOT NULL REFERENCES public.locations(id) ON DELETE CASCADE,
+  org_id        uuid NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  storage_path  text NOT NULL UNIQUE,
+  file_name     text NOT NULL CHECK (length(file_name) BETWEEN 1 AND 255),
+  file_size     bigint NOT NULL CHECK (file_size BETWEEN 1 AND 524288000),
+  mime_type     text NOT NULL CHECK (mime_type IN ('video/mp4','video/x-m4v','application/mp4')),
+  sort_order    int NOT NULL DEFAULT 0,
+  created_at    timestamptz DEFAULT now()
+);
+
+ALTER TABLE public.location_videos ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "org_staff_read_location_videos" ON public.location_videos FOR SELECT
+  USING (org_id = requesting_org_id());
+
+CREATE INDEX IF NOT EXISTS idx_location_videos_location
+  ON public.location_videos (location_id, sort_order);

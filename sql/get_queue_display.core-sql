@@ -10,10 +10,13 @@ SET search_path TO ''
 AS $$
 DECLARE
   v_location record;
-  v_result jsonb;
+  v_queue jsonb;
+  v_videos jsonb;
 BEGIN
-  -- Load location info
-  SELECT l.name, l.queue_type, l.logo_url, l.queue_display_enabled
+  -- Load location info (including TV display settings)
+  SELECT l.name, l.queue_type, l.logo_url, l.queue_display_enabled, l.show_doctor_room_to_patients,
+         l.tv_display_mode, l.tv_overlay_position, l.tv_overlay_visible,
+         l.tv_queue_duration_seconds, l.tv_audio_muted
   INTO v_location
   FROM public.locations l
   WHERE l.id = p_location_id;
@@ -30,15 +33,17 @@ BEGIN
   SELECT COALESCE(jsonb_agg(
     jsonb_build_object(
       'queue_number', q.queue_number,
-      'status', q.status
+      'status', q.status,
+      'staff_room', q.staff_room
     ) ORDER BY q.sort_priority DESC, q.queue_number ASC
   ), '[]'::jsonb)
-  INTO v_result
+  INTO v_queue
   FROM (
     SELECT
       v.queue_number,
       v.status,
-      v.priority AS sort_priority
+      v.priority AS sort_priority,
+      CASE WHEN v_location.show_doctor_room_to_patients THEN v.staff_room ELSE NULL END AS staff_room
     FROM public.visits v
     WHERE v.location_id = p_location_id
       AND v.status IN ('waiting_doctor_claim', 'claimed_by_doctor')
@@ -46,12 +51,33 @@ BEGIN
       AND v.queue_number IS NOT NULL
   ) q;
 
+  -- Load videos only when mode is not 'none'
+  IF v_location.tv_display_mode IS DISTINCT FROM 'none' THEN
+    SELECT COALESCE(jsonb_agg(
+             jsonb_build_object(
+               'id', lv.id,
+               'storage_path', lv.storage_path
+             ) ORDER BY lv.sort_order
+           ), '[]'::jsonb)
+    INTO v_videos
+    FROM public.location_videos lv
+    WHERE lv.location_id = p_location_id;
+  ELSE
+    v_videos := '[]'::jsonb;
+  END IF;
+
   RETURN jsonb_build_object(
     'success', true,
     'location_name', v_location.name,
     'queue_type', COALESCE(v_location.queue_type, 'fifo'),
     'logo_url', v_location.logo_url,
-    'queue', v_result
+    'queue', v_queue,
+    'tv_display_mode', COALESCE(v_location.tv_display_mode, 'none'),
+    'tv_overlay_position', COALESCE(v_location.tv_overlay_position, 'top-left'),
+    'tv_overlay_visible', COALESCE(v_location.tv_overlay_visible, true),
+    'tv_queue_duration_seconds', COALESCE(v_location.tv_queue_duration_seconds, 10),
+    'tv_audio_muted', COALESCE(v_location.tv_audio_muted, true),
+    'videos', v_videos
   );
 END;
 $$;

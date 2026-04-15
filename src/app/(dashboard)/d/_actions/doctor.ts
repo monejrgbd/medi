@@ -428,3 +428,32 @@ export async function fetchQueue(locationId: string) {
 
   return { success: true, queue: data.queue || [] };
 }
+
+export async function setStaffRoom(room: string) {
+  await requireAuth();
+  const trimmed = (room ?? "").trim();
+  if (!trimmed) return { success: false, error: "Room name is required" };
+  if (trimmed.length > 60)
+    return { success: false, error: "Room name must be 60 characters or fewer" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_staff_room", { p_room: trimmed });
+
+  if (error) return { success: false, error: "Failed to set room" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  revalidatePath("/d/doctor");
+  revalidatePath("/d/nurse");
+  return { success: true, room: data.room as string };
+}
+
+export async function fetchRecentStaffRooms() {
+  await requireAuth();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_recent_staff_rooms");
+
+  if (error) return { success: false, error: "Failed to fetch recent rooms" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  return { success: true, rooms: (data.rooms as string[]) || [] };
+}

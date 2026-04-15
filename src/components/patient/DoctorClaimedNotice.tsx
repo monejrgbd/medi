@@ -4,8 +4,16 @@ import { useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Check } from "lucide-react";
 
-export default function DoctorClaimedNotice() {
+interface DoctorClaimedNoticeProps {
+  staffRoom?: string | null;
+}
+
+export default function DoctorClaimedNotice({ staffRoom = null }: DoctorClaimedNoticeProps) {
   const { t } = useLanguage();
+
+  const roomText = staffRoom && staffRoom.trim()
+    ? t("claimed.go_to_room").replace("{room}", staffRoom.trim())
+    : null;
 
   useEffect(() => {
     if (
@@ -14,13 +22,13 @@ export default function DoctorClaimedNotice() {
     ) {
       try {
         new Notification(t("claimed.title"), {
-          body: t("claimed.subtitle"),
+          body: roomText ?? t("claimed.subtitle"),
         });
       } catch {
         // Notification API not available
       }
     }
-  }, [t]);
+  }, [t, roomText]);
 
   return (
     <div className="w-full max-w-md text-center">
@@ -35,6 +43,12 @@ export default function DoctorClaimedNotice() {
       <p className="text-sm text-slate">
         {t("claimed.subtitle")}
       </p>
+
+      {roomText && (
+        <p className="mt-3 text-base font-semibold text-ink">
+          {roomText}
+        </p>
+      )}
     </div>
   );
 }

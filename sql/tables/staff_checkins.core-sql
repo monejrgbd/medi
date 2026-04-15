@@ -4,7 +4,8 @@ CREATE TABLE public.staff_checkins (
   location_id           uuid NOT NULL REFERENCES public.locations(id),
   role                  text NOT NULL,
   checked_in_at         timestamptz DEFAULT now(),
-  checked_out_at        timestamptz
+  checked_out_at        timestamptz,
+  current_room          varchar(60)
 );
 
 ALTER TABLE public.staff_checkins ENABLE ROW LEVEL SECURITY;

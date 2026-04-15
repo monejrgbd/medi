@@ -77,6 +77,13 @@ BEGIN
       'ask_referral_source', l.ask_referral_source,
       'ask_discovery_source', l.ask_discovery_source,
       'queue_display_enabled', l.queue_display_enabled,
+      'show_doctor_room_to_patients', l.show_doctor_room_to_patients,
+      'preset_rooms', l.preset_rooms,
+      'tv_display_mode', l.tv_display_mode,
+      'tv_overlay_position', l.tv_overlay_position,
+      'tv_overlay_visible', l.tv_overlay_visible,
+      'tv_queue_duration_seconds', l.tv_queue_duration_seconds,
+      'tv_audio_muted', l.tv_audio_muted,
       'created_at', l.created_at
     )
   )

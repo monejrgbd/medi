@@ -19,6 +19,7 @@ DECLARE
   v_locked record;
   v_edge_url text;
   v_edge_secret text;
+  v_staff_room text;
   -- v_claimer_name removed (m10: don't leak doctor names)
 BEGIN
   -- Get visit details
@@ -121,11 +122,23 @@ BEGIN
     END, true);
   PERFORM set_config('app.audit_action', 'claimed', true);
 
+  -- Snapshot caller's current room (FOR UPDATE serializes against set_staff_room so
+  -- the cache on visits.staff_room stays consistent under concurrent edits)
+  SELECT current_room INTO v_staff_room
+  FROM public.staff_checkins
+  WHERE staff_user_id = v_caller_staff_id
+    AND role IN ('doctor', 'nurse')
+    AND checked_out_at IS NULL
+  ORDER BY checked_in_at DESC
+  LIMIT 1
+  FOR UPDATE;
+
   -- Claim the visit
   UPDATE public.visits
   SET status = 'claimed_by_doctor',
       claimed_by = v_caller_staff_id,
-      claimed_at = now()
+      claimed_at = now(),
+      staff_room = v_staff_room
   WHERE id = p_visit_id;
 
   -- If AI conversation completed but summary not yet generated (nurse-enabled flow),

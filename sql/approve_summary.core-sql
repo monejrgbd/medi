@@ -13,7 +13,7 @@ DECLARE
   v_visit record;
 BEGIN
   -- Look up visit
-  SELECT v.id, v.status, v.session_token, v.created_at, v.patient_id
+  SELECT v.id, v.status, v.session_token, v.created_at, v.patient_id, v.checkin_mode
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -40,14 +40,26 @@ BEGIN
   PERFORM set_config('app.audit_actor_type', 'patient', true);
   PERFORM set_config('app.audit_action', 'summary_approved', true);
 
-  -- Update visit: move to queue
-  UPDATE public.visits
-  SET status = 'waiting_doctor_claim',
-      entered_queue_at = now(),
-      patient_approved = true,
-      patient_approved_at = now(),
-      updated_at = now()
-  WHERE id = p_visit_id;
+  -- Branch on snapshotted check-in mode:
+  --   approve_to_start  -> straight to doctor queue (current behavior)
+  --   approve_on_arrival / self_service_on_arrival -> arrival gate first; entered_queue_at
+  --     is stamped later by confirm_arrival so queue order anchors on physical arrival.
+  IF v_visit.checkin_mode = 'approve_to_start' THEN
+    UPDATE public.visits
+    SET status = 'waiting_doctor_claim',
+        entered_queue_at = now(),
+        patient_approved = true,
+        patient_approved_at = now(),
+        updated_at = now()
+    WHERE id = p_visit_id;
+  ELSE
+    UPDATE public.visits
+    SET status = 'awaiting_arrival',
+        patient_approved = true,
+        patient_approved_at = now(),
+        updated_at = now()
+    WHERE id = p_visit_id;
+  END IF;
 
   RETURN jsonb_build_object('success', true);
 END;

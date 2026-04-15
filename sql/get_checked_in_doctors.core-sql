@@ -48,7 +48,8 @@ BEGIN
   -- Get checked-in doctors
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
     'staff_user_id', sc.staff_user_id,
-    'full_name', su.full_name
+    'full_name', su.full_name,
+    'current_room', sc.current_room
   )), '[]'::jsonb)
   INTO v_result
   FROM public.staff_checkins sc
@@ -60,7 +61,8 @@ BEGIN
   -- Get checked-in nurses
   SELECT COALESCE(jsonb_agg(jsonb_build_object(
     'staff_user_id', sc.staff_user_id,
-    'full_name', su.full_name
+    'full_name', su.full_name,
+    'current_room', sc.current_room
   )), '[]'::jsonb)
   INTO v_nurses
   FROM public.staff_checkins sc

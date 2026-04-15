@@ -25,7 +25,7 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
   END IF;
 
-  IF v_visit.status NOT IN ('pending_approval', 'still_answering_ai') THEN
+  IF v_visit.status NOT IN ('pending_approval', 'still_answering_ai', 'awaiting_arrival') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Visit is not in a skippable state');
   END IF;
 
@@ -60,11 +60,14 @@ BEGIN
   PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
   PERFORM set_config('app.audit_action', 'skipped_ai', true);
 
-  -- Skip AI and move directly to doctor queue
+  -- Skip AI and move directly to doctor queue.
+  -- entered_queue_at is preserved if already set (e.g. by confirm_arrival in
+  -- approve_on_arrival mode), otherwise stamp now() so queue ordering works.
   UPDATE public.visits
   SET status = 'waiting_doctor_claim',
-      entered_queue_at = now(),
-      ai_skipped = true
+      entered_queue_at = COALESCE(entered_queue_at, now()),
+      ai_skipped = true,
+      updated_at = now()
   WHERE id = p_visit_id;
 
   RETURN jsonb_build_object('success', true);

@@ -1,8 +1,13 @@
+-- Drop old signatures (room param added)
+DROP FUNCTION IF EXISTS public.staff_check_in(uuid, text);
+DROP FUNCTION IF EXISTS private.staff_check_in(uuid, uuid, text);
+
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.staff_check_in(
   p_caller_auth_uid uuid,
   p_location_id uuid,
-  p_role text
+  p_role text,
+  p_room text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -14,6 +19,8 @@ DECLARE
   v_staff_user_id uuid;
   v_org_id uuid;
   v_has_role boolean;
+  v_room text;
+  v_presets text[];
 BEGIN
   -- Only doctors, receptionists, and nurses can check in
   IF p_role NOT IN ('doctor', 'receptionist', 'nurse') THEN
@@ -46,6 +53,27 @@ BEGIN
     END IF;
   END IF;
 
+  -- Room required for doctor + nurse (they claim patients)
+  IF p_role IN ('doctor', 'nurse') THEN
+    v_room := btrim(COALESCE(p_room, ''));
+    IF v_room = '' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Room name is required at check-in');
+    END IF;
+    IF length(v_room) > 60 THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Room name must be 60 characters or fewer');
+    END IF;
+
+    -- If location has preset rooms, enforce picking from the list
+    SELECT preset_rooms INTO v_presets FROM public.locations WHERE id = p_location_id;
+    IF v_presets IS NOT NULL AND array_length(v_presets, 1) > 0 THEN
+      IF NOT (v_room = ANY(v_presets)) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Room must be one of the preset rooms for this location');
+      END IF;
+    END IF;
+  ELSE
+    v_room := NULL;
+  END IF;
+
   -- Auto-check out of any other location
   UPDATE public.staff_checkins
   SET checked_out_at = now()
@@ -53,8 +81,8 @@ BEGIN
     AND checked_out_at IS NULL;
 
   -- Create new checkin
-  INSERT INTO public.staff_checkins (staff_user_id, location_id, role)
-  VALUES (v_staff_user_id, p_location_id, p_role);
+  INSERT INTO public.staff_checkins (staff_user_id, location_id, role, current_room)
+  VALUES (v_staff_user_id, p_location_id, p_role, v_room);
 
   RETURN jsonb_build_object('success', true);
 END;
@@ -63,7 +91,8 @@ $$;
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.staff_check_in(
   p_location_id uuid,
-  p_role text
+  p_role text,
+  p_room text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -74,9 +103,9 @@ AS $$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  RETURN private.staff_check_in(v_auth_uid, p_location_id, p_role);
+  RETURN private.staff_check_in(v_auth_uid, p_location_id, p_role, p_room);
 END;
 $$;
 
-REVOKE EXECUTE ON FUNCTION public.staff_check_in(uuid, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.staff_check_in(uuid, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.staff_check_in(uuid, text, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.staff_check_in(uuid, text, text) TO authenticated;

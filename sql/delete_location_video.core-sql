@@ -1,0 +1,60 @@
+-- delete_location_video: owner deletes a video; returns storage_path so caller can remove bucket object.
+
+CREATE OR REPLACE FUNCTION private.delete_location_video(
+  p_caller_auth_uid uuid,
+  p_video_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_video record;
+  v_owner_id uuid;
+BEGIN
+  SELECT lv.id, lv.org_id, lv.storage_path INTO v_video
+  FROM public.location_videos lv
+  WHERE lv.id = p_video_id;
+
+  IF v_video IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Video not found.');
+  END IF;
+
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_video.org_id;
+
+  IF p_caller_auth_uid IS NULL OR p_caller_auth_uid <> v_owner_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Only the owner can manage TV videos.');
+  END IF;
+
+  DELETE FROM public.location_videos WHERE id = p_video_id;
+
+  RETURN jsonb_build_object('success', true, 'storage_path', v_video.storage_path);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.delete_location_video(
+  p_video_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid;
+BEGIN
+  v_auth_uid := auth.uid();
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.delete_location_video(v_auth_uid, p_video_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.delete_location_video(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_location_video(uuid) TO authenticated;

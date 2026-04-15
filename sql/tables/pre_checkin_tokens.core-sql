@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS public.pre_checkin_tokens (
   skip_ai         boolean NOT NULL DEFAULT false,
   ai_session_instructions text DEFAULT NULL,
   name_match_mode text NOT NULL DEFAULT 'name' CHECK (name_match_mode IN ('name', 'none')),
+  checkin_mode_override text DEFAULT NULL
+    CHECK (checkin_mode_override IS NULL OR checkin_mode_override IN ('approve_to_start', 'approve_on_arrival', 'self_service_on_arrival')),
   created_at      timestamptz NOT NULL DEFAULT now(),
   expires_at      timestamptz NOT NULL DEFAULT now() + interval '48 hours'
 );

@@ -1,5 +1,12 @@
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
+-- Unschedule existing job if present so we can overwrite with new logic.
+DO $$
+BEGIN
+  PERFORM cron.unschedule('ai_timeout_check');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 SELECT cron.schedule('ai_timeout_check', '* * * * *', $$
   DO $do$
   BEGIN
@@ -7,9 +14,20 @@ SELECT cron.schedule('ai_timeout_check', '* * * * *', $$
     PERFORM set_config('app.audit_action', 'ai_timeout', true);
     PERFORM set_config('app.audit_actor_id', '00000000-0000-0000-0000-000000000000', true);
 
+    -- Route stale chats based on the snapshotted check-in mode. Modes 2 and 3
+    -- must still go through the arrival gate so remote chatters cannot
+    -- queue-jump by timing out instead of completing the summary.
     UPDATE public.visits
-    SET status = 'waiting_doctor_claim', timeout_flagged = true,
-        entered_queue_at = now(), updated_at = now()
+    SET status = CASE
+          WHEN checkin_mode = 'approve_to_start' THEN 'waiting_doctor_claim'
+          ELSE 'awaiting_arrival'
+        END,
+        timeout_flagged = true,
+        entered_queue_at = CASE
+          WHEN checkin_mode = 'approve_to_start' THEN now()
+          ELSE entered_queue_at
+        END,
+        updated_at = now()
     WHERE status = 'still_answering_ai'
       AND ai_started_at IS NOT NULL
       AND ai_started_at < now() - interval '30 minutes';

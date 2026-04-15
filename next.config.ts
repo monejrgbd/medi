@@ -13,7 +13,7 @@ const cspBase = [
   "font-src 'self'",
   `connect-src 'self' ${SUPABASE_HOST} ${SUPABASE_WSS} ${PAYPAL_HOSTS} ${GOOGLE_HOSTS}`,
   `frame-src ${PAYPAL_HOSTS}`,
-  "media-src 'self' blob:",
+  `media-src 'self' blob: ${SUPABASE_HOST}`,
   "object-src 'none'",
   "base-uri 'self'",
   `form-action 'self' ${SUPABASE_HOST}`,

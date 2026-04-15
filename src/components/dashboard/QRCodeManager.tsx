@@ -4,17 +4,23 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { toggleQueueDisplay } from "@/app/(dashboard)/d/_actions/locations";
+import TVDisplayConfig from "./TVDisplayConfig";
+import type { TvDisplayConfig as TvDisplayConfigType } from "@/lib/tvDisplay";
 
 export default function QRCodeManager({
   locationId,
   locationName,
   logoUrl,
   queueDisplayEnabled,
+  orgId,
+  tvConfig,
 }: {
   locationId: string;
   locationName: string;
   logoUrl: string | null;
   queueDisplayEnabled: boolean;
+  orgId: string;
+  tvConfig: TvDisplayConfigType;
 }) {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -190,6 +196,14 @@ export default function QRCodeManager({
             <p className="text-center text-xs text-ash">
               Enable queue display above to generate the TV screen link and show patients their queue number.
             </p>
+          )}
+
+          {queueEnabled && (
+            <TVDisplayConfig
+              locationId={locationId}
+              orgId={orgId}
+              initial={tvConfig}
+            />
           )}
         </div>
       )}

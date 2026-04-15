@@ -46,11 +46,14 @@ export default async function DoctorPage({
   let checkedInLocationId: string | null = null;
   let locationName = "Clinic";
   let nurseEnabled = false;
+  let locationPresetRooms: string[] = [];
+  let locationShowRoomToPatients = true;
+  let currentRoom: string | null = null;
 
   if (staffUser) {
     const { data: checkin } = await supabase
       .from("staff_checkins")
-      .select("location_id")
+      .select("location_id, current_room")
       .eq("staff_user_id", staffUser.id)
       .eq("role", "doctor")
       .is("checked_out_at", null)
@@ -59,15 +62,18 @@ export default async function DoctorPage({
       .single();
 
     checkedInLocationId = checkin?.location_id ?? null;
+    currentRoom = checkin?.current_room ?? null;
 
     if (checkedInLocationId) {
       const { data: locationRow } = await supabase
         .from("locations")
-        .select("name, nurse_enabled")
+        .select("name, nurse_enabled, preset_rooms, show_doctor_room_to_patients")
         .eq("id", checkedInLocationId)
         .single();
       locationName = locationRow?.name ?? "Clinic";
       nurseEnabled = locationRow?.nurse_enabled ?? false;
+      locationPresetRooms = locationRow?.preset_rooms ?? [];
+      locationShowRoomToPatients = locationRow?.show_doctor_room_to_patients ?? true;
     }
   }
 
@@ -90,7 +96,7 @@ export default async function DoctorPage({
   // No location yet — show picker
   if (!checkedInLocationId) {
     const roles = await getMyRoles();
-    const doctorLocations = ownerCheck
+    const baseDoctorLocations: { id: string; name: string }[] = ownerCheck
       ? allLocations
       : roles
           .filter((r: { role: string }) => r.role === "doctor")
@@ -98,6 +104,27 @@ export default async function DoctorPage({
             id: r.location_id,
             name: r.location_name,
           }));
+
+    // Enrich with preset_rooms + show_doctor_room_to_patients for the room input UI
+    const locationIds = baseDoctorLocations.map((l) => l.id);
+    const { data: locationConfigs } = locationIds.length
+      ? await supabase
+          .from("locations")
+          .select("id, preset_rooms, show_doctor_room_to_patients")
+          .in("id", locationIds)
+      : { data: [] };
+    const configById = new Map(
+      (locationConfigs ?? []).map((c: { id: string; preset_rooms: string[]; show_doctor_room_to_patients: boolean }) => [c.id, c])
+    );
+    const doctorLocations = baseDoctorLocations.map((l) => ({
+      id: l.id,
+      name: l.name,
+      preset_rooms: configById.get(l.id)?.preset_rooms ?? [],
+      show_doctor_room_to_patients: configById.get(l.id)?.show_doctor_room_to_patients ?? true,
+    }));
+
+    const recentRes = await supabase.rpc("get_recent_staff_rooms");
+    const recentRooms: string[] = recentRes.data?.success ? (recentRes.data.rooms ?? []) : [];
 
     return (
       <DoctorDashboard
@@ -108,6 +135,7 @@ export default async function DoctorPage({
         orgId={orgId}
         locationId={null}
         suggestedLocationId={suggestedLocationId}
+        recentRooms={recentRooms}
         initialQueue={[]}
         initialClaimed={[]}
         initialCompleted={[]}
@@ -132,6 +160,9 @@ export default async function DoctorPage({
       }),
     ]);
 
+  const recentRes = await supabase.rpc("get_recent_staff_rooms");
+  const recentRooms: string[] = recentRes.data?.success ? (recentRes.data.rooms ?? []) : [];
+
   return (
     <DoctorDashboard
       mode="dashboard"
@@ -141,6 +172,10 @@ export default async function DoctorPage({
       orgId={orgId}
       locationId={checkedInLocationId}
       locationName={locationName}
+      locationPresetRooms={locationPresetRooms}
+      locationShowRoomToPatients={locationShowRoomToPatients}
+      currentRoom={currentRoom}
+      recentRooms={recentRooms}
       initialQueue={queueRes.data?.queue ?? []}
       initialClaimed={claimedRes.data?.claimed ?? []}
       initialCompleted={completedLeftRes.data?.completed ?? []}

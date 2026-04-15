@@ -6,9 +6,12 @@ CREATE TABLE public.visits (
   session_token         uuid NOT NULL UNIQUE DEFAULT gen_random_uuid(),
   status                text NOT NULL DEFAULT 'pending_approval'
     CHECK (status IN (
-      'pending_approval', 'still_answering_ai', 'waiting_doctor_claim',
-      'claimed_by_doctor', 'completed', 'left'
+      'pending_approval', 'still_answering_ai', 'awaiting_arrival',
+      'waiting_doctor_claim', 'claimed_by_doctor', 'completed', 'left'
     )),
+  checkin_mode          text NOT NULL DEFAULT 'approve_to_start'
+    CHECK (checkin_mode IN ('approve_to_start', 'approve_on_arrival', 'self_service_on_arrival')),
+  arrived_at            timestamptz,
   priority              smallint DEFAULT 1 CHECK (priority BETWEEN 1 AND 3),
   is_sensitive          boolean DEFAULT false,
   is_follow_up          boolean DEFAULT false,
@@ -19,6 +22,7 @@ CREATE TABLE public.visits (
   entered_queue_at      timestamptz,
   claimed_by            uuid REFERENCES public.staff_users(id),
   claimed_at            timestamptz,
+  staff_room            varchar(60),
   completed_at          timestamptz,
   ai_summary            text,
   ai_summary_translated text,

@@ -7,6 +7,12 @@ import { stripHtml } from "@/lib/utils";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+const CHECKIN_MODE_VALUES = new Set([
+  "approve_to_start",
+  "approve_on_arrival",
+  "self_service_on_arrival",
+]);
+
 export async function generateCheckinLink(
   locationId: string,
   firstName: string,
@@ -14,7 +20,8 @@ export async function generateCheckinLink(
   aiModel?: string | null,
   skipAi?: boolean,
   aiSessionInstructions?: string | null,
-  nameMatchMode?: "name" | "none"
+  nameMatchMode?: "name" | "none",
+  checkinModeOverride?: string | null
 ): Promise<{ success: boolean; link?: string; error?: string }> {
   await requireAuth();
 
@@ -36,6 +43,11 @@ export async function generateCheckinLink(
     ? stripHtml(aiSessionInstructions).slice(0, 2000)
     : null;
 
+  const resolvedCheckinOverride =
+    checkinModeOverride && CHECKIN_MODE_VALUES.has(checkinModeOverride)
+      ? checkinModeOverride
+      : null;
+
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("create_pre_checkin_token", {
     p_location_id: locationId,
@@ -45,6 +57,7 @@ export async function generateCheckinLink(
     p_skip_ai: skipAi || false,
     p_ai_session_instructions: cleanInstructions,
     p_name_match_mode: mode,
+    p_checkin_mode_override: resolvedCheckinOverride,
   });
 
   if (error) return { success: false, error: "Failed to generate link" };

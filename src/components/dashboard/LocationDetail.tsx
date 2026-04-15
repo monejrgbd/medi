@@ -30,6 +30,13 @@ interface LocationData {
   ask_referral_source?: boolean;
   ask_discovery_source?: boolean;
   queue_display_enabled?: boolean;
+  show_doctor_room_to_patients?: boolean;
+  preset_rooms?: string[];
+  tv_display_mode?: "none" | "alternating" | "batched";
+  tv_overlay_position?: "top-left" | "top-right";
+  tv_overlay_visible?: boolean;
+  tv_queue_duration_seconds?: number;
+  tv_audio_muted?: boolean;
   created_at: string;
 }
 
@@ -110,6 +117,14 @@ export default function LocationDetail({
           locationName={location.name}
           logoUrl={location.logo_url}
           queueDisplayEnabled={location.queue_display_enabled ?? false}
+          orgId={location.org_id}
+          tvConfig={{
+            mode: location.tv_display_mode ?? "none",
+            position: location.tv_overlay_position ?? "top-left",
+            overlayVisible: location.tv_overlay_visible ?? true,
+            queueDurationSeconds: location.tv_queue_duration_seconds ?? 10,
+            audioMuted: location.tv_audio_muted ?? true,
+          }}
         />
       )}
     </div>
