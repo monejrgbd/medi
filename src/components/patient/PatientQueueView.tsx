@@ -202,7 +202,7 @@ export default function PatientQueueView({
               <Monitor className="h-3.5 w-3.5" />
               View on TV
             </button>
-            <p className="text-[10px] text-ash">Your clinic can display this on a lobby TV with custom video</p>
+            <p className="text-[10px] text-ash">Your clinic gets a guide to display this on the lobby TV with custom video</p>
           </div>
         )}
       </div>

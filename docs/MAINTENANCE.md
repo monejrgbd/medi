@@ -3,6 +3,7 @@
 ## Daily
 - **[email]** Verify `process-email-queue` edge function is running (check pending_emails for stuck rows)
 - **[ai]** Monitor AI conversation edge function errors in Supabase logs
+- **[ai-flow]** Spot-check `generate-summary` edge function logs for the expected mode pattern: nurse-enabled visits should show two invocations per visit (`mode: summary_only` then `mode: diagnostic_only`); non-nurse should show one (`mode: full`). Repeated `mode: full` fallback fires from `claim_patient` indicate the AI is failing to emit `[CONVERSATION_COMPLETE]` — review and re-strengthen the system prompt in `start_ai_conversation.core-sql` if frequency is non-trivial.
 - **[credits]** Verify `credit_reset` cron runs successfully (check audit_trail for `monthly_credit_reset` entries)
 
 ## Weekly
