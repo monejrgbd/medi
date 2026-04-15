@@ -6,6 +6,7 @@ import type { QueueVisit } from "@/app/(dashboard)/d/nurse/NurseDashboard";
 interface NurseQueueListProps {
   queue: QueueVisit[];
   onClaimed: () => void;
+  demoMode?: boolean;
 }
 
 function PriorityBadge({ priority }: { priority: number }) {
@@ -26,7 +27,7 @@ function PriorityBadge({ priority }: { priority: number }) {
   return null;
 }
 
-export default function NurseQueueList({ queue, onClaimed }: NurseQueueListProps) {
+export default function NurseQueueList({ queue, onClaimed, demoMode = false }: NurseQueueListProps) {
   if (queue.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -89,7 +90,7 @@ export default function NurseQueueList({ queue, onClaimed }: NurseQueueListProps
                 </div>
               </div>
 
-              <NurseClaimButton visitId={visit.visit_id} onClaimed={onClaimed} />
+              <NurseClaimButton visitId={visit.visit_id} onClaimed={onClaimed} demoMode={demoMode} />
             </div>
           </div>
         );

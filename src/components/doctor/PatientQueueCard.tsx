@@ -7,6 +7,7 @@ import { formatQueueNumber } from "@/lib/queueUtils";
 interface PatientQueueCardProps {
   visit: QueueVisit;
   onClaimed: (visitId: string) => void;
+  demoMode?: boolean;
 }
 
 function PriorityBadge({ priority }: { priority: number }) {
@@ -30,6 +31,7 @@ function PriorityBadge({ priority }: { priority: number }) {
 export default function PatientQueueCard({
   visit,
   onClaimed,
+  demoMode = false,
 }: PatientQueueCardProps) {
   const waitMinutes = Math.floor(visit.wait_seconds / 60);
   const isHighPriority = visit.priority === 3;
@@ -82,7 +84,7 @@ export default function PatientQueueCard({
           </div>
         </div>
 
-        <ClaimButton visitId={visit.visit_id} onClaimed={onClaimed} />
+        <ClaimButton visitId={visit.visit_id} onClaimed={onClaimed} demoMode={demoMode} />
       </div>
     </div>
   );

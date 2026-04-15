@@ -528,7 +528,7 @@ export default function DoctorDashboard({
 
         {/* Tab content */}
         {tab === "pending" && (
-          <QueueList queue={queue} onClaimed={(visitId) => {
+          <QueueList queue={queue} demoMode={demoMode} onClaimed={(visitId) => {
             if (demoMode) {
               setFocusMode(true);
               router.refresh();

@@ -6,9 +6,10 @@ import type { QueueVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 interface QueueListProps {
   queue: QueueVisit[];
   onClaimed: (visitId: string) => void;
+  demoMode?: boolean;
 }
 
-export default function QueueList({ queue, onClaimed }: QueueListProps) {
+export default function QueueList({ queue, onClaimed, demoMode = false }: QueueListProps) {
   if (queue.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-12 text-center">
@@ -28,6 +29,7 @@ export default function QueueList({ queue, onClaimed }: QueueListProps) {
           key={visit.visit_id}
           visit={visit}
           onClaimed={onClaimed}
+          demoMode={demoMode}
         />
       ))}
     </div>

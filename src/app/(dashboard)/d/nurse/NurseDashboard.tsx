@@ -568,7 +568,7 @@ export default function NurseDashboard({
 
         {/* Tab content */}
         {tab === "pending" && (
-          <NurseQueueList queue={queue} onClaimed={() => {
+          <NurseQueueList queue={queue} demoMode={demoMode} onClaimed={() => {
             if (demoMode) {
               setFocusMode(true);
             }
