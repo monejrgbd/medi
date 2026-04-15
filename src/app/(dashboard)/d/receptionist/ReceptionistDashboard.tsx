@@ -558,7 +558,7 @@ export default function ReceptionistDashboard({
           </div>
           <div>
             <p className="text-sm font-medium text-hilt-blue">Share Custom Check in Link</p>
-            <p className="text-xs text-slate">Custom check in configuration for a specific patient</p>
+            <p className="text-xs text-slate">For a specific patient</p>
           </div>
         </button>
 
