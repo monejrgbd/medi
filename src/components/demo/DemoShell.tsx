@@ -134,6 +134,7 @@ function DemoShellInner({
   const [visitCompleted, setVisitCompleted] = useState(false);
   const [visitClaimed, setVisitClaimed] = useState(false);
   const [nurseStepDone, setNurseStepDone] = useState(false);
+  const [nurseStepStarted, setNurseStepStarted] = useState(false);
   const [demoStep, setDemoStep] = useState(1);
   const [patientStepsDone, setPatientStepsDone] = useState(false);
   const [pendingReceptionistSwitch, setPendingReceptionistSwitch] = useState(false);
@@ -369,6 +370,7 @@ function DemoShellInner({
         // Route to nurse first (only once)
         if (!nurseTabShownRef.current) {
           nurseTabShownRef.current = true;
+          setNurseStepStarted(true);
           setPulsingTab("nurse");
           setTimeout(() => {
             setActiveTab("nurse");
@@ -602,6 +604,7 @@ function DemoShellInner({
     setVisitCompleted(false);
     setVisitClaimed(false);
     setNurseStepDone(false);
+    setNurseStepStarted(false);
     nurseStepDoneRef.current = false;
     nurseTabShownRef.current = false;
     setPatientStepsDone(false);
@@ -651,7 +654,7 @@ function DemoShellInner({
       />
 
       {/* Timeline */}
-      <DemoTimeline currentStep={demoStep} features={features} nurseActive={features.nurseEnabled && !nurseStepDone && activeTab === "nurse"} nurseDone={nurseStepDone} onFinish={() => setDemoComplete(true)} />
+      <DemoTimeline currentStep={demoStep} features={features} nurseActive={features.nurseEnabled && nurseStepStarted && !nurseStepDone} nurseDone={nurseStepDone} onFinish={() => setDemoComplete(true)} />
 
 
 
