@@ -127,6 +127,7 @@ export default function PreScreeningForm({
   });
 
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
 
   // Auto-complete if no visible sections
   useEffect(() => {
@@ -188,6 +189,7 @@ export default function PreScreeningForm({
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(false);
     try {
       const data: Record<string, unknown> = {};
 
@@ -237,11 +239,15 @@ export default function PreScreeningForm({
 
       if (error) {
         console.error("Failed to save prescreening data:", error);
+        setSaveError(true);
+        setSaving(false);
+        return;
       }
 
       onComplete();
     } catch (err) {
       console.error("Failed to save prescreening data:", err);
+      setSaveError(true);
       setSaving(false);
     }
   };
@@ -395,6 +401,13 @@ export default function PreScreeningForm({
           />
         );
       })}
+
+      {/* Error message */}
+      {saveError && (
+        <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+          Something went wrong. Please try again.
+        </div>
+      )}
 
       {/* Continue button */}
       <div className="mt-6">

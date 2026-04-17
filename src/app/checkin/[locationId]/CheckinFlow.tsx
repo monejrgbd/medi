@@ -676,6 +676,8 @@ export default function CheckinFlow({
       }
 
       setPatientFirstName(firstName);
+      setPatientSex(sex || null);
+      setPatientBirthday(birthday);
       setHasPreviousVisits(tokenData.has_previous_visits);
       if (tokenData.queue_number != null) setQueueNumber(tokenData.queue_number);
 
@@ -772,6 +774,8 @@ export default function CheckinFlow({
     }
 
     setPatientFirstName(firstName);
+    setPatientSex(sex || null);
+    setPatientBirthday(birthday);
     setHasPreviousVisits(data.has_previous_visits);
 
     if (data.queue_number != null) setQueueNumber(data.queue_number);
@@ -930,9 +934,8 @@ export default function CheckinFlow({
         p_language: language,
       }
     );
-    setLanguageLoading(false);
-
     if (rpcError || !data?.success) {
+      setLanguageLoading(false);
       setError(data?.error || "Failed to save preferences.");
       return;
     }
@@ -940,9 +943,11 @@ export default function CheckinFlow({
     setConsentGiven(true);
     setPatientLanguage(language);
     if (shouldShowPrescreening()) {
-      fetchMedicalInfo();
+      await fetchMedicalInfo();
+      setLanguageLoading(false);
       setState("prescreening");
     } else {
+      setLanguageLoading(false);
       setState("chatting");
     }
   }
@@ -1333,6 +1338,16 @@ export default function CheckinFlow({
         pregnancy_enabled: true,
         custom_fields: [],
       };
+      // Wait for medical info to load for returning patients (fetchMedicalInfo is async)
+      if (hasPreviousVisits && !medicalInfo) {
+        return (
+          <div className="w-full max-w-md text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-hilt-blue" />
+            </div>
+          </div>
+        );
+      }
       return (
         <PreScreeningForm
           sessionToken={sessionToken!}
