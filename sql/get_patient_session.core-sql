@@ -16,6 +16,8 @@ DECLARE
   v_allergies jsonb;
   v_chronic jsonb;
   v_pets jsonb;
+  v_custom_fields jsonb;
+  v_location_config jsonb;
 BEGIN
   -- Look up visit by session token
   SELECT v.id AS visit_id, v.status, v.has_previous_visits, v.created_at,
@@ -24,6 +26,7 @@ BEGIN
          v.pending_phone, v.queue_number,
          v.entered_queue_at, v.patient_denied, v.patient_id,
          v.staff_room, v.checkin_mode, v.arrived_at,
+         v.prescreening_data,
          p.first_name AS patient_first_name, p.language, p.consent_given,
          p.birthday AS patient_birthday,
          p.sex,
@@ -83,6 +86,30 @@ BEGIN
   FROM public.patient_pets pp
   WHERE pp.patient_id = v_visit.patient_id AND pp.active = true;
 
+  -- Load location prescreening config for custom field label lookup
+  SELECT l.prescreening_config INTO v_location_config
+  FROM public.locations l WHERE l.id = v_visit.location_id;
+
+  -- Load active custom fields with labels from location config
+  SELECT COALESCE(
+    (SELECT jsonb_object_agg(sub.field_id::text, jsonb_build_object(
+      'label', COALESCE(
+        (SELECT cf->>'label'
+         FROM jsonb_array_elements(v_location_config->'custom_fields') cf
+         WHERE cf->>'id' = sub.field_id::text),
+        'Custom field'
+      ),
+      'values', sub.vals
+    ))
+     FROM (
+       SELECT field_id, jsonb_agg(value ORDER BY created_at) AS vals
+       FROM public.patient_custom_fields
+       WHERE patient_id = v_visit.patient_id AND active = true
+       GROUP BY field_id
+     ) sub),
+    '{}'::jsonb
+  ) INTO v_custom_fields;
+
   RETURN jsonb_build_object(
     'success', true,
     'visit_id', v_visit.visit_id,
@@ -112,7 +139,9 @@ BEGIN
     'pets', v_pets,
     'staff_room', CASE WHEN v_visit.show_doctor_room_to_patients THEN v_visit.staff_room ELSE NULL END,
     'checkin_mode', v_visit.checkin_mode,
-    'arrived_at', v_visit.arrived_at
+    'arrived_at', v_visit.arrived_at,
+    'prescreening_data', v_visit.prescreening_data,
+    'custom_fields', v_custom_fields
   );
 END;
 $$;

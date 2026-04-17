@@ -1060,6 +1060,7 @@ export type Database = {
           nurse_enabled: boolean | null
           operating_hours: Json | null
           org_id: string
+          prescreening_config: Json | null
           preset_rooms: string[]
           qr_code_url: string | null
           queue_display_enabled: boolean | null
@@ -1098,6 +1099,7 @@ export type Database = {
           nurse_enabled?: boolean | null
           operating_hours?: Json | null
           org_id: string
+          prescreening_config?: Json | null
           preset_rooms?: string[]
           qr_code_url?: string | null
           queue_display_enabled?: boolean | null
@@ -1136,6 +1138,7 @@ export type Database = {
           nurse_enabled?: boolean | null
           operating_hours?: Json | null
           org_id?: string
+          prescreening_config?: Json | null
           preset_rooms?: string[]
           qr_code_url?: string | null
           queue_display_enabled?: boolean | null
@@ -1424,6 +1427,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "patient_chronic_conditions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_custom_fields: {
+        Row: {
+          active: boolean
+          created_at: string
+          field_id: string
+          id: string
+          org_id: string
+          patient_id: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          field_id: string
+          id?: string
+          org_id: string
+          patient_id: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          field_id?: string
+          id?: string
+          org_id?: string
+          patient_id?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_custom_fields_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_custom_fields_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -3011,6 +3062,7 @@ export type Database = {
           patient_id: string
           pending_phone: string | null
           phone_verification_pending: boolean | null
+          prescreening_data: Json | null
           priority: number | null
           queue_number: number | null
           review_sms_sent: boolean | null
@@ -3069,6 +3121,7 @@ export type Database = {
           patient_id: string
           pending_phone?: string | null
           phone_verification_pending?: boolean | null
+          prescreening_data?: Json | null
           priority?: number | null
           queue_number?: number | null
           review_sms_sent?: boolean | null
@@ -3127,6 +3180,7 @@ export type Database = {
           patient_id?: string
           pending_phone?: string | null
           phone_verification_pending?: boolean | null
+          prescreening_data?: Json | null
           priority?: number | null
           queue_number?: number | null
           review_sms_sent?: boolean | null
@@ -3860,6 +3914,10 @@ export type Database = {
         }
         Returns: Json
       }
+      save_prescreening_data: {
+        Args: { p_data: Json; p_session_token: string }
+        Returns: Json
+      }
       save_summary: {
         Args: {
           p_diagnostic?: string
@@ -4044,6 +4102,7 @@ export type Database = {
           p_name?: string
           p_nurse_enabled?: boolean
           p_operating_hours?: Json
+          p_prescreening_config?: Json
           p_preset_rooms?: string[]
           p_queue_display_enabled?: boolean
           p_queue_type?: string
@@ -4070,6 +4129,15 @@ export type Database = {
       }
       update_organization: { Args: { p_name: string }; Returns: Json }
       update_organization_name: { Args: { p_name: string }; Returns: undefined }
+      update_patient_custom_field: {
+        Args: {
+          p_field_id: string
+          p_org_id: string
+          p_patient_id: string
+          p_values: string[]
+        }
+        Returns: Json
+      }
       update_pets: {
         Args: { p_patient_id: string; p_pets: string[] }
         Returns: Json

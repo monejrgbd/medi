@@ -35,6 +35,18 @@ interface LocationData {
   show_doctor_room_to_patients?: boolean;
   preset_rooms?: string[];
   checkin_mode?: "approve_to_start" | "approve_on_arrival" | "self_service_on_arrival";
+  prescreening_config?: {
+    medications_enabled: boolean;
+    allergies_enabled: boolean;
+    pets_enabled: boolean;
+    pregnancy_enabled: boolean;
+    custom_fields: {
+      id: string;
+      label: string;
+      type: "list" | "yes_no";
+      none_label?: string;
+    }[];
+  } | null;
 }
 
 type CheckinMode = "approve_to_start" | "approve_on_arrival" | "self_service_on_arrival";
@@ -128,6 +140,11 @@ export default function LocationSettingsForm({
     showDoctorRoomToPatients: location.show_doctor_room_to_patients ?? true,
     presetRoomsText: (location.preset_rooms ?? []).join("\n"),
     checkinMode: (location.checkin_mode ?? "approve_to_start") as CheckinMode,
+    prescreeningMedicationsEnabled: (location.prescreening_config as any)?.medications_enabled ?? true,
+    prescreeningAllergiesEnabled: (location.prescreening_config as any)?.allergies_enabled ?? true,
+    prescreeningPetsEnabled: (location.prescreening_config as any)?.pets_enabled ?? true,
+    prescreeningPregnancyEnabled: (location.prescreening_config as any)?.pregnancy_enabled ?? true,
+    prescreeningCustomFields: ((location.prescreening_config as any)?.custom_fields ?? []) as { id: string; label: string; type: "list" | "yes_no"; none_label?: string }[],
   });
   const initialFormJson = useMemo(() => JSON.stringify(form), []);
   const isDirty = JSON.stringify(form) !== initialFormJson;
@@ -201,6 +218,13 @@ export default function LocationSettingsForm({
       showDoctorRoomToPatients: form.showDoctorRoomToPatients,
       presetRooms: presetRoomsArr,
       checkinMode: form.checkinMode,
+      prescreeningConfig: {
+        medications_enabled: form.prescreeningMedicationsEnabled,
+        allergies_enabled: form.prescreeningAllergiesEnabled,
+        pets_enabled: form.prescreeningPetsEnabled,
+        pregnancy_enabled: form.prescreeningPregnancyEnabled,
+        custom_fields: form.prescreeningCustomFields,
+      },
     });
 
     setLoading(false);
@@ -593,6 +617,146 @@ export default function LocationSettingsForm({
             className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
           />
         </label>
+      </div>
+
+      {/* Pre Screening */}
+      <div className="space-y-4 border-t border-gray-100 pt-5">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">Pre Screening</h3>
+          <p className="text-xs text-ash mt-0.5">Configure what information to collect from patients before the AI conversation.</p>
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-slate">Default Fields</p>
+          {([
+            { key: "prescreeningMedicationsEnabled" as const, label: "Medications", desc: "Ask patients to list their current medications." },
+            { key: "prescreeningAllergiesEnabled" as const, label: "Allergies", desc: "Ask patients to list their known allergies." },
+            { key: "prescreeningPetsEnabled" as const, label: "Pets", desc: "Ask patients about pets at home (relevant for certain conditions)." },
+            { key: "prescreeningPregnancyEnabled" as const, label: "Pregnancy (females 17+)", desc: "Ask eligible patients about pregnancy status." },
+          ]).map(({ key, label, desc }) => (
+            <label key={key} className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-ink">{label}</span>
+                <p className="text-xs text-ash">{desc}</p>
+              </div>
+              <input
+                type="checkbox"
+                checked={form[key]}
+                onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.checked }))}
+                className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+              />
+            </label>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <p className="text-xs font-medium text-slate">Custom Fields</p>
+          {form.prescreeningCustomFields.map((field, idx) => (
+            <div key={field.id} className="flex items-start gap-2 bg-gray-50 rounded-lg p-3">
+              <div className="flex-1 space-y-2">
+                <input
+                  type="text"
+                  value={field.label}
+                  onChange={(e) => {
+                    const updated = [...form.prescreeningCustomFields];
+                    updated[idx] = { ...updated[idx], label: e.target.value.slice(0, 200) };
+                    setForm((prev) => ({ ...prev, prescreeningCustomFields: updated }));
+                  }}
+                  placeholder="Field label"
+                  className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={field.type}
+                    onChange={(e) => {
+                      const updated = [...form.prescreeningCustomFields];
+                      updated[idx] = { ...updated[idx], type: e.target.value as "list" | "yes_no" };
+                      setForm((prev) => ({ ...prev, prescreeningCustomFields: updated }));
+                    }}
+                    className="rounded-lg border border-gray-200 px-2 py-1 text-sm focus:border-hilt-blue focus:outline-none"
+                  >
+                    <option value="list">List</option>
+                    <option value="yes_no">Yes / No</option>
+                  </select>
+                  {field.type === "list" && (
+                    <input
+                      type="text"
+                      value={field.none_label || ""}
+                      onChange={(e) => {
+                        const updated = [...form.prescreeningCustomFields];
+                        updated[idx] = { ...updated[idx], none_label: e.target.value.slice(0, 200) || undefined };
+                        setForm((prev) => ({ ...prev, prescreeningCustomFields: updated }));
+                      }}
+                      placeholder="None label (e.g. I do not have any...)"
+                      className="flex-1 rounded-lg border border-gray-200 px-3 py-1 text-sm focus:border-hilt-blue focus:outline-none"
+                    />
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                {idx > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...form.prescreeningCustomFields];
+                      [updated[idx - 1], updated[idx]] = [updated[idx], updated[idx - 1]];
+                      setForm((prev) => ({ ...prev, prescreeningCustomFields: updated }));
+                    }}
+                    className="text-ash hover:text-ink text-xs"
+                    title="Move up"
+                  >
+                    ▲
+                  </button>
+                )}
+                {idx < form.prescreeningCustomFields.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = [...form.prescreeningCustomFields];
+                      [updated[idx], updated[idx + 1]] = [updated[idx + 1], updated[idx]];
+                      setForm((prev) => ({ ...prev, prescreeningCustomFields: updated }));
+                    }}
+                    className="text-ash hover:text-ink text-xs"
+                    title="Move down"
+                  >
+                    ▼
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = form.prescreeningCustomFields.filter((_, i) => i !== idx);
+                    setForm((prev) => ({ ...prev, prescreeningCustomFields: updated }));
+                  }}
+                  className="text-red-400 hover:text-red-600 text-xs"
+                  title="Delete field"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            disabled={form.prescreeningCustomFields.length >= 20}
+            onClick={() => {
+              const newField = {
+                id: crypto.randomUUID(),
+                label: "",
+                type: "list" as const,
+                none_label: undefined as string | undefined,
+              };
+              setForm((prev) => ({
+                ...prev,
+                prescreeningCustomFields: [...prev.prescreeningCustomFields, newField],
+              }));
+            }}
+            className="text-sm text-hilt-blue hover:underline disabled:opacity-50 disabled:no-underline"
+          >
+            + Add custom field{form.prescreeningCustomFields.length >= 20 ? " (max 20)" : ""}
+          </button>
+        </div>
       </div>
 
       {/* AI Configuration */}

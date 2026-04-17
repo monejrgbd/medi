@@ -149,13 +149,13 @@ Produce a JSON object with these fields:
    - "relieving_factors": What makes it better
    - "tried": Treatments or remedies already attempted` : "Always null for this visit."}
 
-3. "medications" (string[] or null): Array of medication names mentioned by the patient as currently taking. Use null if medications were not discussed (NOT an empty array). Use empty array [] only if patient explicitly stated they take no medications.
+3. "medications" (string[] or null): Array of ALL medication names the patient is currently taking, including those listed by the AI in a confirmation question that the patient agreed to or corrected. Use null if medications were never discussed or confirmed. Use empty array [] only if patient explicitly stated they take no medications.
 
-4. "allergies" (string[] or null): Array of allergy names mentioned. Same null vs [] rules as medications.
+4. "allergies" (string[] or null): Array of ALL allergy names, including those confirmed by the patient when listed by the AI. Same null vs [] rules as medications.
 
 5. "chronic_conditions" (string[] or null): Array of chronic condition names mentioned. Same null vs [] rules as medications.
 
-6. "pets_at_home" (string[] or null): Array of pet types/names mentioned by the patient as having at home. Same null vs [] rules as medications.
+6. "pets_at_home" (string[] or null): Array of ALL pet types/names, including those confirmed by the patient when listed by the AI. Same null vs [] rules as medications.
 
 Respond ONLY with valid JSON. No markdown, no code fences, no explanation.`;
 

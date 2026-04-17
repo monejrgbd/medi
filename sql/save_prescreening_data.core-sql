@@ -1,0 +1,136 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.save_prescreening_data(
+  p_session_token uuid,
+  p_data jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_patient_id uuid;
+  v_org_id uuid;
+  v_field_key text;
+  v_field_obj jsonb;
+  v_values text[];
+BEGIN
+  -- Look up visit by session token
+  SELECT v.id, v.patient_id, v.org_id, v.created_at, v.status
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.session_token = p_session_token;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session not found');
+  END IF;
+
+  IF v_visit.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+  END IF;
+
+  IF v_visit.status <> 'still_answering_ai' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session status');
+  END IF;
+
+  v_patient_id := v_visit.patient_id;
+  v_org_id := v_visit.org_id;
+
+  -- Medications
+  IF p_data ? 'medications' THEN
+    IF (p_data->>'medications_none')::boolean = true THEN
+      PERFORM private.update_medications('patient', v_patient_id, '{}'::text[]);
+    ELSIF jsonb_array_length(p_data->'medications') > 0 THEN
+      PERFORM private.update_medications(
+        'patient',
+        v_patient_id,
+        ARRAY(SELECT jsonb_array_elements_text(p_data->'medications'))
+      );
+    END IF;
+  END IF;
+
+  -- Allergies
+  IF p_data ? 'allergies' THEN
+    IF (p_data->>'allergies_none')::boolean = true THEN
+      PERFORM private.update_allergies('patient', v_patient_id, '{}'::text[]);
+    ELSIF jsonb_array_length(p_data->'allergies') > 0 THEN
+      PERFORM private.update_allergies(
+        'patient',
+        v_patient_id,
+        ARRAY(SELECT jsonb_array_elements_text(p_data->'allergies'))
+      );
+    END IF;
+  END IF;
+
+  -- Pets
+  IF p_data ? 'pets' THEN
+    IF (p_data->>'pets_none')::boolean = true THEN
+      PERFORM private.update_pets('patient', v_patient_id, '{}'::text[]);
+    ELSIF jsonb_array_length(p_data->'pets') > 0 THEN
+      PERFORM private.update_pets(
+        'patient',
+        v_patient_id,
+        ARRAY(SELECT jsonb_array_elements_text(p_data->'pets'))
+      );
+    END IF;
+  END IF;
+
+  -- Custom fields
+  IF p_data ? 'custom_fields' AND jsonb_typeof(p_data->'custom_fields') = 'object' THEN
+    FOR v_field_key IN SELECT jsonb_object_keys(p_data->'custom_fields')
+    LOOP
+      v_field_obj := p_data->'custom_fields'->v_field_key;
+
+      IF v_field_obj->>'type' = 'list' THEN
+        IF (v_field_obj->>'none')::boolean = true THEN
+          PERFORM private.update_patient_custom_field(
+            'patient', v_patient_id, v_org_id, v_field_key::uuid, '{}'::text[]
+          );
+        ELSIF jsonb_array_length(v_field_obj->'values') > 0 THEN
+          PERFORM private.update_patient_custom_field(
+            'patient',
+            v_patient_id,
+            v_org_id,
+            v_field_key::uuid,
+            ARRAY(SELECT jsonb_array_elements_text(v_field_obj->'values'))
+          );
+        END IF;
+
+      ELSIF v_field_obj->>'type' = 'yes_no' THEN
+        PERFORM private.update_patient_custom_field(
+          'patient',
+          v_patient_id,
+          v_org_id,
+          v_field_key::uuid,
+          ARRAY[v_field_obj->>'value']
+        );
+      END IF;
+    END LOOP;
+  END IF;
+
+  -- Save raw prescreening data to visit
+  UPDATE public.visits
+  SET prescreening_data = p_data
+  WHERE id = v_visit.id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable)
+CREATE OR REPLACE FUNCTION public.save_prescreening_data(
+  p_session_token uuid,
+  p_data jsonb
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.save_prescreening_data(p_session_token, p_data);
+END;
+$$;

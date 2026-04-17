@@ -31,12 +31,17 @@ DECLARE
   v_follow_up record;
   v_prior_summary text;
   v_prior_date timestamptz;
+  v_prescreening_section text := '';
+  v_prescreening_confirm text := '';
+  v_ps jsonb;
+  v_cf_key text;
+  v_cf_obj jsonb;
 BEGIN
   -- Look up visit with joins
   SELECT v.id, v.status, v.session_token, v.patient_id, v.location_id,
          v.org_id, v.has_previous_visits, v.created_at,
          v.is_follow_up, v.follow_up_of, v.ai_model_override,
-         v.ai_session_instructions
+         v.ai_session_instructions, v.prescreening_data
   INTO v_visit
   FROM public.visits v
   WHERE v.id = p_visit_id;
@@ -256,6 +261,117 @@ BEGIN
     END IF;
   END IF;
 
+  -- Build pre-screening injection when prescreening_data exists on the visit
+  v_ps := v_visit.prescreening_data;
+  IF v_ps IS NOT NULL THEN
+    -- Suppress the CONFIRM STORED RECORDS section (pre-screening form already handled it)
+    v_returning_section := '';
+
+    v_prescreening_section := E'\n\nPRE-SCREENING DATA (already collected from the patient before this conversation):';
+
+    -- Default fields
+    IF v_ps ? 'medications' THEN
+      IF (v_ps->>'medications_none')::boolean = true THEN
+        v_prescreening_section := v_prescreening_section || E'\n- Medications: Patient confirmed none';
+      ELSIF jsonb_array_length(v_ps->'medications') > 0 THEN
+        v_prescreening_section := v_prescreening_section || E'\n- Medications: ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_ps->'medications')), ', ');
+      END IF;
+    END IF;
+
+    IF v_ps ? 'allergies' THEN
+      IF (v_ps->>'allergies_none')::boolean = true THEN
+        v_prescreening_section := v_prescreening_section || E'\n- Allergies: Patient confirmed none';
+      ELSIF jsonb_array_length(v_ps->'allergies') > 0 THEN
+        v_prescreening_section := v_prescreening_section || E'\n- Allergies: ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_ps->'allergies')), ', ');
+      END IF;
+    END IF;
+
+    IF v_ps ? 'pets' THEN
+      IF (v_ps->>'pets_none')::boolean = true THEN
+        v_prescreening_section := v_prescreening_section || E'\n- Pets at home: Patient confirmed none';
+      ELSIF jsonb_array_length(v_ps->'pets') > 0 THEN
+        v_prescreening_section := v_prescreening_section || E'\n- Pets at home: ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_ps->'pets')), ', ');
+      END IF;
+    END IF;
+
+    IF (v_ps->>'pregnancy_asked')::boolean = true THEN
+      IF (v_ps->>'is_pregnant')::boolean = true THEN
+        v_prescreening_section := v_prescreening_section || E'\n- Pregnancy status: Pregnant';
+      ELSE
+        v_prescreening_section := v_prescreening_section || E'\n- Pregnancy status: Not pregnant';
+      END IF;
+    END IF;
+
+    -- Custom fields
+    IF v_ps ? 'custom_fields' AND jsonb_typeof(v_ps->'custom_fields') = 'object' THEN
+      FOR v_cf_key IN SELECT jsonb_object_keys(v_ps->'custom_fields')
+      LOOP
+        v_cf_obj := v_ps->'custom_fields'->v_cf_key;
+        IF v_cf_obj->>'type' = 'list' THEN
+          IF (v_cf_obj->>'none')::boolean = true THEN
+            v_prescreening_section := v_prescreening_section || E'\n- ' || (v_cf_obj->>'label') || ': Patient confirmed none';
+          ELSIF jsonb_array_length(v_cf_obj->'values') > 0 THEN
+            v_prescreening_section := v_prescreening_section || E'\n- ' || (v_cf_obj->>'label') || ': ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_cf_obj->'values')), ', ');
+          END IF;
+        ELSIF v_cf_obj->>'type' = 'yes_no' THEN
+          v_prescreening_section := v_prescreening_section || E'\n- ' || (v_cf_obj->>'label') || ': ' || CASE WHEN v_cf_obj->>'value' = 'yes' THEN 'Yes' ELSE 'No' END;
+        END IF;
+      END LOOP;
+    END IF;
+
+    v_prescreening_section := v_prescreening_section
+      || E'\n\nDo NOT ask about any of the above again. This data was confirmed by the patient.'
+      || E'\nIf the patient spontaneously mentions a correction, note it naturally but do not interrogate further.';
+
+    -- Build confirmation list for the CONVERSATION END PROTOCOL
+    v_prescreening_confirm := E'\n\nCONFIRM THESE ITEMS FROM PRE-SCREENING (list every item by name).'
+      || E'\nIf the patient mentioned any corrections or additions during the conversation'
+      || E'\n(e.g., a new medication, a removed allergy), include the UPDATED information'
+      || E'\nin your confirmation, not the original pre-screening version.'
+      || E'\n\nPre-screening baseline:';
+
+    -- Rebuild the same items for the confirmation template
+    IF v_ps ? 'medications' THEN
+      IF (v_ps->>'medications_none')::boolean = true THEN
+        v_prescreening_confirm := v_prescreening_confirm || E'\n- Medications: none';
+      ELSIF jsonb_array_length(v_ps->'medications') > 0 THEN
+        v_prescreening_confirm := v_prescreening_confirm || E'\n- Takes: ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_ps->'medications')), ', ');
+      END IF;
+    END IF;
+    IF v_ps ? 'allergies' THEN
+      IF (v_ps->>'allergies_none')::boolean = true THEN
+        v_prescreening_confirm := v_prescreening_confirm || E'\n- Allergies: none';
+      ELSIF jsonb_array_length(v_ps->'allergies') > 0 THEN
+        v_prescreening_confirm := v_prescreening_confirm || E'\n- Allergies: ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_ps->'allergies')), ', ');
+      END IF;
+    END IF;
+    IF v_ps ? 'pets' THEN
+      IF (v_ps->>'pets_none')::boolean = true THEN
+        v_prescreening_confirm := v_prescreening_confirm || E'\n- Pets: none';
+      ELSIF jsonb_array_length(v_ps->'pets') > 0 THEN
+        v_prescreening_confirm := v_prescreening_confirm || E'\n- Pets: ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_ps->'pets')), ', ');
+      END IF;
+    END IF;
+    IF (v_ps->>'pregnancy_asked')::boolean = true THEN
+      v_prescreening_confirm := v_prescreening_confirm || E'\n- ' || CASE WHEN (v_ps->>'is_pregnant')::boolean = true THEN 'Pregnant' ELSE 'Not pregnant' END;
+    END IF;
+    IF v_ps ? 'custom_fields' AND jsonb_typeof(v_ps->'custom_fields') = 'object' THEN
+      FOR v_cf_key IN SELECT jsonb_object_keys(v_ps->'custom_fields')
+      LOOP
+        v_cf_obj := v_ps->'custom_fields'->v_cf_key;
+        IF v_cf_obj->>'type' = 'list' THEN
+          IF (v_cf_obj->>'none')::boolean = true THEN
+            v_prescreening_confirm := v_prescreening_confirm || E'\n- ' || (v_cf_obj->>'label') || ': none';
+          ELSIF jsonb_array_length(v_cf_obj->'values') > 0 THEN
+            v_prescreening_confirm := v_prescreening_confirm || E'\n- ' || (v_cf_obj->>'label') || ': ' || array_to_string(ARRAY(SELECT jsonb_array_elements_text(v_cf_obj->'values')), ', ');
+          END IF;
+        ELSIF v_cf_obj->>'type' = 'yes_no' THEN
+          v_prescreening_confirm := v_prescreening_confirm || E'\n- ' || (v_cf_obj->>'label') || ': ' || CASE WHEN v_cf_obj->>'value' = 'yes' THEN 'Yes' ELSE 'No' END;
+        END IF;
+      END LOOP;
+    END IF;
+  END IF;
+
   -- Construct system prompt
   v_system_prompt := 'You are a medical intake assistant at ' || v_org.name || ' (' || COALESCE(v_location.specialty, 'General Practice') || ').'
     || E'\nThink like a triage nurse. Your job: gather everything the doctor needs to know.'
@@ -268,11 +384,23 @@ BEGIN
     || E'\n6. Character — sharp, dull, throbbing, burning, etc.'
     || E'\n7. Aggravating factors — what makes it worse'
     || E'\n8. Relieving factors — what makes it better'
-    || E'\n9. Associated symptoms — anything else happening'
-    || E'\n10. Current medications — EVERY visit, no exceptions'
-    || E'\n11. Known allergies — EVERY visit, no exceptions'
-    || E'\n12. Chronic conditions — diabetes, hypertension, asthma, etc. EVERY visit.'
-    || E'\n13. Pets at home — dogs, cats, birds, reptiles, etc. EVERY visit.'
+    || E'\n9. Associated symptoms — anything else happening';
+
+  -- Add items 10-13 only if NOT already collected in pre-screening
+  IF v_ps IS NULL OR NOT (v_ps ? 'medications') THEN
+    v_system_prompt := v_system_prompt || E'\n10. Current medications — EVERY visit, no exceptions';
+  END IF;
+  IF v_ps IS NULL OR NOT (v_ps ? 'allergies') THEN
+    v_system_prompt := v_system_prompt || E'\n11. Known allergies — EVERY visit, no exceptions';
+  END IF;
+  v_system_prompt := v_system_prompt || E'\n12. Chronic conditions — diabetes, hypertension, asthma, etc. EVERY visit.';
+  IF v_ps IS NULL OR NOT (v_ps ? 'pets') THEN
+    v_system_prompt := v_system_prompt || E'\n13. Pets at home — dogs, cats, birds, reptiles, etc. EVERY visit.';
+  END IF;
+
+  -- Add pre-screening data injection (empty string if no prescreening)
+  v_system_prompt := v_system_prompt
+    || v_prescreening_section
     || v_returning_section
     || v_past_section
     || v_follow_up_section;
@@ -284,8 +412,9 @@ BEGIN
     || E'\n- Biological sex: ' || COALESCE(v_patient.sex, 'not provided')
     || E'\n- Age: ' || v_patient_age;
 
-  -- Pregnancy screening for females 16+
-  IF v_patient.sex = 'female' AND v_patient_age >= 16 THEN
+  -- Pregnancy screening for females 17+ (skip if pre-screening already asked)
+  IF v_patient.sex = 'female' AND v_patient_age >= 17
+     AND (v_ps IS NULL OR NOT ((v_ps->>'pregnancy_asked')::boolean = true)) THEN
     v_system_prompt := v_system_prompt
       || E'\n\nPREGNANCY SCREENING:'
       || E'\nYou MUST ask: "Are you currently pregnant or is there a chance you might be pregnant?"'
@@ -318,13 +447,23 @@ BEGIN
   IF v_location.ai_message_limit IS NOT NULL THEN
     v_system_prompt := v_system_prompt
       || E'\n\nMESSAGE PACING:'
-      || E'\nThis conversation is limited to approximately ' || v_location.ai_message_limit || ' patient messages.'
-      || E'\nPace yourself accordingly. Prioritize gathering these critical fields early:'
-      || E'\n- Chief complaint and core symptoms (FIRST)'
-      || E'\n- Current medications'
-      || E'\n- Known allergies'
-      || E'\n- Chronic conditions'
-      || E'\n- Pets at home'
+      || E'\nThis conversation is limited to approximately ' || v_location.ai_message_limit || ' patient messages.';
+    IF v_ps IS NOT NULL THEN
+      v_system_prompt := v_system_prompt
+        || E'\n2 messages are reserved for pre-screening confirmation at the end.'
+        || E'\nPace yourself accordingly. Prioritize gathering these critical fields early:'
+        || E'\n- Chief complaint and core symptoms (FIRST)'
+        || E'\n- Chronic conditions';
+    ELSE
+      v_system_prompt := v_system_prompt
+        || E'\nPace yourself accordingly. Prioritize gathering these critical fields early:'
+        || E'\n- Chief complaint and core symptoms (FIRST)'
+        || E'\n- Current medications'
+        || E'\n- Known allergies'
+        || E'\n- Chronic conditions'
+        || E'\n- Pets at home';
+    END IF;
+    v_system_prompt := v_system_prompt
       || E'\nDo not rush the patient, but be efficient. If you sense you are running low on messages, combine remaining questions or move directly to "Is there anything else we might be missing?" to conclude.';
   END IF;
 
@@ -348,9 +487,32 @@ BEGIN
   -- examples and a forbidden-phrase list because the model otherwise reverts to its default
   -- "polite wrap-up with summary" pattern from RLHF training.
   v_system_prompt := v_system_prompt
-    || E'\n\nCONVERSATION END PROTOCOL (MANDATORY — overrides every other rule):'
+    || E'\n\nCONVERSATION END PROTOCOL (MANDATORY — overrides every other rule):';
+
+  -- Step 0: Pre-screening confirmation (only when prescreening data exists)
+  IF v_ps IS NOT NULL THEN
+    v_system_prompt := v_system_prompt
+      || E'\n'
+      || E'\nStep 0 (PRE-SCREENING CONFIRMATION — MANDATORY):'
+      || E'\nBefore moving to Step 1, confirm the pre-screening data in ONE message.'
+      || E'\nYou MUST list every item EXPLICITLY by name. NEVER say "your usual medications",'
+      || E'\n"the same as before", or any shorthand. The summary system reads this message'
+      || E'\nto update the patient''s records. If you omit a name, it gets lost.'
+      || E'\n'
+      || E'\nExample:'
+      || E'\n  "Before we finish up, I want to make sure the information you provided earlier'
+      || E'\n   is still accurate: you currently take Lisinopril and Metformin, have no known'
+      || E'\n   allergies, and have a dog at home. Is all of that correct?"'
+      || E'\n'
+      || E'\nWait for the patient to respond:'
+      || E'\n  - If they confirm: proceed to Step 1.'
+      || E'\n  - If they correct something: acknowledge the correction, then proceed to Step 1.'
+      || v_prescreening_confirm;
+  END IF;
+
+  v_system_prompt := v_system_prompt
     || E'\n'
-    || E'\nStep 1: Once you have gathered the ALWAYS COVER fields, your VERY NEXT message must be EXACTLY:'
+    || E'\nStep 1: Once you have gathered the ALWAYS COVER fields' || CASE WHEN v_ps IS NOT NULL THEN ' and completed Step 0' ELSE '' END || ', your VERY NEXT message must be EXACTLY:'
     || E'\n  "Is there anything else we might be missing for your visit today?"'
     || E'\nDo not add anything else. No "I have everything", no summary, no recap, no acknowledgement, no markdown. JUST that one question.'
     || E'\n'

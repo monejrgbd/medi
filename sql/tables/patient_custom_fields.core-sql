@@ -1,0 +1,18 @@
+CREATE TABLE IF NOT EXISTS public.patient_custom_fields (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id uuid NOT NULL REFERENCES public.patients(id),
+  org_id uuid NOT NULL REFERENCES public.organizations(id),
+  field_id uuid NOT NULL,
+  value text NOT NULL,
+  active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(patient_id, field_id, value)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pcf_patient_active ON public.patient_custom_fields (patient_id) WHERE active = true;
+
+ALTER TABLE public.patient_custom_fields ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "access_via_functions_only" ON public.patient_custom_fields FOR ALL
+  USING (false);

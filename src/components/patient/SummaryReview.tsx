@@ -5,12 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import StructuredCard from "./StructuredCard";
 
-interface MedicalInfo {
-  medications: { name: string }[];
-  allergies: { name: string }[];
-  chronic_conditions: { name: string }[];
-  pets: { name: string }[];
-}
+import { MedicalInfo } from "@/types/medical";
 
 interface SummaryReviewProps {
   visitId: string;
@@ -143,61 +138,48 @@ export default function SummaryReview({
       )}
 
       {/* Medical info confirmation */}
-      {medicalInfo && (medicalInfo.medications.length > 0 || medicalInfo.allergies.length > 0 || medicalInfo.chronic_conditions.length > 0 || medicalInfo.pets.length > 0) && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 mb-4">
-          <p className="text-xs font-semibold text-ink mb-3">Your medical information on file</p>
-          <div className="grid gap-3 sm:grid-cols-4">
-            <div>
-              <p className="text-[11px] font-medium text-slate mb-1">Medications</p>
-              {medicalInfo.medications.length === 0 ? (
-                <p className="text-xs text-ash">None</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {medicalInfo.medications.map((m, i) => (
-                    <li key={i} className="text-xs text-ink">{m.name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <p className={`text-[11px] font-medium mb-1 ${medicalInfo.allergies.length > 0 ? "text-red-600" : "text-slate"}`}>Allergies</p>
-              {medicalInfo.allergies.length === 0 ? (
-                <p className="text-xs text-ash">None</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {medicalInfo.allergies.map((a, i) => (
-                    <li key={i} className="text-xs text-ink">{a.name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-slate mb-1">Chronic conditions</p>
-              {medicalInfo.chronic_conditions.length === 0 ? (
-                <p className="text-xs text-ash">None</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {medicalInfo.chronic_conditions.map((c, i) => (
-                    <li key={i} className="text-xs text-ink">{c.name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <p className="text-[11px] font-medium text-slate mb-1">Pets at home</p>
-              {medicalInfo.pets.length === 0 ? (
-                <p className="text-xs text-ash">None</p>
-              ) : (
-                <ul className="space-y-0.5">
-                  {medicalInfo.pets.map((p, i) => (
-                    <li key={i} className="text-xs text-ink">{p.name}</li>
-                  ))}
-                </ul>
-              )}
+      {medicalInfo && (() => {
+        const sections: { label: string; items: string[]; isAllergy?: boolean }[] = [];
+
+        if (medicalInfo.medications.length > 0)
+          sections.push({ label: "Medications", items: medicalInfo.medications.map(m => m.name) });
+        if (medicalInfo.allergies.length > 0)
+          sections.push({ label: "Allergies", items: medicalInfo.allergies.map(a => a.name), isAllergy: true });
+        if (medicalInfo.chronic_conditions.length > 0)
+          sections.push({ label: "Chronic conditions", items: medicalInfo.chronic_conditions.map(c => c.name) });
+        if (medicalInfo.pets.length > 0)
+          sections.push({ label: "Pets at home", items: medicalInfo.pets.map(p => p.name) });
+
+        if (medicalInfo.custom_fields) {
+          for (const [, field] of Object.entries(medicalInfo.custom_fields)) {
+            if (field.values.length > 0) {
+              sections.push({ label: field.label, items: field.values });
+            }
+          }
+        }
+
+        if (sections.length === 0) return null;
+
+        return (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 mb-4">
+            <p className="text-xs font-semibold text-ink mb-3">Your medical information on file</p>
+            <div className={`grid gap-3 ${sections.length >= 4 ? "sm:grid-cols-4" : sections.length === 3 ? "sm:grid-cols-3" : sections.length === 2 ? "sm:grid-cols-2" : ""}`}>
+              {sections.map((section, i) => (
+                <div key={i}>
+                  <p className={`text-[11px] font-medium mb-1 ${section.isAllergy ? "text-red-600" : "text-slate"}`}>
+                    {section.label}
+                  </p>
+                  <ul className="space-y-0.5">
+                    {section.items.map((item, j) => (
+                      <li key={j} className="text-xs text-ink">{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <p className="text-[11px] text-ash italic mb-4">
         {t("summary.disclaimer")}

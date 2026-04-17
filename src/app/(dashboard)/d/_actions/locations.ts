@@ -83,6 +83,7 @@ export async function updateLocation(formData: {
   showDoctorRoomToPatients?: boolean;
   presetRooms?: string[];
   checkinMode?: "approve_to_start" | "approve_on_arrival" | "self_service_on_arrival";
+  prescreeningConfig?: Record<string, unknown> | null;
 }) {
   await requireAuth();
   const supabase = await createClient();
@@ -127,6 +128,7 @@ export async function updateLocation(formData: {
     );
   }
   if (formData.checkinMode !== undefined) params.p_checkin_mode = formData.checkinMode;
+  if (formData.prescreeningConfig !== undefined) params.p_prescreening_config = formData.prescreeningConfig;
 
   const { data, error } = await supabase.rpc("update_location", params);
 

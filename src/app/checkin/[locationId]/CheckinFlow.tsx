@@ -24,6 +24,8 @@ import DiscoveryQuestionScreen from "@/components/checkin/DiscoveryQuestionScree
 import MatchResolution from "@/components/checkin/MatchResolution";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { t } from "@/lib/i18n";
+import PreScreeningForm from "@/components/patient/PreScreeningForm";
+import { MedicalInfo, PrescreeningConfig } from "@/types/medical";
 import { Clock } from "lucide-react";
 import { formatQueueNumber } from "@/lib/queueUtils";
 
@@ -35,6 +37,7 @@ type FlowState =
   | "denied"
   | "first_timer"
   | "language"
+  | "prescreening"
   | "chatting"
   | "generating_summary"
   | "summary_review"
@@ -63,6 +66,7 @@ interface LocationData {
   ask_discovery_source?: boolean;
   queue_display_enabled?: boolean;
   queue_type?: string;
+  prescreening_config?: PrescreeningConfig | null;
 }
 
 interface CheckinFlowProps {
@@ -77,12 +81,6 @@ interface CheckinFlowProps {
   onPatientReady?: () => void;
 }
 
-interface MedicalInfo {
-  medications: { name: string }[];
-  allergies: { name: string }[];
-  chronic_conditions: { name: string }[];
-  pets: { name: string }[];
-}
 
 interface SummaryData {
   summary: string;
@@ -136,6 +134,8 @@ export default function CheckinFlow({
   const [formDataForResolve, setFormDataForResolve] = useState<Record<string, unknown> | null>(null);
   const [phoneRetryAt, setPhoneRetryAt] = useState<number | null>(null);
   const [phoneRetryReady, setPhoneRetryReady] = useState(false);
+  const [patientSex, setPatientSex] = useState<string | null>(null);
+  const [patientBirthday, setPatientBirthday] = useState<string | null>(null);
 
   // Pre-checkin token (from shared link)
   const [preCheckinToken, setPreCheckinToken] = useState<string | null>(null);
@@ -160,6 +160,16 @@ export default function CheckinFlow({
   const consentGivenRef = useRef(consentGiven);
   consentGivenRef.current = consentGiven;
   const demoModeRef = useRef(demoMode);
+
+  function shouldShowPrescreening(): boolean {
+    const config = locationData.prescreening_config;
+    if (!config) return true; // null = all defaults enabled
+    return config.medications_enabled
+      || config.allergies_enabled
+      || config.pets_enabled
+      || config.pregnancy_enabled
+      || (config.custom_fields?.length ?? 0) > 0;
+  }
 
   // Stable demo defaults — computed once per mount so they don't change on re-render
   const demoDefaultsRef = useRef(demoMode ? (() => {
@@ -295,6 +305,9 @@ export default function CheckinFlow({
                 setState("generating_summary");
               } else if (!session.consent_given) {
                 setState("first_timer");
+              } else if (!session.prescreening_data && !session.ai_summary && shouldShowPrescreening()) {
+                fetchMedicalInfo();
+                setState("prescreening");
               } else {
                 setState("chatting");
               }
@@ -411,6 +424,9 @@ export default function CheckinFlow({
             setState("generating_summary");
           } else if (!data.consent_given) {
             setState("first_timer");
+          } else if (!data.prescreening_data && !data.ai_summary && shouldShowPrescreening()) {
+            fetchMedicalInfo();
+            setState("prescreening");
           } else {
             setState("chatting");
           }
@@ -484,6 +500,17 @@ export default function CheckinFlow({
         }
         if (!consentGivenRef.current) {
           setState("first_timer");
+        } else if (shouldShowPrescreening()) {
+          (async () => {
+            const supabase = createClient();
+            const { data: sess } = await supabase.rpc("get_patient_session", { p_session_token: sessionToken });
+            if (sess?.success && !sess.prescreening_data && !sess.ai_summary) {
+              fetchMedicalInfo();
+              setState("prescreening");
+            } else {
+              setState("chatting");
+            }
+          })();
         } else {
           setState("chatting");
         }
@@ -593,6 +620,7 @@ export default function CheckinFlow({
     state === "waiting" ||
     state === "first_timer" ||
     state === "language" ||
+    state === "prescreening" ||
     state === "chatting" ||
     state === "generating_summary" ||
     state === "summary_review" ||
@@ -669,7 +697,10 @@ export default function CheckinFlow({
               break;
             case "still_answering_ai":
               if (!session.consent_given) setState("first_timer");
-              else setState("chatting");
+              else if (!session.prescreening_data && !session.ai_summary && shouldShowPrescreening()) {
+                fetchMedicalInfo();
+                setState("prescreening");
+              } else setState("chatting");
               break;
             case "awaiting_arrival":
               setState("awaiting_arrival");
@@ -805,6 +836,9 @@ export default function CheckinFlow({
               setState("generating_summary");
             } else if (!session.consent_given) {
               setState("first_timer");
+            } else if (!session.prescreening_data && !session.ai_summary && shouldShowPrescreening()) {
+              fetchMedicalInfo();
+              setState("prescreening");
             } else {
               setState("chatting");
             }
@@ -905,6 +939,15 @@ export default function CheckinFlow({
 
     setConsentGiven(true);
     setPatientLanguage(language);
+    if (shouldShowPrescreening()) {
+      fetchMedicalInfo();
+      setState("prescreening");
+    } else {
+      setState("chatting");
+    }
+  }
+
+  function handlePrescreeningComplete() {
     setState("chatting");
   }
 
@@ -920,7 +963,10 @@ export default function CheckinFlow({
         allergies: (data.allergies || []) as { name: string }[],
         chronic_conditions: (data.chronic_conditions || []) as { name: string }[],
         pets: (data.pets || []) as { name: string }[],
+        custom_fields: (data.custom_fields || {}) as Record<string, { label: string; values: string[] }>,
       });
+      if (!patientSex && data.sex) setPatientSex(data.sex);
+      if (!patientBirthday && data.patient_birthday) setPatientBirthday(data.patient_birthday);
     }
   }
 
@@ -1212,6 +1258,9 @@ export default function CheckinFlow({
                       setState("generating_summary");
                     } else if (!(data.consent_given as boolean)) {
                       setState("first_timer");
+                    } else if (!data.prescreening_data && !data.ai_summary && shouldShowPrescreening()) {
+                      fetchMedicalInfo();
+                      setState("prescreening");
                     } else {
                       setState("chatting");
                     }
@@ -1276,6 +1325,31 @@ export default function CheckinFlow({
         />
       );
 
+    case "prescreening": {
+      const config = locationData.prescreening_config ?? {
+        medications_enabled: true,
+        allergies_enabled: true,
+        pets_enabled: true,
+        pregnancy_enabled: true,
+        custom_fields: [],
+      };
+      return (
+        <PreScreeningForm
+          sessionToken={sessionToken!}
+          config={config}
+          patientSex={patientSex}
+          patientBirthday={patientBirthday}
+          hasPreviousVisits={hasPreviousVisits}
+          existingMedications={medicalInfo?.medications || []}
+          existingAllergies={medicalInfo?.allergies || []}
+          existingPets={medicalInfo?.pets || []}
+          existingCustomFields={medicalInfo?.custom_fields || {}}
+          onComplete={handlePrescreeningComplete}
+          demoMode={demoMode}
+        />
+      );
+    }
+
     case "chatting":
       return visitId && sessionToken ? (
         <ChatInterface
@@ -1314,7 +1388,7 @@ export default function CheckinFlow({
           {demoMode && (
             <div className="w-full max-w-md text-center mb-4">
               <p className="text-sm font-medium text-blue-700 bg-blue-50 rounded-lg px-4 py-3">
-                Allergies, chronic conditions, pets, and medications are saved per patient. Returning patients are simply asked to confirm they are still accurate rather than entering them again.
+                Allergies, pets, and medications are collected in a pre-screening form. Returning patients see their previous answers pre-filled for confirmation.
               </p>
             </div>
           )}

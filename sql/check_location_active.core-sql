@@ -16,7 +16,8 @@ BEGIN
   SELECT l.id, l.name, l.address, l.specialty, l.operating_hours, l.logo_url,
          o.name AS org_name,
          l.ask_referral_source, l.ask_discovery_source,
-         l.queue_display_enabled, l.queue_type
+         l.queue_display_enabled, l.queue_type,
+         l.prescreening_config
   INTO v_location
   FROM public.locations l
   JOIN public.organizations o ON o.id = l.org_id
@@ -45,7 +46,8 @@ BEGIN
     'ask_referral_source', v_location.ask_referral_source,
     'ask_discovery_source', v_location.ask_discovery_source,
     'queue_display_enabled', v_location.queue_display_enabled,
-    'queue_type', v_location.queue_type
+    'queue_type', v_location.queue_type,
+    'prescreening_config', v_location.prescreening_config
   );
 END;
 $$;

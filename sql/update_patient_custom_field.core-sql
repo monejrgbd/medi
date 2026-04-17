@@ -1,0 +1,52 @@
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.update_patient_custom_field(
+  p_caller_role text,
+  p_patient_id uuid,
+  p_org_id uuid,
+  p_field_id uuid,
+  p_values text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- Mark removed items inactive
+  UPDATE public.patient_custom_fields
+  SET active = false, updated_at = now()
+  WHERE patient_id = p_patient_id AND field_id = p_field_id AND active = true
+    AND value NOT IN (SELECT unnest(p_values));
+
+  -- Upsert new/existing
+  INSERT INTO public.patient_custom_fields (patient_id, org_id, field_id, value, active, updated_at)
+  SELECT p_patient_id, p_org_id, p_field_id, unnest(p_values), true, now()
+  ON CONFLICT (patient_id, field_id, value) DO UPDATE
+    SET active = true, updated_at = now();
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.update_patient_custom_field(
+  p_patient_id uuid,
+  p_org_id uuid,
+  p_field_id uuid,
+  p_values text[]
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.update_patient_custom_field(auth.role(), p_patient_id, p_org_id, p_field_id, p_values);
+END;
+$$;
