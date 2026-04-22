@@ -1047,6 +1047,7 @@ export type Database = {
           ai_custom_instructions: string | null
           ai_message_limit: number | null
           ai_model: string | null
+          always_accepting_checkins: boolean | null
           ask_discovery_source: boolean | null
           ask_referral_source: boolean | null
           checkin_mode: string
@@ -1086,6 +1087,7 @@ export type Database = {
           ai_custom_instructions?: string | null
           ai_message_limit?: number | null
           ai_model?: string | null
+          always_accepting_checkins?: boolean | null
           ask_discovery_source?: boolean | null
           ask_referral_source?: boolean | null
           checkin_mode?: string
@@ -1125,6 +1127,7 @@ export type Database = {
           ai_custom_instructions?: string | null
           ai_message_limit?: number | null
           ai_model?: string | null
+          always_accepting_checkins?: boolean | null
           ask_discovery_source?: boolean | null
           ask_referral_source?: boolean | null
           checkin_mode?: string
@@ -3357,6 +3360,10 @@ export type Database = {
       }
       cancel_campaign: { Args: { p_campaign_id: string }; Returns: Json }
       cancel_claim: { Args: { p_visit_id: string }; Returns: Json }
+      cancel_patient_checkin: {
+        Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
       cancel_subscription: { Args: never; Returns: Json }
       capture_email: {
         Args: { p_email: string; p_source?: string }

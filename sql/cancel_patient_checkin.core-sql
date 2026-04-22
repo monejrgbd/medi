@@ -43,6 +43,7 @@ BEGIN
   v_old_status := v_visit.status;
 
   -- Critical: flip status. Audit + broadcast are best-effort below.
+  -- visits has no left_at / left_reason columns; status = 'left' is the signal.
   UPDATE public.visits
   SET status = 'left',
       claimed_by = NULL,
@@ -51,9 +52,9 @@ BEGIN
   WHERE id = p_visit_id;
 
   BEGIN
-    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, details)
-    VALUES (v_visit.org_id, NULL, 'patient', 'patient_cancelled',
-      jsonb_build_object('visit_id', p_visit_id, 'from_status', v_old_status));
+    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+    VALUES (v_visit.org_id, NULL, 'patient', 'patient_cancelled', 'visit', p_visit_id,
+      jsonb_build_object('from_status', v_old_status));
   EXCEPTION WHEN OTHERS THEN
     NULL;
   END;

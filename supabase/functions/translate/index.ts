@@ -92,9 +92,15 @@ Deno.serve(async (req) => {
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
-      const { data: sessionData } = await supabase.rpc("get_patient_session", {
-        p_session_token: sessionToken,
-      });
+      let sessionData: { success?: boolean; visit_id?: string } | null = null;
+      try {
+        const { data } = await supabase.rpc("get_patient_session", {
+          p_session_token: sessionToken,
+        });
+        sessionData = data;
+      } catch {
+        // Malformed session_token (not a valid uuid) — treat as invalid.
+      }
       if (!sessionData?.success) {
         return new Response(JSON.stringify({ error: "Invalid session" }), {
           status: 401,

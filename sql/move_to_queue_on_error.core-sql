@@ -58,11 +58,13 @@ BEGIN
       updated_at = now()
   WHERE id = p_visit_id;
 
-  -- Best-effort audit trail.
+  -- Best-effort audit trail. entity_type is NOT NULL on audit_trail; the
+  -- original version of this function omitted it which was almost certainly
+  -- the source of the HTTP 400 reported as Bug 10.
   BEGIN
-    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, details)
-    VALUES (v_visit.org_id, NULL, 'system', 'ai_error',
-      jsonb_build_object('visit_id', p_visit_id, 'target_status', v_new_status));
+    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, entity_type, entity_id, details)
+    VALUES (v_visit.org_id, NULL, 'system', 'ai_error', 'visit', p_visit_id,
+      jsonb_build_object('target_status', v_new_status));
   EXCEPTION WHEN OTHERS THEN
     NULL;
   END;
