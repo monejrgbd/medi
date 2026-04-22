@@ -235,10 +235,14 @@ export default function CheckinFlow({
       if (stateRef.current !== "generating_summary") return;
 
       const supabase = createClient();
-      await supabase.rpc("move_to_queue_on_error", {
-        p_visit_id: visitId,
-        p_session_token: sessionToken,
-      });
+      try {
+        await supabase.rpc("move_to_queue_on_error", {
+          p_visit_id: visitId,
+          p_session_token: sessionToken,
+        });
+      } catch (err) {
+        console.error("move_to_queue_on_error failed:", err);
+      }
 
       setState("timeout");
     }, 60_000);
@@ -892,6 +896,23 @@ export default function CheckinFlow({
     setState("form");
   }
 
+  // Cancel from the waiting-for-approval screen. Marks the visit as "left" on
+  // the server so the receptionist queue card is removed, then resets local state.
+  async function handleCancelWait() {
+    if (visitId && sessionToken) {
+      const supabase = createClient();
+      try {
+        await supabase.rpc("cancel_patient_checkin", {
+          p_visit_id: visitId,
+          p_session_token: sessionToken,
+        });
+      } catch (err) {
+        console.error("cancel_patient_checkin failed:", err);
+      }
+    }
+    handleRetry();
+  }
+
   function handleKioskReset() {
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(PHONE_STORAGE_KEY);
@@ -1122,6 +1143,12 @@ export default function CheckinFlow({
       setHasPreviousVisits(true);
     }
 
+    // Capture sex/birthday from original form data for prescreening
+    if (formDataForResolve) {
+      if (formDataForResolve.sex) setPatientSex(formDataForResolve.sex as string);
+      if (formDataForResolve.birthday) setPatientBirthday(formDataForResolve.birthday as string);
+    }
+
     // If phone needs verification, go to phone_verification
     if (!result.phoneVerified && result.hasPhoneToVerify) {
       const phone = formDataForResolve?.phone as string;
@@ -1305,7 +1332,7 @@ export default function CheckinFlow({
         <WaitingApproval
           patientFirstName={patientFirstName}
           locationName={locationData.location_name || "the clinic"}
-          onCancel={handleRetry}
+          onCancel={handleCancelWait}
           queueDisplay={locationData.queue_display_enabled ? formatQueueNumber(queueNumber, locationData.queue_type || "fifo") || null : null}
         />
       );
@@ -1576,7 +1603,58 @@ export default function CheckinFlow({
                 p_source: discoverySource,
               });
             }
-            setState("waiting");
+            // Realtime is inactive on this screen; the front desk may have
+            // approved/denied while the patient was answering. Resync status
+            // before transitioning so we never land on a stale waiting screen.
+            if (!sessionToken) {
+              setState("waiting");
+              return;
+            }
+            const { data } = await supabase.rpc("get_patient_session", { p_session_token: sessionToken });
+            if (!data?.success) {
+              setState("waiting");
+              return;
+            }
+            switch (data.status) {
+              case "pending_approval":
+                setState("waiting");
+                break;
+              case "still_answering_ai":
+                if (data.ai_summary) {
+                  setSummaryData({ summary: data.ai_summary, structured_card: data.ai_structured_card });
+                  setState("summary_review");
+                } else if (data.ai_completed_at) {
+                  setState("generating_summary");
+                } else if (!data.consent_given) {
+                  setState("first_timer");
+                } else if (!data.prescreening_data && !data.ai_summary && shouldShowPrescreening()) {
+                  fetchMedicalInfo();
+                  setState("prescreening");
+                } else {
+                  setState("chatting");
+                }
+                break;
+              case "awaiting_arrival":
+                setState("awaiting_arrival");
+                break;
+              case "waiting_doctor_claim":
+                if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
+                if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
+                setState(data.timeout_flagged ? "timeout" : "queued");
+                break;
+              case "claimed_by_doctor":
+                setStaffRoom(data.staff_room ?? null);
+                setState("claimed");
+                break;
+              case "completed":
+                setState("visit_completed");
+                break;
+              case "left":
+                setState(data.patient_denied ? "denied" : "patient_left");
+                break;
+              default:
+                setState("waiting");
+            }
           }}
           language={patientLanguage}
         />

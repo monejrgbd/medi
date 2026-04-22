@@ -146,6 +146,13 @@ export default function PatientRecordEditor({
               >
                 Female
               </button>
+              <button
+                type="button"
+                onClick={() => setSex("other")}
+                className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${sex === "other" ? "border-hilt-blue bg-blue-50 text-hilt-blue font-medium" : "border-gray-300 text-ink hover:bg-gray-50"}`}
+              >
+                Other
+              </button>
             </div>
           </div>
 

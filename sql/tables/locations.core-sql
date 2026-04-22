@@ -46,7 +46,8 @@ ALTER TABLE public.locations
   ADD COLUMN IF NOT EXISTS tv_overlay_visible boolean NOT NULL DEFAULT true,
   ADD COLUMN IF NOT EXISTS tv_queue_duration_seconds int NOT NULL DEFAULT 10
     CHECK (tv_queue_duration_seconds BETWEEN 3 AND 60),
-  ADD COLUMN IF NOT EXISTS tv_audio_muted boolean NOT NULL DEFAULT true;
+  ADD COLUMN IF NOT EXISTS tv_audio_muted boolean NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS always_accepting_checkins boolean DEFAULT false;
 
 ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
 

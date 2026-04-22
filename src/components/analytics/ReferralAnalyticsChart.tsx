@@ -128,30 +128,32 @@ export default function ReferralAnalyticsChart({ data }: Props) {
 
           {/* Top referring clinics */}
           {data.top_sending_clinics.length > 0 && (
-            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+            <div className="rounded-lg border border-gray-200 bg-white">
               <div className="p-4 pb-0">
                 <p className="text-sm font-semibold text-ink mb-4">Top referring clinics</p>
               </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase">Clinic</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Total</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Arrived</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase">Pending</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.top_sending_clinics.map((c) => (
-                    <tr key={c.org_name} className="border-b border-gray-50">
-                      <td className="px-4 py-3 font-medium text-ink">{c.org_name}</td>
-                      <td className="px-4 py-3 text-right text-slate">{c.count}</td>
-                      <td className="px-4 py-3 text-right text-green-600 font-medium">{c.arrived}</td>
-                      <td className="px-4 py-3 text-right text-amber-600 font-medium">{c.pending}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-max text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 bg-gray-50">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate uppercase whitespace-nowrap">Clinic</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase whitespace-nowrap">Total</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase whitespace-nowrap">Arrived</th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate uppercase whitespace-nowrap">Pending</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {data.top_sending_clinics.map((c) => (
+                      <tr key={c.org_name} className="border-b border-gray-50">
+                        <td className="px-4 py-3 font-medium text-ink">{c.org_name}</td>
+                        <td className="px-4 py-3 text-right text-slate">{c.count}</td>
+                        <td className="px-4 py-3 text-right text-green-600 font-medium">{c.arrived}</td>
+                        <td className="px-4 py-3 text-right text-amber-600 font-medium">{c.pending}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

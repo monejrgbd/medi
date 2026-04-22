@@ -180,9 +180,9 @@ export default function CheckinForm({
           </div>
         </div>
 
-        {/* Row 2: Birthday + Sex */}
-        <div className="flex flex-wrap gap-3">
-          <div className="flex-1 min-w-[180px]">
+        {/* Row 2: Birthday + Sex (stacked on narrow iOS viewports to avoid overlap) */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
+          <div className="flex-1 sm:min-w-[150px] min-w-0">
             <label className="block text-sm font-medium text-ink mb-1">
               {t("checkin.birthday")}
             </label>
@@ -196,7 +196,7 @@ export default function CheckinForm({
             />
           </div>
 
-          <div className="flex-1 min-w-[180px]">
+          <div className="flex-1 sm:min-w-[150px] min-w-0">
             <label className="block text-sm font-medium text-ink mb-1">
               {t("checkin.sex")}
             </label>

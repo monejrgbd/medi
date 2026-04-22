@@ -25,15 +25,24 @@ export async function updateOrganizationProfile(orgName: string, fullName: strin
   await requireAuth();
   const supabase = await createClient();
 
+  const trimmedOrg = orgName.trim();
+  if (!trimmedOrg) return { success: false, error: "Organization name is required" };
+
   const { error: nameError } = await supabase.rpc("update_organization_name", {
-    p_name: orgName,
+    p_name: trimmedOrg,
   });
-  if (nameError) return { success: false, error: "Failed to update organization name" };
+  if (nameError) {
+    console.error("update_organization_name failed:", nameError);
+    return { success: false, error: "Failed to update organization name" };
+  }
 
   const { error: userError } = await supabase.auth.updateUser({
     data: { full_name: fullName },
   });
-  if (userError) return { success: false, error: "Failed to update name" };
+  if (userError) {
+    console.error("auth.updateUser failed:", userError);
+    return { success: false, error: "Failed to update name" };
+  }
 
   return { success: true };
 }

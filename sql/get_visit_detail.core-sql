@@ -227,6 +227,7 @@ BEGIN
   SELECT jsonb_build_object(
     'visit', jsonb_build_object(
       'id', v.id,
+      'location_id', v.location_id,
       'status', v.status,
       'ai_summary', v.ai_summary,
       'ai_structured_card', v.ai_structured_card,

@@ -368,7 +368,7 @@ export default function ChatInterface({
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-1 pb-2">
         {greetingMsg && (
-          <SystemGreeting patientName={patientName} clinicName={locationName} />
+          <SystemGreeting patientName={patientName} clinicName={locationName} sessionToken={sessionToken} />
         )}
 
         {chatMessages.map((msg) => (

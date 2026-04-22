@@ -1,0 +1,105 @@
+-- Patient-callable cancel for an in-flight check-in.
+-- Authenticated by session_token (not auth.uid) so it works from the
+-- unauthenticated /checkin page. Flips the visit to 'left' so receptionist /
+-- doctor realtime subscribers remove the card from their queues.
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.cancel_patient_checkin(
+  p_visit_id uuid,
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+  v_old_status text;
+  v_edge_url text;
+  v_edge_secret text;
+  v_anon_key text;
+BEGIN
+  SELECT id, status, session_token, org_id
+  INTO v_visit
+  FROM public.visits
+  WHERE id = p_visit_id;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Visit not found');
+  END IF;
+
+  IF v_visit.session_token <> p_session_token THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid session');
+  END IF;
+
+  -- Allowed only from pre-claimed statuses. If already claimed/completed/left,
+  -- no-op success so the client can still reset local state.
+  IF v_visit.status NOT IN ('pending_approval', 'still_answering_ai', 'awaiting_arrival', 'waiting_doctor_claim') THEN
+    RETURN jsonb_build_object('success', true, 'already_terminal', true);
+  END IF;
+
+  v_old_status := v_visit.status;
+
+  -- Critical: flip status. Audit + broadcast are best-effort below.
+  UPDATE public.visits
+  SET status = 'left',
+      claimed_by = NULL,
+      claimed_at = NULL,
+      updated_at = now()
+  WHERE id = p_visit_id;
+
+  BEGIN
+    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, details)
+    VALUES (v_visit.org_id, NULL, 'patient', 'patient_cancelled',
+      jsonb_build_object('visit_id', p_visit_id, 'from_status', v_old_status));
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+
+  BEGIN
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+    SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
+      PERFORM net.http_post(
+        url := v_edge_url || '/broadcast-visit-update',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'Authorization', 'Bearer ' || v_anon_key,
+          'x-internal-secret', v_edge_secret
+        ),
+        body := jsonb_build_object(
+          'visit_id', p_visit_id,
+          'session_token', p_session_token,
+          'old_status', v_old_status,
+          'new_status', 'left',
+          'patient_cancelled', true
+        )
+      );
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Public wrapper (anon-callable, session-token auth)
+CREATE OR REPLACE FUNCTION public.cancel_patient_checkin(
+  p_visit_id uuid,
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.cancel_patient_checkin(p_visit_id, p_session_token);
+END;
+$$;

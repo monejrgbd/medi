@@ -67,7 +67,7 @@ BEGIN
   END IF;
 
   -- Sex validation if provided
-  IF p_sex IS NOT NULL AND p_sex NOT IN ('male', 'female') THEN
+  IF p_sex IS NOT NULL AND p_sex NOT IN ('male', 'female', 'other') THEN
     RETURN jsonb_build_object('success', false, 'error', 'Invalid sex value');
   END IF;
 

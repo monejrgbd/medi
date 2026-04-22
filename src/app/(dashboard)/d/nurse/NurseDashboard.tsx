@@ -329,9 +329,9 @@ export default function NurseDashboard({
       <NursePatientView
         visitId={activeVisitId}
         patientName={claimedVisit ? `${claimedVisit.first_name} ${claimedVisit.last_name}` : "Patient"}
-        onBack={demoMode ? () => {} : () => {
+        onBack={() => {
           setActiveVisitId(null);
-          router.refresh();
+          if (!demoMode) router.refresh();
         }}
         onComplete={() => {
           if (focusMode) {

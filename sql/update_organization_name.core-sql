@@ -19,22 +19,24 @@ BEGIN
     RAISE EXCEPTION 'Organization name is required';
   END IF;
 
-  -- Get org where caller is owner
-  SELECT su.org_id INTO v_org_id
-  FROM public.staff_users su
-  WHERE su.auth_uid = p_auth_uid
-    AND su.is_owner = true
-    AND su.is_deleted = false;
+  -- Get org where caller is owner. staff_users has no is_owner column; the
+  -- canonical ownership check is organizations.owner_id.
+  SELECT o.id INTO v_org_id
+  FROM public.organizations o
+  WHERE o.owner_id = p_auth_uid;
 
   IF v_org_id IS NULL THEN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
   -- Only regenerate slug if no non-owner staff exist (safe during onboarding,
-  -- avoids breaking staff synthetic emails like {username}@{slug}.staff.hilt)
+  -- avoids breaking staff synthetic emails like {username}@{slug}.staff.hilt).
+  -- "Non-owner staff" = any staff_users row whose auth_uid is not the owner.
   IF NOT EXISTS (
-    SELECT 1 FROM public.staff_users
-    WHERE org_id = v_org_id AND is_owner = false AND is_deleted = false
+    SELECT 1 FROM public.staff_users su
+    WHERE su.org_id = v_org_id
+      AND (su.auth_uid IS NULL OR su.auth_uid <> p_auth_uid)
+      AND su.is_deleted = false
   ) THEN
     v_base_slug := lower(regexp_replace(trim(p_name), '[^a-zA-Z0-9]+', '-', 'g'));
     v_base_slug := trim(BOTH '-' FROM v_base_slug);

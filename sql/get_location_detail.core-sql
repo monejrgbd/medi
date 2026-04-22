@@ -85,7 +85,8 @@ BEGIN
       'tv_overlay_visible', l.tv_overlay_visible,
       'tv_queue_duration_seconds', l.tv_queue_duration_seconds,
       'tv_audio_muted', l.tv_audio_muted,
-      'created_at', l.created_at
+      'created_at', l.created_at,
+      'prescreening_config', l.prescreening_config
     )
   )
   INTO v_result

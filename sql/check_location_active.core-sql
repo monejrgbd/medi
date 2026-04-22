@@ -17,7 +17,7 @@ BEGIN
          o.name AS org_name,
          l.ask_referral_source, l.ask_discovery_source,
          l.queue_display_enabled, l.queue_type,
-         l.prescreening_config
+         l.prescreening_config, l.always_accepting_checkins
   INTO v_location
   FROM public.locations l
   JOIN public.organizations o ON o.id = l.org_id
@@ -27,13 +27,19 @@ BEGIN
     RETURN jsonb_build_object('active', false, 'error', 'Location not found');
   END IF;
 
-  -- Check if a receptionist is currently checked in at this location
-  SELECT EXISTS(
-    SELECT 1 FROM public.staff_checkins sc
-    WHERE sc.location_id = p_location_id
-      AND sc.role = 'receptionist'
-      AND sc.checked_out_at IS NULL
-  ) INTO v_active;
+  -- Demo / showcase locations override the receptionist-checkin gate so the
+  -- homepage QR code and marketing links always land on a working flow.
+  IF COALESCE(v_location.always_accepting_checkins, false) THEN
+    v_active := true;
+  ELSE
+    -- Check if a receptionist is currently checked in at this location
+    SELECT EXISTS(
+      SELECT 1 FROM public.staff_checkins sc
+      WHERE sc.location_id = p_location_id
+        AND sc.role = 'receptionist'
+        AND sc.checked_out_at IS NULL
+    ) INTO v_active;
+  END IF;
 
   RETURN jsonb_build_object(
     'active', v_active,

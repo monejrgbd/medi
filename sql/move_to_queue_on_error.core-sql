@@ -32,7 +32,9 @@ BEGIN
   END IF;
 
   IF v_visit.status <> 'still_answering_ai' THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Visit is not in AI conversation state');
+    -- Already moved past AI state (completed, left, queued by another path).
+    -- Caller's intent (get this visit out of AI state) is already satisfied.
+    RETURN jsonb_build_object('success', true, 'already_moved', true);
   END IF;
 
   -- Route timeout target based on check-in mode:
@@ -47,6 +49,8 @@ BEGIN
     v_new_entered_queue_at := v_visit.entered_queue_at;
   END IF;
 
+  -- CRITICAL: flip status first. Everything below is best-effort and must not
+  -- be allowed to abort the transaction (vault access, pg_net, audit inserts).
   UPDATE public.visits
   SET status = v_new_status,
       timeout_flagged = true,
@@ -54,33 +58,42 @@ BEGIN
       updated_at = now()
   WHERE id = p_visit_id;
 
-  -- Audit trail
-  INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, details)
-  VALUES (v_visit.org_id, NULL, 'system', 'ai_error',
-    jsonb_build_object('visit_id', p_visit_id, 'target_status', v_new_status));
+  -- Best-effort audit trail.
+  BEGIN
+    INSERT INTO public.audit_trail (org_id, actor_id, actor_type, action, details)
+    VALUES (v_visit.org_id, NULL, 'system', 'ai_error',
+      jsonb_build_object('visit_id', p_visit_id, 'target_status', v_new_status));
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
-  -- Broadcast status change
-  SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
-  SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
-  SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+  -- Best-effort realtime broadcast. Vault or pg_net failures would otherwise
+  -- surface to the caller as HTTP 400 and mask the successful UPDATE above.
+  BEGIN
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+    SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
 
-  IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
-    PERFORM net.http_post(
-      url := v_edge_url || '/broadcast-visit-update',
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', 'Bearer ' || v_anon_key,
-        'x-internal-secret', v_edge_secret
-      ),
-      body := jsonb_build_object(
-        'visit_id', p_visit_id,
-        'session_token', p_session_token,
-        'old_status', 'still_answering_ai',
-        'new_status', v_new_status,
-        'timeout_flagged', true
-      )
-    );
-  END IF;
+    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
+      PERFORM net.http_post(
+        url := v_edge_url || '/broadcast-visit-update',
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'Authorization', 'Bearer ' || v_anon_key,
+          'x-internal-secret', v_edge_secret
+        ),
+        body := jsonb_build_object(
+          'visit_id', p_visit_id,
+          'session_token', p_session_token,
+          'old_status', 'still_answering_ai',
+          'new_status', v_new_status,
+          'timeout_flagged', true
+        )
+      );
+    END IF;
+  EXCEPTION WHEN OTHERS THEN
+    NULL;
+  END;
 
   RETURN jsonb_build_object('success', true);
 END;

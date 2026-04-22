@@ -118,6 +118,8 @@ export default function PreScreeningForm({
       if (field.type === "yes_no") {
         if (demoMode && config.custom_fields.indexOf(field) === 0) {
           init[field.id] = false;
+        } else if (existingCustomFields[field.id]?.values?.[0]) {
+          init[field.id] = existingCustomFields[field.id].values[0] === "yes";
         } else {
           init[field.id] = null;
         }

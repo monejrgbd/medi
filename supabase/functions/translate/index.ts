@@ -4,7 +4,7 @@ const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
 const GOOGLE_API_KEY = Deno.env.get("GOOGLE_CLOUD_API_KEY");
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-session-token, x-internal-secret",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -79,14 +79,31 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Auth: internal secret OR valid JWT
+    // Auth: internal secret > session_token (anon patient) > JWT (dashboard user)
     const internalSecret = req.headers.get("x-internal-secret");
+    const sessionToken = req.headers.get("x-session-token");
     let orgId: string | null = null;
 
     if (internalSecret && internalSecret === INTERNAL_SECRET) {
       orgId = "internal"; // Internal calls bypass rate limit
+    } else if (sessionToken) {
+      // Patient check-in path: validate session_token against an active visit
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      const { data: sessionData } = await supabase.rpc("get_patient_session", {
+        p_session_token: sessionToken,
+      });
+      if (!sessionData?.success) {
+        return new Response(JSON.stringify({ error: "Invalid session" }), {
+          status: 401,
+          headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+        });
+      }
+      orgId = `patient:${sessionData.visit_id}`;
     } else {
-      // Validate JWT
+      // Dashboard path: validate JWT
       const authHeader = req.headers.get("Authorization");
       if (!authHeader) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {

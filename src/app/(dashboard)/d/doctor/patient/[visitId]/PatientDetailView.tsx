@@ -346,17 +346,17 @@ export default function PatientDetailView({
       {/* Action bar */}
       {canAct && (
         <div className="fixed bottom-0 inset-x-0 border-t border-gray-200 bg-white px-4 py-3 lg:px-6">
-          <div className="flex items-center gap-3 max-w-3xl mx-auto">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 max-w-3xl mx-auto">
             <button
               onClick={() => setShowDiagnosis(true)}
-              className="flex-1 rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+              className="flex-1 min-w-[140px] rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
             >
               Complete Visit
             </button>
             <button
               onClick={handleCancelClaim}
               disabled={cancelling}
-              className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 disabled:opacity-50"
+              className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
             >
               {cancelling ? "Releasing..." : "Cancel Claim"}
             </button>
@@ -368,13 +368,13 @@ export default function PatientDetailView({
                 }
                 setShowReferral(true);
               }}
-              className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors"
+              className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               Refer
             </button>
             <button
               onClick={() => setShowLetterModal(true)}
-              className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors"
+              className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors whitespace-nowrap"
             >
               Create Document
             </button>
