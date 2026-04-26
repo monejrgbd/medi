@@ -114,8 +114,12 @@ export default function PatientDetailView({
 
   const { visit, patient, transcript, addendums, notes, attachments } = detail;
   const isClaimed = visit.status === "claimed_by_doctor";
+  const isCompleted = visit.status === "completed";
   const canAct =
     isClaimed && (isOwner || visit.claimed_by === staffUserId);
+  // Documents stay accessible after completion so doctors can issue sick notes etc.
+  const canCreateDocument =
+    (isClaimed || isCompleted) && (isOwner || visit.claimed_by === staffUserId);
 
   // Subscribe to visit updates (addendum detection)
   useEffect(() => {
@@ -228,7 +232,7 @@ export default function PatientDetailView({
         </div>
       )}
 
-      <div className="px-4 py-4 lg:px-6">
+      <div className="px-4 py-4 lg:px-6 overflow-x-hidden">
         {/* Patient profile */}
         <PatientProfileCard patient={patient} />
 
@@ -267,23 +271,27 @@ export default function PatientDetailView({
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="mt-6 flex gap-1 border-b border-gray-200">
-          {tabs
-            .filter((t) => t.show)
-            .map((t) => (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                  tab === t.key
-                    ? "border-hilt-blue text-hilt-blue"
-                    : "border-transparent text-slate hover:text-ink"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+        {/* Tabs — scroll inside the strip on narrow viewports so the page itself
+            does not become wider than the viewport (which on iOS Safari allows
+            pinch-zoom-out to reveal whitespace). */}
+        <div className="mt-6 -mx-4 lg:mx-0 overflow-x-auto border-b border-gray-200">
+          <div className="flex gap-1 px-4 lg:px-0 w-max">
+            {tabs
+              .filter((t) => t.show)
+              .map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => setTab(t.key)}
+                  className={`shrink-0 whitespace-nowrap px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+                    tab === t.key
+                      ? "border-hilt-blue text-hilt-blue"
+                      : "border-transparent text-slate hover:text-ink"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+          </div>
         </div>
 
         {/* Tab content */}
@@ -344,40 +352,46 @@ export default function PatientDetailView({
       </div>
 
       {/* Action bar */}
-      {canAct && (
+      {(canAct || canCreateDocument) && (
         <div className="fixed bottom-0 inset-x-0 border-t border-gray-200 bg-white px-4 py-3 lg:px-6">
           <div className="flex flex-wrap items-center gap-2 sm:gap-3 max-w-3xl mx-auto">
-            <button
-              onClick={() => setShowDiagnosis(true)}
-              className="flex-1 min-w-[140px] rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
-            >
-              Complete Visit
-            </button>
-            <button
-              onClick={handleCancelClaim}
-              disabled={cancelling}
-              className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
-            >
-              {cancelling ? "Releasing..." : "Cancel Claim"}
-            </button>
-            <button
-              onClick={() => {
-                if (!org?.verified) {
-                  toast.error("To send referrals, your clinic must be verified. Contact business@hilthealth.com to apply.");
-                  return;
-                }
-                setShowReferral(true);
-              }}
-              className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors whitespace-nowrap"
-            >
-              Refer
-            </button>
-            <button
-              onClick={() => setShowLetterModal(true)}
-              className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors whitespace-nowrap"
-            >
-              Create Document
-            </button>
+            {canAct && (
+              <>
+                <button
+                  onClick={() => setShowDiagnosis(true)}
+                  className="flex-1 min-w-[140px] rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
+                >
+                  Complete Visit
+                </button>
+                <button
+                  onClick={handleCancelClaim}
+                  disabled={cancelling}
+                  className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                >
+                  {cancelling ? "Releasing..." : "Cancel Claim"}
+                </button>
+                <button
+                  onClick={() => {
+                    if (!org?.verified) {
+                      toast.error("To send referrals, your clinic must be verified. Contact business@hilthealth.com to apply.");
+                      return;
+                    }
+                    setShowReferral(true);
+                  }}
+                  className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors whitespace-nowrap"
+                >
+                  Refer
+                </button>
+              </>
+            )}
+            {canCreateDocument && (
+              <button
+                onClick={() => setShowLetterModal(true)}
+                className="flex-1 sm:flex-none rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-slate hover:bg-gray-50 transition-colors whitespace-nowrap"
+              >
+                Create Document
+              </button>
+            )}
           </div>
         </div>
       )}

@@ -49,14 +49,14 @@ export default function PaymentHistory({ orgId }: { orgId: string }) {
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[480px]">
             <thead>
               <tr className="border-b border-gray-100">
-                <th className="text-left py-2 font-medium text-slate">Date</th>
-                <th className="text-left py-2 font-medium text-slate">
+                <th className="text-left py-2 pr-3 font-medium text-slate whitespace-nowrap">Date</th>
+                <th className="text-left py-2 pr-3 font-medium text-slate min-w-[200px]">
                   Description
                 </th>
-                <th className="text-right py-2 font-medium text-slate">
+                <th className="text-right py-2 font-medium text-slate whitespace-nowrap">
                   Credits
                 </th>
               </tr>
@@ -64,12 +64,12 @@ export default function PaymentHistory({ orgId }: { orgId: string }) {
             <tbody>
               {entries.map((e) => (
                 <tr key={e.id} className="border-b border-gray-50">
-                  <td className="py-2 text-slate">
+                  <td className="py-2 pr-3 text-slate whitespace-nowrap">
                     {new Date(e.created_at).toLocaleDateString()}
                   </td>
-                  <td className="py-2 text-ink">{e.description}</td>
+                  <td className="py-2 pr-3 text-ink">{e.description}</td>
                   <td
-                    className={`py-2 text-right font-medium ${
+                    className={`py-2 text-right font-medium whitespace-nowrap ${
                       e.credits_amount < 0
                         ? "text-red-600"
                         : "text-green-600"

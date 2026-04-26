@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
 
     {
       // Status change broadcast
-      const { old_status, new_status, timeout_flagged, denied, staff_room } = body;
+      const { old_status, new_status, timeout_flagged, denied, staff_room, claimer_role } = body;
 
       if (!new_status) {
         supabase.removeChannel(channel);
@@ -53,6 +53,7 @@ Deno.serve(async (req) => {
           timeout_flagged,
           denied,
           staff_room: staff_room ?? null,
+          claimer_role: claimer_role ?? null,
         },
       });
     }

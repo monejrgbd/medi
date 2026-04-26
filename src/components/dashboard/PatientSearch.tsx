@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { searchPatients, fetchPatientFullProfile } from "@/app/(dashboard)/d/_actions/billing";
 import PatientFullProfile from "./PatientFullProfile";
+import { DateInput } from "@/components/ui/DateInput";
 
 interface PatientResult {
   patient_id: string;
@@ -117,8 +118,7 @@ export default function PatientSearch() {
               </button>
             )}
           </div>
-          <input
-            type="date"
+          <DateInput
             value={birthday}
             onChange={(e) => setBirthday(e.target.value)}
             className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"

@@ -48,7 +48,11 @@ BEGIN
 
   -- Verify claimed_by = caller
   IF v_visit.claimed_by <> v_caller_staff_id THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'This visit was claimed by another staff member',
+      'code', 'visit_not_yours'
+    );
   END IF;
 
   -- Verify caller has nurse role at visit location
@@ -58,7 +62,11 @@ BEGIN
       AND sr.role = 'nurse'
       AND sr.location_id = v_visit.location_id
   ) THEN
-    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'You no longer have nurse role at this location',
+      'code', 'role_revoked'
+    );
   END IF;
 
   -- Verify location has nurse_enabled

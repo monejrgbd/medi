@@ -52,6 +52,7 @@
   "queue.submit": "Gửi",
   "queue.sending": "Đang gửi...",
   "claimed.title": "Bác sĩ đã sẵn sàng",
+  "claimed.title_nurse": "Y tá đã sẵn sàng",
   "claimed.subtitle": "Vui lòng đến phòng khám.",
   "claimed.go_to_room": "Vui lòng đến {room}",
   "waiting.title": "Đang đăng ký cho bạn",

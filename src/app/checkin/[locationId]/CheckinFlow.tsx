@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { usePatientRealtime, RealtimePayload } from "@/hooks/usePatientRealtime";
+import { DateInput } from "@/components/ui/DateInput";
 import CheckinForm from "@/components/patient/CheckinForm";
 import WaitingApproval from "@/components/patient/WaitingApproval";
 import DenialScreen from "@/components/patient/DenialScreen";
@@ -124,6 +125,7 @@ export default function CheckinFlow({
   const [estimatedWait, setEstimatedWait] = useState<number | null>(null);
   const [queueNumber, setQueueNumber] = useState<number | null>(null);
   const [staffRoom, setStaffRoom] = useState<string | null>(null);
+  const [claimerRole, setClaimerRole] = useState<"doctor" | "nurse" | null>(null);
 
   // Phone verification state
   const [patientPhone, setPatientPhone] = useState<string | null>(null);
@@ -565,6 +567,10 @@ export default function CheckinFlow({
         if (event.payload.staff_room !== undefined) {
           setStaffRoom(event.payload.staff_room ?? null);
         }
+        if (event.payload.claimer_role !== undefined) {
+          const role = event.payload.claimer_role;
+          setClaimerRole(role === "nurse" || role === "doctor" ? role : null);
+        }
         // Mid-shift room edits also arrive as status_change with status still
         // claimed_by_doctor; do not replay the claim alert in that case.
         if (current === "claimed") {
@@ -593,14 +599,17 @@ export default function CheckinFlow({
         if (typeof navigator !== "undefined" && navigator.vibrate) {
           navigator.vibrate([200, 100, 200]);
         }
-        // Browser notification when tab is backgrounded
+        // Browser notification when tab is backgrounded.
+        // Use the claimer's role so a nurse-claim does not say "doctor".
         if (
           typeof document !== "undefined" &&
           document.hidden &&
           typeof Notification !== "undefined" &&
           Notification.permission === "granted"
         ) {
-          new Notification("Your doctor is ready", {
+          const claimRole = event.payload.claimer_role;
+          const title = claimRole === "nurse" ? "Your nurse is ready" : "Your doctor is ready";
+          new Notification(title, {
             body: "Please proceed to the front desk.",
             tag: `claimed-${visitId}`,
           });
@@ -1232,8 +1241,7 @@ export default function CheckinFlow({
           <p className="text-sm text-slate mb-4">
             {t("checkin.verifyBirthdayDesc", patientLanguage)}
           </p>
-          <input
-            type="date"
+          <DateInput
             value={birthdayInput}
             onChange={(e) => { setBirthdayInput(e.target.value); setError(""); }}
             className="w-full rounded-lg border border-gray-200 px-4 py-3 text-base text-ink mb-3"
@@ -1476,7 +1484,7 @@ export default function CheckinFlow({
       ) : null;
 
     case "claimed":
-      return <DoctorClaimedNotice staffRoom={staffRoom} />;
+      return <DoctorClaimedNotice staffRoom={staffRoom} claimerRole={claimerRole} />;
 
     case "timeout": {
       const timeoutContent = (

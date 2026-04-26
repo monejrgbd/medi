@@ -10,6 +10,7 @@ interface StatusChangePayload {
   timeout_flagged?: boolean;
   denied?: boolean;
   staff_room?: string | null;
+  claimer_role?: "doctor" | "nurse" | null;
 }
 
 interface SummaryReadyPayload {

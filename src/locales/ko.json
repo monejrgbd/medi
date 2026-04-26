@@ -52,6 +52,7 @@
   "queue.submit": "제출",
   "queue.sending": "전송 중...",
   "claimed.title": "의사가 준비되었습니다",
+  "claimed.title_nurse": "간호사가 준비되었습니다",
   "claimed.subtitle": "진료실로 이동해 주세요.",
   "claimed.go_to_room": "{room}(으)로 이동해 주세요",
   "waiting.title": "접수 진행 중",

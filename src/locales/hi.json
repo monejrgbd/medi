@@ -52,6 +52,7 @@
   "queue.submit": "जमा करें",
   "queue.sending": "भेज रहा है...",
   "claimed.title": "आपके डॉक्टर तैयार हैं",
+  "claimed.title_nurse": "आपकी नर्स तैयार हैं",
   "claimed.subtitle": "कृपया जांच कक्ष में जाएं।",
   "claimed.go_to_room": "कृपया {room} पर जाएं",
   "waiting.title": "चेक इन हो रहा है",

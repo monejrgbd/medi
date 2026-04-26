@@ -398,7 +398,23 @@ Deno.serve(async (req) => {
 
         // Post-stream processing
         const completionMarker = "[CONVERSATION_COMPLETE]";
-        const hasCompletion = accumulatedText.includes(completionMarker);
+        const rawHasCompletion = accumulatedText.includes(completionMarker);
+        // Guard against premature completion. The model sometimes emits the
+        // marker after a single patient message, especially with smaller models
+        // or with restrictive ai_message_limit. Refuse to honor it before the
+        // patient has had a chance to give the screening checklist content.
+        // patientMessageCount counts the patient message that triggered THIS
+        // turn, so 4 means the patient has spoken 4 times — enough to cover
+        // chief complaint plus a few follow-ups.
+        const MIN_PATIENT_TURNS = 4;
+        const completionPremature = rawHasCompletion && patientMessageCount < MIN_PATIENT_TURNS;
+        const hasCompletion = rawHasCompletion && !completionPremature;
+        if (completionPremature) {
+          console.warn(
+            `Suppressing premature [CONVERSATION_COMPLETE] for visit ${visit_id}: ` +
+            `patientMessageCount=${patientMessageCount}, threshold=${MIN_PATIENT_TURNS}`
+          );
+        }
         const strippedText = accumulatedText.replace(completionMarker, "").trim();
 
         // For non-English: translate the full response, then send as single delta + done

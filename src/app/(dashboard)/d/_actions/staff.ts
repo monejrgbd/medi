@@ -90,7 +90,13 @@ export async function createStaffUser(formData: {
 
   if (error) {
     console.error("create_staff_user RPC error:", error.message, error.code);
-    return { success: false, error: "Failed to create staff user" };
+    if (error.code === "23505") {
+      return {
+        success: false,
+        error: "Username is already taken at this clinic. Choose a different username.",
+      };
+    }
+    return { success: false, error: error.message || "Could not create staff user" };
   }
   if (data && !data.success) return { success: false, error: data.error };
 

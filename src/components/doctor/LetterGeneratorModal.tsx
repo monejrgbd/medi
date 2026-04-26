@@ -153,7 +153,15 @@ export default function LetterGeneratorModal({
     setInputFields((prev) => ({ ...prev, [key]: value }));
   }
 
-  // Poll for document status after drafting
+  // Poll for document status after drafting. The document row exists immediately
+  // after createDocument, but the AI draft is generated asynchronously, so the
+  // first few polls may race and return transient failures. Treat those as
+  // retryable rather than terminal.
+  const TERMINAL_DOC_ERRORS = new Set([
+    "Document not found",
+    "Not authorized",
+    "Staff user not found",
+  ]);
   const pollForDraft = useCallback(
     async (docId: string, attempts = 0): Promise<void> => {
       if (attempts > 30) {
@@ -164,9 +172,15 @@ export default function LetterGeneratorModal({
 
       const result = await fetchDocumentForStaff(docId);
       if (!result.success || !result.document) {
-        setLoading(false);
-        setError("Failed to check document status");
-        return;
+        const isTerminal = result.error && TERMINAL_DOC_ERRORS.has(result.error);
+        if (isTerminal) {
+          setLoading(false);
+          setError(result.error || "Failed to check document status");
+          return;
+        }
+        // Transient — retry polling
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        return pollForDraft(docId, attempts + 1);
       }
 
       const doc = result.document;

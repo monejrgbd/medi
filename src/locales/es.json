@@ -52,6 +52,7 @@
   "queue.submit": "Enviar",
   "queue.sending": "Enviando...",
   "claimed.title": "Su médico está listo",
+  "claimed.title_nurse": "Su enfermero está listo",
   "claimed.subtitle": "Por favor diríjase a la sala de examen.",
   "claimed.go_to_room": "Por favor diríjase a {room}",
   "waiting.title": "Registrándole",

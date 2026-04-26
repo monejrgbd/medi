@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { fetchSimilarPatients, editPatientRecord, mergeVisitToPatient } from "@/app/(dashboard)/d/_actions/receptionist";
 import FollowUpIndicator from "./FollowUpIndicator";
 import { formatQueueNumber } from "@/lib/queueUtils";
+import { DateInput } from "@/components/ui/DateInput";
 
 interface FollowUpInfo {
   id: string;
@@ -256,8 +257,7 @@ export default function ApprovalCard({
                 />
               </div>
               <div className="flex gap-2">
-                <input
-                  type="date"
+                <DateInput
                   value={editBirthday}
                   onChange={(e) => setEditBirthday(e.target.value)}
                   max={new Date().toISOString().split("T")[0]}
@@ -268,7 +268,7 @@ export default function ApprovalCard({
                   onChange={(e) => setEditSex(e.target.value)}
                   className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
                 >
-                  <option value="">Sex</option>
+                  <option value="" disabled>Sex</option>
                   <option value="male">Male</option>
                   <option value="female">Female</option>
                   <option value="other">Other</option>

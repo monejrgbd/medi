@@ -6,6 +6,7 @@ import {
   addVaccineScheduleEntry,
   fetchVaccinesMasterList,
 } from "@/app/(dashboard)/d/_actions/nurse";
+import { DateInput } from "@/components/ui/DateInput";
 
 interface ScheduleEntry {
   id: string;
@@ -194,9 +195,9 @@ export default function VaccineScheduleView({ patientId }: VaccineScheduleViewPr
             </div>
             <div>
               <label className="text-xs text-slate">Due Date</label>
-              <input
-                type="date"
+              <DateInput
                 value={dueDate}
+                min={new Date().toISOString().split("T")[0]}
                 onChange={(e) => setDueDate(e.target.value)}
                 className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink focus:border-teal-500 focus:outline-none bg-white"
               />

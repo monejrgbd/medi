@@ -28,7 +28,7 @@ export default function CampaignDetail({
   const pathname = usePathname();
   const { org } = useRole();
   const isCreditsMode = org?.subscription_plan === "pay_as_you_go" || org?.subscription_plan?.includes("trial");
-  const costLabel = isCreditsMode ? "{costLabel}" : "Marketing budget used";
+  const costLabel = isCreditsMode ? "Credits charged" : "Marketing budget used";
   const listPath = pathname?.startsWith("/d/marketer") ? "/d/marketer" : "/d/owner/marketing";
   const [data, setData] = useState(initialData);
   const [cancelling, setCancelling] = useState(false);

@@ -2,24 +2,13 @@
 
 import { useState, useEffect } from "react";
 import {
-  fetchVitalTypesMasterList,
-  fetchOrgVitalConfigs,
+  fetchOrgVitalConfigsAll,
   configureOrgVitals,
   initializeOrgDefaultVitals,
 } from "@/app/(dashboard)/d/_actions/nurse";
 
-interface VitalType {
-  id: string;
-  name: string;
-  unit: string;
-  category: string;
-  default_min: number | null;
-  default_max: number | null;
-  default_step: number | null;
-}
-
 interface OrgVitalConfig {
-  id: string;
+  config_id: string | null;
   vital_type_id: string | null;
   name: string;
   unit: string;
@@ -32,7 +21,6 @@ interface OrgVitalConfig {
 }
 
 export default function VitalTypesConfig() {
-  const [masterList, setMasterList] = useState<VitalType[]>([]);
   const [configs, setConfigs] = useState<OrgVitalConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -50,19 +38,15 @@ export default function VitalTypesConfig() {
 
   async function loadData() {
     setLoading(true);
-    const [masterRes, configRes] = await Promise.all([
-      fetchVitalTypesMasterList(),
-      fetchOrgVitalConfigs(),
-    ]);
+    const configRes = await fetchOrgVitalConfigsAll();
 
-    if (masterRes.success) setMasterList(masterRes.vital_types ?? []);
     if (configRes.success) setConfigs(configRes.configs ?? []);
 
-    // If no configs exist, initialize defaults
-    if (configRes.success && (configRes.configs ?? []).length === 0) {
+    // If no configs exist (org never initialized), seed defaults then re-fetch
+    if (configRes.success && (configRes.configs ?? []).filter((c: OrgVitalConfig) => c.config_id !== null).length === 0) {
       const initRes = await initializeOrgDefaultVitals();
       if (initRes.success) {
-        const refreshRes = await fetchOrgVitalConfigs();
+        const refreshRes = await fetchOrgVitalConfigsAll();
         if (refreshRes.success) setConfigs(refreshRes.configs ?? []);
       }
     }
@@ -71,12 +55,8 @@ export default function VitalTypesConfig() {
   }
 
   async function refreshConfigs() {
-    const res = await fetchOrgVitalConfigs();
+    const res = await fetchOrgVitalConfigsAll();
     if (res.success) setConfigs(res.configs ?? []);
-  }
-
-  function getConfigForType(vitalTypeId: string): OrgVitalConfig | undefined {
-    return configs.find((c) => c.vital_type_id === vitalTypeId);
   }
 
   async function handleTogglePredefined(vitalTypeId: string, currentlyEnabled: boolean) {
@@ -150,7 +130,7 @@ export default function VitalTypesConfig() {
     );
   }
 
-  const predefined = masterList;
+  const predefined = configs.filter((c) => !c.is_custom);
   const customConfigs = configs.filter((c) => c.is_custom);
 
   return (
@@ -178,27 +158,27 @@ export default function VitalTypesConfig() {
         </div>
         <div className="divide-y divide-gray-100">
           {predefined.map((vt) => {
-            const config = getConfigForType(vt.id);
-            const isEnabled = config?.is_enabled ?? true;  // predefined vitals are enabled by default
-            const isSaving = saving === vt.id;
+            const isEnabled = vt.is_enabled;
+            const vitalTypeId = vt.vital_type_id ?? "";
+            const isSaving = saving === vitalTypeId;
 
             return (
               <div
-                key={vt.id}
+                key={vitalTypeId}
                 className="flex items-center justify-between px-4 py-3"
               >
                 <div>
                   <p className="text-sm font-medium text-ink">{vt.name}</p>
                   <p className="text-xs text-slate">
                     {vt.unit}
-                    {vt.default_min !== null && vt.default_max !== null
-                      ? ` (${vt.default_min} - ${vt.default_max})`
+                    {vt.min_value !== null && vt.max_value !== null
+                      ? ` (${vt.min_value} - ${vt.max_value})`
                       : ""}
                   </p>
                 </div>
                 <button
-                  onClick={() => handleTogglePredefined(vt.id, isEnabled)}
-                  disabled={isSaving}
+                  onClick={() => handleTogglePredefined(vitalTypeId, isEnabled)}
+                  disabled={isSaving || !vitalTypeId}
                   className={`relative h-6 w-11 rounded-full transition-colors ${
                     isEnabled ? "bg-teal-600" : "bg-gray-300"
                   } ${isSaving ? "opacity-50" : ""}`}
@@ -229,10 +209,11 @@ export default function VitalTypesConfig() {
         {customConfigs.length > 0 && (
           <div className="divide-y divide-gray-100">
             {customConfigs.map((config) => {
-              const isSaving = saving === config.id;
+              const configId = config.config_id ?? "";
+              const isSaving = saving === configId;
               return (
                 <div
-                  key={config.id}
+                  key={configId}
                   className="flex items-center justify-between px-4 py-3"
                 >
                   <div>
@@ -245,8 +226,8 @@ export default function VitalTypesConfig() {
                     </p>
                   </div>
                   <button
-                    onClick={() => handleToggleCustom(config.id, config.is_enabled)}
-                    disabled={isSaving}
+                    onClick={() => handleToggleCustom(configId, config.is_enabled)}
+                    disabled={isSaving || !configId}
                     className={`relative h-6 w-11 rounded-full transition-colors ${
                       config.is_enabled ? "bg-teal-600" : "bg-gray-300"
                     } ${isSaving ? "opacity-50" : ""}`}

@@ -18,11 +18,11 @@ export async function requireAuth() {
   return user;
 }
 
-export async function getStaffUser(_authUid: string) {
+export const getStaffUser = cache(async (_authUid: string) => {
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_my_staff_user");
   return data as { id: string; org_id: string; auth_uid: string; full_name: string; username: string } | null;
-}
+});
 
 export async function isOwner(authUid: string) {
   const org = await getMyOrg();
@@ -51,11 +51,11 @@ export async function requireRole(locationId: string, role: string) {
   return user;
 }
 
-export async function getMyRoles() {
+export const getMyRoles = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_my_roles");
   return data ?? [];
-}
+});
 
 export async function isPlatformAdmin(): Promise<boolean> {
   const user = await getUser();
@@ -63,8 +63,8 @@ export async function isPlatformAdmin(): Promise<boolean> {
   return user.app_metadata?.is_platform_admin === true;
 }
 
-export async function getMyOrg() {
+export const getMyOrg = cache(async () => {
   const supabase = await createClient();
   const { data } = await supabase.rpc("get_my_org");
   return data ?? {};
-}
+});

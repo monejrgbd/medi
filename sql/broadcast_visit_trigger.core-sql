@@ -9,6 +9,7 @@ DECLARE
   v_edge_url text;
   v_secret text;
   v_anon_key text;
+  v_claimer_role text;
 BEGIN
   -- Read from Supabase Vault
   SELECT decrypted_secret INTO v_edge_url
@@ -19,6 +20,30 @@ BEGIN
 
   SELECT decrypted_secret INTO v_anon_key
   FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+  -- Resolve claimer's role at this location so the patient device can show
+  -- "Your nurse is ready" vs "Your doctor is ready". Source: staff_checkins
+  -- (which role the claimer is currently checked in as), fallback to staff_roles.
+  IF NEW.claimed_by IS NOT NULL THEN
+    SELECT sc.role INTO v_claimer_role
+    FROM public.staff_checkins sc
+    WHERE sc.staff_user_id = NEW.claimed_by
+      AND sc.location_id = NEW.location_id
+      AND sc.checked_out_at IS NULL
+      AND sc.role IN ('doctor', 'nurse')
+    ORDER BY sc.checked_in_at DESC
+    LIMIT 1;
+
+    IF v_claimer_role IS NULL THEN
+      SELECT sr.role INTO v_claimer_role
+      FROM public.staff_roles sr
+      WHERE sr.staff_user_id = NEW.claimed_by
+        AND sr.location_id = NEW.location_id
+        AND sr.role IN ('doctor', 'nurse')
+      ORDER BY CASE sr.role WHEN 'nurse' THEN 1 ELSE 2 END
+      LIMIT 1;
+    END IF;
+  END IF;
 
   -- Only fire if edge function is configured
   IF v_edge_url IS NOT NULL AND v_edge_url <> '' AND v_secret IS NOT NULL AND v_secret <> '' AND v_anon_key IS NOT NULL THEN
@@ -36,7 +61,8 @@ BEGIN
         'new_status', NEW.status,
         'location_id', NEW.location_id,
         'timeout_flagged', NEW.timeout_flagged,
-        'staff_room', NEW.staff_room
+        'staff_room', NEW.staff_room,
+        'claimer_role', v_claimer_role
       )
     );
   END IF;

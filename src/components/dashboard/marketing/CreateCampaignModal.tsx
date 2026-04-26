@@ -7,6 +7,7 @@ import { createCampaign } from "@/app/(dashboard)/d/_actions/marketing";
 import { MARKETING_SCAN_EXAMPLES } from "@/lib/constants";
 import { X, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+import { DateInput } from "@/components/ui/DateInput";
 
 interface CreateCampaignModalProps {
   open: boolean;
@@ -191,17 +192,17 @@ export default function CreateCampaignModal({
           {/* Visit history section */}
           <fieldset className="space-y-3">
             <legend className="text-xs font-semibold text-ash uppercase tracking-wider">Visit History</legend>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] text-ash mb-1">Visited after</label>
-                <input type="date" value={visitedAfter} onChange={(e) => setVisitedAfter(e.target.value)} className={inputClass} />
+                <DateInput value={visitedAfter} onChange={(e) => setVisitedAfter(e.target.value)} className={inputClass} />
               </div>
               <div>
                 <label className="block text-[11px] text-ash mb-1">Visited before</label>
-                <input type="date" value={visitedBefore} onChange={(e) => setVisitedBefore(e.target.value)} className={inputClass} />
+                <DateInput value={visitedBefore} onChange={(e) => setVisitedBefore(e.target.value)} className={inputClass} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] text-ash mb-1">Min visits</label>
                 <input type="number" min={0} value={visitCountMin} onChange={(e) => setVisitCountMin(e.target.value)} className={inputClass} placeholder="Any" />

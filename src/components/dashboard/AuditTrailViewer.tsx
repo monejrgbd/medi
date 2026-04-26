@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { fetchAuditTrail } from "@/app/(dashboard)/d/_actions/receptionist";
+import { DateInput } from "@/components/ui/DateInput";
 
 interface AuditEntry {
   id: string;
@@ -98,14 +99,12 @@ export default function AuditTrailViewer({ orgId }: AuditTrailViewerProps) {
           placeholder="Actor ID (UUID)"
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none w-44"
         />
-        <input
-          type="date"
+        <DateInput
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink focus:border-hilt-blue focus:outline-none"
         />
-        <input
-          type="date"
+        <DateInput
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
           className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink focus:border-hilt-blue focus:outline-none"

@@ -85,6 +85,18 @@ export default function MarketingDashboard({
     }
   }, [addonEnabled, loadLocations]);
 
+  // Reload on bfcache restore so the back button does not show a stale
+  // pre-opt-in snapshot of the marketing page after the addon was enabled.
+  useEffect(() => {
+    const handler = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        window.location.reload();
+      }
+    };
+    window.addEventListener("pageshow", handler);
+    return () => window.removeEventListener("pageshow", handler);
+  }, []);
+
   async function handleEnableAddon() {
     setEnabling(true);
     try {
@@ -98,7 +110,9 @@ export default function MarketingDashboard({
       } else {
         setAddonEnabled(true);
         toast.success("Marketing SMS enabled");
-        router.refresh();
+        // Hard reload so the org context picks up marketing_sms_addon=true
+        // and bfcache cannot restore the pre-enabled gateway view.
+        window.location.reload();
       }
     } catch {
       toast.error("Failed to enable addon");

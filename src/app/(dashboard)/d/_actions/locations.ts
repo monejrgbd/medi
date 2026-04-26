@@ -70,6 +70,9 @@ export async function updateLocation(formData: {
   timezone?: string;
   logoUrl?: string;
   nurseEnabled?: boolean;
+  nurseFirstWorkflow?: boolean;
+  vaccinesEnabled?: boolean;
+  vitalsEnabled?: boolean;
   aiCustomInstructions?: string;
   aiMessageLimit?: number | null;
   skipAi?: boolean;
@@ -107,6 +110,9 @@ export async function updateLocation(formData: {
   if (formData.timezone !== undefined) params.p_timezone = formData.timezone;
   if (formData.logoUrl !== undefined) params.p_logo_url = formData.logoUrl;
   if (formData.nurseEnabled !== undefined) params.p_nurse_enabled = formData.nurseEnabled;
+  if (formData.nurseFirstWorkflow !== undefined) params.p_nurse_first_workflow = formData.nurseFirstWorkflow;
+  if (formData.vaccinesEnabled !== undefined) params.p_vaccines_enabled = formData.vaccinesEnabled;
+  if (formData.vitalsEnabled !== undefined) params.p_vitals_enabled = formData.vitalsEnabled;
   if (formData.aiCustomInstructions !== undefined) params.p_ai_custom_instructions = formData.aiCustomInstructions;
   if (formData.aiMessageLimit !== undefined) params.p_ai_message_limit = formData.aiMessageLimit === null ? 0 : formData.aiMessageLimit;
   if (formData.skipAi !== undefined) params.p_skip_ai = formData.skipAi;

@@ -50,12 +50,14 @@ BEGIN
     END IF;
   END IF;
 
-  -- Set handled = true (UI dismiss only, no status change)
+  -- Set handled = true and auto-clear gave_tablet so floor counts stay accurate
+  -- when a receptionist dismisses a visit without an explicit Tablet In step
   UPDATE public.visits
-  SET handled = true
+  SET handled = true,
+      gave_tablet = false
   WHERE id = p_visit_id;
 
-  RETURN jsonb_build_object('success', true);
+  RETURN jsonb_build_object('success', true, 'had_tablet', v_visit.gave_tablet);
 END;
 $$;
 

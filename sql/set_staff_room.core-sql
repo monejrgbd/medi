@@ -58,6 +58,22 @@ BEGIN
     END IF;
   END IF;
 
+  -- Conflict detection: another active doctor/nurse already in this room at the location
+  IF EXISTS (
+    SELECT 1 FROM public.staff_checkins sc
+    WHERE sc.location_id = v_location_id
+      AND sc.role IN ('doctor', 'nurse')
+      AND sc.checked_out_at IS NULL
+      AND sc.current_room = v_room
+      AND sc.staff_user_id <> v_staff_user_id
+  ) THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'Room ' || v_room || ' is already in use by another staff member',
+      'code', 'room_in_use'
+    );
+  END IF;
+
   -- Update the checkin
   UPDATE public.staff_checkins
   SET current_room = v_room

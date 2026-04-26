@@ -52,6 +52,7 @@
   "queue.submit": "Soumettre",
   "queue.sending": "Envoi en cours...",
   "claimed.title": "Votre médecin est prêt",
+  "claimed.title_nurse": "Votre infirmier est prêt",
   "claimed.subtitle": "Veuillez vous rendre à la salle d'examen.",
   "claimed.go_to_room": "Veuillez vous rendre à {room}",
   "waiting.title": "Enregistrement en cours",

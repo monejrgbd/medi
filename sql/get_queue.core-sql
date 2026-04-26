@@ -15,6 +15,7 @@ DECLARE
   v_caller_staff_id uuid;
   v_can_access boolean := false;
   v_nurse_enabled boolean;
+  v_nurse_first boolean;
   v_is_nurse_only boolean := false;
   v_result jsonb;
 BEGIN
@@ -38,8 +39,10 @@ BEGIN
   -- Authorization: owner or doctor/nurse at location
   SELECT owner_id INTO v_owner_id FROM public.organizations WHERE id = v_org_id;
 
-  -- Fetch nurse_enabled from location
-  SELECT l.nurse_enabled INTO v_nurse_enabled FROM public.locations l WHERE l.id = p_location_id;
+  -- Fetch nurse settings from location
+  SELECT l.nurse_enabled, l.nurse_first_workflow
+    INTO v_nurse_enabled, v_nurse_first
+  FROM public.locations l WHERE l.id = p_location_id;
 
   IF v_owner_id = p_caller_auth_uid THEN
     NULL; -- Owner can view
@@ -71,7 +74,12 @@ BEGIN
     END IF;
   END IF;
 
-  -- Get queue
+  -- Get queue. Filter logic:
+  --   - Always exclude claimed visits (defense in depth so a stale claimed_by
+  --     can't leak back into the queue if status was reverted incorrectly).
+  --   - Nurse-only callers see only un-reviewed (existing pre-screen behavior).
+  --   - At nurse-first locations, doctors only see post-review patients.
+  --   - At non-nurse-first locations, doctors see everything.
   SELECT COALESCE(jsonb_agg(row_to_json(q) ORDER BY q.priority DESC, q.created_at ASC), '[]'::jsonb)
   INTO v_result
   FROM (
@@ -92,7 +100,17 @@ BEGIN
     JOIN public.patients p ON p.id = v.patient_id
     WHERE v.location_id = p_location_id
       AND v.status = 'waiting_doctor_claim'
-      AND (v_is_nurse_only = false OR v.nurse_reviewed = false)
+      AND v.claimed_by IS NULL
+      AND (
+        -- Owner sees all queued visits regardless of nurse-first
+        v_owner_id = p_caller_auth_uid
+        -- Nurse-only sees un-reviewed
+        OR (v_is_nurse_only = true AND v.nurse_reviewed = false)
+        -- Doctors at non-nurse-first locations see everything
+        OR (v_is_nurse_only = false AND v_nurse_first IS NOT TRUE)
+        -- Doctors at nurse-first locations see only post-review
+        OR (v_is_nurse_only = false AND v_nurse_first IS TRUE AND v.nurse_reviewed = true)
+      )
   ) q;
 
   RETURN jsonb_build_object('success', true, 'queue', v_result);

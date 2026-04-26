@@ -65,6 +65,7 @@ BEGIN
       'tablet_count', l.tablet_count,
       'timezone', l.timezone,
       'nurse_enabled', l.nurse_enabled,
+      'nurse_first_workflow', l.nurse_first_workflow,
       'vitals_enabled', l.vitals_enabled,
       'vaccines_enabled', l.vaccines_enabled,
       'skip_ai', l.skip_ai,

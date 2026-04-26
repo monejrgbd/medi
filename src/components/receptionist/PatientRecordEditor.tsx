@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { editPatientRecord } from "@/app/(dashboard)/d/_actions/receptionist";
+import { DateInput } from "@/components/ui/DateInput";
 
 interface PatientRecordEditorProps {
   patientId: string;
@@ -120,8 +121,7 @@ export default function PatientRecordEditor({
 
           <div>
             <label className="block text-xs font-medium text-slate mb-1">Birthday</label>
-            <input
-              type="date"
+            <DateInput
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
               max={new Date().toISOString().split("T")[0]}

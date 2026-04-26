@@ -1,0 +1,98 @@
+-- Returns ALL vital configs for the org (enabled + disabled), used by the
+-- settings page so the user can see and toggle every vital type — including
+-- ones currently disabled. The recording form continues to use
+-- get_org_vital_configs (filtered by enabled = true).
+
+CREATE OR REPLACE FUNCTION private.get_org_vital_configs_all(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_org_id uuid;
+  v_caller_staff_id uuid;
+  v_configs jsonb;
+BEGIN
+  -- Owner check
+  SELECT o.id INTO v_caller_org_id
+  FROM public.organizations o
+  WHERE o.owner_id = p_caller_auth_uid;
+
+  IF v_caller_org_id IS NULL THEN
+    -- Staff check
+    SELECT su.org_id, su.id INTO v_caller_org_id, v_caller_staff_id
+    FROM public.staff_users su
+    WHERE su.auth_uid = p_caller_auth_uid
+      AND su.is_active = true
+      AND su.is_deleted = false;
+  END IF;
+
+  IF v_caller_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- Predefined vitals: LEFT JOIN vital_types with org_vital_configs so a vital
+  -- with no row appears as enabled-by-default (we treat absence of a row as
+  -- "enabled, not yet customized" for predefined types).
+  -- Custom vitals: read directly from org_vital_configs (no vital_type_id).
+  SELECT COALESCE(jsonb_agg(row_to_json(q) ORDER BY q.display_order, q.name), '[]'::jsonb)
+  INTO v_configs
+  FROM (
+    SELECT
+      ovc.id AS config_id,
+      vt.id AS vital_type_id,
+      vt.name,
+      vt.unit,
+      vt.min_value,
+      vt.max_value,
+      vt.step_value,
+      COALESCE(ovc.display_order, vt.display_order) AS display_order,
+      false AS is_custom,
+      COALESCE(ovc.enabled, true) AS is_enabled
+    FROM public.vital_types vt
+    LEFT JOIN public.org_vital_configs ovc
+      ON ovc.vital_type_id = vt.id AND ovc.org_id = v_caller_org_id
+    UNION ALL
+    SELECT
+      ovc.id AS config_id,
+      NULL::uuid AS vital_type_id,
+      ovc.custom_name AS name,
+      ovc.custom_unit AS unit,
+      ovc.custom_min AS min_value,
+      ovc.custom_max AS max_value,
+      ovc.custom_step AS step_value,
+      ovc.display_order,
+      true AS is_custom,
+      ovc.enabled AS is_enabled
+    FROM public.org_vital_configs ovc
+    WHERE ovc.org_id = v_caller_org_id
+      AND ovc.vital_type_id IS NULL
+  ) q;
+
+  RETURN jsonb_build_object('success', true, 'configs', v_configs);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.get_org_vital_configs_all()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_org_vital_configs_all(v_auth_uid);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_org_vital_configs_all() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_org_vital_configs_all() TO authenticated;

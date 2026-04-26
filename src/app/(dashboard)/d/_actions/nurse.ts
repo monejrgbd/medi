@@ -153,6 +153,18 @@ export async function fetchOrgVitalConfigs() {
   return { success: true, configs: data?.configs ?? [] };
 }
 
+export async function fetchOrgVitalConfigsAll() {
+  await requireAuth();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("get_org_vital_configs_all");
+
+  if (error) return { success: false, error: "Failed to fetch vital configs" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  return { success: true, configs: data?.configs ?? [] };
+}
+
 export async function configureOrgVitals(
   configs: Array<{
     vital_type_id?: string;

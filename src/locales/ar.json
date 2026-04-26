@@ -52,6 +52,7 @@
   "queue.submit": "إرسال",
   "queue.sending": "جارٍ الإرسال...",
   "claimed.title": "طبيبك جاهز",
+  "claimed.title_nurse": "ممرضك جاهز",
   "claimed.subtitle": "يرجى التوجه إلى غرفة الفحص.",
   "claimed.go_to_room": "يرجى التوجه إلى {room}",
   "waiting.title": "جارٍ تسجيل وصولك",

@@ -124,8 +124,11 @@ export default function VitalsForm({ patientId, visitId, onRecorded }: VitalsFor
       <form onSubmit={handleSubmit} className="space-y-3">
         <div className="space-y-2">
           {configs.map((config) => (
-            <div key={config.id} className="flex items-center gap-3">
-              <label className="text-xs text-slate w-40 shrink-0 text-right">
+            <div
+              key={config.id}
+              className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3"
+            >
+              <label className="text-xs text-slate sm:w-40 sm:shrink-0 sm:text-right">
                 {config.name} ({config.unit})
               </label>
               <input
@@ -140,7 +143,7 @@ export default function VitalsForm({ patientId, visitId, onRecorded }: VitalsFor
                     ? `${config.min_value} - ${config.max_value}`
                     : ""
                 }
-                className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-teal-500 focus:outline-none"
+                className="w-full sm:flex-1 min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm text-ink placeholder:text-ash focus:border-teal-500 focus:outline-none"
               />
             </div>
           ))}

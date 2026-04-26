@@ -110,7 +110,7 @@ export default function Sidebar() {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="sticky top-0 z-40 flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden">
+      <div className="sticky top-0 z-50 flex items-center gap-3 border-b border-gray-100 bg-white px-4 py-3 lg:hidden">
         <button
           onClick={() => setMobileOpen(true)}
           className="rounded-lg p-1.5 text-ink hover:bg-gray-100"

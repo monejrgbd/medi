@@ -70,56 +70,83 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'A staff member with this username was recently deleted. Please choose a different username.');
   END IF;
 
-  -- Create auth user directly in auth.users
-  INSERT INTO auth.users (
-    instance_id, id, aud, role, email, encrypted_password,
-    email_confirmed_at, confirmation_token, recovery_token,
-    email_change, email_change_token_new,
-    raw_app_meta_data, raw_user_meta_data,
-    created_at, updated_at
-  ) VALUES (
-    '00000000-0000-0000-0000-000000000000',
-    gen_random_uuid(), 'authenticated', 'authenticated',
-    v_synthetic_email,
-    extensions.crypt(p_password, extensions.gen_salt('bf')),
-    now(), '', '',
-    '', '',
-    jsonb_build_object('provider', 'email', 'providers', ARRAY['email'], 'org_id', p_org_id),
-    jsonb_build_object('full_name', p_full_name),
-    now(), now()
-  ) RETURNING id INTO v_auth_uid;
+  -- All inserts wrapped in an EXCEPTION block so PG errors come back as
+  -- clean {success:false, error:"..."} returns instead of propagating to
+  -- supabase-js as raw exceptions and being collapsed into a generic
+  -- "Failed to create staff user" message in the action layer.
+  BEGIN
+    -- Create auth user directly in auth.users
+    INSERT INTO auth.users (
+      instance_id, id, aud, role, email, encrypted_password,
+      email_confirmed_at, confirmation_token, recovery_token,
+      email_change, email_change_token_new,
+      raw_app_meta_data, raw_user_meta_data,
+      created_at, updated_at
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000000',
+      gen_random_uuid(), 'authenticated', 'authenticated',
+      v_synthetic_email,
+      extensions.crypt(p_password, extensions.gen_salt('bf')),
+      now(), '', '',
+      '', '',
+      jsonb_build_object('provider', 'email', 'providers', ARRAY['email'], 'org_id', p_org_id),
+      jsonb_build_object('full_name', p_full_name),
+      now(), now()
+    ) RETURNING id INTO v_auth_uid;
 
-  -- Create identity record (required for GoTrue email/password login)
-  INSERT INTO auth.identities (
-    id, user_id, provider_id, provider, identity_data,
-    last_sign_in_at, created_at, updated_at
-  ) VALUES (
-    v_auth_uid, v_auth_uid, v_synthetic_email, 'email',
-    jsonb_build_object(
-      'sub', v_auth_uid::text,
-      'email', v_synthetic_email,
-      'email_verified', true,
-      'phone_verified', false
-    ),
-    now(), now(), now()
-  );
+    -- Create identity record (required for GoTrue email/password login)
+    INSERT INTO auth.identities (
+      id, user_id, provider_id, provider, identity_data,
+      last_sign_in_at, created_at, updated_at
+    ) VALUES (
+      v_auth_uid, v_auth_uid, v_synthetic_email, 'email',
+      jsonb_build_object(
+        'sub', v_auth_uid::text,
+        'email', v_synthetic_email,
+        'email_verified', true,
+        'phone_verified', false
+      ),
+      now(), now(), now()
+    );
 
-  -- Create staff_user
-  INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
-  VALUES (p_org_id, v_auth_uid, p_full_name, p_username)
-  RETURNING id INTO v_staff_user_id;
+    -- Create staff_user
+    INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
+    VALUES (p_org_id, v_auth_uid, p_full_name, p_username)
+    RETURNING id INTO v_staff_user_id;
 
-  -- Create staff_roles
-  FOREACH v_role IN ARRAY p_roles LOOP
-    INSERT INTO public.staff_roles (staff_user_id, location_id, role)
-    VALUES (v_staff_user_id, p_location_id, v_role);
-  END LOOP;
+    -- Create staff_roles
+    FOREACH v_role IN ARRAY p_roles LOOP
+      INSERT INTO public.staff_roles (staff_user_id, location_id, role)
+      VALUES (v_staff_user_id, p_location_id, v_role);
+    END LOOP;
 
-  -- Create default preferences
-  INSERT INTO public.staff_preferences (staff_user_id)
-  VALUES (v_staff_user_id);
+    -- Create default preferences
+    INSERT INTO public.staff_preferences (staff_user_id)
+    VALUES (v_staff_user_id);
 
-  RETURN jsonb_build_object('success', true, 'staff_user_id', v_staff_user_id);
+    RETURN jsonb_build_object('success', true, 'staff_user_id', v_staff_user_id);
+  EXCEPTION
+    WHEN unique_violation THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Username is already taken at this clinic. Choose a different username.'
+      );
+    WHEN check_violation THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Invalid value for one of the fields. Check the role and try again.'
+      );
+    WHEN string_data_right_truncation THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'One of the fields is too long. Shorten it and try again.'
+      );
+    WHEN OTHERS THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Could not create staff user: ' || SQLERRM
+      );
+  END;
 END;
 $$;
 

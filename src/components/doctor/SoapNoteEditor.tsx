@@ -253,7 +253,13 @@ export default function SoapNoteEditor({
     };
   }, []);
 
-  /* ── Poll for draft completion ── */
+  /* ── Poll for draft completion ──
+     Transient failures are retried; only terminal RPC errors surface to the user. */
+  const TERMINAL_DOC_ERRORS = new Set([
+    "Document not found",
+    "Not authorized",
+    "Staff user not found",
+  ]);
   const pollForDraft = useCallback(
     async (docId: string, attempts = 0): Promise<void> => {
       if (attempts > 30) {
@@ -265,9 +271,14 @@ export default function SoapNoteEditor({
 
       const result = await fetchDocumentForStaff(docId);
       if (!result.success || !result.document) {
-        setLoading(false);
-        setError("Failed to check document status");
-        return;
+        const isTerminal = result.error && TERMINAL_DOC_ERRORS.has(result.error);
+        if (isTerminal) {
+          setLoading(false);
+          setError(result.error || "Failed to check document status");
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        return pollForDraft(docId, attempts + 1);
       }
 
       const doc = result.document;

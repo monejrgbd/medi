@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import PatientStatusBadge from "@/components/patient/PatientStatusBadge";
 import {
   markPatientLeft,
@@ -96,6 +97,8 @@ export default function ActivePatientsList({
   }
 
   async function handleDismiss(visitId: string) {
+    const visit = visits.find((v) => v.id === visitId);
+    const hadTablet = visit?.gave_tablet === true;
     setLoadingAction((prev) => ({ ...prev, [visitId]: "handled" }));
     const result = await handlePatient(visitId);
     setLoadingAction((prev) => {
@@ -103,7 +106,12 @@ export default function ActivePatientsList({
       delete next[visitId];
       return next;
     });
-    if (result.success) onVisitRemove(visitId);
+    if (result.success) {
+      if (hadTablet) {
+        toast.info("Tablet auto marked as returned. Use Tablet Out again if it left with the patient.");
+      }
+      onVisitRemove(visitId);
+    }
   }
 
   const activeVisits = visits;

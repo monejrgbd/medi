@@ -18,6 +18,7 @@ CREATE TABLE public.locations (
   review_sms_enabled    boolean DEFAULT true,
   diagnostic_enabled    boolean DEFAULT true,
   nurse_enabled         boolean DEFAULT false,
+  nurse_first_workflow  boolean DEFAULT false,
   vaccines_enabled      boolean DEFAULT true,
   vitals_enabled        boolean DEFAULT true,
   ai_custom_instructions text DEFAULT NULL,

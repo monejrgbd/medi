@@ -10,6 +10,29 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+/* iOS Safari date input fix. Native <input type="date"> shows a blank
+   field on iOS until tapped, hiding both the placeholder and value text.
+   The .date-input class (used by <DateInput>) restores left-aligned text
+   and shows a hint when no value is set. */
+.date-input {
+  -webkit-appearance: none;
+  appearance: none;
+  color: var(--color-ink, #111827);
+  background-color: white;
+  position: relative;
+  min-height: 2.5rem;
+}
+.date-input::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 100%;
+}
+.date-input[data-has-value="false"]::before {
+  content: attr(placeholder);
+  color: var(--color-ash, #9ca3af);
+  position: absolute;
+  pointer-events: none;
+}
+
 @keyframes logo-scroll {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }

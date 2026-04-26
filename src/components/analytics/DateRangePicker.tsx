@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { DateInput } from "@/components/ui/DateInput";
 
 type SingleProps = {
   mode: "single";
@@ -44,8 +45,7 @@ export default function DateRangePicker(props: Props) {
         >
           &larr;
         </button>
-        <input
-          type="date"
+        <DateInput
           value={props.date}
           max={today}
           onChange={(e) => props.onDateChange(e.target.value)}
@@ -128,16 +128,14 @@ function RangePicker({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <input
-        type="date"
+      <DateInput
         value={start}
         max={today}
         onChange={(e) => setStart(e.target.value)}
         className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
       />
       <span className="text-sm text-slate">to</span>
-      <input
-        type="date"
+      <DateInput
         value={end}
         max={today}
         onChange={(e) => setEnd(e.target.value)}

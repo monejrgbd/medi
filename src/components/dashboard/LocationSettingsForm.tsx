@@ -21,6 +21,9 @@ interface LocationData {
   tablet_count: number;
   timezone: string;
   nurse_enabled?: boolean;
+  nurse_first_workflow?: boolean;
+  vaccines_enabled?: boolean;
+  vitals_enabled?: boolean;
   ai_custom_instructions?: string | null;
   ai_message_limit?: number | null;
   skip_ai?: boolean;
@@ -128,6 +131,9 @@ export default function LocationSettingsForm({
       return acc;
     }, {} as Record<string, string>),
     nurseEnabled: location.nurse_enabled ?? false,
+    nurseFirstWorkflow: location.nurse_first_workflow ?? false,
+    vaccinesEnabled: location.vaccines_enabled ?? true,
+    vitalsEnabled: location.vitals_enabled ?? true,
     aiCustomInstructions: location.ai_custom_instructions || "",
     aiMessageLimit: location.ai_message_limit ?? null as number | null,
     skipAi: location.skip_ai ?? false,
@@ -206,6 +212,9 @@ export default function LocationSettingsForm({
       tabletCount: form.tabletCount,
       timezone: form.timezone,
       nurseEnabled: form.nurseEnabled,
+      nurseFirstWorkflow: form.nurseFirstWorkflow,
+      vaccinesEnabled: form.vaccinesEnabled,
+      vitalsEnabled: form.vitalsEnabled,
       aiCustomInstructions: form.aiCustomInstructions,
       aiMessageLimit: form.aiMessageLimit,
       skipAi: form.skipAi,
@@ -518,6 +527,47 @@ export default function LocationSettingsForm({
           />
         </label>
 
+        {form.nurseEnabled && (
+          <label className="flex items-center justify-between pl-6">
+            <div>
+              <span className="text-sm text-ink">Nurse First Workflow</span>
+              <p className="text-xs text-ash">When on, doctors only see patients after a nurse has reviewed them.</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={form.nurseFirstWorkflow}
+              onChange={(e) => setForm((prev) => ({ ...prev, nurseFirstWorkflow: e.target.checked }))}
+              className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+            />
+          </label>
+        )}
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Enable Vitals</span>
+            <p className="text-xs text-ash">Allow staff to record patient vitals at this location.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.vitalsEnabled}
+            onChange={(e) => setForm((prev) => ({ ...prev, vitalsEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
+        <label className="flex items-center justify-between">
+          <div>
+            <span className="text-sm text-ink">Enable Vaccines</span>
+            <p className="text-xs text-ash">Allow staff to record and schedule vaccines for patients at this location.</p>
+          </div>
+          <input
+            type="checkbox"
+            checked={form.vaccinesEnabled}
+            onChange={(e) => setForm((prev) => ({ ...prev, vaccinesEnabled: e.target.checked }))}
+            className="h-4 w-4 rounded border-gray-300 text-hilt-blue focus:ring-hilt-blue"
+          />
+        </label>
+
         <label className="flex items-center justify-between">
           <div>
             <span className="text-sm text-ink">AI Intake</span>
@@ -650,19 +700,30 @@ export default function LocationSettingsForm({
         </div>
 
         <div className="space-y-3">
-          <p className="text-xs font-medium text-slate">Custom Fields</p>
-          {form.prescreeningCustomFields.map((field, idx) => (
-            <div key={field.id} className="flex items-start gap-2 bg-gray-50 rounded-lg p-3">
+          <div className="flex items-baseline justify-between">
+            <p className="text-xs font-medium text-slate">Custom Fields</p>
+            <p className="text-xs text-ash">Click + Add custom field, fill in the label, then Save Changes.</p>
+          </div>
+          {form.prescreeningCustomFields.map((field, idx) => {
+            const labelEmpty = !field.label.trim();
+            return (
+            <div
+              key={field.id}
+              className={`flex items-start gap-2 rounded-lg p-3 ${
+                labelEmpty ? "bg-yellow-50 ring-1 ring-yellow-300" : "bg-gray-50"
+              }`}
+            >
               <div className="flex-1 space-y-2">
                 <input
                   type="text"
                   value={field.label}
+                  autoFocus={labelEmpty && idx === form.prescreeningCustomFields.length - 1}
                   onChange={(e) => {
                     const updated = [...form.prescreeningCustomFields];
                     updated[idx] = { ...updated[idx], label: e.target.value.slice(0, 200) };
                     setForm((prev) => ({ ...prev, prescreeningCustomFields: updated }));
                   }}
-                  placeholder="Field label"
+                  placeholder="Field label (e.g. What is your most pressing concern today?)"
                   className="w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-hilt-blue focus:outline-none"
                 />
                 <div className="flex gap-2">
@@ -735,7 +796,8 @@ export default function LocationSettingsForm({
                 </button>
               </div>
             </div>
-          ))}
+            );
+          })}
 
           <button
             type="button"
@@ -752,7 +814,7 @@ export default function LocationSettingsForm({
                 prescreeningCustomFields: [...prev.prescreeningCustomFields, newField],
               }));
             }}
-            className="text-sm text-hilt-blue hover:underline disabled:opacity-50 disabled:no-underline"
+            className="rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm font-medium text-hilt-blue hover:border-hilt-blue hover:bg-blue-50 disabled:opacity-50 disabled:hover:bg-transparent w-full transition-colors"
           >
             + Add custom field{form.prescreeningCustomFields.length >= 20 ? " (max 20)" : ""}
           </button>

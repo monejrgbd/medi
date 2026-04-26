@@ -52,6 +52,7 @@
   "queue.submit": "提交",
   "queue.sending": "发送中...",
   "claimed.title": "您的医生已准备好",
+  "claimed.title_nurse": "您的护士已准备好",
   "claimed.subtitle": "请前往检查室。",
   "claimed.go_to_room": "请前往 {room}",
   "waiting.title": "正在为您登记",

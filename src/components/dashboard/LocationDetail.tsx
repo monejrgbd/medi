@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import LocationSettingsForm from "./LocationSettingsForm";
 import StaffTable from "./StaffTable";
@@ -73,6 +74,7 @@ export default function LocationDetail({
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "general";
+  const [isPending, startTransition] = useTransition();
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -87,16 +89,22 @@ export default function LocationDetail({
         {TABS.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => router.push(`?tab=${tab.key}`)}
+            onClick={() => startTransition(() => router.push(`?tab=${tab.key}`))}
+            disabled={isPending && activeTab !== tab.key}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               activeTab === tab.key
                 ? "border-hilt-blue text-hilt-blue"
                 : "border-transparent text-slate hover:text-ink"
-            }`}
+            } ${isPending ? "opacity-70" : ""}`}
           >
             {tab.label}
           </button>
         ))}
+        {isPending && (
+          <div className="ml-auto self-center pr-2">
+            <div className="h-3 w-3 animate-spin rounded-full border-2 border-gray-200 border-t-hilt-blue" />
+          </div>
+        )}
       </div>
 
       {activeTab === "general" && (

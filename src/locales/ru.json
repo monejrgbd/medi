@@ -52,6 +52,7 @@
   "queue.submit": "Отправить",
   "queue.sending": "Отправка...",
   "claimed.title": "Ваш врач готов",
+  "claimed.title_nurse": "Ваша медсестра готова",
   "claimed.subtitle": "Пожалуйста, пройдите в кабинет.",
   "claimed.go_to_room": "Пожалуйста, пройдите в {room}",
   "waiting.title": "Регистрация",

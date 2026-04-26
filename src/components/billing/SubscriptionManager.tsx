@@ -201,7 +201,10 @@ export default function SubscriptionManager({
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* `relative isolate z-0` forces a new stacking context so PayPal SDK
+          iframes rendered inside cannot paint over the dashboard sticky header
+          on iOS Safari (a documented WebKit iframe stacking bug). */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 relative isolate z-0">
         {PLANS.map((plan) => {
           const isActive = currentPlan === plan.key;
           const planIdKey = `${plan.key}_${billing}`;
@@ -250,6 +253,8 @@ export default function SubscriptionManager({
                     ref={(el) => {
                       buttonRefs.current[plan.key] = el;
                     }}
+                    className="relative overflow-hidden"
+                    style={{ minHeight: 90 }}
                   />
                 )}
               </div>

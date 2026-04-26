@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { stripHtml } from "@/lib/utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { DateInput } from "@/components/ui/DateInput";
 
 const COUNTRY_CODES = [
   { code: "+1", label: "US/CA +1" },
@@ -186,8 +187,7 @@ export default function CheckinForm({
             <label className="block text-sm font-medium text-ink mb-1">
               {t("checkin.birthday")}
             </label>
-            <input
-              type="date"
+            <DateInput
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
               max={new Date().toISOString().split("T")[0]}

@@ -155,13 +155,13 @@ export default function ReviewPlatformConfig({
 
       <div className="space-y-3 mb-4">
         {platforms.map((platform, index) => (
-          <div key={index} className="flex gap-2 items-start">
+          <div key={index} className="flex flex-col sm:flex-row sm:items-start gap-2">
             <select
               value={platform.platform_name}
               onChange={(e) =>
                 updatePlatform(index, "platform_name", e.target.value)
               }
-              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none w-40"
+              className="rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none w-full sm:w-40 sm:shrink-0"
             >
               <option value="">Select...</option>
               {REVIEW_PLATFORMS.map((name) => (
@@ -174,23 +174,26 @@ export default function ReviewPlatformConfig({
                 </option>
               ))}
             </select>
-            <input
-              type="url"
-              value={platform.platform_url}
-              onChange={(e) =>
-                updatePlatform(index, "platform_url", e.target.value)
-              }
-              placeholder="https://..."
-              className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-            />
-            <button
-              onClick={() => removePlatform(index)}
-              className="shrink-0 rounded-lg p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex gap-2 items-center min-w-0 flex-1">
+              <input
+                type="url"
+                value={platform.platform_url}
+                onChange={(e) =>
+                  updatePlatform(index, "platform_url", e.target.value)
+                }
+                placeholder="https://..."
+                className="flex-1 min-w-0 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              />
+              <button
+                onClick={() => removePlatform(index)}
+                aria-label="Remove platform"
+                className="shrink-0 rounded-lg p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -210,12 +213,12 @@ export default function ReviewPlatformConfig({
         <p className="text-xs text-gray-500 mb-2">
           Only reviews at or above this rating will be asked to leave a review on your external platforms.
         </p>
-        <div className="flex gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           {[5, 4, 3, 2, 1].map((r) => (
             <button
               key={r}
               onClick={() => setRedirectMinRating(r)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                 redirectMinRating === r
                   ? "bg-blue-600 text-white"
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"
