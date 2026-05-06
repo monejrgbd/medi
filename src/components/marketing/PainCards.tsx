@@ -109,8 +109,8 @@ export default function PainCards() {
               </div>
             </div>
 
-            {/* Headline + chevron — fixed position below image */}
-            <div className="mt-4 flex items-start justify-between gap-3">
+            {/* Headline + chevron — reserved height so all cards match */}
+            <div className="mt-4 flex min-h-[60px] items-start justify-between gap-3 lg:min-h-[72px]">
               <h3 className="text-base font-bold leading-tight text-gray-900 lg:text-lg">
                 {card.headline}
               </h3>

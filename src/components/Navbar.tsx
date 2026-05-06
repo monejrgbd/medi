@@ -69,7 +69,7 @@ export default function Navbar() {
         }`}
       >
         <div className="mx-auto flex max-w-[1200px] items-center justify-between px-4 py-3 sm:px-6 sm:py-4">
-          <Link href="/" className="text-xl font-bold tracking-tight text-hilt-blue sm:text-2xl">
+          <Link href="/" className="text-lg font-bold tracking-tight text-hilt-blue sm:text-xl">
             Hilt Health
           </Link>
 
@@ -86,24 +86,22 @@ export default function Navbar() {
             ))}
             <Link
               href="/login"
-              className="rounded-xl border-2 border-hilt-blue px-5 py-2.5 text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
+              aria-label="Sign in"
+              title="Sign in"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-slate transition-colors hover:border-hilt-blue hover:bg-hilt-blue/5 hover:text-hilt-blue"
             >
-              Sign In
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.7" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21a8.966 8.966 0 0 1-5.982-2.275M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+              </svg>
             </Link>
-            <a
-              href="/signup"
-              className="rounded-xl bg-hilt-blue px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-hilt-blue-dark"
-            >
-              Start Free Trial
-            </a>
             {!isLoggedIn && (
               <a
                 href={CAL_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl border-2 border-green-600 px-4 py-2.5 text-sm font-semibold text-green-700 transition-all hover:bg-green-50 hover:shadow-sm"
+                className="inline-flex items-center gap-1.5 rounded-lg border-2 border-green-600 px-3 py-2 text-xs font-semibold text-green-700 transition-all hover:bg-green-50 hover:shadow-sm"
               >
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
                 </svg>
                 Book a Consultation
@@ -224,7 +222,7 @@ export default function Navbar() {
               onClick={closeMenu}
               className="flex w-full items-center justify-center rounded-xl border-2 border-hilt-blue px-5 py-3 text-base font-semibold text-hilt-blue transition-colors hover:bg-blue-50"
             >
-              Start Free Trial
+              Start Trial
             </a>
           </div>
 

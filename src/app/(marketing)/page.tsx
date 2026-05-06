@@ -390,7 +390,7 @@ const PHASE_TONES: Record<string, string> = {
 
 const SOLUTION_AGENTS = [
   {
-    name: "Intake",
+    name: "AI Intake",
     phase: "BEFORE",
     desc: "Voice or text in 130+ languages. Detects urgency and sensitive topics. Custom prompts per specialty.",
     icon: (
@@ -400,9 +400,9 @@ const SOLUTION_AGENTS = [
     ),
   },
   {
-    name: "Summary",
+    name: "AI Summary",
     phase: "DURING",
-    desc: "Doctor reads in their language. Patient records auto update. Diagnostic suggestion, doctor only.",
+    desc: "Doctor reads the visit summary in their language. Patient records auto update with every visit.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
         <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
@@ -410,7 +410,17 @@ const SOLUTION_AGENTS = [
     ),
   },
   {
-    name: "Paperwork",
+    name: "AI Suggestion",
+    phase: "DURING",
+    desc: "Suggests differentials from history, vitals, medications, and the visit. Doctor only, never shown to the patient.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" />
+      </svg>
+    ),
+  },
+  {
+    name: "AI Paperwork",
     phase: "DURING",
     desc: "SOAP notes, sick notes, work letters drafted from the visit. Doctor edits, then signs.",
     icon: (
@@ -450,7 +460,7 @@ const SOLUTION_AGENTS = [
     ),
   },
   {
-    name: "Reactivation",
+    name: "AI Reactivation",
     phase: "ONGOING",
     desc: "Describe who to reach in plain English. AI scans medical histories. Per patient match reasoning, auditable.",
     icon: (
@@ -578,16 +588,6 @@ function TheSolutionSection() {
     <section className="bg-gradient-to-b from-snow to-white py-20 lg:py-28">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          {/* Bridge line connecting pain section above to solution below */}
-          <div className="mb-4 flex items-center gap-2 text-xs font-medium text-ash">
-            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-            </svg>
-            <span>
-              <span className="font-semibold text-ink">Four pains, above.</span> Seven AI agents and one Analytics layer, below.
-            </span>
-          </div>
-
           <div className="mb-3 flex items-center gap-2.5">
             <p className="text-sm font-semibold uppercase tracking-wider text-hilt-blue">The solution</p>
             <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-hilt-blue ring-1 ring-blue-200">
@@ -595,10 +595,10 @@ function TheSolutionSection() {
             </span>
           </div>
           <h2 className="text-3xl font-bold leading-tight text-ink sm:text-4xl lg:text-5xl">
-            Seven AI agents. The entire visit, end to end.
+            Eight AI agents. The entire visit, end to end.
           </h2>
           <p className="mt-4 max-w-[760px] text-lg leading-relaxed text-slate">
-            <span className="font-semibold text-ink">Seven specialists, one visit.</span> Voice or text in 130+ languages, with real time urgency detection and custom prompts per specialty. Your team approves, signs, and supervises every step. Encrypted at rest and in transit. Row level security per clinic. Audit trails on every action.
+            <span className="font-semibold text-ink">Eight specialists, one visit.</span> Voice or text in 130+ languages, with real time urgency detection and custom prompts per specialty. Your team approves, signs, and supervises every step. Encrypted at rest and in transit. Row level security per clinic. Audit trails on every action.
           </p>
         </FadeIn>
 
@@ -616,8 +616,8 @@ function TheSolutionSection() {
                   </span>
                 </div>
               </div>
-              <div className="hidden grid-cols-8 lg:grid">
-                {Array.from({ length: 8 }).map((_, i) => (
+              <div className="hidden grid-cols-9 lg:grid">
+                {Array.from({ length: 9 }).map((_, i) => (
                   <div key={i} className="flex justify-center">
                     <div className="h-3 w-px bg-gradient-to-b from-blue-200 to-transparent" />
                   </div>
@@ -627,7 +627,7 @@ function TheSolutionSection() {
 
             {/* Pipeline: Patient + 7 agents */}
             <div className="border-x border-gray-200 bg-white px-3 py-10 shadow-sm lg:px-6 lg:py-12">
-              <div className="relative grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-8">
+              <div className="relative grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-9">
                 {/* Animated blue dot jumps through each agent step by step (desktop only) */}
                 <div className="pipeline-progress hidden lg:block" aria-hidden="true" />
                 <PatientStart />
@@ -647,8 +647,8 @@ function TheSolutionSection() {
 
             {/* Bottom analytics layer */}
             <div className="relative">
-              <div className="hidden grid-cols-8 lg:grid">
-                {Array.from({ length: 8 }).map((_, i) => (
+              <div className="hidden grid-cols-9 lg:grid">
+                {Array.from({ length: 9 }).map((_, i) => (
                   <div key={i} className="flex justify-center">
                     <div className="h-3 w-px bg-gradient-to-b from-transparent to-blue-300/60" />
                   </div>

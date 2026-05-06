@@ -44,7 +44,7 @@ export default function CodesPanel() {
       <div className="rounded-2xl border border-gray-100 bg-white p-6">
         <h2 className="text-lg font-semibold">Your affiliate code</h2>
         <p className="mt-1 text-sm text-slate">
-          Share this with anyone. Every clinic that signs up using it earns you 30% of every payment forever.
+          Share this with anyone. Clinics who sign up with it get the standard trial (20 credits, no time limit) and you earn 30% of every payment they make, forever.
         </p>
         {code ? (
           <div className="mt-5 space-y-3">
@@ -90,7 +90,7 @@ export default function CodesPanel() {
           <div>
             <h2 className="text-lg font-semibold">Premium trial code</h2>
             <p className="mt-1 text-sm text-slate">
-              Targeted at a specific clinic. We email them an 8 character code with a 30 day premium trial. You get attribution.
+              Targeted at a specific clinic. We email them an 8 character code that grants the bigger trial (200 credits, no time limit). You get attribution.
             </p>
           </div>
           <button

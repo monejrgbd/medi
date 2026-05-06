@@ -35,7 +35,7 @@ BEGIN
         || '<h2 style="color: #1a1a1a; margin-bottom: 8px;">Hilt Health</h2>'
         || '<p style="color: #555; font-size: 15px;">'
         || 'Hi, <strong>' || v_row.partner_name || '</strong> thought Hilt Health would be a fit for your clinic '
-        || 'and shared a 30-day premium trial code with you. No obligation.'
+        || 'and shared a premium trial code with you. No obligation.'
         || '</p>'
         || '<p style="color: #555; font-size: 15px;">Here is your code:</p>'
         || '<div style="background: #f4f4f5; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">'
@@ -43,7 +43,7 @@ BEGIN
         || '</div>'
         || '<p style="color: #555; font-size: 15px;">Use it when you <a href="https://hilthealth.com/signup?code=' || v_row.code || '" style="color: #2563EB;">sign up</a>.</p>'
         || '<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5;">'
-        || '<p style="color: #888; font-size: 13px;">200 credits. 30 days. Full access to every feature.</p>'
+        || '<p style="color: #888; font-size: 13px;">200 credits. Full access to every feature.</p>'
         || '<p style="color: #888; font-size: 11px; margin-top: 12px;">'
         || 'You received this email because ' || v_row.partner_name || ' is a Hilt Health affiliate and provided your address. '
         || '<a href="https://hilthealth.com/unsubscribe" style="color: #888;">Unsubscribe</a>'
@@ -64,7 +64,7 @@ BEGIN
         || '<p style="color: #555; font-size: 15px;">Enter this code when you <a href="https://hilthealth.com/signup?code=' || v_row.code || '" style="color: #2563EB;">sign up</a> to activate your premium trial.</p>'
         || '<p style="color: #555; font-size: 15px;">This code does not expire. Use it whenever you are ready.</p>'
         || '<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5;">'
-        || '<p style="color: #888; font-size: 13px;">200 credits. 30 days. Full access to every feature.</p>'
+        || '<p style="color: #888; font-size: 13px;">200 credits. Full access to every feature.</p>'
         || '</div>'
         || '</div>';
     END IF;

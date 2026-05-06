@@ -246,7 +246,7 @@ export default function OwnerSignUpForm() {
       {refBanner && (
         <div className="rounded-lg border border-hilt-blue/20 bg-hilt-blue/5 p-3 text-sm text-ink">
           {refBanner.code_type === "premium_trial"
-            ? <>Premium trial code applied. <span className="font-medium">{refBanner.display_name}</span> sent you 30 days and 200 credits.</>
+            ? <>Premium trial code applied. <span className="font-medium">{refBanner.display_name}</span> sent you 200 credits.</>
             : <>Referred by <span className="font-medium">{refBanner.display_name}</span>.</>
           }
         </div>

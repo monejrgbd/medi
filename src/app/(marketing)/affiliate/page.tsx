@@ -77,8 +77,8 @@ export default function AffiliateLandingPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-hilt-blue/10 text-sm font-bold text-hilt-blue">2</div>
                 <h3 className="mt-4 text-lg font-semibold">Share your code two ways</h3>
                 <p className="mt-2 text-sm text-slate">
-                  An <strong>affiliate code</strong> for your audience (standard 14 day trial).
-                  A <strong>premium trial code</strong> for a specific clinic (30 days, 200 credits, we email it for you).
+                  Your <strong>affiliate code</strong> is multi use and grants signups the standard trial (20 credits, no time limit).
+                  A <strong>premium trial code</strong> is a targeted invite we email to a specific clinic, granting them the bigger trial (200 credits, no time limit).
                 </p>
               </div>
             </FadeIn>
@@ -197,7 +197,7 @@ export default function AffiliateLandingPage() {
               },
               {
                 q: "What is the difference between the two code types?",
-                a: "An affiliate code is a single multi use code you share publicly. Anyone who signs up with it gets the standard trial; you get attribution. A premium trial code is targeted at a specific clinic. You enter their email, we email them an 8 character code with a 30 day premium trial. Both attribute commissions to you the same way."
+                a: "An affiliate code is a single multi use code you share publicly. Anyone who signs up with it gets the standard trial (20 credits, no time limit); you get attribution. A premium trial code is targeted at a specific clinic. You enter their email, we email them an 8 character code that grants the bigger trial (200 credits, no time limit). Both attribute commissions to you the same way."
               },
               {
                 q: "What if a clinic refunds or cancels?",

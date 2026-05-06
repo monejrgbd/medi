@@ -30,11 +30,11 @@ export default function HeroEmailCTA() {
   return (
     <div className="flex flex-col items-start lg:items-end">
       {!showEmail ? (
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+        <div className="flex flex-row flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => setShowEmail(true)}
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-hilt-blue px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:bg-hilt-blue-dark hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full bg-hilt-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:bg-hilt-blue-dark hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 sm:px-7 sm:py-3.5 sm:text-base"
           >
             Start Trial
           </button>
@@ -42,7 +42,7 @@ export default function HeroEmailCTA() {
             href="https://cal.com/102937474/hilt-health-meeting"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border-2 border-hilt-blue bg-transparent px-7 py-3 text-base font-semibold text-hilt-blue transition-all hover:bg-hilt-blue/5 hover:-translate-y-0.5 active:translate-y-0"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-full border-2 border-hilt-blue bg-transparent px-5 py-2.5 text-sm font-semibold text-hilt-blue transition-all hover:bg-hilt-blue/5 hover:-translate-y-0.5 active:translate-y-0 sm:px-7 sm:py-3 sm:text-base"
           >
             Book a Consultation
           </a>

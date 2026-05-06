@@ -82,34 +82,35 @@
   animation-delay: var(--delay, 0s);
 }
 
-/* Pipeline progress: green bar grows step by step through 7 connectors
-   (Patient + 7 agents = 8 stops). Uses transform scaleX from a fixed 88%
-   base width so it reliably reaches the last agent. The fully-filled
+/* Pipeline progress: green bar grows step by step through 8 connectors
+   (Patient + 8 agents = 9 stops). Uses transform scaleX from a fixed
+   88.89% base width so it reliably reaches the last agent. The fully-filled
    state holds for most of the cycle so the visitor always sees completion. */
 @keyframes pipeline-progress {
-  0%, 4% { transform: scaleX(0); opacity: 1; }
-  8%, 12% { transform: scaleX(0.1428); }   /* 1/7 — past Intake */
-  16%, 20% { transform: scaleX(0.2857); }  /* 2/7 — past Summary */
-  24%, 28% { transform: scaleX(0.4285); }  /* 3/7 — past Paperwork */
-  32%, 36% { transform: scaleX(0.5714); }  /* 4/7 — past Referrals */
-  40%, 44% { transform: scaleX(0.7142); }  /* 5/7 — past Follow up */
-  48%, 52% { transform: scaleX(0.8571); }  /* 6/7 — past Reviews */
-  56%, 95% { transform: scaleX(1); }       /* 7/7 — past Reactivation, hold long */
+  0%, 3% { transform: scaleX(0); opacity: 1; }
+  6%, 9% { transform: scaleX(0.125); }     /* 1/8 — past Intake */
+  12%, 15% { transform: scaleX(0.25); }    /* 2/8 — past Summary */
+  18%, 21% { transform: scaleX(0.375); }   /* 3/8 — past Diagnostic */
+  24%, 27% { transform: scaleX(0.5); }     /* 4/8 — past Paperwork */
+  30%, 33% { transform: scaleX(0.625); }   /* 5/8 — past Referrals */
+  36%, 39% { transform: scaleX(0.75); }    /* 6/8 — past Follow up */
+  42%, 45% { transform: scaleX(0.875); }   /* 7/8 — past Reviews */
+  50%, 95% { transform: scaleX(1); }       /* 8/8 — past Reactivation, hold long */
   100% { transform: scaleX(0); opacity: 0; }
 }
 
 .pipeline-progress {
   position: absolute;
   top: 26px;
-  left: 6.25%;
-  width: 88%;
+  left: 5.55%;
+  width: 88.89%;
   height: 4px;
   border-radius: 9999px;
   background: rgb(34, 197, 94); /* green-500 */
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
   transform-origin: left center;
   transform: scaleX(0);
-  animation: pipeline-progress 11s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  animation: pipeline-progress 12s cubic-bezier(0.65, 0, 0.35, 1) infinite;
   pointer-events: none;
 }
 
