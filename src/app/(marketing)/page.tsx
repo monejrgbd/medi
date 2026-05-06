@@ -35,12 +35,20 @@ function HeroSection() {
 
           <HeroEmailCTA />
         </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Big square tour trigger */}
-        <div className="mt-16 flex justify-center sm:mt-20">
+/* ── Tour ─────────────────────────────────────────────── */
+
+function TourSection() {
+  return (
+    <section className="bg-white py-20 lg:py-28">
+      <div className="mx-auto max-w-[1200px] px-6">
+        <div className="flex justify-center">
           <MockupTour />
         </div>
-
       </div>
     </section>
   );
@@ -139,8 +147,8 @@ function AIJourneySection() {
   const tiers = [
     {
       level: "AI led",
-      name: "Patients run intake themselves",
-      blurb: "Patients scan, describe their symptoms in any language, and approve a summary. Doctors walk in fully briefed. Staff does not touch intake unless something needs them.",
+      name: "Hands off intake.",
+      blurb: "Patients scan, talk to the AI in their language, and approve their own summary before it reaches the doctor. The receptionist step can be skipped entirely. AI flags urgent or sensitive cases, so your staff only steps in when it matters.",
       tradeoff: "Fastest and most consistent. Cannot read body language or what a patient does not say.",
       borderClass: "border-blue-200",
       iconBg: "bg-blue-100",
@@ -155,8 +163,8 @@ function AIJourneySection() {
     },
     {
       level: "Hybrid",
-      name: "AI plus your team",
-      blurb: "AI handles the questions in any language. Your nurses or receptionists triage, verify ID, and step in for sensitive cases or new patients.",
+      name: "AI asks. Your team decides.",
+      blurb: "AI runs the conversation in any language. Your receptionist approves the visit, your nurse takes vitals and triages. The questions are AI. The decisions are yours.",
       tradeoff: "AI scale with human judgment. Most clinics land here.",
       borderClass: "border-violet-300",
       iconBg: "bg-violet-100",
@@ -172,8 +180,8 @@ function AIJourneySection() {
     },
     {
       level: "Staff led",
-      name: "Your team runs intake",
-      blurb: "Receptionists and nurses handle every patient conversation as they always have. AI works the back side: paperwork, follow ups, reviews, analytics, marketing.",
+      name: "Same intake. Smarter back office.",
+      blurb: "Patients self check in via QR for basic info. Then your receptionist or nurse takes every medical history conversation, like before. AI keeps working in the back office: paperwork, follow ups, reviews, analytics, and reactivation.",
       tradeoff: "Warm and personal. Every minute of intake stays staff time.",
       borderClass: "border-green-200",
       iconBg: "bg-green-100",
@@ -192,13 +200,13 @@ function AIJourneySection() {
     <section className="bg-snow py-16 lg:py-20">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-hilt-blue sm:text-sm">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-hilt-blue sm:text-sm">
             How much AI do you want?
           </p>
-          <h2 className="mb-3 text-center text-2xl font-bold text-ink sm:text-3xl md:text-4xl">
+          <h2 className="mb-3 text-2xl font-bold text-ink sm:text-3xl md:text-4xl">
             Use as much AI as you want.<span className="text-hilt-blue"> Or as little.</span>
           </h2>
-          <p className="mx-auto mb-10 max-w-2xl text-center text-base text-slate">
+          <p className="mb-10 max-w-2xl text-base text-slate">
             Some clinics want patients to drive intake themselves. Others want every conversation to go through their staff. Hilt fits all three.
           </p>
         </FadeIn>
@@ -221,14 +229,9 @@ function AIJourneySection() {
                 <h3 className="mb-2 text-base font-semibold text-ink">
                   {tier.name}
                 </h3>
-                <p className="mb-3 flex-1 text-sm leading-snug text-slate">
+                <p className="flex-1 text-sm leading-snug text-slate">
                   {tier.blurb}
                 </p>
-                <div className={`mt-auto rounded-lg ${tier.footerBg} px-3 py-2`}>
-                  <p className="text-xs leading-snug text-slate">
-                    <span className="font-semibold text-ink">Tradeoff: </span>{tier.tradeoff}
-                  </p>
-                </div>
               </div>
             </FadeIn>
           ))}
@@ -354,7 +357,10 @@ function BeforeAfterSection() {
     <section className="bg-ink py-20 lg:py-28">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <h2 className="text-3xl font-bold text-white sm:text-4xl leading-tight max-w-[680px]">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+            The problem
+          </p>
+          <h2 className="text-3xl font-bold text-white sm:text-4xl leading-tight">
             Your clinic is losing more than you think.
           </h2>
         </FadeIn>
@@ -375,9 +381,17 @@ function BeforeAfterSection() {
 
 /* ── The Solution ─────────────────────────────────────── */
 
+const PHASE_TONES: Record<string, string> = {
+  BEFORE: "bg-amber-50 text-amber-700 ring-amber-200",
+  DURING: "bg-blue-50 text-hilt-blue ring-blue-200",
+  AFTER: "bg-green-50 text-green-700 ring-green-200",
+  ONGOING: "bg-violet-50 text-violet-700 ring-violet-200",
+};
+
 const SOLUTION_AGENTS = [
   {
     name: "Intake",
+    phase: "BEFORE",
     desc: "Voice or text in 130+ languages. Detects urgency and sensitive topics. Custom prompts per specialty.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -387,6 +401,7 @@ const SOLUTION_AGENTS = [
   },
   {
     name: "Summary",
+    phase: "DURING",
     desc: "Doctor reads in their language. Patient records auto update. Diagnostic suggestion, doctor only.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -396,6 +411,7 @@ const SOLUTION_AGENTS = [
   },
   {
     name: "Paperwork",
+    phase: "DURING",
     desc: "SOAP notes, sick notes, work letters drafted from the visit. Doctor edits, then signs.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -405,6 +421,7 @@ const SOLUTION_AGENTS = [
   },
   {
     name: "Referrals",
+    phase: "DURING",
     desc: "PDF with full visit history. Routes inside your clinic network or to any email. Auto matches incoming.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -414,6 +431,7 @@ const SOLUTION_AGENTS = [
   },
   {
     name: "Follow up",
+    phase: "AFTER",
     desc: "Doctor's instructions persist to the next visit.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -423,6 +441,7 @@ const SOLUTION_AGENTS = [
   },
   {
     name: "Reviews",
+    phase: "AFTER",
     desc: "You set the star threshold. Above it, patients post to Google. Below, you see it first.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -432,6 +451,7 @@ const SOLUTION_AGENTS = [
   },
   {
     name: "Reactivation",
+    phase: "ONGOING",
     desc: "Describe who to reach in plain English. AI scans medical histories. Per patient match reasoning, auditable.",
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
@@ -445,22 +465,22 @@ function AgentNode({
   name,
   desc,
   icon,
-  index,
+  phase,
   isLast,
 }: {
   name: string;
   desc: string;
   icon: React.ReactNode;
-  index: number;
+  phase: string;
   isLast: boolean;
 }) {
   return (
     <div className="relative flex flex-col items-center text-center">
       {/* Desktop horizontal arrow to next agent */}
       {!isLast && (
-        <div className="absolute left-[calc(50%+28px)] top-7 hidden h-px w-[calc(100%-56px)] bg-hilt-blue/30 lg:block">
+        <div className="absolute left-[calc(50%+28px)] top-[26px] hidden h-1 w-[calc(100%-56px)] rounded-full bg-hilt-blue/20 lg:block">
           <svg
-            className="absolute -right-1 -top-[5px] text-hilt-blue/60"
+            className="absolute -right-1 -top-[4px] text-hilt-blue/60"
             width="12"
             height="12"
             fill="none"
@@ -490,8 +510,8 @@ function AgentNode({
         </div>
       )}
 
-      <span className="absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ash ring-1 ring-gray-200">
-        {String(index + 1).padStart(2, "0")}
+      <span className={`absolute -top-2 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ${PHASE_TONES[phase] ?? "bg-white text-ash ring-gray-200"}`}>
+        {phase}
       </span>
 
       <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-hilt-blue to-blue-600 text-white shadow-lg shadow-hilt-blue/30 ring-4 ring-white">
@@ -536,9 +556,9 @@ function PatientStart() {
       </div>
 
       {/* Desktop horizontal arrow into first agent */}
-      <div className="absolute left-[calc(50%+28px)] top-7 hidden h-px w-[calc(100%-56px)] bg-amber-400/40 lg:block">
+      <div className="absolute left-[calc(50%+28px)] top-[26px] hidden h-1 w-[calc(100%-56px)] rounded-full bg-amber-400/30 lg:block">
         <svg
-          className="absolute -right-1 -top-[5px] text-amber-500/70"
+          className="absolute -right-1 -top-[4px] text-amber-500/70"
           width="12"
           height="12"
           fill="none"
@@ -574,7 +594,7 @@ function TheSolutionSection() {
               Powered by AI
             </span>
           </div>
-          <h2 className="max-w-[820px] text-3xl font-bold leading-tight text-ink sm:text-4xl lg:text-5xl">
+          <h2 className="text-3xl font-bold leading-tight text-ink sm:text-4xl lg:text-5xl">
             Seven AI agents. The entire visit, end to end.
           </h2>
           <p className="mt-4 max-w-[760px] text-lg leading-relaxed text-slate">
@@ -607,7 +627,9 @@ function TheSolutionSection() {
 
             {/* Pipeline: Patient + 7 agents */}
             <div className="border-x border-gray-200 bg-white px-3 py-10 shadow-sm lg:px-6 lg:py-12">
-              <div className="grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-8">
+              <div className="relative grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-8">
+                {/* Animated blue dot jumps through each agent step by step (desktop only) */}
+                <div className="pipeline-progress hidden lg:block" aria-hidden="true" />
                 <PatientStart />
                 {SOLUTION_AGENTS.map((agent, i) => (
                   <AgentNode
@@ -615,7 +637,7 @@ function TheSolutionSection() {
                     name={agent.name}
                     desc={agent.desc}
                     icon={agent.icon}
-                    index={i}
+                    phase={agent.phase}
                     isLast={i === SOLUTION_AGENTS.length - 1}
                   />
                 ))}
@@ -773,13 +795,13 @@ function HowToSetUpSection() {
     <section className="cv-auto bg-white py-20 lg:py-24">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-hilt-blue">
             How to set up
           </p>
-          <h2 className="mb-4 text-center text-3xl font-bold text-ink sm:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-ink sm:text-4xl">
             Ready before your next patient.
           </h2>
-          <p className="mx-auto mb-12 max-w-lg text-center text-lg text-slate">
+          <p className="mb-12 max-w-lg text-lg text-slate">
             No onboarding calls, no IT department, no training sessions.
           </p>
         </FadeIn>
@@ -883,15 +905,15 @@ function TheDifferenceSection() {
     <section className="bg-snow py-20 lg:py-24">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-hilt-blue">
             The difference
           </p>
-          <h2 className="mb-4 text-center text-3xl font-bold text-ink sm:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-ink sm:text-4xl">
             Punch above your weight.
             <br className="hidden sm:block" />
             <span className="text-hilt-blue"> Enterprise grade quality and support.</span>
           </h2>
-          <p className="mx-auto mb-14 max-w-2xl text-center text-lg text-slate">
+          <p className="mb-14 max-w-2xl text-lg text-slate">
             The infrastructure, intelligence, and service usually reserved for hospital systems, now available to clinics of any size. Our quality flywheel makes sure every visit makes the next one better.
           </p>
         </FadeIn>
@@ -1205,10 +1227,13 @@ function TrustAndControlSection() {
     <section className="cv-auto bg-white pt-32 pb-24 lg:pt-40 lg:pb-32 border-y border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <h2 className="mb-3 text-center text-3xl font-bold text-ink sm:text-4xl">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+            Trust and control
+          </p>
+          <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
             The AI prepares. The doctor decides.
           </h2>
-          <p className="mx-auto mb-12 max-w-xl text-center text-lg text-slate">
+          <p className="mb-12 max-w-xl text-lg text-slate">
             AI gathers, drafts, and translates. Doctors review, decide, and sign. Patients never hear a diagnosis or treatment from AI.
           </p>
         </FadeIn>
@@ -1251,37 +1276,40 @@ function TrustAndControlSection() {
   );
 }
 
-/* ── Pricing Hint + Contact ───────────────────────────── */
+/* ── Pricing Hint ─────────────────────────────────────── */
 
-function PricingAndContactSection() {
+function PricingHintSection() {
   return (
-    <section id="contact" className="cv-auto bg-snow py-24 lg:py-32">
+    <section className="cv-auto bg-snow py-24 lg:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
-        {/* Pricing hint */}
         <FadeIn>
-          <div className="mb-16 text-center">
-            <p className="text-3xl font-bold text-ink sm:text-4xl">
-              As low as $99/month for unlimited patients
-            </p>
-            <Link
-              href="/pricing"
-              className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-hilt-blue hover:underline"
-            >
-              See full pricing
-              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </Link>
-          </div>
+          <p className="text-3xl font-bold text-ink sm:text-4xl">
+            As low as $99/month for unlimited patients
+          </p>
+          <Link
+            href="/pricing"
+            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-hilt-blue hover:underline"
+          >
+            See full pricing
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+          </Link>
         </FadeIn>
+      </div>
+    </section>
+  );
+}
 
-        {/* Signup form */}
-        <div className="mx-auto max-w-2xl">
-          <FadeIn>
-            <SignUpForm />
-          </FadeIn>
-        </div>
+/* ── Apply ────────────────────────────────────────────── */
 
+function ApplySection() {
+  return (
+    <section id="contact" className="cv-auto bg-white py-24 lg:py-32">
+      <div className="mx-auto max-w-[1100px] px-6">
+        <FadeIn>
+          <SignUpForm />
+        </FadeIn>
       </div>
     </section>
   );
@@ -1322,6 +1350,7 @@ export default async function Home() {
       <Suspense><TeamCodeCapture /></Suspense>
       <main>
         <HeroSection />
+        <TourSection />
         <SocialProofSection />
         <BeforeAfterSection />
         <TheSolutionSection />
@@ -1329,7 +1358,8 @@ export default async function Home() {
         <HowToSetUpSection />
         <TheDifferenceSection />
         <TrustAndControlSection />
-        <PricingAndContactSection />
+        <PricingHintSection />
+        <ApplySection />
       </main>
       <Footer />
     </>

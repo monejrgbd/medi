@@ -412,27 +412,27 @@ export default function MockupTour({ className = "" }: { className?: string }) {
         aria-label="Try a demo"
         aria-haspopup="dialog"
         aria-expanded={open}
-        className={`group relative flex min-h-[420px] w-full max-w-[960px] overflow-hidden rounded-[28px] bg-gradient-to-br from-hilt-blue via-blue-700 to-indigo-900 shadow-2xl shadow-hilt-blue/30 transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_40px_80px_-20px_rgba(37,99,235,0.6)] focus:outline-none focus:ring-4 focus:ring-hilt-blue/30 sm:min-h-[480px] ${className}`}
+        className={`group relative flex min-h-[380px] w-full max-w-[920px] overflow-hidden rounded-[24px] bg-gradient-to-br from-hilt-blue via-blue-700 to-indigo-900 shadow-xl shadow-hilt-blue/25 transition-all duration-500 hover:-translate-y-0.5 hover:shadow-[0_28px_60px_-15px_rgba(37,99,235,0.5)] focus:outline-none focus:ring-4 focus:ring-hilt-blue/30 sm:min-h-[460px] ${className}`}
       >
         <span aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(255,255,255,0.22),transparent_55%)]" />
         <span aria-hidden="true" className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-indigo-300/15 blur-3xl" />
 
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 select-none px-7 py-7 opacity-75 blur-[3px] sm:px-12 sm:py-10"
+          className="pointer-events-none absolute inset-0 select-none px-5 py-5 opacity-75 blur-[2.5px] sm:px-7 sm:py-6"
         >
-          <div className="space-y-3.5 sm:space-y-4">
-            <div className="max-w-[58%] rounded-2xl bg-white px-4 py-2.5 shadow-lg ring-1 ring-black/5 sm:px-5 sm:py-3">
-              <p className="text-sm font-medium leading-snug text-ink sm:text-base">Hi Sarah, welcome back to Riverside Family Medicine!</p>
+          <div className="space-y-2 sm:space-y-2.5">
+            <div className="max-w-[58%] rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-black/5 sm:px-3.5">
+              <p className="text-xs font-medium leading-snug text-ink sm:text-sm">Hi Sarah, welcome back to Riverside Family Medicine!</p>
             </div>
-            <div className="ml-auto max-w-[46%] rounded-2xl bg-blue-50 px-4 py-2.5 shadow-lg ring-1 ring-hilt-blue/10 sm:px-5 sm:py-3">
-              <p className="text-sm font-medium leading-snug text-ink sm:text-base">My hands have been really stiff every morning</p>
+            <div className="ml-auto max-w-[46%] rounded-xl bg-blue-50 px-3 py-2 shadow-md ring-1 ring-hilt-blue/10 sm:px-3.5">
+              <p className="text-xs font-medium leading-snug text-ink sm:text-sm">My hands have been really stiff every morning</p>
             </div>
-            <div className="max-w-[64%] rounded-2xl bg-white px-4 py-2.5 shadow-lg ring-1 ring-black/5 sm:px-5 sm:py-3">
-              <p className="text-sm font-medium leading-snug text-ink sm:text-base">You came in for knee pain on March 1. Could the hand stiffness be related?</p>
+            <div className="max-w-[64%] rounded-xl bg-white px-3 py-2 shadow-md ring-1 ring-black/5 sm:px-3.5">
+              <p className="text-xs font-medium leading-snug text-ink sm:text-sm">You came in for knee pain on March 1. Could the hand stiffness be related?</p>
             </div>
-            <div className="ml-auto max-w-[36%] rounded-2xl bg-blue-50 px-4 py-2.5 shadow-lg ring-1 ring-hilt-blue/10 sm:px-5 sm:py-3">
-              <p className="text-sm font-medium leading-snug text-ink sm:text-base">Yes, my knee has been worse</p>
+            <div className="ml-auto max-w-[36%] rounded-xl bg-blue-50 px-3 py-2 shadow-md ring-1 ring-hilt-blue/10 sm:px-3.5">
+              <p className="text-xs font-medium leading-snug text-ink sm:text-sm">Yes, my knee has been worse</p>
             </div>
           </div>
         </div>
@@ -446,13 +446,13 @@ export default function MockupTour({ className = "" }: { className?: string }) {
           className="pointer-events-none absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-indigo-950/60 to-transparent"
         />
 
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-6 text-center sm:gap-7">
-          <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-white/90 sm:text-xs">60 second tour</p>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-5 text-center sm:gap-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/90 sm:text-[11px]">60 second tour</p>
 
           <div className="relative">
-            <span aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-white/40 blur-2xl transition-opacity duration-500 group-hover:opacity-70" />
-            <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white shadow-[0_20px_50px_-10px_rgba(0,0,0,0.4)] transition-transform duration-500 group-hover:scale-110 sm:h-28 sm:w-28">
-              <svg className="h-10 w-10 translate-x-0.5 text-hilt-blue sm:h-12 sm:w-12" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <span aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-white/40 blur-xl transition-opacity duration-500 group-hover:opacity-70" />
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-[0_14px_36px_-10px_rgba(0,0,0,0.4)] transition-transform duration-500 group-hover:scale-110 sm:h-20 sm:w-20">
+              <svg className="h-7 w-7 translate-x-0.5 text-hilt-blue sm:h-9 sm:w-9" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
               </svg>
             </div>
@@ -460,14 +460,14 @@ export default function MockupTour({ className = "" }: { className?: string }) {
 
           <div>
             <h3
-              className="text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl"
-              style={{ textShadow: "0 2px 20px rgba(15,23,42,0.5)" }}
+              className="text-xl font-bold leading-tight text-white sm:text-2xl md:text-3xl"
+              style={{ textShadow: "0 2px 16px rgba(15,23,42,0.5)" }}
             >
               Let us show you
             </h3>
             <p
-              className="mt-2 text-sm text-white/85 sm:text-base lg:text-lg"
-              style={{ textShadow: "0 1px 10px rgba(15,23,42,0.4)" }}
+              className="mt-1.5 text-xs text-white/85 sm:text-sm md:text-base"
+              style={{ textShadow: "0 1px 8px rgba(15,23,42,0.4)" }}
             >
               What your patients see, and what all your staff see
             </p>
@@ -487,8 +487,8 @@ export default function MockupTour({ className = "" }: { className?: string }) {
 
           <div className="relative flex h-full items-center justify-center p-3 sm:p-6" onClick={close}>
             <div
-              className={`tour-card-in flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl ${
-                view === "chooser" ? "max-h-[92vh] max-w-lg" : "max-h-[92vh] max-w-5xl"
+              className={`tour-card-in flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl ${
+                view === "chooser" ? "max-h-[92vh] max-w-lg" : "h-full max-h-[92vh] max-w-5xl"
               }`}
               onClick={(e) => e.stopPropagation()}
             >

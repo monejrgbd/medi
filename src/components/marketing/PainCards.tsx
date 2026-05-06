@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const CARDS = [
   {
-    headline: "Eight hours of doctor time, gone. Per day.",
+    headline: "Eight hours of doctor time, wasted. Per day.",
     image: "/images/pain/time-lost.png",
     pain: "At least ten minutes per patient on the same intake questions and paperwork, even for returning patients. Non English speakers take twice as long or get half the detail. Fifty patients a day. That is over eight hours of doctor time, every single day.",
     fix: "AI handles intake in 130+ languages while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Every doctor reads the summary in their preferred language before they open the door, then signs the sick note, work letter, or SOAP note already drafted from the visit. Eight hours back, better intake, and paperwork in seconds.",
@@ -42,6 +42,8 @@ function CardImage({ src, alt }: { src: string; alt: string }) {
     <img
       src={src}
       alt={alt}
+      loading="lazy"
+      decoding="async"
       className="absolute inset-0 h-full w-full object-cover"
       onError={() => setError(true)}
     />
@@ -84,17 +86,26 @@ export default function PainCards() {
             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-xl">
               <CardImage src={card.image} alt={card.headline} />
               <div
-                className={`absolute inset-0 flex flex-col gap-2 overflow-y-auto bg-amber-50/97 p-3 transition-opacity duration-300 ${
+                className={`absolute inset-0 transition-opacity duration-300 ${
                   isOpen ? "opacity-100" : "pointer-events-none opacity-0"
                 }`}
               >
-                <p className="text-[11px] leading-snug text-gray-700">{card.pain}</p>
-                <div className="border-t border-amber-200 pt-2">
-                  <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-hilt-blue">
-                    With Hilt
-                  </p>
-                  <p className="text-[11px] leading-snug text-gray-700">{card.fix}</p>
+                {/* Solid background */}
+                <div className="absolute inset-0 bg-amber-50/97" />
+
+                {/* Scrollable content with always visible thin scrollbar */}
+                <div className="pain-card-scroll absolute inset-0 flex flex-col gap-2 overflow-y-auto p-3 pb-6">
+                  <p className="text-[11px] leading-snug text-gray-700">{card.pain}</p>
+                  <div className="border-t border-amber-200 pt-2">
+                    <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-hilt-blue">
+                      With Hilt
+                    </p>
+                    <p className="text-[11px] leading-snug text-gray-700">{card.fix}</p>
+                  </div>
                 </div>
+
+                {/* Bottom fade gradient: signals "more below" when content overflows */}
+                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-amber-50 to-transparent" />
               </div>
             </div>
 

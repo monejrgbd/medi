@@ -29,7 +29,7 @@ const options: Option[] = [
     href: "/demo?mode=quick",
     title: "Quick demo",
     description: "Watch a scripted patient conversation play through.",
-    duration: "~30 sec",
+    duration: "~60 sec",
     accent: "hover:bg-green-50",
     icon: (
       <svg className="h-5 w-5 text-green-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">

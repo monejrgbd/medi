@@ -4,16 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
-
-const COUNTRIES = [
-  "Canada",
-  "United States",
-  "United Kingdom",
-  "Australia",
-  "New Zealand",
-  "Ireland",
-  "Other",
-];
+import { COUNTRIES } from "@/lib/countries";
+import CountryCombobox from "@/components/CountryCombobox";
 
 function Spinner() {
   return (
@@ -59,6 +51,14 @@ export default function SignUpForm() {
     }
 
     const emailValue = data.get("email") as string;
+    const countryValue = (data.get("country") as string) || "";
+
+    // Country is required (hidden inputs skip native HTML5 validation)
+    if (!countryValue.trim()) {
+      setLoading(false);
+      setError("Please select a country from the dropdown.");
+      return;
+    }
 
     // Client-side generic domain check for instant feedback
     const domain = emailValue.split("@")[1]?.toLowerCase();
@@ -104,6 +104,7 @@ export default function SignUpForm() {
       p_email: emailValue,
       p_phone: (data.get("phone") as string) || null,
       p_country: (data.get("country") as string) || null,
+      p_city: (data.get("city") as string) || null,
       p_interest: "free_trial",
       p_notes: (data.get("notes") as string) || null,
     });
@@ -120,34 +121,15 @@ export default function SignUpForm() {
   }
 
   return (
-    <>
-      {!submitted && (
-        <div className="mb-8">
-          <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
-            Apply for Premium Trial
-          </h2>
-          <p className="text-lg text-slate">
-            Start with $200 worth of credits. No card required.
-          </p>
-          <p className="mt-2 text-sm text-ash">
-            Want to talk first?{" "}
-            <a href="https://cal.com/102937474/hilt-health-meeting" target="_blank" rel="noopener noreferrer" className="font-semibold text-hilt-blue hover:underline">
-              Schedule a meeting
-            </a>{" "}
-            instead.
-          </p>
-        </div>
-      )}
-
-      <AnimatePresence mode="wait">
-        {submitted ? (
-          <motion.div
-            key="success"
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4, ease: "easeOut" }}
-            className="flex flex-col items-center justify-center py-12 text-center"
-          >
+    <AnimatePresence mode="wait">
+      {submitted ? (
+        <motion.div
+          key="success"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.4, ease: "easeOut" }}
+          className="flex flex-col items-center justify-center py-12 text-center"
+        >
             <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
               <motion.svg
                 width="40"
@@ -175,13 +157,29 @@ export default function SignUpForm() {
             </p>
           </motion.div>
         ) : (
-          <motion.form
-            key="form"
+          <motion.div
+            key="apply"
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            onSubmit={handleSubmit}
-            className="mx-auto max-w-lg"
+            className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-16"
           >
+            <div className="lg:flex-1 lg:pt-2">
+              <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
+                Apply for Premium Trial
+              </h2>
+              <p className="text-lg text-slate">
+                Start with $200 worth of credits. No card required.
+              </p>
+              <p className="mt-2 text-sm text-ash">
+                Want to talk first?{" "}
+                <a href="https://cal.com/102937474/hilt-health-meeting" target="_blank" rel="noopener noreferrer" className="font-semibold text-hilt-blue hover:underline">
+                  Schedule a meeting
+                </a>{" "}
+                instead.
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="w-full lg:max-w-lg lg:flex-shrink-0">
             {/* Honeypot — hidden from real users, bots fill it */}
             <div className="absolute -left-[9999px]" aria-hidden="true">
               <input type="text" name="company_url" tabIndex={-1} autoComplete="off" suppressHydrationWarning />
@@ -250,36 +248,26 @@ export default function SignUpForm() {
               <label htmlFor="country" className="mb-1 block text-sm font-medium text-ink text-left">
                 Country <span className="text-red-400">*</span>
               </label>
-              <div className="relative">
-                <select
-                  id="country"
-                  name="country"
-                  required
-                  defaultValue=""
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-10 text-ink focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors appearance-none bg-white"
-                  suppressHydrationWarning
-                >
-                  <option value="" disabled>
-                    Select your country
-                  </option>
-                  {COUNTRIES.map((country) => (
-                    <option key={country} value={country}>
-                      {country}
-                    </option>
-                  ))}
-                </select>
-                <svg
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ash"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                </svg>
-              </div>
+              <CountryCombobox
+                id="country"
+                name="country"
+                options={COUNTRIES}
+                required
+              />
+            </div>
+
+            <div className="mt-4">
+              <label htmlFor="city" className="mb-1 block text-sm font-medium text-ink text-left">
+                City <span className="text-ash font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                id="city"
+                name="city"
+                className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors"
+                placeholder="Toronto"
+                suppressHydrationWarning
+              />
             </div>
 
             <div className="mt-4">
@@ -322,9 +310,9 @@ export default function SignUpForm() {
                 Privacy Policy
               </Link>.
             </p>
-          </motion.form>
+            </form>
+          </motion.div>
         )}
       </AnimatePresence>
-    </>
   );
 }
