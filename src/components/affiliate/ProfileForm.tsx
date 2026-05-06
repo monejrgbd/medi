@@ -4,7 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PARTNER_TAX_FORM_THRESHOLD_CENTS } from "@/lib/constants";
 
-const COUNTRIES = ["US","CA","GB","AU","DE","FR","NL","ES","IT","SE","NZ","MX","BR","IN","JP","OTHER"];
+const COUNTRIES = ["US","CA","GB","AU","DE","FR","NL","ES","IT","SE","NZ","MX","BR","IN","JP","ZZ"];
 
 type Partner = {
   display_name: string;

@@ -598,6 +598,7 @@ export type Database = {
           city: string | null
           clinic_name: string
           contact_name: string
+          country: string | null
           created_at: string | null
           email: string
           id: number
@@ -609,6 +610,7 @@ export type Database = {
           city?: string | null
           clinic_name: string
           contact_name: string
+          country?: string | null
           created_at?: string | null
           email: string
           id?: never
@@ -620,6 +622,7 @@ export type Database = {
           city?: string | null
           clinic_name?: string
           contact_name?: string
+          country?: string | null
           created_at?: string | null
           email?: string
           id?: never
@@ -1343,6 +1346,7 @@ export type Database = {
           subscription_plan: string | null
           trial_alert_sent: boolean | null
           trial_end_date: string | null
+          updated_at: string
           verified: boolean | null
         }
         Insert: {
@@ -1380,6 +1384,7 @@ export type Database = {
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
           trial_end_date?: string | null
+          updated_at?: string
           verified?: boolean | null
         }
         Update: {
@@ -1417,6 +1422,7 @@ export type Database = {
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
           trial_end_date?: string | null
+          updated_at?: string
           verified?: boolean | null
         }
         Relationships: []
@@ -4464,18 +4470,32 @@ export type Database = {
         }
         Returns: Json
       }
-      submit_contact: {
-        Args: {
-          p_city?: string
-          p_clinic_name: string
-          p_contact_name: string
-          p_email: string
-          p_interest?: string
-          p_notes?: string
-          p_phone?: string
-        }
-        Returns: undefined
-      }
+      submit_contact:
+        | {
+            Args: {
+              p_city?: string
+              p_clinic_name: string
+              p_contact_name: string
+              p_email: string
+              p_interest?: string
+              p_notes?: string
+              p_phone?: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
+              p_city?: string
+              p_clinic_name: string
+              p_contact_name: string
+              p_country?: string
+              p_email: string
+              p_interest?: string
+              p_notes?: string
+              p_phone?: string
+            }
+            Returns: undefined
+          }
       submit_feature_request: { Args: { p_content: string }; Returns: Json }
       submit_prospect: {
         Args: {

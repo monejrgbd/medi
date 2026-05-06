@@ -36,7 +36,10 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'skipped', 'no_partner_referral');
   END IF;
 
-  SELECT * INTO v_partner FROM public.partners WHERE id = v_referral.partner_id;
+  -- FOR UPDATE locks the partner row so concurrent commissions for the same partner serialize.
+  -- Without this, two simultaneous webhooks could both observe first_commission_at IS NULL
+  -- and both queue the welcome email.
+  SELECT * INTO v_partner FROM public.partners WHERE id = v_referral.partner_id FOR UPDATE;
   IF v_partner.status = 'banned' THEN
     RETURN jsonb_build_object('success', true, 'skipped', 'partner_banned');
   END IF;

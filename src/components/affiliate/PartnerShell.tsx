@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const NAV = [
   { href: "/affiliate/dashboard", label: "Dashboard" },
@@ -33,6 +34,16 @@ export default function PartnerShell({
                 {partner.status}
               </span>
             )}
+            <button
+              onClick={async () => {
+                const supabase = createClient();
+                await supabase.auth.signOut();
+                window.location.href = "/login";
+              }}
+              className="text-xs text-slate hover:text-ink hover:underline"
+            >
+              Sign out
+            </button>
           </div>
         </div>
         <nav className="mx-auto max-w-[1100px] px-6">

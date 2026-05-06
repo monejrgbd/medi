@@ -1,22 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 
-const CITIES = [
-  "St. Catharines",
-  "Niagara Falls",
-  "Welland",
-  "Fort Erie",
-  "Thorold",
-  "Grimsby",
-  "Lincoln",
-  "Pelham",
-  "Port Colborne",
-  "Niagara-on-the-Lake",
+const COUNTRIES = [
+  "Canada",
+  "United States",
+  "United Kingdom",
+  "Australia",
+  "New Zealand",
+  "Ireland",
   "Other",
 ];
 
@@ -29,11 +24,6 @@ function Spinner() {
   );
 }
 
-const fieldVariants = {
-  hidden: { opacity: 0, height: 0, marginTop: 0, overflow: "hidden" as const },
-  visible: { opacity: 1, height: "auto", marginTop: 16, overflow: "visible" as const },
-};
-
 const GENERIC_DOMAINS = new Set([
   "gmail.com","googlemail.com","outlook.com","hotmail.com",
   "live.com","msn.com","aol.com","icloud.com","me.com","mac.com","mail.com",
@@ -42,34 +32,10 @@ const GENERIC_DOMAINS = new Set([
 ]);
 
 export default function SignUpForm() {
-  const router = useRouter();
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | React.ReactNode>("");
-  const [waitlistCount, setWaitlistCount] = useState<number | null>(null);
-  const [interest, setInterest] = useState<"free_trial" | "meet">("free_trial");
   const [submittedEmail, setSubmittedEmail] = useState("");
-
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.rpc("get_waitlist_count").then(({ data }) => {
-      if (data !== null && data > 0) setWaitlistCount(data);
-    });
-  }, []);
-
-  // Auto-select "meet" when signalled via sessionStorage or custom event
-  useEffect(() => {
-    function applyPreselect() {
-      const val = sessionStorage.getItem("preselectInterest");
-      if (val === "meet") {
-        sessionStorage.removeItem("preselectInterest");
-        setInterest("meet");
-      }
-    }
-    applyPreselect();
-    window.addEventListener("preselectInterest", applyPreselect);
-    return () => window.removeEventListener("preselectInterest", applyPreselect);
-  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -94,118 +60,82 @@ export default function SignUpForm() {
 
     const emailValue = data.get("email") as string;
 
-    // Premium trial path: validate domain + request code first
-    if (interest === "free_trial") {
-      // Client-side generic domain check for instant feedback
-      const domain = emailValue.split("@")[1]?.toLowerCase();
-      if (domain && GENERIC_DOMAINS.has(domain)) {
-        setLoading(false);
-        setError(
-          <>Premium trial requires a clinic email address. Do not have one? Select <strong>Meet with Us</strong> above to book a meeting.</>
-        );
-        return;
-      }
-
-      const { data: premiumResult, error: premiumError } = await supabase.rpc(
-        "request_premium_code",
-        { p_email: emailValue }
-      );
-
-      if (premiumError) {
-        setLoading(false);
-        setError("Something went wrong. Please try again.");
-        return;
-      }
-
-      if (premiumResult && !premiumResult.success) {
-        setLoading(false);
-        if (premiumResult.error === "identifier_taken" && premiumResult.email === "taken") {
-          setError(
-            <>You have already applied. Check your email including spam. Contact <a href="mailto:support@hilthealth.com" className="text-hilt-blue hover:underline">support@hilthealth.com</a> if you did not receive it.</>
-          );
-        } else if (premiumResult.error === "identifier_taken" && premiumResult.domain === "taken") {
-          setError(
-            <>Your clinic has already been approved. The code was sent to <strong>{premiumResult.domain_approved_email}</strong>. Contact <a href="mailto:support@hilthealth.com" className="text-hilt-blue hover:underline">support@hilthealth.com</a> if you need help.</>
-          );
-        } else {
-          setError("Something went wrong. Please try again.");
-        }
-        return;
-      }
-
-      // Premium code request succeeded — also store contact for lead tracking (fire-and-forget)
-      supabase.rpc("submit_contact", {
-        p_clinic_name: (data.get("clinic_name") as string) || null,
-        p_contact_name: data.get("contact_name") as string,
-        p_email: emailValue,
-        p_phone: (data.get("phone") as string) || null,
-        p_city: (data.get("city") as string) || null,
-        p_interest: interest,
-        p_notes: (data.get("notes") as string) || null,
-      });
-
+    // Client-side generic domain check for instant feedback
+    const domain = emailValue.split("@")[1]?.toLowerCase();
+    if (domain && GENERIC_DOMAINS.has(domain)) {
       setLoading(false);
-      setSubmittedEmail(emailValue);
-      setSubmitted(true);
-      if (typeof window !== "undefined" && typeof window.gtag === "function") {
-        window.gtag("event", "conversion", {
-          send_to: "AW-18032484152/P8SxCPDbpZccELi-x5ZD",
-          transaction_id: `email-${emailValue}`,
-        });
-      }
+      setError(
+        <>Premium trial requires a clinic email address. Do not have one? <a href="https://cal.com/102937474/hilt-health-meeting" target="_blank" rel="noopener noreferrer" className="font-semibold text-hilt-blue hover:underline">Schedule a meeting</a> instead.</>
+      );
       return;
     }
 
-    // Meet path
-    const { error: dbError } = await supabase.rpc("submit_contact", {
-      p_clinic_name: data.get("clinic_name") as string,
-      p_contact_name: data.get("contact_name") as string,
-      p_email: emailValue,
-      p_phone: (data.get("phone") as string) || null,
-      p_city: null,
-      p_interest: interest,
-      p_notes: (data.get("notes") as string) || null,
-    });
+    const { data: premiumResult, error: premiumError } = await supabase.rpc(
+      "request_premium_code",
+      { p_email: emailValue }
+    );
 
-    setLoading(false);
+    if (premiumError) {
+      setLoading(false);
+      setError("Something went wrong. Please try again.");
+      return;
+    }
 
-    if (dbError) {
-      const msg = dbError.message?.toLowerCase() ?? "";
-      if (msg.includes("email")) {
-        setError("Please enter a valid email address.");
-      } else if (msg.includes("contact name")) {
-        setError("Please enter your name.");
+    if (premiumResult && !premiumResult.success) {
+      setLoading(false);
+      if (premiumResult.error === "identifier_taken" && premiumResult.email === "taken") {
+        setError(
+          <>You have already applied. Check your email including spam. Contact <a href="mailto:support@hilthealth.com" className="text-hilt-blue hover:underline">support@hilthealth.com</a> if you did not receive it.</>
+        );
+      } else if (premiumResult.error === "identifier_taken" && premiumResult.domain === "taken") {
+        setError(
+          <>Your clinic has already been approved. The code was sent to <strong>{premiumResult.domain_approved_email}</strong>. Contact <a href="mailto:support@hilthealth.com" className="text-hilt-blue hover:underline">support@hilthealth.com</a> if you need help.</>
+        );
       } else {
         setError("Something went wrong. Please try again.");
       }
       return;
     }
 
-    router.push("/book");
+    // Premium code request succeeded — also store contact for lead tracking (fire-and-forget)
+    supabase.rpc("submit_contact", {
+      p_clinic_name: (data.get("clinic_name") as string) || null,
+      p_contact_name: data.get("contact_name") as string,
+      p_email: emailValue,
+      p_phone: (data.get("phone") as string) || null,
+      p_country: (data.get("country") as string) || null,
+      p_interest: "free_trial",
+      p_notes: (data.get("notes") as string) || null,
+    });
+
+    setLoading(false);
+    setSubmittedEmail(emailValue);
+    setSubmitted(true);
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("event", "conversion", {
+        send_to: "AW-18032484152/P8SxCPDbpZccELi-x5ZD",
+        transaction_id: `email-${emailValue}`,
+      });
+    }
   }
 
   return (
     <>
       {!submitted && (
-        <div className="mb-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={interest}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.2 }}
-            >
-              <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
-                {interest === "meet" ? "Meet with us" : "Apply for Premium Trial"}
-              </h2>
-              <p className="text-lg text-slate">
-                {interest === "meet"
-                  ? "Let\u2019s find a time to chat about how Hilt Health can work for your clinic."
-                  : <>Start with 200 free credits. No card required.</>}
-              </p>
-            </motion.div>
-          </AnimatePresence>
+        <div className="mb-8">
+          <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
+            Apply for Premium Trial
+          </h2>
+          <p className="text-lg text-slate">
+            Start with $200 worth of credits. No card required.
+          </p>
+          <p className="mt-2 text-sm text-ash">
+            Want to talk first?{" "}
+            <a href="https://cal.com/102937474/hilt-health-meeting" target="_blank" rel="noopener noreferrer" className="font-semibold text-hilt-blue hover:underline">
+              Schedule a meeting
+            </a>{" "}
+            instead.
+          </p>
         </div>
       )}
 
@@ -258,37 +188,6 @@ export default function SignUpForm() {
             </div>
 
             <div>
-              <label htmlFor="interest" className="mb-1 block text-sm font-medium text-ink text-left">
-                I&apos;m interested in <span className="text-red-400">*</span>
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setInterest("free_trial")}
-                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
-                    interest === "free_trial"
-                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
-                      : "border-gray-300 text-slate hover:border-gray-400"
-                  }`}
-                >
-                  Premium Free Trial
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInterest("meet")}
-                  className={`rounded-xl border-2 px-4 py-3 text-sm font-medium transition-colors ${
-                    interest === "meet"
-                      ? "border-hilt-blue bg-hilt-blue/5 text-hilt-blue"
-                      : "border-gray-300 text-slate hover:border-gray-400"
-                  }`}
-                >
-                  Meet with Us
-                </button>
-              </div>
-              <input type="hidden" name="interest" value={interest} />
-            </div>
-
-            <div className="mt-4">
               <label htmlFor="clinic_name" className="mb-1 block text-sm font-medium text-ink text-left">
                 Clinic name <span className="text-red-400">*</span>
               </label>
@@ -347,68 +246,52 @@ export default function SignUpForm() {
               />
             </div>
 
-            <AnimatePresence initial={false}>
-              {interest === "free_trial" && (
-                <motion.div
-                  key="city"
-                  variants={fieldVariants}
-                  initial="hidden"
-                  animate="visible"
-                  exit="hidden"
-                  transition={{ duration: 0.25, ease: "easeInOut" }}
+            <div className="mt-4">
+              <label htmlFor="country" className="mb-1 block text-sm font-medium text-ink text-left">
+                Country <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  id="country"
+                  name="country"
+                  required
+                  defaultValue=""
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-10 text-ink focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors appearance-none bg-white"
+                  suppressHydrationWarning
                 >
-                  <label htmlFor="city" className="mb-1 block text-sm font-medium text-ink text-left">
-                    City <span className="text-red-400">*</span>
-                  </label>
-                  <div className="relative">
-                    <select
-                      id="city"
-                      name="city"
-                      required
-                      defaultValue=""
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 pr-10 text-ink focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors appearance-none bg-white"
-                      suppressHydrationWarning
-                    >
-                      <option value="" disabled>
-                        Select your city
-                      </option>
-                      {CITIES.map((city) => (
-                        <option key={city} value={city}>
-                          {city}
-                        </option>
-                      ))}
-                    </select>
-                    <svg
-                      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ash"
-                      width="20"
-                      height="20"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                    </svg>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                  <option value="" disabled>
+                    Select your country
+                  </option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                </select>
+                <svg
+                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ash"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                </svg>
+              </div>
+            </div>
 
             <div className="mt-4">
               <label htmlFor="notes" className="mb-1 block text-sm font-medium text-ink text-left">
-                {interest === "meet" ? (
-                  <>What would you like to discuss? <span className="text-red-400">*</span></>
-                ) : (
-                  <>Notes <span className="text-ash font-normal">(optional)</span></>
-                )}
+                Notes <span className="text-ash font-normal">(optional)</span>
               </label>
               <textarea
                 id="notes"
                 name="notes"
                 rows={3}
-                required={interest === "meet"}
                 className="w-full rounded-xl border border-gray-300 px-4 py-3 text-ink placeholder:text-ash focus:border-hilt-blue focus:outline-none focus:ring-2 focus:ring-hilt-blue/20 transition-colors resize-none"
-                placeholder={interest === "meet" ? "e.g. I'd like to learn about AI pre-screening for my walk-in clinic" : "Anything you'd like us to know"}
+                placeholder="Anything you'd like us to know"
               />
             </div>
 
@@ -426,8 +309,6 @@ export default function SignUpForm() {
                   <Spinner />
                   Submitting...
                 </>
-              ) : interest === "meet" ? (
-                "Book a Meeting"
               ) : (
                 "Apply for Premium Trial"
               )}

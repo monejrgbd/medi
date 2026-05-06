@@ -24,9 +24,9 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'not_a_partner');
   END IF;
 
-  SELECT COUNT(*) INTO v_total FROM public.partner_referrals WHERE partner_id = v_partner;
+  SELECT COUNT(*)::int INTO v_total FROM public.partner_referrals WHERE partner_id = v_partner;
 
-  SELECT COALESCE(jsonb_agg(row_to_json(t) ORDER BY (t->>'attributed_at') DESC), '[]'::jsonb)
+  SELECT COALESCE(jsonb_agg(to_jsonb(r) ORDER BY r.attributed_at DESC), '[]'::jsonb)
   INTO v_rows
   FROM (
     SELECT
@@ -41,15 +41,14 @@ BEGIN
         SELECT SUM(pc.commission_amount_cents)
         FROM public.partner_commissions pc
         WHERE pc.referral_id = pr.id
-      ), 0) AS commission_to_date_cents
+      ), 0)::bigint AS commission_to_date_cents
     FROM public.partner_referrals pr
     JOIN public.organizations o ON o.id = pr.org_id
     WHERE pr.partner_id = v_partner
     ORDER BY pr.attributed_at DESC
     LIMIT GREATEST(LEAST(p_limit, 200), 1)
     OFFSET GREATEST(p_offset, 0)
-  ) AS sub
-  CROSS JOIN LATERAL (SELECT to_jsonb(sub) AS t) j;
+  ) r;
 
   RETURN jsonb_build_object('success', true, 'total', v_total, 'rows', v_rows);
 END;

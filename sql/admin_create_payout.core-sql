@@ -18,6 +18,7 @@ DECLARE
   v_payout_id uuid;
   v_rows_affected int;
   v_tax_clear boolean;
+  v_locked_ids uuid[];
 BEGIN
   IF NOT COALESCE(
     (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean FROM auth.users WHERE id = p_caller_auth_uid),
@@ -44,16 +45,21 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'tax_form_required');
   END IF;
 
-  -- Lock and net the eligible rows
-  WITH locked AS (
+  -- Lock the eligible rows AND capture their IDs into an array in a single query
+  -- so the UPDATE only touches the rows we summed. A concurrent INSERT after this point
+  -- creates a new pending row that gets picked up by the next payout, not this one.
+  SELECT array_agg(id), COALESCE(SUM(commission_amount_cents), 0)
+  INTO v_locked_ids, v_payout_amount
+  FROM (
     SELECT id, commission_amount_cents
     FROM public.partner_commissions
     WHERE partner_id = p_partner_id
       AND status = 'pending'
       AND eligible_for_payout_at <= now()
     FOR UPDATE SKIP LOCKED
-  )
-  SELECT COALESCE(SUM(commission_amount_cents), 0) INTO v_payout_amount FROM locked;
+  ) locked;
+
+  v_locked_ids := COALESCE(v_locked_ids, ARRAY[]::uuid[]);
 
   IF v_payout_amount < 5000 THEN
     RETURN jsonb_build_object('success', false, 'error', 'below_minimum_payout', 'amount_cents', v_payout_amount);
@@ -69,9 +75,7 @@ BEGIN
 
   UPDATE public.partner_commissions
   SET status = 'paid', payout_id = v_payout_id
-  WHERE partner_id = p_partner_id
-    AND status = 'pending'
-    AND eligible_for_payout_at <= now();
+  WHERE id = ANY(v_locked_ids);
   GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
 
   UPDATE public.partners

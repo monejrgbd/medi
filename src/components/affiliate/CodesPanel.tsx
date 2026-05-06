@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function CodesPanel() {
   const [code, setCode] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [trialOpen, setTrialOpen] = useState(false);
 
@@ -15,7 +16,16 @@ export default function CodesPanel() {
   async function loadCode() {
     const supabase = createClient();
     const { data } = await supabase.rpc("partner_create_affiliate_code", { p_force_replace: false });
-    if (data?.success) setCode(data.code);
+    if (data?.success) {
+      setCode(data.code);
+      setLoadError(null);
+    } else {
+      setLoadError(
+        data?.error === "partner_not_active"
+          ? "Code generation is paused while your account is under review."
+          : data?.error || "Could not load your affiliate code."
+      );
+    }
   }
 
   async function regenerate() {
@@ -68,6 +78,8 @@ export default function CodesPanel() {
               {generating ? "Regenerating…" : "Regenerate (replaces current code; 1h grace for in-flight signups)"}
             </button>
           </div>
+        ) : loadError ? (
+          <p className="mt-4 text-sm text-rose-700">{loadError}</p>
         ) : (
           <p className="mt-4 text-sm text-slate">Loading…</p>
         )}

@@ -19,30 +19,28 @@ BEGIN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
-  SELECT COALESCE(jsonb_agg(row_to_json(t) ORDER BY (t->>'pending_payable_cents')::bigint DESC), '[]'::jsonb)
+  SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY t.pending_payable_cents DESC), '[]'::jsonb)
   INTO v_rows
   FROM (
     SELECT
       p.id AS partner_id,
       p.display_name, p.email, p.country, p.payout_method, p.payout_email,
       p.tax_form_status, p.total_earned_cents,
-      COALESCE(SUM(pc.commission_amount_cents), 0) AS pending_payable_cents,
-      COUNT(pc.id) AS commission_count,
-      -- Tax gate: US partners over $600 must have verified W-9
-      (
-        upper(p.country) <> 'US'
-        OR p.total_earned_cents < 60000
-        OR p.tax_form_status = 'verified'
-      ) AS tax_clear
+      COALESCE(SUM(pc.commission_amount_cents), 0)::bigint AS pending_payable_cents,
+      COUNT(pc.id)::int AS commission_count
     FROM public.partners p
     JOIN public.partner_commissions pc ON pc.partner_id = p.id
     WHERE p.status = 'active'
       AND pc.status = 'pending'
       AND pc.eligible_for_payout_at <= now()
+      AND (
+        upper(p.country) <> 'US'
+        OR p.total_earned_cents < 60000
+        OR p.tax_form_status = 'verified'
+      )
     GROUP BY p.id
     HAVING COALESCE(SUM(pc.commission_amount_cents), 0) >= 5000
-  ) t
-  WHERE (t->>'tax_clear')::boolean = true;
+  ) t;
 
   RETURN jsonb_build_object('success', true, 'rows', v_rows);
 END;

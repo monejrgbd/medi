@@ -1,5 +1,4 @@
 import FadeIn from "@/components/FadeIn";
-import PaperworkMockup from "@/components/marketing/PaperworkMockup";
 
 export default function PaperworkSection() {
   const soapRows = [
@@ -143,13 +142,6 @@ export default function PaperworkSection() {
             </div>
           </FadeIn>
         </div>
-
-        {/* Paperwork mockup */}
-        <FadeIn delay={0.36}>
-          <div className="mt-12 mx-auto max-w-4xl">
-            <PaperworkMockup />
-          </div>
-        </FadeIn>
 
         {/* Already included strip */}
         <FadeIn delay={0.36}>

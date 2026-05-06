@@ -3,243 +3,122 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import FadeIn from "@/components/FadeIn";
 import TeamCodeCapture from "@/components/demo/TeamCodeCapture";
-const DoctorMockup = dynamic(() => import("@/components/marketing/DoctorMockup"), {
-  loading: () => <div className="h-[500px] rounded-2xl border border-gray-200 bg-white" />,
-});
 import ContactLink from "@/components/marketing/ContactLink";
-import PaperworkSection from "@/components/marketing/PaperworkSection";
-import { getAllPosts } from "@/lib/blog";
+import MockupTour from "@/components/marketing/MockupTour";
 
 const SignUpForm = dynamic(() => import("@/components/SignUpForm"), {
   loading: () => <div className="h-[400px]" />,
 });
-const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMockup"), {
-  loading: () => <div className="h-[300px] rounded-2xl border border-gray-200 bg-gray-50" />,
-});
-const PaperworkMockup = dynamic(() => import("@/components/marketing/PaperworkMockup"), {
-  loading: () => <div className="h-[360px] rounded-2xl border border-gray-200 bg-gray-50" />,
-});
 const HeroEmailCTA = dynamic(() => import("@/components/marketing/HeroEmailCTA"), {
   loading: () => <div className="h-[52px]" />,
+});
+const PainCards = dynamic(() => import("@/components/marketing/PainCards"), {
+  loading: () => <div className="mt-10 h-[400px]" />,
 });
 
 /* ── Hero ─────────────────────────────────────────────── */
 
-function ChatMockup() {
-  const chatMessages = [
-    { role: "ai", text: "Hi Sarah, welcome back to Riverside Family Medicine! What brings you in today?", time: "9:03 AM", delay: "0.5s" },
-    { role: "patient", text: "My hands have been really stiff every morning and my knuckles are swollen", time: "9:04 AM", delay: "1.8s" },
-    { role: "ai", text: "You came in for knee pain on March 1. Could the hand stiffness be related?", time: "9:05 AM", delay: "3.2s" },
-    { role: "patient", text: "Actually yes, my knee has been worse too", time: "9:06 AM", delay: "4.6s" },
-  ];
-
+function HeroSection() {
   return (
-    <div className="space-y-3">
-      {/* QR scan step */}
-      <div className="w-[300px] sm:w-[340px] rounded-2xl border border-gray-200 bg-white p-4 shadow-xl ring-1 ring-gray-900/5 flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-          <svg className="h-5 w-5 text-ink" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
-          </svg>
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-ink">Patient scans QR code or opens a shared link</p>
-          <p className="text-[11px] text-slate">Their phone or your clinic tablet, no app needed</p>
-        </div>
-      </div>
+    <section className="relative overflow-hidden bg-snow pt-24 pb-28 lg:pt-36 lg:pb-40">
+      <div className="mx-auto max-w-[1200px] px-6">
+        <h1 className="mb-12 text-balance text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-ink sm:text-4xl lg:mb-20 lg:text-5xl xl:text-6xl">
+          AI for your clinic.
+          <br />
+          Before, during, and after every visit.
+        </h1>
 
-      {/* Arrow: QR → chat */}
-      <div className="flex justify-center">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Chat card */}
-      <div className="w-[300px] sm:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
-        {/* Header — matches prod: logo + name left, language switcher right */}
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-md bg-hilt-blue">
-              <span className="text-[10px] font-bold text-white">H</span>
-            </div>
-            <span className="text-xs font-semibold text-ink">Riverside Family Medicine</span>
-          </div>
-          <button className="flex items-center gap-1 rounded-full border border-gray-200 bg-gray-50 px-2.5 py-1 text-[10px] text-slate">
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5a17.92 17.92 0 0 1-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418" />
-            </svg>
-            English
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div className="space-y-2.5 px-4 py-4">
-          {chatMessages.map((m, i) => (
-            <div
-              key={i}
-              className={`hero-msg ${m.role === "patient" ? "ml-6" : ""}`}
-              style={{ "--delay": m.delay } as React.CSSProperties}
-            >
-              <div className={`rounded-xl px-3 py-2.5 ${m.role === "patient" ? "bg-hilt-blue/10" : "bg-snow"}`}>
-                <p className={`text-sm leading-relaxed ${m.role === "patient" ? "text-ink" : "text-slate"}`}>
-                  {m.text}
-                </p>
-              </div>
-              <p className={`mt-0.5 text-[9px] text-ash ${m.role === "patient" ? "text-right" : ""}`}>{m.time}</p>
-            </div>
-          ))}
-          <div
-            className="hero-msg flex items-center gap-2 pt-1"
-            style={{ "--delay": "6s" } as React.CSSProperties}
-          >
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-hilt-blue" />
-            <span className="text-[11px] text-ash">Hilt Health is typing...</span>
-          </div>
-        </div>
-
-        {/* Input area — matches prod: textarea + mic + send */}
-        <div className="flex items-center gap-1 border-t border-gray-100 bg-white px-2 py-2">
-          <div className="flex-1 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5">
-            <p className="text-[10px] text-ash">Send a message</p>
-          </div>
-          {/* Mic button */}
-          <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-gray-100">
-            <svg className="h-3 w-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
-            </svg>
-          </div>
-          {/* Send button */}
-          <div className="flex h-[26px] shrink-0 items-center justify-center rounded-lg bg-hilt-blue px-2.5">
-            <span className="text-[10px] font-medium text-white">Send</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Arrow: chat → summary */}
-      <div className="hero-msg flex justify-center" style={{ "--delay": "7s" } as React.CSSProperties}>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Summary confirmation card */}
-      <div>
-        <div className="w-[300px] sm:w-[340px] rounded-2xl border border-green-200 bg-green-50 p-5 shadow-xl ring-1 ring-green-900/5">
-          <p className="text-[10px] font-semibold text-green-700 mb-2">Patient approves summary the doctor will read</p>
-          <p className="text-sm leading-relaxed text-green-900 mb-3">
-            Returning patient with worsening knee pain, new morning stiffness in hands lasting about 1 hour, and knuckle swelling. Ibuprofen provides partial relief. Fatigue reported. Family history of rheumatoid arthritis.
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
+          <p className="text-lg leading-snug text-slate sm:text-xl lg:flex-1 lg:text-lg xl:text-xl">
+            AI agents run every visit, handling intake in 130+ languages, briefing doctors, drafting paperwork, sending referrals, scheduling follow ups, collecting reviews, and bringing patients back, with your team approving every step.
           </p>
-          {/* Medical info on file */}
-          <div className="rounded-lg bg-white/60 p-2.5 mb-3">
-            <p className="text-[9px] font-semibold text-green-800 mb-1.5">Your information on file</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[10px]">
-              <div>
-                <p className="font-medium text-slate">Meds (1)</p>
-                <p className="text-ink">Ibuprofen PRN</p>
-              </div>
-              <div>
-                <p className="font-medium text-red-600">Allergies (1)</p>
-                <p className="text-ink">Penicillin</p>
-              </div>
-              <div>
-                <p className="font-medium text-slate">Chronic (0)</p>
-                <p className="text-ash">None</p>
-              </div>
-              <div>
-                <p className="font-medium text-slate">Pets (1)</p>
-                <p className="text-ink">Cat</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <div className="flex-1 rounded-lg border border-green-300 bg-white py-2 text-center text-[10px] font-medium text-green-700">
-              Something is not right
-            </div>
-            <div className="flex-1 rounded-lg bg-green-600 py-2 text-center text-[10px] font-semibold text-white">
-              This is accurate ✓
-            </div>
-          </div>
-          <p className="mt-2 text-[9px] text-right text-ash">9:09 AM</p>
+
+          <HeroEmailCTA />
         </div>
+
+        {/* Big square tour trigger */}
+        <div className="mt-16 flex justify-center sm:mt-20">
+          <MockupTour />
+        </div>
+
       </div>
-    </div>
+    </section>
   );
 }
 
+/* ── Social Proof ─────────────────────────────────────── */
 
-function HeroSection() {
+function SocialProofSection() {
+  const clinics = [
+    "Riverside Family Medicine",
+    "Pinewood Pediatrics",
+    "Cedar Valley Health",
+    "Aspen Family Practice",
+    "Bayside Medical Group",
+    "Crestwood Clinic",
+    "Greenleaf Walk-In Care",
+    "Heartland Primary Care",
+    "Lakeshore Health Partners",
+    "Maplewood Wellness",
+    "Meridian Pediatrics",
+    "Mountain View Internal Medicine",
+    "Oakwood Family Care",
+    "Parkside Urgent Care",
+    "Pine Hill Medicine",
+    "Sage Wellness Center",
+    "Silvercreek Family Health",
+    "Whitefield Pediatrics",
+  ];
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/50 to-white pt-16 pb-20 lg:pt-20 lg:pb-24">
+    <section className="bg-snow py-16 lg:py-24">
       <div className="mx-auto max-w-[1200px] px-6">
-        <div className="flex flex-col sm:flex-row sm:items-start gap-4 md:gap-6 lg:gap-16 sm:pt-8">
-          {/* Left column */}
-          <div className="sm:flex-1 sm:min-w-0">
-            <h1 className="mb-4 text-4xl font-bold leading-[1.08] tracking-tight text-ink sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl">
-              AI for your clinic.
-              <br />
-              <span className="text-hilt-blue">Before, during, and
-              <br />
-              after every visit.</span>
-            </h1>
-            <p className="mb-8 text-lg text-slate sm:text-sm md:text-base lg:text-xl">
-              Intake in 130+ languages. Follow ups that remember. Reviews that grow. Paperwork that flows. Analytics that show.
-            </p>
-            {/* Start Trial CTA */}
-            <HeroEmailCTA />
-          </div>
+        <FadeIn>
+          <p className="mb-10 text-center text-xs font-semibold uppercase tracking-[0.2em] text-ash sm:text-sm">
+            Trusted by clinics worldwide
+          </p>
+        </FadeIn>
 
-          {/* Patient flow: chat → summary (phone-sized, right column) */}
-          <div className="sm:shrink-0 sm:w-[340px] lg:w-auto lg:flex-1 flex flex-col items-center gap-3 mt-8 mb-8 sm:mt-0 sm:mb-0">
-            {/* Glow behind everything */}
-            <div className="relative">
-              <div className="absolute -inset-12 rounded-[40px]" style={{ background: "radial-gradient(circle, rgba(37,99,235,0.06) 0%, transparent 70%)" }} />
-              <div className="relative z-10">
-                <ChatMockup />
-              </div>
-            </div>
+        {/* Marquee */}
+        <div
+          className="relative mb-14 overflow-hidden"
+          style={{
+            maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+            WebkitMaskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
+          }}
+          aria-hidden="true"
+        >
+          <div className="logo-carousel flex w-max gap-x-14">
+            {[...clinics, ...clinics].map((name, i) => (
+              <span key={i} className="shrink-0 whitespace-nowrap text-base font-medium tracking-tight text-slate sm:text-lg">
+                {name}
+              </span>
+            ))}
           </div>
         </div>
 
-        {/* Doctor view: centered, wider */}
+        {/* Stats — inline, no card */}
         <FadeIn>
-          <div className="mt-12">
-            <p className="mb-4 text-center text-sm font-medium text-slate">Doctor sees in an auto updated queue of patients</p>
-            <div className="mx-auto max-w-3xl">
-              <DoctorMockup />
+          <div className="flex flex-col items-center gap-7 text-center">
+            <div className="flex flex-wrap items-end justify-center gap-x-14 gap-y-6 sm:gap-x-24">
+              <div>
+                <p className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">2M+</p>
+                <p className="mt-1.5 text-sm font-medium text-ash">Patients Screened</p>
+              </div>
+              <div>
+                <p className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">12 min</p>
+                <p className="mt-1.5 text-sm font-medium text-ash">Saved Per Visit</p>
+              </div>
             </div>
-          </div>
-        </FadeIn>
 
-        {/* Social proof */}
-        <FadeIn>
-          <div className="mt-14 mx-auto max-w-3xl rounded-2xl border border-gray-100 bg-white shadow-sm overflow-hidden">
-            {/* Stats row */}
-            <div className="grid grid-cols-2 divide-x divide-gray-100 bg-snow/60">
-              {[
-                { value: "2M+", label: "Patients Screened" },
-                { value: "12 min", label: "Saved Per Visit" },
-              ].map((s, i) => (
-                <div key={i} className="py-4 text-center">
-                  <p className="text-xl font-bold text-ink sm:text-2xl tracking-tight">{s.value}</p>
-                  <p className="mt-0.5 text-[11px] text-ash font-medium">{s.label}</p>
-                </div>
-              ))}
-            </div>
-            {/* Details */}
-            <div className="px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-3 sm:gap-6 text-sm border-t border-gray-100">
+            <div className="flex flex-col items-center gap-3 text-sm sm:flex-row sm:gap-6">
               <div className="flex items-center gap-2">
                 <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
                 </svg>
                 <span className="text-slate">Avg intake drops from <span className="font-semibold text-ink">14 min to under 3</span></span>
               </div>
-              <div className="hidden sm:block w-px h-4 bg-gray-200" />
+              <div className="hidden h-4 w-px bg-gray-300 sm:block" />
               <div className="flex items-center gap-2">
                 <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
@@ -249,217 +128,132 @@ function HeroSection() {
             </div>
           </div>
         </FadeIn>
+      </div>
+    </section>
+  );
+}
 
-        {/* Post-visit flow: marketing + review + continuity mockups */}
+/* ── AI Adoption Journey ──────────────────────────────── */
+
+function AIJourneySection() {
+  const tiers = [
+    {
+      level: "AI led",
+      name: "Patients run intake themselves",
+      blurb: "Patients scan, describe their symptoms in any language, and approve a summary. Doctors walk in fully briefed. Staff does not touch intake unless something needs them.",
+      tradeoff: "Fastest and most consistent. Cannot read body language or what a patient does not say.",
+      borderClass: "border-blue-200",
+      iconBg: "bg-blue-100",
+      iconColor: "text-hilt-blue",
+      footerBg: "bg-blue-50",
+      featured: false,
+      icon: (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+        </svg>
+      ),
+    },
+    {
+      level: "Hybrid",
+      name: "AI plus your team",
+      blurb: "AI handles the questions in any language. Your nurses or receptionists triage, verify ID, and step in for sensitive cases or new patients.",
+      tradeoff: "AI scale with human judgment. Most clinics land here.",
+      borderClass: "border-violet-300",
+      iconBg: "bg-violet-100",
+      iconColor: "text-violet-600",
+      footerBg: "bg-violet-50",
+      featured: true,
+      featuredLabel: "Most common",
+      icon: (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+        </svg>
+      ),
+    },
+    {
+      level: "Staff led",
+      name: "Your team runs intake",
+      blurb: "Receptionists and nurses handle every patient conversation as they always have. AI works the back side: paperwork, follow ups, reviews, analytics, marketing.",
+      tradeoff: "Warm and personal. Every minute of intake stays staff time.",
+      borderClass: "border-green-200",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+      footerBg: "bg-green-50",
+      featured: false,
+      icon: (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.75" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <section className="bg-snow py-16 lg:py-20">
+      <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <div className="mt-16">
-            {/* Arrow connector */}
-            <div className="flex justify-center mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-                </svg>
+          <p className="mb-2 text-center text-xs font-semibold uppercase tracking-wider text-hilt-blue sm:text-sm">
+            How much AI do you want?
+          </p>
+          <h2 className="mb-3 text-center text-2xl font-bold text-ink sm:text-3xl md:text-4xl">
+            Use as much AI as you want.<span className="text-hilt-blue"> Or as little.</span>
+          </h2>
+          <p className="mx-auto mb-10 max-w-2xl text-center text-base text-slate">
+            Some clinics want patients to drive intake themselves. Others want every conversation to go through their staff. Hilt fits all three.
+          </p>
+        </FadeIn>
+
+        <div className="grid items-stretch gap-4 md:grid-cols-3">
+          {tiers.map((tier, i) => (
+            <FadeIn key={tier.level} delay={i * 0.08} className="h-full">
+              <div className={`relative flex h-full flex-col rounded-2xl border-2 ${tier.borderClass} bg-white p-5 transition-shadow ${tier.featured ? "shadow-lg ring-1 ring-violet-200/50" : "shadow-sm hover:shadow-md"}`}>
+                {tier.featured && (
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-violet-600 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">
+                    {tier.featuredLabel}
+                  </span>
+                )}
+                <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-lg ${tier.iconBg} ${tier.iconColor}`}>
+                  {tier.icon}
+                </div>
+                <p className="mb-0.5 text-[10px] font-bold uppercase tracking-wider text-ash">
+                  {tier.level}
+                </p>
+                <h3 className="mb-2 text-base font-semibold text-ink">
+                  {tier.name}
+                </h3>
+                <p className="mb-3 flex-1 text-sm leading-snug text-slate">
+                  {tier.blurb}
+                </p>
+                <div className={`mt-auto rounded-lg ${tier.footerBg} px-3 py-2`}>
+                  <p className="text-xs leading-snug text-slate">
+                    <span className="font-semibold text-ink">Tradeoff: </span>{tier.tradeoff}
+                  </p>
+                </div>
               </div>
+            </FadeIn>
+          ))}
+        </div>
+
+        {/* Compact footer: per-location + Raven partnership */}
+        <FadeIn delay={0.3}>
+          <div className="mt-6 grid gap-4 rounded-2xl border border-gray-200 bg-snow/60 px-5 py-4 md:grid-cols-2 md:divide-x md:divide-gray-200 md:gap-0">
+            <div className="md:pr-6">
+              <p className="text-sm font-semibold text-ink">Customize per location</p>
+              <p className="mt-1 text-xs leading-snug text-slate">
+                Every feature toggles on or off per clinic. Custom workflows on request.
+              </p>
             </div>
-            <p className="mb-8 text-center text-sm font-medium text-slate">After the visit</p>
-
-            <div className="mx-auto max-w-4xl grid gap-5 sm:grid-cols-2">
-              {/* Marketing SMS Campaign */}
-              <FadeIn delay={0.1}>
-                <div className="h-full rounded-2xl border border-blue-200 bg-gradient-to-b from-blue-50/80 to-white p-3.5 shadow-xl ring-1 ring-blue-900/5">
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <div className="h-2 w-2 rounded-full bg-blue-500" />
-                    <span className="text-[10px] font-semibold text-blue-700">Targeted patient outreach</span>
-                    <span className="ml-auto rounded-full bg-blue-100 px-1.5 py-0.5 text-[9px] font-medium text-blue-700">via SMS</span>
-                  </div>
-                  <div className="rounded-lg bg-white p-2.5 shadow-sm ring-1 ring-gray-900/5 space-y-1.5">
-                    {/* Filter chips */}
-                    <div className="flex gap-1">
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[7px] text-ink">Age 50+</span>
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[7px] text-ink">Female</span>
-                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[7px] text-ink">All locations</span>
-                    </div>
-                    {/* AI criteria */}
-                    <div className="rounded border border-blue-200 bg-blue-50/50 px-2 py-1">
-                      <p className="text-[7px] font-medium text-blue-600 mb-0.5">AI criteria</p>
-                      <p className="text-[8px] text-ink italic">&ldquo;Mentioned joint pain or arthritis&rdquo;</p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1">
-                        <div className="h-2 w-2 rounded-full bg-green-400" />
-                        <span className="text-[8px] font-medium text-ink">31 matched</span>
-                      </div>
-                      <span className="rounded-full bg-green-100 px-1.5 py-0.5 text-[7px] font-medium text-green-700">Ready</span>
-                    </div>
-                    <div className="rounded bg-gray-50 px-2 py-1 text-[8px] text-slate">
-                      Hi &#123;first_name&#125;, &#123;clinic_name&#125; now offers orthopedic services. Call us to book.
-                    </div>
-                    <div className="rounded bg-blue-600 py-1 text-center text-[8px] font-semibold text-white">
-                      Send to 31 Patients
-                    </div>
-                  </div>
-                  <p className="mt-2 text-[8px] text-ash">Filter first, then AI scans visit summaries for the rest</p>
-                </div>
-              </FadeIn>
-
-              {/* Review SMS */}
-              <FadeIn delay={0.2}>
-                <div className="h-full rounded-2xl border border-amber-200 bg-gradient-to-b from-amber-50/80 to-white p-5 shadow-xl ring-1 ring-amber-900/5">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                    <span className="text-xs font-semibold text-amber-700">Review request</span>
-                    <span className="ml-auto rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-700">via SMS</span>
-                  </div>
-                  <div className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-gray-900/5">
-                    <p className="text-xs text-slate leading-relaxed mb-2">
-                      Hi Sarah, thank you for visiting Dr. Chen today! How was your experience?
-                    </p>
-                    <div className="flex justify-center gap-0.5 mb-0.5">
-                      {[1,2,3,4,5].map(n => (
-                        <svg key={n} className="h-6 w-6 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-                        </svg>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="mt-3 rounded-lg bg-amber-100/80 px-3 py-2 text-center">
-                    <p className="text-[11px] font-medium text-amber-800">
-                      Review collected internally first, then happy patients redirected to any review platform(s) you choose
-                    </p>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* Continuity of care / smart follow ups */}
-              <FadeIn delay={0.3}>
-                <div className="h-full rounded-2xl border border-green-200 bg-gradient-to-b from-green-50/80 to-white p-5 shadow-xl ring-1 ring-green-900/5">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                    <span className="text-xs font-semibold text-green-700">Continuity of care, built in</span>
-                    <span className="ml-auto rounded-full bg-green-100 px-1.5 py-0.5 text-[9px] font-medium text-green-700">AI powered</span>
-                  </div>
-                  {/* AI remembers past visits */}
-                  <p className="text-[8px] font-semibold text-green-800 mb-1.5">AI remembers past visits</p>
-                  <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-900/5 space-y-2">
-                    <div className="flex items-start gap-2">
-                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-gray-200">
-                        <span className="text-[7px] font-bold text-ash">S</span>
-                      </div>
-                      <p className="text-[10px] text-ink leading-relaxed">
-                        My hands have been really stiff every morning.
-                      </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-green-500">
-                        <span className="text-[7px] font-bold text-white">AI</span>
-                      </div>
-                      <p className="text-[10px] text-ink leading-relaxed">
-                        You came in for knee pain on March 1. Could the hand stiffness be related?
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="my-3 border-t border-green-200" />
-                  {/* Follow-up tagging */}
-                  <p className="text-[8px] font-semibold text-green-800 mb-1.5">Doctor tagged follow ups</p>
-                  <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-900/5">
-                    <p className="text-[10px] text-slate leading-relaxed">
-                      Doctors tag sessions with instructions. On the return visit, the AI continues with full memory of what was said and what the doctor wanted next.
-                    </p>
-                  </div>
-                </div>
-              </FadeIn>
-
-              {/* Refer patient */}
-              <FadeIn delay={0.4}>
-                <div className="h-full rounded-2xl border border-purple-200 bg-gradient-to-b from-purple-50/80 to-white p-3.5 shadow-xl ring-1 ring-purple-900/5">
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <div className="h-2 w-2 rounded-full bg-purple-500" />
-                    <span className="text-[10px] font-semibold text-purple-700">Send referral</span>
-                  </div>
-                  <div className="rounded-lg bg-white p-2.5 shadow-sm ring-1 ring-gray-900/5 space-y-1.5">
-                    {/* Specialty */}
-                    <div>
-                      <p className="text-[8px] font-medium text-slate mb-0.5">Specialty</p>
-                      <div className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[9px] text-ink">Rheumatology</div>
-                    </div>
-                    {/* Visits included */}
-                    <div>
-                      <p className="text-[8px] font-medium text-slate mb-0.5">Include visits</p>
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-1 text-[8px]">
-                          <div className="h-2.5 w-2.5 rounded-sm border border-hilt-blue bg-hilt-blue flex items-center justify-center">
-                            <svg className="h-1.5 w-1.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                          </div>
-                          <span className="text-ink">Today, Knee pain, hand stiffness</span>
-                        </div>
-                        <div className="flex items-center gap-1 text-[8px]">
-                          <div className="h-2.5 w-2.5 rounded-sm border border-hilt-blue bg-hilt-blue flex items-center justify-center">
-                            <svg className="h-1.5 w-1.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                          </div>
-                          <span className="text-ink">Mar 1, Initial knee assessment</span>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Referral note */}
-                    <div>
-                      <p className="text-[8px] font-medium text-slate mb-0.5">Referral note</p>
-                      <div className="rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[8px] text-ink leading-relaxed">
-                        Bilateral joint symptoms, suspect RA. Requesting rheumatology evaluation.
-                      </div>
-                    </div>
-                    {/* Destination */}
-                    <div>
-                      <p className="text-[8px] font-medium text-slate mb-0.5">Destination</p>
-                      <div className="flex gap-1 mb-1">
-                        <div className="rounded-full bg-hilt-blue px-2 py-0.5 text-[7px] font-semibold text-white">Hilt Clinic</div>
-                        <div className="rounded-full bg-gray-100 px-2 py-0.5 text-[7px] font-medium text-ash">Email</div>
-                      </div>
-                      <div className="rounded border border-hilt-blue bg-blue-50/50 px-2 py-1">
-                        <p className="text-[8px] font-medium text-ink">City Rheum Clinic</p>
-                        <p className="text-[7px] text-ash">Dr. Patel &middot; 123 Health St</p>
-                      </div>
-                    </div>
-                    {/* Send button */}
-                    <div className="rounded bg-purple-600 py-1 text-center text-[9px] font-semibold text-white">
-                      Send Referral
-                    </div>
-                  </div>
-                  <p className="mt-2 text-[8px] text-ash">Transcript, summary, diagnosis, notes, and attachments included</p>
-                </div>
-              </FadeIn>
-
-
-            </div>
-
-            {/* Arrow: post-visit → paperwork */}
-            <div className="flex justify-center mt-6 mb-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-                </svg>
-              </div>
-            </div>
-            <p className="mb-6 text-center text-sm font-medium text-slate">Paperwork handled in seconds</p>
-
-            {/* Paperwork mockup */}
-            <div className="mx-auto max-w-4xl">
-              <PaperworkMockup />
-            </div>
-
-            {/* Arrow: paperwork → analytics */}
-            <div className="flex justify-center mt-6 mb-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
-                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
-                </svg>
-              </div>
-            </div>
-            <p className="mb-6 text-center text-sm font-medium text-slate">Everything tracked in your dashboard</p>
-
-            {/* Analytics dashboard mockup */}
-            <div className="mx-auto max-w-4xl">
-              <DashboardMockup />
+            <div className="md:pl-6">
+              <p className="text-sm font-semibold text-ink">
+                Add an AI receptionist <span className="font-normal text-ash">(optional)</span>
+              </p>
+              <p className="mt-1 text-xs leading-snug text-slate">
+                Our partner{" "}
+                <a href="https://ravenscheduler.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-hilt-blue hover:underline">
+                  Raven Scheduler
+                </a>{" "}
+                answers every call, books appointments, and recovers no shows.
+              </p>
             </div>
           </div>
         </FadeIn>
@@ -558,155 +352,309 @@ function RavenSchedulerSection() {
 function BeforeAfterSection() {
   return (
     <section className="bg-ink py-20 lg:py-28">
-      <div className="mx-auto max-w-[680px] px-6">
+      <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <h2 className="text-3xl font-bold text-white sm:text-4xl leading-tight">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl leading-tight max-w-[680px]">
             Your clinic is losing more than you think.
           </h2>
         </FadeIn>
 
-        <div className="mt-10 space-y-6">
-          <FadeIn delay={0.08}>
-            <p className="text-lg leading-relaxed text-gray-300">
-              At least ten minutes per patient on the same intake questions and paperwork, even for returning patients. Non English speakers take twice as long or get half the detail. Fifty patients a day.{" "}
-              <span className="text-white font-semibold">Over eight hours of doctor time, gone.</span>
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.24}>
-            <p className="text-lg leading-relaxed text-gray-300">
-              After the visit, nothing happens. The doctor forgets what they wanted to ask on the follow up. No one asks for a review, no record sent to the patient. You have no way to tell your own patients about new services.{" "}
-              <span className="text-white font-semibold">Continuity of care breaks down, and the next thing you hear is a one star rating on Google.</span>
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.56}>
-            <p className="text-lg leading-relaxed text-gray-300">
-              Which doctor sees the most patients? How long are people really waiting? Who referred who?{" "}
-              <span className="text-white font-semibold">You have no idea.</span>
-            </p>
-          </FadeIn>
-        </div>
+        <FadeIn delay={0.1}>
+          <PainCards />
+        </FadeIn>
 
-        <FadeIn delay={0.75}>
-          <div className="mt-12 border-t border-gray-700 pt-10">
-            <p className="text-xl font-semibold text-blue-300 mb-6">
-              Hilt Health fixes every one of these.
-            </p>
-            <div className="space-y-3">
-              <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Eight hours back, better intake, and paperwork in seconds.</span>{" "}
-                AI handles intake in 130+ languages while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Every doctor reads the summary in their preferred language before they open the door, then signs the sick note, work letter, or SOAP note already drafted from the visit.
-              </p>
-              <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">After the visit, everything is handled.</span>{" "}
-                Follow ups carry doctor instructions across visits. Happy patients guided to leave a review. Low ratings come to you privately first. Tell AI which patients to bring back and reach them by SMS.
-              </p>
-              <p className="text-lg leading-relaxed text-gray-400">
-                <span className="text-blue-300 font-medium">Real time analytics.</span>{" "}
-                Wait times, throughput, patient volume, and referral tracking per doctor, per location, per day.
-              </p>
-            </div>
-          </div>
+        <FadeIn delay={0.3}>
+          <p className="mt-10 text-center text-xl font-semibold text-blue-300">
+            Hilt Health fixes every one of these.
+          </p>
         </FadeIn>
       </div>
     </section>
   );
 }
 
-/* ── How It Works ─────────────────────────────────────── */
+/* ── The Solution ─────────────────────────────────────── */
 
-function HowItWorksSection() {
-  const steps = [
-    {
-      num: "01",
-      title: "Patient scans a QR code or clicks a link you shared.",
-      desc: "Patients scan it with their own phone or a clinic tablet, enter their name and date of birth, and they are checked in. Or share a link ahead of time so they can start from home.",
-      tag: "Clinic tablet kiosk mode for patients without phones",
-      icon: (
-        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5Z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 14.625v2.625m0 3v.375m0-3h2.625m-2.625 0H15m3.75 0v.375m0-3v.375m0 0h.375m-3.375 0H15" />
-        </svg>
-      ),
-      accent: "bg-blue-50 text-hilt-blue ring-blue-100",
-    },
-    {
-      num: "02",
-      title: "Receptionist approves with one click.",
-      desc: "Patient appears in the front desk queue. Receptionist verifies ID, taps approve, and the AI conversation begins.",
-      tag: "Returning patients identified by full name, birthday, and sometimes phone",
-      icon: (
-        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-        </svg>
-      ),
-      accent: "bg-amber-50 text-amber-600 ring-amber-100",
-    },
-    {
-      num: "03",
-      title: "Patient talks to the AI while they wait.",
-      desc: "AI asks about symptoms, medications, and allergies through a conversation. 130+ languages, voice and text. The patient reviews and approves the summary before it reaches the doctor.",
-      tag: "Phone number collected here if not already on file",
-      icon: (
-        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 0 1-.825-.242m9.345-8.334a2.126 2.126 0 0 0-.476-.095 48.64 48.64 0 0 0-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0 0 11.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
-        </svg>
-      ),
-      accent: "bg-violet-50 text-violet-600 ring-violet-100",
-    },
-    {
-      num: "04",
-      title: "Doctor walks in already briefed.",
-      desc: "Summary, suggested differentials, medications, allergies, and full visit history. A 30 second read replaces 5 minutes of intake questions.",
-      icon: (
-        <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
-        </svg>
-      ),
-      accent: "bg-green-50 text-green-600 ring-green-100",
-    },
-  ];
+const SOLUTION_AGENTS = [
+  {
+    name: "Intake",
+    desc: "Voice or text in 130+ languages. Detects urgency and sensitive topics. Custom prompts per specialty.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.184-4.183a1.14 1.14 0 0 1 .778-.332 48.294 48.294 0 0 0 5.83-.498c1.585-.233 2.708-1.626 2.708-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+      </svg>
+    ),
+  },
+  {
+    name: "Summary",
+    desc: "Doctor reads in their language. Patient records auto update. Diagnostic suggestion, doctor only.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="m10.5 21 5.25-11.25L21 21m-9-3h7.5M3 5.621a48.474 48.474 0 0 1 6-.371m0 0c1.12 0 2.233.038 3.334.114M9 5.25V3m3.334 2.364C11.176 10.658 7.69 15.08 3 17.502m9.334-12.138c.896.061 1.785.147 2.666.257m-4.589 8.495a18.023 18.023 0 0 1-3.827-5.802" />
+      </svg>
+    ),
+  },
+  {
+    name: "Paperwork",
+    desc: "SOAP notes, sick notes, work letters drafted from the visit. Doctor edits, then signs.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+      </svg>
+    ),
+  },
+  {
+    name: "Referrals",
+    desc: "PDF with full visit history. Routes inside your clinic network or to any email. Auto matches incoming.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+      </svg>
+    ),
+  },
+  {
+    name: "Follow up",
+    desc: "Doctor's instructions persist to the next visit.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+      </svg>
+    ),
+  },
+  {
+    name: "Reviews",
+    desc: "You set the star threshold. Above it, patients post to Google. Below, you see it first.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+      </svg>
+    ),
+  },
+  {
+    name: "Reactivation",
+    desc: "Describe who to reach in plain English. AI scans medical histories. Per patient match reasoning, auditable.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5l-2.25-1.313M21 7.5v2.25m0-2.25-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3 2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75 2.25-1.313M12 21.75V19.5m0 2.25-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
+      </svg>
+    ),
+  },
+];
 
+function AgentNode({
+  name,
+  desc,
+  icon,
+  index,
+  isLast,
+}: {
+  name: string;
+  desc: string;
+  icon: React.ReactNode;
+  index: number;
+  isLast: boolean;
+}) {
   return (
-    <section className="cv-auto bg-snow pt-32 pb-24 lg:pt-40 lg:pb-32">
+    <div className="relative flex flex-col items-center text-center">
+      {/* Desktop horizontal arrow to next agent */}
+      {!isLast && (
+        <div className="absolute left-[calc(50%+28px)] top-7 hidden h-px w-[calc(100%-56px)] bg-hilt-blue/30 lg:block">
+          <svg
+            className="absolute -right-1 -top-[5px] text-hilt-blue/60"
+            width="12"
+            height="12"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+          </svg>
+        </div>
+      )}
+
+      {/* Mobile vertical arrow to next agent */}
+      {!isLast && (
+        <div className="absolute left-1/2 top-[calc(100%+0.5rem)] h-6 w-px -translate-x-1/2 bg-hilt-blue/30 md:hidden">
+          <svg
+            className="absolute -bottom-1.5 -left-[5px] text-hilt-blue/60"
+            width="12"
+            height="12"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </div>
+      )}
+
+      <span className="absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-ash ring-1 ring-gray-200">
+        {String(index + 1).padStart(2, "0")}
+      </span>
+
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-hilt-blue to-blue-600 text-white shadow-lg shadow-hilt-blue/30 ring-4 ring-white">
+        {icon}
+      </div>
+
+      <p className="mt-3 text-sm font-bold text-ink">{name}</p>
+      <p className="mt-1.5 px-1 text-xs leading-snug text-slate">{desc}</p>
+    </div>
+  );
+}
+
+function PatientStart() {
+  return (
+    <div className="relative flex flex-col items-center text-center">
+      <span className="absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow">
+        Patient
+      </span>
+
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-lg shadow-amber-400/30 ring-4 ring-white">
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+        </svg>
+      </div>
+
+      <p className="mt-3 text-sm font-bold text-ink">Patient enters</p>
+      <p className="mt-1.5 px-1 text-xs leading-snug text-slate">QR scan, tablet, or shared link</p>
+
+      {/* Mobile vertical arrow into first agent */}
+      <div className="absolute left-1/2 top-[calc(100%+0.5rem)] h-6 w-px -translate-x-1/2 bg-amber-400/40 md:hidden">
+        <svg
+          className="absolute -bottom-1.5 -left-[5px] text-amber-500/70"
+          width="12"
+          height="12"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+        </svg>
+      </div>
+
+      {/* Desktop horizontal arrow into first agent */}
+      <div className="absolute left-[calc(50%+28px)] top-7 hidden h-px w-[calc(100%-56px)] bg-amber-400/40 lg:block">
+        <svg
+          className="absolute -right-1 -top-[5px] text-amber-500/70"
+          width="12"
+          height="12"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function TheSolutionSection() {
+  return (
+    <section className="bg-gradient-to-b from-snow to-white py-20 lg:py-28">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
-            How it works
-          </p>
-          <h2 className="mb-6 text-center text-3xl font-bold text-ink sm:text-4xl">
-            Four steps. No training needed.
+          {/* Bridge line connecting pain section above to solution below */}
+          <div className="mb-4 flex items-center gap-2 text-xs font-medium text-ash">
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+            </svg>
+            <span>
+              <span className="font-semibold text-ink">Four pains, above.</span> Seven AI agents and one Analytics layer, below.
+            </span>
+          </div>
+
+          <div className="mb-3 flex items-center gap-2.5">
+            <p className="text-sm font-semibold uppercase tracking-wider text-hilt-blue">The solution</p>
+            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-hilt-blue ring-1 ring-blue-200">
+              Powered by AI
+            </span>
+          </div>
+          <h2 className="max-w-[820px] text-3xl font-bold leading-tight text-ink sm:text-4xl lg:text-5xl">
+            Seven AI agents. The entire visit, end to end.
           </h2>
-          <p className="mx-auto mb-16 max-w-lg text-center text-lg text-slate">
-            Set it up in five minutes. Results start with the first patient.
+          <p className="mt-4 max-w-[760px] text-lg leading-relaxed text-slate">
+            <span className="font-semibold text-ink">Seven specialists, one visit.</span> Voice or text in 130+ languages, with real time urgency detection and custom prompts per specialty. Your team approves, signs, and supervises every step. Encrypted at rest and in transit. Row level security per clinic. Audit trails on every action.
           </p>
         </FadeIn>
-        <div className="relative grid gap-8 sm:grid-cols-2 lg:grid-cols-4 sm:gap-6 lg:gap-8">
-          {/* Connecting line — desktop only */}
-          <div className="pointer-events-none absolute top-16 left-[calc(12.5%+24px)] right-[calc(12.5%+24px)] hidden lg:block">
-            <div className="h-px w-full bg-gradient-to-r from-blue-200 via-violet-200 via-amber-200 to-green-200" />
-          </div>
-          {steps.map((s, i) => (
-            <FadeIn key={s.num} delay={i * 0.12}>
-              <div className="relative flex flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md h-full">
-                {/* Icon */}
-                <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${s.accent}`}>
-                  {s.icon}
-                </div>
-                {/* Step number + title */}
-                <div className="mb-2 flex items-baseline gap-2.5">
-                  <span className="text-xs font-bold tracking-wider text-ash">{s.num}</span>
-                  <h3 className="text-base font-semibold text-ink leading-snug">{s.title}</h3>
-                </div>
-                <p className="flex-1 text-sm leading-relaxed text-slate">{s.desc}</p>
-                {s.tag && (
-                  <span className="mt-3 inline-block rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-700 ring-1 ring-green-200 self-start">
-                    {s.tag}
+
+        <FadeIn delay={0.15}>
+          <div className="mt-14">
+            {/* Top trust band */}
+            <div className="relative">
+              <div className="rounded-t-2xl border border-b-0 border-gray-200 bg-white px-6 py-3">
+                <div className="flex items-center justify-center gap-2 text-xs font-medium text-slate">
+                  <svg className="h-4 w-4 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                  </svg>
+                  <span>
+                    <span className="font-semibold text-ink">Your team</span> stays in charge. Approves, signs, and supervises every step.
                   </span>
-                )}
+                </div>
               </div>
-            </FadeIn>
-          ))}
-        </div>
+              <div className="hidden grid-cols-8 lg:grid">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex justify-center">
+                    <div className="h-3 w-px bg-gradient-to-b from-blue-200 to-transparent" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Pipeline: Patient + 7 agents */}
+            <div className="border-x border-gray-200 bg-white px-3 py-10 shadow-sm lg:px-6 lg:py-12">
+              <div className="grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-8">
+                <PatientStart />
+                {SOLUTION_AGENTS.map((agent, i) => (
+                  <AgentNode
+                    key={agent.name}
+                    name={agent.name}
+                    desc={agent.desc}
+                    icon={agent.icon}
+                    index={i}
+                    isLast={i === SOLUTION_AGENTS.length - 1}
+                  />
+                ))}
+              </div>
+
+            </div>
+
+            {/* Bottom analytics layer */}
+            <div className="relative">
+              <div className="hidden grid-cols-8 lg:grid">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex justify-center">
+                    <div className="h-3 w-px bg-gradient-to-b from-transparent to-blue-300/60" />
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-b-2xl bg-ink px-6 py-4 lg:px-8 lg:py-5">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 ring-1 ring-blue-300/30">
+                    <svg className="h-5 w-5 text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                      <p className="text-base font-semibold text-white">Analytics AI</p>
+                      <span className="rounded-full bg-blue-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-blue-300">
+                        Always on
+                      </span>
+                    </div>
+                    <p className="text-xs leading-relaxed text-gray-300 sm:text-sm">
+                      Every minute counted. Wait times at each step, throughput per doctor, return rates, follow-up compliance, and referrals. Per location, per doctor, per day.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </FadeIn>
       </div>
     </section>
   );
@@ -777,7 +725,7 @@ function HowToSetUpSection() {
     {
       num: "01",
       title: "Create your account",
-      desc: "Sign up with your email and organization name. You get $200 worth of free credits to start, no card required.",
+      desc: "Up to $200 in free credits. No card.",
       icon: (
         <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
@@ -788,7 +736,7 @@ function HowToSetUpSection() {
     {
       num: "02",
       title: "Add your locations",
-      desc: "Add each clinic location and get a unique QR code for each one. Add your logo if you want them branded.",
+      desc: "One QR per location. Your logo on it.",
       icon: (
         <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
@@ -800,7 +748,7 @@ function HowToSetUpSection() {
     {
       num: "03",
       title: "Add your staff",
-      desc: "Create logins for your doctors and receptionists. Assign roles per location. Takes about 30 seconds each.",
+      desc: "About 30 seconds per staff member.",
       icon: (
         <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
@@ -811,7 +759,7 @@ function HowToSetUpSection() {
     {
       num: "04",
       title: "Print the QR and go",
-      desc: "Download the QR code as a PDF, put it in your waiting room. Patients start scanning and the system is live.",
+      desc: "Print the PDF. Patients scan. Live.",
       icon: (
         <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m0 0a48.108 48.108 0 0 1 10.5 0m-10.5 0V6.75a2 2 0 0 1 2-2h6.5a2 2 0 0 1 2 2v.878" />
@@ -822,7 +770,7 @@ function HowToSetUpSection() {
   ];
 
   return (
-    <section className="cv-auto bg-snow py-20 lg:py-24">
+    <section className="cv-auto bg-white py-20 lg:py-24">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
@@ -848,6 +796,122 @@ function HowToSetUpSection() {
                   <h3 className="text-sm font-semibold text-ink">{s.title}</h3>
                 </div>
                 <p className="text-sm leading-relaxed text-slate">{s.desc}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+
+        <FadeIn delay={0.32}>
+          <div className="mt-10 rounded-2xl border-2 border-hilt-blue/20 bg-gradient-to-br from-blue-50/50 to-white p-6 lg:p-8">
+            <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+              <div className="flex items-start gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-hilt-blue/10 ring-1 ring-hilt-blue/20">
+                  <svg className="h-5 w-5 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-ink sm:text-lg">Or do not lift a finger.</p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate">
+                    Book a consultation and we handle the entire setup for you.
+                  </p>
+                </div>
+              </div>
+              <a
+                href="https://cal.com/102937474/hilt-health-meeting"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl bg-hilt-blue px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:bg-hilt-blue-dark hover:shadow-xl hover:-translate-y-0.5"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                </svg>
+                Book a Consultation
+              </a>
+            </div>
+          </div>
+        </FadeIn>
+      </div>
+    </section>
+  );
+}
+
+/* ── The Difference ───────────────────────────────────── */
+
+function TheDifferenceSection() {
+  const pillars = [
+    {
+      label: "Quality",
+      title: "We get it right.",
+      body: "Every doctor approval, patient correction, and outcome flows back into the model. Every visit makes the next one sharper.",
+      iconBg: "bg-blue-100",
+      iconColor: "text-hilt-blue",
+      icon: (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+        </svg>
+      ),
+    },
+    {
+      label: "Flexibility",
+      title: "We get it right your way.",
+      body: "Pick your AI and staff balance. Toggle every feature per location. Custom workflows, integrations, and specialty logic on request.",
+      iconBg: "bg-violet-100",
+      iconColor: "text-violet-600",
+      icon: (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+        </svg>
+      ),
+    },
+    {
+      label: "Support",
+      title: "We do it for you.",
+      body: "Onboarding in days, not months. Real humans answer your questions. Training included for your front desk, nurses, and doctors.",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+      icon: (
+        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 9.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM6.343 18.073A6.971 6.971 0 0 1 12 15.75c2.305 0 4.367 1.114 5.657 2.823" />
+        </svg>
+      ),
+    },
+  ];
+
+  return (
+    <section className="bg-snow py-20 lg:py-24">
+      <div className="mx-auto max-w-[1200px] px-6">
+        <FadeIn>
+          <p className="mb-3 text-center text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+            The difference
+          </p>
+          <h2 className="mb-4 text-center text-3xl font-bold text-ink sm:text-4xl">
+            Punch above your weight.
+            <br className="hidden sm:block" />
+            <span className="text-hilt-blue"> Enterprise grade quality and support.</span>
+          </h2>
+          <p className="mx-auto mb-14 max-w-2xl text-center text-lg text-slate">
+            The infrastructure, intelligence, and service usually reserved for hospital systems, now available to clinics of any size. Our quality flywheel makes sure every visit makes the next one better.
+          </p>
+        </FadeIn>
+
+        <div className="grid gap-10 md:grid-cols-3 md:gap-8">
+          {pillars.map((p, i) => (
+            <FadeIn key={p.label} delay={i * 0.1}>
+              <div>
+                <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${p.iconBg} ${p.iconColor}`}>
+                  {p.icon}
+                </div>
+                <p className="mb-1 text-xs font-bold uppercase tracking-wider text-ash">
+                  {p.label}
+                </p>
+                <h3 className="mb-2 text-xl font-semibold text-ink sm:text-2xl">
+                  {p.title}
+                </h3>
+                <p className="text-base leading-relaxed text-slate">
+                  {p.body}
+                </p>
               </div>
             </FadeIn>
           ))}
@@ -1145,7 +1209,7 @@ function TrustAndControlSection() {
             The AI prepares. The doctor decides.
           </h2>
           <p className="mx-auto mb-12 max-w-xl text-center text-lg text-slate">
-            Hilt Health is an intake tool, not a diagnostic tool. Your doctors make every clinical decision.
+            AI gathers, drafts, and translates. Doctors review, decide, and sign. Patients never hear a diagnosis or treatment from AI.
           </p>
         </FadeIn>
 
@@ -1197,10 +1261,7 @@ function PricingAndContactSection() {
         <FadeIn>
           <div className="mb-16 text-center">
             <p className="text-3xl font-bold text-ink sm:text-4xl">
-              As low as $0.75 per patient
-            </p>
-            <p className="mt-3 text-lg text-slate">
-              Plans from $99/mo · 200 free credits to start
+              As low as $99/month for unlimited patients
             </p>
             <Link
               href="/pricing"
@@ -1226,71 +1287,13 @@ function PricingAndContactSection() {
   );
 }
 
-/* ── Blog ─────────────────────────────────────────────── */
-
-function BlogSection() {
-  const posts = getAllPosts().slice(0, 3);
-
-  return (
-    <section className="cv-auto bg-white py-24 lg:py-32">
-      <div className="mx-auto max-w-[1200px] px-6">
-        <FadeIn>
-          <div className="mb-12 flex items-end justify-between">
-            <h2 className="text-3xl font-bold text-ink sm:text-4xl">
-              From the blog
-            </h2>
-            <a
-              href="/blog"
-              className="hidden sm:inline-flex items-center gap-1 text-sm font-medium text-hilt-blue hover:underline"
-            >
-              View all
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-              </svg>
-            </a>
-          </div>
-        </FadeIn>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {posts.map((post, i) => (
-            <FadeIn key={post.slug} delay={i * 0.1}>
-              <a
-                href={`/blog/${post.slug}`}
-                className="group block h-full rounded-2xl border border-gray-100 bg-snow p-6 shadow-sm transition-shadow hover:shadow-md"
-              >
-                <h3 className="mb-2 text-lg font-semibold leading-snug text-ink group-hover:text-hilt-blue transition-colors">
-                  {post.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-slate line-clamp-2">
-                  {post.description}
-                </p>
-              </a>
-            </FadeIn>
-          ))}
-        </div>
-        <div className="mt-8 text-center sm:hidden">
-          <a
-            href="/blog"
-            className="inline-flex items-center gap-1 text-sm font-medium text-hilt-blue hover:underline"
-          >
-            View all
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-            </svg>
-          </a>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ── Footer ───────────────────────────────────────────── */
 
 function Footer() {
   return (
     <footer className="cv-auto bg-white py-12 border-t border-gray-100">
       <div className="mx-auto max-w-[1200px] px-6 text-center">
-        <p className="mb-2 text-2xl font-bold text-hilt-blue tracking-tight">Hilt Health</p>
-        <p className="mb-4 text-slate">Built in Canada.</p>
+        <p className="mb-4 text-2xl font-bold text-hilt-blue tracking-tight">Hilt Health</p>
         <div className="mb-4 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-ash">
           <Link href="/blog" className="hover:text-slate transition-colors">Blog</Link>
           <Link href="/privacy" className="hover:text-slate transition-colors">Privacy Policy</Link>
@@ -1319,16 +1322,14 @@ export default async function Home() {
       <Suspense><TeamCodeCapture /></Suspense>
       <main>
         <HeroSection />
-        <BuiltForYourClinicSection />
-        <RavenSchedulerSection />
+        <SocialProofSection />
         <BeforeAfterSection />
+        <TheSolutionSection />
+        <AIJourneySection />
         <HowToSetUpSection />
-        <HowItWorksSection />
-        <BeyondTheVisitSection />
-        <PaperworkSection />
+        <TheDifferenceSection />
         <TrustAndControlSection />
         <PricingAndContactSection />
-        <BlogSection />
       </main>
       <Footer />
     </>

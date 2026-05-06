@@ -393,14 +393,6 @@ function PlanCards() {
                 href="https://cal.com/102937474/hilt-health-meeting"
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => {
-                  if (typeof window !== "undefined" && typeof window.gtag === "function") {
-                    window.gtag("event", "conversion", {
-                      send_to: "AW-18032484152/9-IpCO_ljpccELi-x5ZD",
-                      transaction_id: `book-${Date.now()}`,
-                    });
-                  }
-                }}
                 className="block rounded-xl border-2 border-hilt-blue py-3 text-center text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
               >
                 Talk to Sales
@@ -473,14 +465,6 @@ function PlanCards() {
             href="https://cal.com/102937474/hilt-health-meeting"
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => {
-              if (typeof window !== "undefined" && typeof window.gtag === "function") {
-                window.gtag("event", "conversion", {
-                  send_to: "AW-18032484152/9-IpCO_ljpccELi-x5ZD",
-                  transaction_id: `book-${Date.now()}`,
-                });
-              }
-            }}
             className="text-sm font-medium text-hilt-blue hover:underline"
           >
             Need custom volumes or dedicated support? Talk to sales.

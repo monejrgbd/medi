@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { PARTNER_TOS_VERSION } from "@/lib/constants";
 
 const COUNTRIES = [
-  "US","CA","GB","AU","DE","FR","NL","ES","IT","SE","NZ","MX","BR","IN","JP","OTHER",
+  "US","CA","GB","AU","DE","FR","NL","ES","IT","SE","NZ","MX","BR","IN","JP","ZZ",
 ];
 
 export default function PartnerConnectForm() {

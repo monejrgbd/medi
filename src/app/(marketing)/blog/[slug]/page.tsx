@@ -76,7 +76,7 @@ export default async function BlogPostPage({ params }: Props) {
             </h2>
             <p className="mb-6 text-slate">
               Hilt Health uses AI to pre-screen patients before they see the doctor.
-              Start with 200 free credits.
+              Start with $200 worth of credits.
             </p>
             <ContactLink
               className="inline-block rounded-xl bg-hilt-blue px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-hilt-blue-dark"

@@ -31,6 +31,7 @@ BEGIN
   IF p_display_name IS NULL OR trim(p_display_name) = '' THEN
     RETURN jsonb_build_object('success', false, 'error', 'display_name_required');
   END IF;
+  -- Accept ISO-2 codes (e.g. "US", "GB") or "ZZ" for unknown/multinational
   IF p_country IS NULL OR length(trim(p_country)) <> 2 THEN
     RETURN jsonb_build_object('success', false, 'error', 'invalid_country_code');
   END IF;

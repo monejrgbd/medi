@@ -33,7 +33,7 @@ BEGIN
     AND (p_search IS NULL OR display_name ILIKE '%' || replace(replace(p_search, '%','\%'), '_','\_') || '%'
                           OR email ILIKE '%' || replace(replace(p_search, '%','\%'), '_','\_') || '%');
 
-  SELECT COALESCE(jsonb_agg(row_to_json(t) ORDER BY (t->>'created_at') DESC), '[]'::jsonb)
+  SELECT COALESCE(jsonb_agg(to_jsonb(t) ORDER BY t.created_at DESC), '[]'::jsonb)
   INTO v_rows
   FROM (
     SELECT
@@ -44,12 +44,12 @@ BEGIN
       COALESCE((
         SELECT SUM(commission_amount_cents) FROM public.partner_commissions
         WHERE partner_id = p.id AND status = 'pending' AND eligible_for_payout_at <= now()
-      ), 0) AS pending_payable_cents,
+      ), 0)::bigint AS pending_payable_cents,
       COALESCE((
         SELECT SUM(commission_amount_cents) FROM public.partner_commissions
         WHERE partner_id = p.id AND status = 'pending' AND eligible_for_payout_at > now()
-      ), 0) AS held_balance_cents,
-      (SELECT COUNT(*) FROM public.partner_referrals WHERE partner_id = p.id) AS referrals_count
+      ), 0)::bigint AS held_balance_cents,
+      (SELECT COUNT(*) FROM public.partner_referrals WHERE partner_id = p.id)::int AS referrals_count
     FROM public.partners p
     WHERE (p_status IS NULL OR p.status = p_status)
       AND (p_search IS NULL OR p.display_name ILIKE '%' || replace(replace(p_search, '%','\%'), '_','\_') || '%'

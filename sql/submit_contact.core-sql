@@ -6,7 +6,8 @@ CREATE OR REPLACE FUNCTION private.submit_contact(
   p_phone text,
   p_city text,
   p_interest text DEFAULT 'free_trial',
-  p_notes text DEFAULT NULL
+  p_notes text DEFAULT NULL,
+  p_country text DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -25,13 +26,14 @@ BEGIN
   END IF;
 
   INSERT INTO public.contact_submissions (
-    clinic_name, contact_name, email, phone, city, interest, notes, created_at
+    clinic_name, contact_name, email, phone, city, country, interest, notes, created_at
   ) VALUES (
     trim(p_clinic_name),
     trim(p_contact_name),
     lower(trim(p_email)),
     CASE WHEN p_phone IS NOT NULL AND length(trim(p_phone)) > 0 THEN trim(p_phone) ELSE NULL END,
-    trim(p_city),
+    CASE WHEN p_city IS NOT NULL AND length(trim(p_city)) > 0 THEN trim(p_city) ELSE NULL END,
+    CASE WHEN p_country IS NOT NULL AND length(trim(p_country)) > 0 THEN trim(p_country) ELSE NULL END,
     CASE WHEN p_interest IN ('free_trial', 'demo', 'meet', 'custom_plan') THEN p_interest ELSE 'free_trial' END,
     CASE WHEN p_notes IS NOT NULL AND length(trim(p_notes)) > 0 THEN trim(p_notes) ELSE NULL END,
     now()
@@ -47,7 +49,8 @@ CREATE OR REPLACE FUNCTION public.submit_contact(
   p_phone text DEFAULT NULL,
   p_city text DEFAULT NULL,
   p_interest text DEFAULT 'free_trial',
-  p_notes text DEFAULT NULL
+  p_notes text DEFAULT NULL,
+  p_country text DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -55,6 +58,8 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $function$
 BEGIN
-  PERFORM private.submit_contact(p_clinic_name, p_contact_name, p_email, p_phone, p_city, p_interest, p_notes);
+  PERFORM private.submit_contact(
+    p_clinic_name, p_contact_name, p_email, p_phone, p_city, p_interest, p_notes, p_country
+  );
 END;
 $function$;

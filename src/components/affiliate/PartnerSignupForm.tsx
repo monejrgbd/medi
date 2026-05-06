@@ -21,7 +21,7 @@ const COUNTRIES = [
   { code: "BR", name: "Brazil" },
   { code: "IN", name: "India" },
   { code: "JP", name: "Japan" },
-  { code: "OTHER", name: "Other" },
+  { code: "ZZ", name: "Other / Multinational" },
 ];
 
 export default function PartnerSignupForm() {
