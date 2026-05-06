@@ -1,0 +1,58 @@
+-- Partner-callable wrapper around request_premium_code.
+-- Enforces consent + the 24h rate limit, then delegates to the (modified) request_premium_code
+-- which handles the claim-or-create logic against approval_codes.
+CREATE OR REPLACE FUNCTION public.partner_create_premium_trial_code(
+  p_target_email     text DEFAULT NULL,
+  p_target_domain    text DEFAULT NULL,
+  p_target_phone     text DEFAULT NULL,
+  p_consent_to_email boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid       uuid := auth.uid();
+  v_partner   public.partners%ROWTYPE;
+  v_recent    int;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT * INTO v_partner FROM public.partners WHERE auth_uid = v_uid;
+  IF v_partner.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_a_partner');
+  END IF;
+  IF v_partner.status <> 'active' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'partner_not_active');
+  END IF;
+
+  IF NOT p_consent_to_email THEN
+    RETURN jsonb_build_object('success', false, 'error', 'consent_required');
+  END IF;
+
+  -- Rate limit: ≤20 partner-generated codes per rolling 24h
+  SELECT COUNT(*) INTO v_recent
+  FROM public.approval_codes
+  WHERE partner_id = v_partner.id AND created_at > now() - interval '24 hours';
+  IF v_recent >= 20 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'daily_code_limit_reached');
+  END IF;
+
+  -- Delegate to request_premium_code (modified to handle claim-or-create when partner_id is set)
+  RETURN private.request_premium_code(
+    p_target_email,
+    p_target_domain,
+    p_target_phone,
+    true,           -- p_send_email
+    v_partner.id,   -- p_partner_id
+    p_consent_to_email
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.partner_create_premium_trial_code(text, text, text, boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.partner_create_premium_trial_code(text, text, text, boolean) TO authenticated;

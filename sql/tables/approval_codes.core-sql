@@ -9,7 +9,8 @@ CREATE TABLE public.approval_codes (
   expires_at            timestamptz,
   send_after            timestamptz,
   email_sent            boolean DEFAULT false,
-  phone                 text
+  phone                 text,
+  partner_id            uuid REFERENCES public.partners(id)
 );
 
 ALTER TABLE public.approval_codes ENABLE ROW LEVEL SECURITY;
@@ -21,3 +22,5 @@ CREATE UNIQUE INDEX idx_approval_codes_domain_unique ON public.approval_codes(do
 CREATE INDEX idx_approval_codes_pending ON public.approval_codes(send_after) WHERE email_sent = false AND send_after IS NOT NULL;
 -- One premium trial per phone number
 CREATE UNIQUE INDEX idx_approval_codes_phone_unique ON public.approval_codes(phone) WHERE phone IS NOT NULL;
+-- Partner-attributed codes for affiliate dashboard queries
+CREATE INDEX idx_approval_codes_partner ON public.approval_codes(partner_id) WHERE partner_id IS NOT NULL;

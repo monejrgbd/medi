@@ -1,0 +1,35 @@
+-- Affiliate program: a partner is an external referrer who earns 30% on payments from clinics they introduce.
+-- One partner per auth.users row. Never hard-deleted; status flips to 'banned' instead.
+CREATE TABLE public.partners (
+  id                       uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_uid                 uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE NO ACTION,
+  display_name             text NOT NULL,
+  email                    text NOT NULL,
+  phone                    text,
+  country                  text NOT NULL,
+  payout_method            text NOT NULL DEFAULT 'paypal' CHECK (payout_method IN ('paypal','manual')),
+  payout_email             text,
+  commission_rate          numeric(5,4) NOT NULL DEFAULT 0.30,
+  status                   text NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended','banned')),
+  tax_form_status          text NOT NULL DEFAULT 'not_collected'
+                           CHECK (tax_form_status IN ('not_collected','submitted','verified','not_required')),
+  tax_form_url             text,
+  total_earned_cents       bigint NOT NULL DEFAULT 0,
+  total_paid_out_cents     bigint NOT NULL DEFAULT 0,
+  total_clawed_back_cents  bigint NOT NULL DEFAULT 0,
+  hold_days_override       int,
+  tos_accepted_at          timestamptz NOT NULL,
+  tos_version              text NOT NULL,
+  first_commission_at      timestamptz,
+  created_at               timestamptz NOT NULL DEFAULT now(),
+  updated_at               timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
+
+-- Partner reads own row. Mutations go through SECURITY DEFINER functions.
+CREATE POLICY "partner_self_read" ON public.partners FOR SELECT
+  USING (auth_uid = auth.uid());
+
+CREATE INDEX idx_partners_email_lower ON public.partners (lower(email));
+CREATE INDEX idx_partners_status ON public.partners (status) WHERE status <> 'banned';

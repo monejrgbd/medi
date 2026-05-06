@@ -1,0 +1,70 @@
+-- Returns the partner's existing active affiliate code, or generates a new one.
+-- p_force_replace=true deactivates the current active code (1h grace window for in-flight signups)
+-- and issues a fresh one. Idempotent on default call so the dashboard can fetch+display safely on render.
+CREATE OR REPLACE FUNCTION public.partner_create_affiliate_code(
+  p_force_replace boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid        uuid := auth.uid();
+  v_partner    public.partners%ROWTYPE;
+  v_existing   text;
+  v_code       text;
+  v_attempts   int := 0;
+  v_alphabet   text := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; -- 32 chars, omits ambiguous I/O/0/1
+  v_i          int;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT * INTO v_partner FROM public.partners WHERE auth_uid = v_uid;
+  IF v_partner.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_a_partner');
+  END IF;
+  IF v_partner.status <> 'active' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'partner_not_active');
+  END IF;
+
+  -- If an active code exists and we're not replacing, return it
+  IF NOT p_force_replace THEN
+    SELECT code INTO v_existing
+    FROM public.affiliate_codes
+    WHERE partner_id = v_partner.id AND is_active = true;
+    IF v_existing IS NOT NULL THEN
+      RETURN jsonb_build_object('success', true, 'code', v_existing, 'created', false);
+    END IF;
+  ELSE
+    -- Deactivate the current active code (1h grace handled in create_organization)
+    UPDATE public.affiliate_codes
+    SET is_active = false, deactivated_at = now()
+    WHERE partner_id = v_partner.id AND is_active = true;
+  END IF;
+
+  -- Generate a fresh 8-character code, retrying on collision
+  WHILE v_attempts < 3 LOOP
+    v_code := '';
+    FOR v_i IN 1..8 LOOP
+      v_code := v_code || substr(v_alphabet, 1 + floor(random() * length(v_alphabet))::int, 1);
+    END LOOP;
+
+    BEGIN
+      INSERT INTO public.affiliate_codes (partner_id, code)
+      VALUES (v_partner.id, v_code);
+      RETURN jsonb_build_object('success', true, 'code', v_code, 'created', true);
+    EXCEPTION WHEN unique_violation THEN
+      v_attempts := v_attempts + 1;
+    END;
+  END LOOP;
+
+  RAISE EXCEPTION 'Failed to generate unique affiliate code after 3 attempts';
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.partner_create_affiliate_code(boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.partner_create_affiliate_code(boolean) TO authenticated;

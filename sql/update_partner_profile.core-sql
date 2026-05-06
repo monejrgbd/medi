@@ -1,0 +1,56 @@
+-- Partner-callable: updates own profile fields. Re-evaluates tax_form_status when country changes.
+CREATE OR REPLACE FUNCTION public.update_partner_profile(
+  p_display_name   text DEFAULT NULL,
+  p_phone          text DEFAULT NULL,
+  p_country        text DEFAULT NULL,
+  p_payout_method  text DEFAULT NULL,
+  p_payout_email   text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_partner public.partners%ROWTYPE;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT * INTO v_partner FROM public.partners WHERE auth_uid = v_uid;
+  IF v_partner.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_a_partner');
+  END IF;
+
+  IF p_payout_method IS NOT NULL AND p_payout_method NOT IN ('paypal','manual') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_payout_method');
+  END IF;
+  IF p_country IS NOT NULL AND length(trim(p_country)) <> 2 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_country_code');
+  END IF;
+
+  UPDATE public.partners
+  SET
+    display_name    = COALESCE(NULLIF(trim(p_display_name), ''), display_name),
+    phone           = COALESCE(p_phone, phone),
+    country         = COALESCE(NULLIF(upper(trim(p_country)), ''), country),
+    payout_method   = COALESCE(NULLIF(p_payout_method, ''), payout_method),
+    payout_email    = COALESCE(NULLIF(lower(trim(p_payout_email)), ''), payout_email),
+    -- If country flipped to/from US, refresh tax_form_status (only when not yet collected/verified)
+    tax_form_status = CASE
+      WHEN p_country IS NOT NULL AND tax_form_status IN ('not_collected','not_required')
+      THEN (CASE WHEN upper(trim(p_country)) = 'US' THEN 'not_collected' ELSE 'not_required' END)
+      ELSE tax_form_status
+    END,
+    updated_at      = now()
+  WHERE id = v_partner.id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.update_partner_profile(text, text, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.update_partner_profile(text, text, text, text, text) TO authenticated;

@@ -1,0 +1,73 @@
+-- Service-role only. Called by billing-webhook on CUSTOMER.DISPUTE.CREATED.
+-- Pushes the related commission's eligibility forward to at least 90 days from now.
+CREATE OR REPLACE FUNCTION public.extend_commission_dispute_hold(
+  p_payment_event_id text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_updated int;
+BEGIN
+  UPDATE public.partner_commissions
+  SET eligible_for_payout_at = GREATEST(eligible_for_payout_at, now() + interval '90 days')
+  WHERE payment_event_id = p_payment_event_id
+    AND status = 'pending';
+  GET DIAGNOSTICS v_updated = ROW_COUNT;
+  RETURN jsonb_build_object('success', true, 'rows_updated', v_updated);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.extend_commission_dispute_hold(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.extend_commission_dispute_hold(text) TO service_role;
+
+-- Companion: reset eligibility back to original payment_date + standard/first-commission hold
+-- when CUSTOMER.DISPUTE.RESOLVED (won) fires.
+CREATE OR REPLACE FUNCTION public.reset_commission_hold(
+  p_payment_event_id text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_row public.partner_commissions%ROWTYPE;
+  v_partner public.partners%ROWTYPE;
+  v_hold_days int;
+  v_first_ever boolean;
+BEGIN
+  SELECT * INTO v_row FROM public.partner_commissions
+  WHERE payment_event_id = p_payment_event_id AND status = 'pending'
+  LIMIT 1;
+  IF v_row.id IS NULL THEN
+    RETURN jsonb_build_object('success', true, 'skipped', 'no_match');
+  END IF;
+
+  SELECT * INTO v_partner FROM public.partners WHERE id = v_row.partner_id;
+
+  -- Detect first-ever commission via the dataset
+  SELECT NOT EXISTS (
+    SELECT 1 FROM public.partner_commissions
+    WHERE partner_id = v_row.partner_id AND payment_date < v_row.payment_date
+  ) INTO v_first_ever;
+
+  v_hold_days := COALESCE(
+    v_partner.hold_days_override,
+    CASE WHEN v_first_ever THEN 60 ELSE 30 END
+  );
+
+  UPDATE public.partner_commissions
+  SET eligible_for_payout_at = v_row.payment_date + (v_hold_days || ' days')::interval
+  WHERE id = v_row.id;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reset_commission_hold(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.reset_commission_hold(text) TO service_role;

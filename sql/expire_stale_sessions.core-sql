@@ -66,6 +66,14 @@ BEGIN
   DELETE FROM public.pre_checkin_tokens
   WHERE expires_at < now() - interval '7 days';
 
+  -- 7b. Expire partner-generated premium-trial codes after 30 days unused
+  UPDATE public.approval_codes
+  SET expires_at = now()
+  WHERE partner_id IS NOT NULL
+    AND used_by_org_id IS NULL
+    AND (expires_at IS NULL OR expires_at > now())
+    AND created_at < now() - interval '30 days';
+
   -- 8. Owner alerts (trial expiry + daily digest)
   PERFORM private.send_trial_expiry_alert();
   PERFORM private.send_daily_digest();

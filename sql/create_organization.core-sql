@@ -1,8 +1,9 @@
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.create_organization(
   p_owner_auth_uid uuid,
-  p_name text,
-  p_approval_code text DEFAULT NULL
+  p_name           text,
+  p_approval_code  text DEFAULT NULL,
+  p_signup_ip      text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -20,57 +21,197 @@ DECLARE
   v_trial_days int := 14;
   v_full_name text;
   v_code_id uuid;
+  v_code_partner_id uuid;
+  v_code_clean text;
+  v_aff_code public.affiliate_codes%ROWTYPE;
+  v_partner public.partners%ROWTYPE;
+  v_owner_email text;
+  v_owner_domain text;
+  v_partner_domain text;
+  v_recent_referrals int;
+  v_ip_hash text;
+  v_attributed_partner_id uuid;
+  v_attributed_code_type text;
+  v_attributed_aff_code_id uuid;
+  v_attributed_approval_code_id uuid;
+  v_referral_inserted boolean := false;
+  v_generic_domains text[] := ARRAY[
+    'gmail.com','googlemail.com','outlook.com','hotmail.com',
+    'live.com','msn.com','aol.com','icloud.com','me.com','mac.com','mail.com',
+    'protonmail.com','proton.me','zoho.com','yandex.com','gmx.com','gmx.net',
+    'yahoo.com','yahoo.ca'
+  ];
 BEGIN
-  -- Get full_name from auth.users metadata
-  SELECT COALESCE(raw_user_meta_data->>'full_name', 'Owner')
-  INTO v_full_name
+  -- Get full_name + email from auth.users
+  SELECT
+    COALESCE(raw_user_meta_data->>'full_name', 'Owner'),
+    lower(email)
+  INTO v_full_name, v_owner_email
   FROM auth.users
   WHERE id = p_owner_auth_uid;
 
-  -- Handle approval code for premium trial
-  IF p_approval_code IS NOT NULL AND p_approval_code <> '' THEN
-    SELECT id INTO v_code_id
+  IF v_owner_email IS NOT NULL AND v_owner_email LIKE '%@%' THEN
+    v_owner_domain := split_part(v_owner_email, '@', 2);
+    IF v_owner_domain = ANY(v_generic_domains) THEN
+      v_owner_domain := NULL; -- generic domains never trigger self-referral guard
+    END IF;
+  END IF;
+
+  -- Hash signup IP for fraud forensics (best-effort; NULL ok)
+  v_ip_hash := private.hash_signup_ip(p_signup_ip);
+
+  -------------------------------------------------------
+  -- CODE LOOKUP (priority: approval_codes → affiliate_codes)
+  -------------------------------------------------------
+  IF p_approval_code IS NOT NULL AND trim(p_approval_code) <> '' THEN
+    v_code_clean := upper(trim(p_approval_code));
+
+    -- 1. Approval-code path (premium-trial; may carry partner_id)
+    SELECT id, partner_id
+    INTO v_code_id, v_code_partner_id
     FROM public.approval_codes
-    WHERE code = p_approval_code
+    WHERE code = v_code_clean
       AND used_by_org_id IS NULL
       AND (expires_at IS NULL OR expires_at > now());
 
-    IF v_code_id IS NULL THEN
-      RETURN jsonb_build_object('success', false, 'error', 'Invalid or already used approval code');
-    END IF;
+    IF v_code_id IS NOT NULL THEN
+      v_plan := 'premium_trial';
+      v_credits := 200;
+      v_trial_days := 30;
+      v_attributed_partner_id := v_code_partner_id;
+      v_attributed_code_type := 'premium_trial';
+      v_attributed_approval_code_id := v_code_id;
+    ELSE
+      -- 2. Affiliate-code path (no trial bump; partner.status must be 'active' for new attribution)
+      SELECT ac.* INTO v_aff_code
+      FROM public.affiliate_codes ac
+      JOIN public.partners p ON p.id = ac.partner_id
+      WHERE lower(ac.code) = lower(v_code_clean)
+        AND (ac.is_active = true OR ac.deactivated_at > now() - interval '1 hour')
+        AND p.status = 'active';
 
-    v_plan := 'premium_trial';
-    v_credits := 200;
-    v_trial_days := 30;
+      IF v_aff_code.id IS NOT NULL THEN
+        v_attributed_partner_id := v_aff_code.partner_id;
+        v_attributed_code_type := 'affiliate';
+        v_attributed_aff_code_id := v_aff_code.id;
+      ELSE
+        -- Code submitted but not recognized — fail visibly (mirrors original behavior for premium codes)
+        RETURN jsonb_build_object('success', false, 'error', 'Invalid or already used approval code');
+      END IF;
+    END IF;
   END IF;
 
-  -- Generate slug: lowercase, replace non-alphanumeric with hyphens, trim, add random suffix
+  -------------------------------------------------------
+  -- SELF-REFERRAL GUARD (only if a partner is attributed)
+  -------------------------------------------------------
+  IF v_attributed_partner_id IS NOT NULL THEN
+    SELECT * INTO v_partner FROM public.partners WHERE id = v_attributed_partner_id;
+    IF v_partner.status <> 'active' THEN
+      RAISE EXCEPTION 'Referral code belongs to a non-active partner';
+    END IF;
+
+    -- Direct self-referral: same auth.uid
+    IF v_partner.auth_uid = p_owner_auth_uid THEN
+      RAISE EXCEPTION 'Self-referral is not allowed';
+    END IF;
+    -- Same email
+    IF lower(v_partner.email) = v_owner_email THEN
+      RAISE EXCEPTION 'Self-referral is not allowed';
+    END IF;
+    -- Non-generic domain match
+    IF v_owner_domain IS NOT NULL AND v_partner.email LIKE '%@%' THEN
+      v_partner_domain := lower(split_part(v_partner.email, '@', 2));
+      IF v_partner_domain = v_owner_domain AND v_partner_domain <> ALL(v_generic_domains) THEN
+        RAISE EXCEPTION 'Self-referral is not allowed';
+      END IF;
+    END IF;
+
+    -- Velocity guard: ≥5 referrals in last 24h → auto-suspend partner + alert admin
+    SELECT COUNT(*) INTO v_recent_referrals
+    FROM public.partner_referrals
+    WHERE partner_id = v_attributed_partner_id
+      AND attributed_at > now() - interval '24 hours';
+    IF v_recent_referrals >= 5 THEN
+      UPDATE public.partners SET status = 'suspended', updated_at = now() WHERE id = v_attributed_partner_id;
+      INSERT INTO public.pending_emails (to_email, subject, html_body, priority)
+      VALUES (
+        'support@hilthealth.com',
+        'Partner auto-suspended: velocity guard triggered',
+        '<p>Partner <strong>' || v_partner.display_name || '</strong> (' || v_partner.email
+          || ') hit 5+ referrals in 24h. Status flipped to suspended pending review.</p>',
+        2
+      );
+      RAISE EXCEPTION 'Referral velocity exceeded; partner suspended';
+    END IF;
+  END IF;
+
+  -------------------------------------------------------
+  -- CREATE ORG
+  -------------------------------------------------------
   v_base_slug := lower(regexp_replace(trim(p_name), '[^a-zA-Z0-9]+', '-', 'g'));
   v_base_slug := trim(BOTH '-' FROM v_base_slug);
   v_suffix := substr(md5(random()::text), 1, 4);
   v_slug := v_base_slug || '-' || v_suffix;
 
-  -- Create organization
-  -- PAyG trials: no time limit (credits are the limit). Subscription trials set trial_end_date via activate_subscription.
-  INSERT INTO public.organizations (name, slug, owner_id, subscription_plan, credits_total, credits_used, trial_end_date)
-  VALUES (p_name, v_slug, p_owner_auth_uid, v_plan, v_credits, 0, NULL)
+  INSERT INTO public.organizations (
+    name, slug, owner_id, subscription_plan, credits_total, credits_used,
+    trial_end_date, signup_ip_hash
+  )
+  VALUES (
+    p_name, v_slug, p_owner_auth_uid, v_plan, v_credits, 0, NULL, v_ip_hash
+  )
   RETURNING id INTO v_org_id;
 
-  -- Mark approval code as used
+  -- Mark approval code as used (premium-trial path)
   IF v_code_id IS NOT NULL THEN
     UPDATE public.approval_codes
     SET used_by_org_id = v_org_id, used_at = now()
     WHERE id = v_code_id;
   END IF;
 
-  -- Create owner's staff_user record
+  -- Owner staff record
   INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
   VALUES (v_org_id, p_owner_auth_uid, v_full_name, 'owner');
 
-  -- P1: Store org_id in JWT app_metadata for RLS performance
+  -- Store org_id in JWT app_metadata for RLS performance
   UPDATE auth.users
   SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('org_id', v_org_id)
   WHERE id = p_owner_auth_uid;
+
+  -------------------------------------------------------
+  -- PARTNER ATTRIBUTION (concurrency-safe via ON CONFLICT)
+  -------------------------------------------------------
+  IF v_attributed_partner_id IS NOT NULL THEN
+    INSERT INTO public.partner_referrals (
+      partner_id, org_id, code_used, code_type,
+      affiliate_code_id, approval_code_id, signup_ip_hash
+    )
+    VALUES (
+      v_attributed_partner_id, v_org_id, v_code_clean, v_attributed_code_type,
+      v_attributed_aff_code_id, v_attributed_approval_code_id, v_ip_hash
+    )
+    ON CONFLICT (org_id) DO NOTHING;
+
+    GET DIAGNOSTICS v_referral_inserted = ROW_COUNT;
+    -- Bump uses_count on the affiliate code (only when a referral was actually inserted)
+    IF v_referral_inserted AND v_attributed_aff_code_id IS NOT NULL THEN
+      UPDATE public.affiliate_codes
+      SET uses_count = uses_count + 1
+      WHERE id = v_attributed_aff_code_id;
+    END IF;
+
+    -- Audit trail (we now have an org_id satisfying the NOT NULL constraint)
+    INSERT INTO public.audit_trail (org_id, actor_type, action, entity_type, entity_id, details)
+    VALUES (
+      v_org_id, 'system', 'partner_referral_attributed', 'organization', v_org_id,
+      jsonb_build_object(
+        'partner_id', v_attributed_partner_id,
+        'code', v_code_clean,
+        'code_type', v_attributed_code_type,
+        'ip_hash', v_ip_hash
+      )
+    );
+  END IF;
 
   RETURN jsonb_build_object(
     'success', true,
@@ -78,49 +219,18 @@ BEGIN
     'slug', v_slug,
     'plan', v_plan,
     'credits', v_credits,
-    'trial_days', v_trial_days
+    'trial_days', v_trial_days,
+    'partner_attributed', v_attributed_partner_id IS NOT NULL
   );
-
-EXCEPTION
-  WHEN unique_violation THEN
-    -- Slug collision: retry once with different suffix
-    v_suffix := substr(md5(random()::text || clock_timestamp()::text), 1, 4);
-    v_slug := v_base_slug || '-' || v_suffix;
-
-    INSERT INTO public.organizations (name, slug, owner_id, subscription_plan, credits_total, credits_used, trial_end_date)
-    VALUES (p_name, v_slug, p_owner_auth_uid, v_plan, v_credits, 0, now() + (v_trial_days || ' days')::interval)
-    RETURNING id INTO v_org_id;
-
-    IF v_code_id IS NOT NULL THEN
-      UPDATE public.approval_codes
-      SET used_by_org_id = v_org_id, used_at = now()
-      WHERE id = v_code_id;
-    END IF;
-
-    INSERT INTO public.staff_users (org_id, auth_uid, full_name, username)
-    VALUES (v_org_id, p_owner_auth_uid, v_full_name, 'owner');
-
-    -- P1: Store org_id in JWT app_metadata for RLS performance
-    UPDATE auth.users
-    SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb) || jsonb_build_object('org_id', v_org_id)
-    WHERE id = p_owner_auth_uid;
-
-    RETURN jsonb_build_object(
-      'success', true,
-      'org_id', v_org_id,
-      'slug', v_slug,
-      'plan', v_plan,
-      'credits', v_credits,
-      'trial_days', v_trial_days
-    );
 END;
 $$;
 
 -- Public wrapper (takes auth_uid as explicit parameter - auth.uid() guard prevents spoofing)
 CREATE OR REPLACE FUNCTION public.create_organization(
   p_owner_auth_uid uuid,
-  p_name text,
-  p_approval_code text DEFAULT NULL
+  p_name           text,
+  p_approval_code  text DEFAULT NULL,
+  p_signup_ip      text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -129,12 +239,9 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
-  -- Block authenticated users from passing a different auth_uid
-  -- (only service role, which has auth.uid() = NULL, bypasses this)
   IF auth.uid() IS NOT NULL AND auth.uid() <> p_owner_auth_uid THEN
     RAISE EXCEPTION 'Cannot create organization for another user';
   END IF;
-
-  RETURN private.create_organization(p_owner_auth_uid, p_name, p_approval_code);
+  RETURN private.create_organization(p_owner_auth_uid, p_name, p_approval_code, p_signup_ip);
 END;
 $$;

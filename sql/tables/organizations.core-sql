@@ -25,6 +25,7 @@ CREATE TABLE public.organizations (
   billing_interval      text DEFAULT 'monthly' CHECK (billing_interval IN ('monthly', 'annual')),
   current_period_end    timestamptz,
   verified              boolean DEFAULT false,
+  signup_ip_hash        text,
   created_at            timestamptz DEFAULT now()
 );
 

@@ -1,0 +1,28 @@
+-- One row per actual money-movement event (manual PayPal v1).
+-- amount_cents is always positive (the net amount sent to the partner after offsetting any clawbacks).
+CREATE TABLE public.partner_payouts (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id      uuid NOT NULL REFERENCES public.partners(id),
+  amount_cents    bigint NOT NULL CHECK (amount_cents > 0),
+  currency        text NOT NULL DEFAULT 'USD',
+  method          text NOT NULL DEFAULT 'paypal_manual',
+  reference       text,
+  status          text NOT NULL DEFAULT 'sent'
+                  CHECK (status IN ('pending','sent','failed','reversed')),
+  notes           text,
+  created_by      uuid REFERENCES auth.users(id),
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.partner_payouts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "partner_self_read_payouts" ON public.partner_payouts FOR SELECT
+  USING (partner_id IN (SELECT id FROM public.partners WHERE auth_uid = auth.uid()));
+
+CREATE INDEX idx_partner_payouts_partner_created
+  ON public.partner_payouts (partner_id, created_at DESC);
+
+-- Add the partner_payouts FK to partner_commissions now that the table exists
+ALTER TABLE public.partner_commissions
+  ADD CONSTRAINT partner_commissions_payout_fk
+  FOREIGN KEY (payout_id) REFERENCES public.partner_payouts(id);

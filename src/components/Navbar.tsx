@@ -47,6 +47,20 @@ export default function Navbar() {
               Pricing
             </Link>
             <Link
+              href="/affiliate"
+              className="px-4 py-2.5 text-sm font-medium text-slate transition-colors hover:text-ink"
+            >
+              Affiliate
+            </Link>
+            <a
+              href="https://cal.com/102937474/hilt-health-meeting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2.5 text-sm font-medium text-slate transition-colors hover:text-ink"
+            >
+              Meet with Us
+            </a>
+            <Link
               href="/login"
               className="rounded-xl border-2 border-hilt-blue px-5 py-2.5 text-sm font-semibold text-hilt-blue transition-colors hover:bg-hilt-blue/5"
             >
@@ -91,6 +105,20 @@ export default function Navbar() {
             >
               Pricing
             </Link>
+            <Link
+              href="/affiliate"
+              className="block w-full rounded-xl px-5 py-3 text-center text-sm font-medium text-slate"
+            >
+              Affiliate
+            </Link>
+            <a
+              href="https://cal.com/102937474/hilt-health-meeting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full rounded-xl px-5 py-3 text-center text-sm font-medium text-slate"
+            >
+              Meet with Us
+            </a>
             <Link
               href="/login"
               className="block w-full rounded-xl border-2 border-hilt-blue px-5 py-3 text-center text-sm font-semibold text-hilt-blue"

@@ -1,0 +1,36 @@
+-- Lets an authenticated user (e.g., a clinic owner) add a partner role to their existing account.
+-- Skips OTP because the email was already verified on the original account.
+CREATE OR REPLACE FUNCTION public.register_partner_for_existing_user(
+  p_display_name   text,
+  p_country        text,
+  p_payout_email   text,
+  p_phone          text,
+  p_tos_version    text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid   uuid := auth.uid();
+  v_email text;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT email INTO v_email FROM auth.users WHERE id = v_uid;
+  IF v_email IS NULL THEN
+    RAISE EXCEPTION 'Auth user not found';
+  END IF;
+
+  RETURN private.register_partner(
+    v_uid, p_display_name, v_email, p_phone, p_country, p_payout_email, p_tos_version
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.register_partner_for_existing_user(text, text, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.register_partner_for_existing_user(text, text, text, text, text) TO authenticated;

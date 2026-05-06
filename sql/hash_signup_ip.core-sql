@@ -1,0 +1,36 @@
+-- HMAC-SHA256 of an IP address using the vault-stored partner_ip_pepper.
+-- Plain SHA-256 of an IPv4 is brute-forceable across the entire 4B address space;
+-- HMAC + secret pepper renders the hash a private fingerprint that only matches
+-- when computed inside the database with the same key.
+-- Returns NULL for NULL input. Returns lower-hex.
+CREATE OR REPLACE FUNCTION private.hash_signup_ip(p_ip text)
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_pepper text;
+BEGIN
+  IF p_ip IS NULL OR p_ip = '' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT decrypted_secret INTO v_pepper
+  FROM vault.decrypted_secrets
+  WHERE name = 'partner_ip_pepper'
+  LIMIT 1;
+
+  IF v_pepper IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  RETURN encode(
+    extensions.hmac(p_ip::bytea, v_pepper::bytea, 'sha256'),
+    'hex'
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION private.hash_signup_ip(text) FROM PUBLIC, anon, authenticated;

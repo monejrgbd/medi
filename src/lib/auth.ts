@@ -68,3 +68,13 @@ export const getMyOrg = cache(async () => {
   const { data } = await supabase.rpc("get_my_org");
   return data ?? {};
 });
+
+export const getPartnerByAuthUid = cache(async (authUid: string) => {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("partners")
+    .select("id, display_name, status")
+    .eq("auth_uid", authUid)
+    .maybeSingle();
+  return data as { id: string; display_name: string; status: string } | null;
+});

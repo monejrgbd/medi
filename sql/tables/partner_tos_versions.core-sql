@@ -1,0 +1,13 @@
+-- Published affiliate Terms of Service revisions. Signup writes the active version
+-- to partners.tos_version so we have a per-partner audit of which terms they accepted.
+CREATE TABLE public.partner_tos_versions (
+  version          text PRIMARY KEY,
+  body_md          text NOT NULL,
+  published_at     timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.partner_tos_versions ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read the published TOS to display on /affiliate/terms.
+CREATE POLICY "tos_public_read" ON public.partner_tos_versions FOR SELECT
+  USING (true);

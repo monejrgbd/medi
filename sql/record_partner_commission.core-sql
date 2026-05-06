@@ -1,0 +1,112 @@
+-- Service-role only. Idempotent commission recorder.
+-- Called by billing-webhook on PAYMENT.SALE.COMPLETED for orgs with a partner_referrals row.
+-- Skips when partner is banned. Sets eligible_for_payout_at = payment_date + 30 days
+-- (60 days for first-ever commission per partner; partner.hold_days_override wins if set).
+CREATE OR REPLACE FUNCTION public.record_partner_commission(
+  p_org_id              uuid,
+  p_payment_amount_cents bigint,
+  p_payment_event_id    text,
+  p_payment_date        timestamptz
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_referral public.partner_referrals%ROWTYPE;
+  v_partner  public.partners%ROWTYPE;
+  v_commission_cents bigint;
+  v_hold_days int;
+  v_eligible timestamptz;
+  v_inserted_id uuid;
+  v_is_first_commission boolean;
+BEGIN
+  IF p_payment_amount_cents IS NULL OR p_payment_amount_cents <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_amount');
+  END IF;
+  IF p_payment_event_id IS NULL OR trim(p_payment_event_id) = '' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'missing_event_id');
+  END IF;
+
+  -- Look up the org's referral (if any)
+  SELECT * INTO v_referral FROM public.partner_referrals WHERE org_id = p_org_id;
+  IF v_referral.id IS NULL THEN
+    RETURN jsonb_build_object('success', true, 'skipped', 'no_partner_referral');
+  END IF;
+
+  SELECT * INTO v_partner FROM public.partners WHERE id = v_referral.partner_id;
+  IF v_partner.status = 'banned' THEN
+    RETURN jsonb_build_object('success', true, 'skipped', 'partner_banned');
+  END IF;
+
+  v_is_first_commission := v_partner.first_commission_at IS NULL;
+  v_commission_cents := floor(p_payment_amount_cents * v_partner.commission_rate)::bigint;
+
+  -- Hold-days resolution (override → first-commission → standard)
+  v_hold_days := COALESCE(
+    v_partner.hold_days_override,
+    CASE WHEN v_is_first_commission THEN 60 ELSE 30 END
+  );
+  v_eligible := p_payment_date + (v_hold_days || ' days')::interval;
+
+  -- Idempotent INSERT
+  BEGIN
+    INSERT INTO public.partner_commissions (
+      partner_id, referral_id, org_id,
+      payment_amount_cents, commission_amount_cents, commission_rate,
+      payment_event_id, payment_date, eligible_for_payout_at, status
+    )
+    VALUES (
+      v_partner.id, v_referral.id, p_org_id,
+      p_payment_amount_cents, v_commission_cents, v_partner.commission_rate,
+      p_payment_event_id, p_payment_date, v_eligible, 'pending'
+    )
+    RETURNING id INTO v_inserted_id;
+  EXCEPTION WHEN unique_violation THEN
+    RETURN jsonb_build_object('success', true, 'skipped', 'duplicate_event');
+  END;
+
+  -- Bookkeeping side effects
+  UPDATE public.partners
+  SET total_earned_cents = total_earned_cents + v_commission_cents,
+      first_commission_at = COALESCE(first_commission_at, now()),
+      updated_at = now()
+  WHERE id = v_partner.id;
+
+  IF v_referral.first_payment_at IS NULL THEN
+    UPDATE public.partner_referrals
+    SET first_payment_at = p_payment_date
+    WHERE id = v_referral.id;
+  END IF;
+
+  -- First-commission notification email
+  IF v_is_first_commission THEN
+    INSERT INTO public.pending_emails (to_email, subject, html_body, priority)
+    VALUES (
+      COALESCE(v_partner.payout_email, v_partner.email),
+      'Your first Hilt Health affiliate commission was earned',
+      '<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">'
+      || '<h2 style="color: #1a1a1a; margin-bottom: 8px;">First commission earned</h2>'
+      || '<p style="color: #555; font-size: 15px;">A clinic you referred just made their first payment. '
+      || 'Your commission is now accruing in your dashboard.</p>'
+      || '<p style="color: #555; font-size: 15px;">Eligible for payout: ' || to_char(v_eligible, 'YYYY-MM-DD') || ' '
+      || '(60-day hold on first-ever commission).</p>'
+      || '<p style="margin-top: 16px;"><a href="https://hilthealth.com/affiliate/dashboard" style="color: #2563EB;">View dashboard</a></p>'
+      || '</div>',
+      2
+    );
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'commission_id', v_inserted_id,
+    'commission_cents', v_commission_cents,
+    'eligible_for_payout_at', v_eligible
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.record_partner_commission(uuid, bigint, text, timestamptz) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_partner_commission(uuid, bigint, text, timestamptz) TO service_role;

@@ -103,6 +103,21 @@ export const MARKETING_SCAN_EXAMPLES = [
   "Anyone with chronic back pain or joint issues",
 ];
 
+// Affiliate program
+export const PARTNER_COMMISSION_RATE = 0.30;
+export const PARTNER_MIN_PAYOUT_CENTS = 5000;          // $50
+export const PARTNER_HOLD_DAYS_STANDARD = 30;
+export const PARTNER_HOLD_DAYS_FIRST = 60;
+export const PARTNER_HOLD_DAYS_DISPUTE = 90;
+export const PARTNER_AFFILIATE_CODE_GRACE_HOURS = 1;
+export const PARTNER_DAILY_TRIAL_CODE_LIMIT = 20;
+export const PARTNER_VELOCITY_AUTO_SUSPEND = 5;        // signups per 24h
+export const PARTNER_TAX_FORM_THRESHOLD_CENTS = 60000; // $600 (US 1099)
+export const PARTNER_TAX_FORM_BANNER_CENTS = 40000;    // $400
+export const PARTNER_TOS_VERSION = "v1-2026-05-05";
+export const REF_COOKIE_NAME = "hh_ref";
+export const REF_COOKIE_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days (UX prefill only)
+
 export const DOCUMENT_TEMPLATES = [
   { key: "letter_sick_note", label: "Sick note", icon: "file-text", category: "letter" },
   { key: "letter_return_to_work", label: "Return to work", icon: "check-circle", category: "letter" },

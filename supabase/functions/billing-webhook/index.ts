@@ -279,6 +279,140 @@ Deno.serve(async (req) => {
             })
             .eq("id", orgId);
         }
+
+        // Affiliate commission: only for real subscription payments in USD with non-zero amount
+        try {
+          const billingAgreementId = resource.billing_agreement_id;
+          const currency = resource.amount?.currency;
+          const totalStr = resource.amount?.total;
+          const totalNum = totalStr ? parseFloat(totalStr) : 0;
+
+          if (billingAgreementId && totalNum > 0) {
+            if (currency !== "USD") {
+              await supabase.from("audit_trail").insert({
+                org_id: orgId,
+                actor_type: "system",
+                action: "partner_webhook_currency_skip",
+                entity_type: "organization",
+                entity_id: orgId,
+                details: { event_id: eventId, currency, total: totalStr },
+              });
+            } else {
+              const amountCents = Math.round(totalNum * 100);
+              const paymentDate = resource.create_time || new Date().toISOString();
+              await supabase.rpc("record_partner_commission", {
+                p_org_id: orgId,
+                p_payment_amount_cents: amountCents,
+                p_payment_event_id: resource.id || eventId,
+                p_payment_date: paymentDate,
+              });
+            }
+          }
+        } catch (err) {
+          // Never fail the webhook over commission accounting; log + continue
+          await supabase.from("audit_trail").insert({
+            org_id: orgId,
+            actor_type: "system",
+            action: "partner_webhook_error",
+            entity_type: "organization",
+            entity_id: orgId,
+            details: { event_id: eventId, error: String(err) },
+          });
+        }
+        break;
+      }
+
+      case "PAYMENT.SALE.REFUNDED":
+      case "PAYMENT.SALE.REVERSED": {
+        try {
+          const parentSaleId = resource.parent_payment || resource.sale_id;
+          const totalStr = resource.amount?.total;
+          const totalNum = totalStr ? parseFloat(totalStr) : 0;
+          if (parentSaleId && totalNum > 0) {
+            await supabase.rpc("record_partner_clawback", {
+              p_payment_event_id: parentSaleId,
+              p_refund_event_id: resource.id || eventId,
+              p_refund_amount_cents: Math.round(totalNum * 100),
+            });
+          }
+        } catch (err) {
+          await supabase.from("audit_trail").insert({
+            org_id: orgId,
+            actor_type: "system",
+            action: "partner_webhook_error",
+            entity_type: "organization",
+            entity_id: orgId,
+            details: { event_id: eventId, kind: "clawback", error: String(err) },
+          });
+        }
+        break;
+      }
+
+      case "CUSTOMER.DISPUTE.CREATED": {
+        try {
+          const disputedTxn = resource.disputed_transactions?.[0];
+          const saleId = disputedTxn?.seller_transaction_id || disputedTxn?.buyer_transaction_id;
+          if (saleId) {
+            await supabase.rpc("extend_commission_dispute_hold", {
+              p_payment_event_id: saleId,
+            });
+          }
+          await supabase.from("audit_trail").insert({
+            org_id: orgId,
+            actor_type: "system",
+            action: "partner_dispute_created",
+            entity_type: "organization",
+            entity_id: orgId,
+            details: { event_id: eventId, sale_id: saleId },
+          });
+        } catch (err) {
+          await supabase.from("audit_trail").insert({
+            org_id: orgId,
+            actor_type: "system",
+            action: "partner_webhook_error",
+            entity_type: "organization",
+            entity_id: orgId,
+            details: { event_id: eventId, kind: "dispute_created", error: String(err) },
+          });
+        }
+        break;
+      }
+
+      case "CUSTOMER.DISPUTE.RESOLVED": {
+        try {
+          const disputedTxn = resource.disputed_transactions?.[0];
+          const saleId = disputedTxn?.seller_transaction_id || disputedTxn?.buyer_transaction_id;
+          const outcome = resource.dispute_outcome?.outcome_code;
+          // Treat anything other than "RESOLVED_BUYER_FAVOUR" as a win for the merchant
+          if (saleId) {
+            if (outcome === "RESOLVED_BUYER_FAVOUR") {
+              // Buyer won — clawback (use the disputed amount)
+              const amountStr = resource.dispute_amount?.value;
+              const amountNum = amountStr ? parseFloat(amountStr) : 0;
+              if (amountNum > 0) {
+                await supabase.rpc("record_partner_clawback", {
+                  p_payment_event_id: saleId,
+                  p_refund_event_id: resource.dispute_id || eventId,
+                  p_refund_amount_cents: Math.round(amountNum * 100),
+                });
+              }
+            } else {
+              // Merchant won — release the 90-day hold
+              await supabase.rpc("reset_commission_hold", {
+                p_payment_event_id: saleId,
+              });
+            }
+          }
+        } catch (err) {
+          await supabase.from("audit_trail").insert({
+            org_id: orgId,
+            actor_type: "system",
+            action: "partner_webhook_error",
+            entity_type: "organization",
+            entity_id: orgId,
+            details: { event_id: eventId, kind: "dispute_resolved", error: String(err) },
+          });
+        }
         break;
       }
 

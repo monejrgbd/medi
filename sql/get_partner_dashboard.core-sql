@@ -1,0 +1,123 @@
+-- Top-level read for the affiliate dashboard.
+-- Pending balance is computed live (depends on dispute extensions to eligible_for_payout_at).
+CREATE OR REPLACE FUNCTION public.get_partner_dashboard()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid       uuid := auth.uid();
+  v_partner   public.partners%ROWTYPE;
+  v_pending   bigint;
+  v_held      bigint;
+  v_referrals jsonb;
+  v_commissions jsonb;
+  v_active_code text;
+  v_referrals_count int;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+
+  SELECT * INTO v_partner FROM public.partners WHERE auth_uid = v_uid;
+  IF v_partner.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_a_partner');
+  END IF;
+
+  -- Net pending (positives + negative clawback offsets) currently eligible
+  SELECT COALESCE(SUM(commission_amount_cents), 0)
+  INTO v_pending
+  FROM public.partner_commissions
+  WHERE partner_id = v_partner.id
+    AND status = 'pending'
+    AND eligible_for_payout_at <= now();
+
+  -- Held (commissions still in their waiting period)
+  SELECT COALESCE(SUM(commission_amount_cents), 0)
+  INTO v_held
+  FROM public.partner_commissions
+  WHERE partner_id = v_partner.id
+    AND status = 'pending'
+    AND eligible_for_payout_at > now();
+
+  -- Total referrals
+  SELECT COUNT(*) INTO v_referrals_count
+  FROM public.partner_referrals
+  WHERE partner_id = v_partner.id;
+
+  -- Active affiliate code (if any)
+  SELECT code INTO v_active_code
+  FROM public.affiliate_codes
+  WHERE partner_id = v_partner.id AND is_active = true;
+
+  -- Last 10 referrals with org name + plan + commission to date
+  SELECT COALESCE(jsonb_agg(row_to_json(r) ORDER BY (r->>'attributed_at') DESC), '[]'::jsonb)
+  INTO v_referrals
+  FROM (
+    SELECT
+      pr.id,
+      pr.attributed_at,
+      pr.first_payment_at,
+      pr.code_used,
+      pr.code_type,
+      o.name AS org_name,
+      o.subscription_plan AS plan,
+      COALESCE((
+        SELECT SUM(pc.commission_amount_cents)
+        FROM public.partner_commissions pc
+        WHERE pc.referral_id = pr.id
+      ), 0) AS commission_to_date_cents
+    FROM public.partner_referrals pr
+    JOIN public.organizations o ON o.id = pr.org_id
+    WHERE pr.partner_id = v_partner.id
+    ORDER BY pr.attributed_at DESC
+    LIMIT 10
+  ) AS sub
+  CROSS JOIN LATERAL (SELECT to_jsonb(sub) AS r) j;
+
+  -- Last 20 commission rows
+  SELECT COALESCE(jsonb_agg(to_jsonb(c) ORDER BY c.created_at DESC), '[]'::jsonb)
+  INTO v_commissions
+  FROM (
+    SELECT
+      id, payment_amount_cents, commission_amount_cents,
+      payment_date, eligible_for_payout_at, status, created_at
+    FROM public.partner_commissions
+    WHERE partner_id = v_partner.id
+    ORDER BY created_at DESC
+    LIMIT 20
+  ) c;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'profile', jsonb_build_object(
+      'id', v_partner.id,
+      'display_name', v_partner.display_name,
+      'email', v_partner.email,
+      'country', v_partner.country,
+      'payout_method', v_partner.payout_method,
+      'payout_email', v_partner.payout_email,
+      'commission_rate', v_partner.commission_rate,
+      'status', v_partner.status,
+      'tax_form_status', v_partner.tax_form_status,
+      'first_commission_at', v_partner.first_commission_at
+    ),
+    'totals', jsonb_build_object(
+      'total_earned_cents', v_partner.total_earned_cents,
+      'total_paid_out_cents', v_partner.total_paid_out_cents,
+      'total_clawed_back_cents', v_partner.total_clawed_back_cents,
+      'pending_balance_cents', v_pending,
+      'held_balance_cents', v_held,
+      'referrals_count', v_referrals_count
+    ),
+    'active_affiliate_code', v_active_code,
+    'recent_referrals', v_referrals,
+    'recent_commissions', v_commissions
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_partner_dashboard() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_partner_dashboard() TO authenticated;

@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      affiliate_codes: {
+        Row: {
+          code: string
+          created_at: string
+          deactivated_at: string | null
+          id: string
+          is_active: boolean
+          partner_id: string
+          uses_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          is_active?: boolean
+          partner_id: string
+          uses_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          deactivated_at?: string | null
+          id?: string
+          is_active?: boolean
+          partner_id?: string
+          uses_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_codes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_model_config: {
         Row: {
           credit_cost: number
@@ -143,6 +181,7 @@ export type Database = {
           email_sent: boolean | null
           expires_at: string | null
           id: string
+          partner_id: string | null
           phone: string | null
           send_after: string | null
           used_at: string | null
@@ -156,6 +195,7 @@ export type Database = {
           email_sent?: boolean | null
           expires_at?: string | null
           id?: string
+          partner_id?: string | null
           phone?: string | null
           send_after?: string | null
           used_at?: string | null
@@ -169,12 +209,20 @@ export type Database = {
           email_sent?: boolean | null
           expires_at?: string | null
           id?: string
+          partner_id?: string | null
           phone?: string | null
           send_after?: string | null
           used_at?: string | null
           used_by_org_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "approval_codes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "approval_codes_used_by_org_id_fkey"
             columns: ["used_by_org_id"]
@@ -1059,6 +1107,7 @@ export type Database = {
           logo_url: string | null
           name: string
           nurse_enabled: boolean | null
+          nurse_first_workflow: boolean | null
           operating_hours: Json | null
           org_id: string
           prescreening_config: Json | null
@@ -1099,6 +1148,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           nurse_enabled?: boolean | null
+          nurse_first_workflow?: boolean | null
           operating_hours?: Json | null
           org_id: string
           prescreening_config?: Json | null
@@ -1139,6 +1189,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           nurse_enabled?: boolean | null
+          nurse_first_workflow?: boolean | null
           operating_hours?: Json | null
           org_id?: string
           prescreening_config?: Json | null
@@ -1287,6 +1338,7 @@ export type Database = {
           quick_doc_shortcuts: Json
           recharge_limit: number | null
           recharge_used: number | null
+          signup_ip_hash: string | null
           slug: string
           subscription_plan: string | null
           trial_alert_sent: boolean | null
@@ -1323,6 +1375,7 @@ export type Database = {
           quick_doc_shortcuts?: Json
           recharge_limit?: number | null
           recharge_used?: number | null
+          signup_ip_hash?: string | null
           slug: string
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
@@ -1359,11 +1412,304 @@ export type Database = {
           quick_doc_shortcuts?: Json
           recharge_limit?: number | null
           recharge_used?: number | null
+          signup_ip_hash?: string | null
           slug?: string
           subscription_plan?: string | null
           trial_alert_sent?: boolean | null
           trial_end_date?: string | null
           verified?: boolean | null
+        }
+        Relationships: []
+      }
+      partner_commissions: {
+        Row: {
+          commission_amount_cents: number
+          commission_rate: number
+          created_at: string
+          eligible_for_payout_at: string
+          id: string
+          org_id: string
+          parent_commission_id: string | null
+          partner_id: string
+          payment_amount_cents: number
+          payment_date: string
+          payment_event_id: string
+          payout_id: string | null
+          referral_id: string
+          status: string
+        }
+        Insert: {
+          commission_amount_cents: number
+          commission_rate: number
+          created_at?: string
+          eligible_for_payout_at: string
+          id?: string
+          org_id: string
+          parent_commission_id?: string | null
+          partner_id: string
+          payment_amount_cents: number
+          payment_date: string
+          payment_event_id: string
+          payout_id?: string | null
+          referral_id: string
+          status?: string
+        }
+        Update: {
+          commission_amount_cents?: number
+          commission_rate?: number
+          created_at?: string
+          eligible_for_payout_at?: string
+          id?: string
+          org_id?: string
+          parent_commission_id?: string | null
+          partner_id?: string
+          payment_amount_cents?: number
+          payment_date?: string
+          payment_event_id?: string
+          payout_id?: string | null
+          referral_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_commissions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_commissions_parent_commission_id_fkey"
+            columns: ["parent_commission_id"]
+            isOneToOne: false
+            referencedRelation: "partner_commissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_commissions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_commissions_payout_fk"
+            columns: ["payout_id"]
+            isOneToOne: false
+            referencedRelation: "partner_payouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_commissions_referral_id_fkey"
+            columns: ["referral_id"]
+            isOneToOne: false
+            referencedRelation: "partner_referrals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_payouts: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          created_by: string | null
+          currency: string
+          id: string
+          method: string
+          notes: string | null
+          partner_id: string
+          reference: string | null
+          status: string
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          method?: string
+          notes?: string | null
+          partner_id: string
+          reference?: string | null
+          status?: string
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          created_by?: string | null
+          currency?: string
+          id?: string
+          method?: string
+          notes?: string | null
+          partner_id?: string
+          reference?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_payouts_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_referrals: {
+        Row: {
+          affiliate_code_id: string | null
+          approval_code_id: string | null
+          attributed_at: string
+          code_type: string
+          code_used: string
+          first_payment_at: string | null
+          id: string
+          org_id: string
+          partner_id: string
+          signup_ip_hash: string | null
+        }
+        Insert: {
+          affiliate_code_id?: string | null
+          approval_code_id?: string | null
+          attributed_at?: string
+          code_type: string
+          code_used: string
+          first_payment_at?: string | null
+          id?: string
+          org_id: string
+          partner_id: string
+          signup_ip_hash?: string | null
+        }
+        Update: {
+          affiliate_code_id?: string | null
+          approval_code_id?: string | null
+          attributed_at?: string
+          code_type?: string
+          code_used?: string
+          first_payment_at?: string | null
+          id?: string
+          org_id?: string
+          partner_id?: string
+          signup_ip_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_referrals_affiliate_code_id_fkey"
+            columns: ["affiliate_code_id"]
+            isOneToOne: false
+            referencedRelation: "affiliate_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_referrals_approval_code_id_fkey"
+            columns: ["approval_code_id"]
+            isOneToOne: false
+            referencedRelation: "approval_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_referrals_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_referrals_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_tos_versions: {
+        Row: {
+          body_md: string
+          published_at: string
+          version: string
+        }
+        Insert: {
+          body_md: string
+          published_at?: string
+          version: string
+        }
+        Update: {
+          body_md?: string
+          published_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
+      partners: {
+        Row: {
+          auth_uid: string
+          commission_rate: number
+          country: string
+          created_at: string
+          display_name: string
+          email: string
+          first_commission_at: string | null
+          hold_days_override: number | null
+          id: string
+          payout_email: string | null
+          payout_method: string
+          phone: string | null
+          status: string
+          tax_form_status: string
+          tax_form_url: string | null
+          tos_accepted_at: string
+          tos_version: string
+          total_clawed_back_cents: number
+          total_earned_cents: number
+          total_paid_out_cents: number
+          updated_at: string
+        }
+        Insert: {
+          auth_uid: string
+          commission_rate?: number
+          country: string
+          created_at?: string
+          display_name: string
+          email: string
+          first_commission_at?: string | null
+          hold_days_override?: number | null
+          id?: string
+          payout_email?: string | null
+          payout_method?: string
+          phone?: string | null
+          status?: string
+          tax_form_status?: string
+          tax_form_url?: string | null
+          tos_accepted_at: string
+          tos_version: string
+          total_clawed_back_cents?: number
+          total_earned_cents?: number
+          total_paid_out_cents?: number
+          updated_at?: string
+        }
+        Update: {
+          auth_uid?: string
+          commission_rate?: number
+          country?: string
+          created_at?: string
+          display_name?: string
+          email?: string
+          first_commission_at?: string | null
+          hold_days_override?: number | null
+          id?: string
+          payout_email?: string | null
+          payout_method?: string
+          phone?: string | null
+          status?: string
+          tax_form_status?: string
+          tax_form_url?: string | null
+          tos_accepted_at?: string
+          tos_version?: string
+          total_clawed_back_cents?: number
+          total_earned_cents?: number
+          total_paid_out_cents?: number
+          updated_at?: string
         }
         Relationships: []
       }
@@ -3320,6 +3666,18 @@ export type Database = {
         Args: { p_content: string; p_is_private?: boolean; p_visit_id: string }
         Returns: Json
       }
+      admin_adjust_partner_status: {
+        Args: { p_partner_id: string; p_reason?: string; p_status: string }
+        Returns: Json
+      }
+      admin_attach_tax_form: {
+        Args: { p_form_url: string; p_partner_id: string }
+        Returns: Json
+      }
+      admin_create_payout: {
+        Args: { p_notes?: string; p_partner_id: string; p_reference?: string }
+        Returns: Json
+      }
       admin_create_premium_code: {
         Args: {
           p_domain?: string
@@ -3329,7 +3687,17 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_get_pending_payouts: { Args: never; Returns: Json }
       admin_list_organizations: { Args: { p_search?: string }; Returns: Json }
+      admin_list_partners: {
+        Args: {
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
       admin_list_premium_codes: { Args: never; Returns: Json }
       admin_set_enterprise_plan: {
         Args: {
@@ -3482,6 +3850,7 @@ export type Database = {
           p_approval_code?: string
           p_name: string
           p_owner_auth_uid: string
+          p_signup_ip?: string
         }
         Returns: Json
       }
@@ -3560,6 +3929,10 @@ export type Database = {
           p_excluded: boolean
           p_recipient_id: string
         }
+        Returns: Json
+      }
+      extend_commission_dispute_hold: {
+        Args: { p_payment_event_id: string }
         Returns: Json
       }
       extend_document_token: { Args: { p_document_id: string }; Returns: Json }
@@ -3665,7 +4038,21 @@ export type Database = {
       }
       get_notes_for_visit: { Args: { p_visit_id: string }; Returns: Json }
       get_org_vital_configs: { Args: never; Returns: Json }
+      get_org_vital_configs_all: { Args: never; Returns: Json }
       get_organization_overview: { Args: never; Returns: Json }
+      get_partner_commissions: {
+        Args: { p_limit?: number; p_offset?: number; p_status?: string }
+        Returns: Json
+      }
+      get_partner_dashboard: { Args: never; Returns: Json }
+      get_partner_payouts: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
+      get_partner_referrals: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       get_past_visit_summaries: {
         Args: { p_limit?: number; p_patient_id: string }
         Returns: Json
@@ -3801,6 +4188,7 @@ export type Database = {
         Args: { p_entity_id: string; p_entity_type: string }
         Returns: undefined
       }
+      lookup_partner_by_code: { Args: { p_code: string }; Returns: Json }
       mark_follow_up_completed: {
         Args: { p_follow_up_id: string }
         Returns: Json
@@ -3818,6 +4206,19 @@ export type Database = {
         Args: { p_nurse_notes: string; p_visit_id: string }
         Returns: Json
       }
+      partner_create_affiliate_code: {
+        Args: { p_force_replace?: boolean }
+        Returns: Json
+      }
+      partner_create_premium_trial_code: {
+        Args: {
+          p_consent_to_email?: boolean
+          p_target_domain?: string
+          p_target_email?: string
+          p_target_phone?: string
+        }
+        Returns: Json
+      }
       private_get_vault_secret: { Args: { p_name: string }; Returns: string }
       purchase_feature_topup: {
         Args: { p_credits: number; p_feature: string }
@@ -3827,6 +4228,23 @@ export type Database = {
       purge_expired_orgs: { Args: never; Returns: Json }
       reactivate_referral: { Args: { p_referral_id: string }; Returns: Json }
       reactivate_staff: { Args: { p_staff_user_id: string }; Returns: Json }
+      record_partner_clawback: {
+        Args: {
+          p_payment_event_id: string
+          p_refund_amount_cents: number
+          p_refund_event_id: string
+        }
+        Returns: Json
+      }
+      record_partner_commission: {
+        Args: {
+          p_org_id: string
+          p_payment_amount_cents: number
+          p_payment_date: string
+          p_payment_event_id: string
+        }
+        Returns: Json
+      }
       record_vaccine: {
         Args: {
           p_custom_vaccine_name?: string
@@ -3845,6 +4263,28 @@ export type Database = {
       }
       record_vitals: {
         Args: { p_patient_id: string; p_readings: Json; p_visit_id: string }
+        Returns: Json
+      }
+      register_partner: {
+        Args: {
+          p_auth_uid: string
+          p_country: string
+          p_display_name: string
+          p_email: string
+          p_payout_email: string
+          p_phone: string
+          p_tos_version: string
+        }
+        Returns: Json
+      }
+      register_partner_for_existing_user: {
+        Args: {
+          p_country: string
+          p_display_name: string
+          p_payout_email: string
+          p_phone: string
+          p_tos_version: string
+        }
         Returns: Json
       }
       reject_summary: {
@@ -3884,6 +4324,11 @@ export type Database = {
         Returns: Json
       }
       requesting_org_id: { Args: never; Returns: string }
+      requesting_partner_id: { Args: never; Returns: string }
+      reset_commission_hold: {
+        Args: { p_payment_event_id: string }
+        Returns: Json
+      }
       reset_monthly_credits: { Args: { p_org_id: string }; Returns: Json }
       reset_staff_password: {
         Args: { p_new_password: string; p_staff_user_id: string }
@@ -4108,6 +4553,7 @@ export type Database = {
           p_logo_url?: string
           p_name?: string
           p_nurse_enabled?: boolean
+          p_nurse_first_workflow?: boolean
           p_operating_hours?: Json
           p_prescreening_config?: Json
           p_preset_rooms?: string[]
@@ -4136,6 +4582,16 @@ export type Database = {
       }
       update_organization: { Args: { p_name: string }; Returns: Json }
       update_organization_name: { Args: { p_name: string }; Returns: undefined }
+      update_partner_profile: {
+        Args: {
+          p_country?: string
+          p_display_name?: string
+          p_payout_email?: string
+          p_payout_method?: string
+          p_phone?: string
+        }
+        Returns: Json
+      }
       update_patient_custom_field: {
         Args: {
           p_field_id: string

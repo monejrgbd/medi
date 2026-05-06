@@ -1,0 +1,51 @@
+-- Platform-admin-only. Marks a partner's tax form as verified after manual W-9/W-8BEN review.
+CREATE OR REPLACE FUNCTION private.admin_attach_tax_form(
+  p_caller_auth_uid uuid,
+  p_partner_id      uuid,
+  p_form_url        text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  UPDATE public.partners
+  SET tax_form_status = 'verified',
+      tax_form_url    = p_form_url,
+      updated_at      = now()
+  WHERE id = p_partner_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', false, 'error', 'partner_not_found');
+  END IF;
+
+  RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_attach_tax_form(
+  p_partner_id uuid,
+  p_form_url   text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_attach_tax_form(auth.uid(), p_partner_id, p_form_url);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_attach_tax_form(uuid, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_attach_tax_form(uuid, text) TO authenticated;

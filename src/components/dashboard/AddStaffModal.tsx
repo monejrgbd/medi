@@ -164,6 +164,9 @@ export default function AddStaffModal({
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
+            {password.length > 0 && password.length < 8 && (
+              <p className="mt-1 text-xs text-red-600">Min 8 characters</p>
+            )}
           </div>
 
           <div>

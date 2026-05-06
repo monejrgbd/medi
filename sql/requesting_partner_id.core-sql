@@ -1,0 +1,13 @@
+-- JWT-claim helper for partner RLS performance.
+-- Mirrors requesting_org_id() pattern. Partner-id is written to app_metadata
+-- on register_partner; client must call refreshSession() afterward.
+-- COALESCE fallback to subquery covers the window before token refresh.
+CREATE OR REPLACE FUNCTION public.requesting_partner_id() RETURNS uuid
+LANGUAGE sql STABLE
+SET search_path TO ''
+AS $$
+  SELECT COALESCE(
+    (auth.jwt() -> 'app_metadata' ->> 'partner_id')::uuid,
+    (SELECT id FROM public.partners WHERE auth_uid = auth.uid())
+  );
+$$;

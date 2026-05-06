@@ -13,9 +13,6 @@ import { getAllPosts } from "@/lib/blog";
 const SignUpForm = dynamic(() => import("@/components/SignUpForm"), {
   loading: () => <div className="h-[400px]" />,
 });
-const DemoQR = dynamic(() => import("@/components/marketing/DemoQR"), {
-  loading: () => <div className="rounded-lg bg-gray-100" />,
-});
 const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMockup"), {
   loading: () => <div className="h-[300px] rounded-2xl border border-gray-200 bg-gray-50" />,
 });
@@ -195,48 +192,6 @@ function HeroSection() {
             </p>
             {/* Start Trial CTA */}
             <HeroEmailCTA />
-
-            {/* Live Demo Card */}
-            <div className="mt-6 sm:mt-4 md:mt-8 max-w-md rounded-xl sm:rounded-xl md:rounded-2xl border-2 border-green-200 bg-gradient-to-br from-green-50 to-white p-3 sm:px-2 sm:py-2.5 md:px-3 md:py-4 shadow-lg">
-              {/* Mobile layout — horizontal QR + text */}
-              <div className="flex items-center gap-3 sm:hidden">
-                <div className="shrink-0 rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-900/5">
-                  <DemoQR size={50} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-ink mb-1.5">See it in action</p>
-                  <Link
-                    href="/demo"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-[11px] font-semibold text-white shadow-md shadow-green-600/20"
-                  >
-                    <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-                    </svg>
-                    Try Live Demo
-                  </Link>
-                </div>
-              </div>
-              {/* Desktop layout — vertical stack */}
-              <div className="hidden sm:flex flex-col items-center text-center">
-                <div className="md:hidden rounded-lg bg-white p-1 shadow-sm ring-1 ring-gray-900/5 mb-1.5">
-                  <DemoQR size={20} />
-                </div>
-                <div className="hidden md:block rounded-xl bg-white p-1.5 shadow-sm ring-1 ring-gray-900/5 mb-2">
-                  <DemoQR size={70} />
-                </div>
-                <p className="text-[10px] md:text-xs font-bold text-ink mb-0.5">See it in action</p>
-                <p className="text-[9px] md:text-[11px] text-slate mb-1.5 md:mb-2">Experience the full patient-to-doctor flow.</p>
-                <Link
-                  href="/demo"
-                  className="inline-flex items-center gap-1 md:gap-1.5 rounded-lg bg-green-600 px-2 py-1 md:px-3 md:py-1.5 text-[9px] md:text-[11px] font-semibold text-white shadow-md shadow-green-600/20 transition-all hover:bg-green-700 hover:shadow-lg hover:-translate-y-0.5"
-                >
-                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-                  </svg>
-                  Try Live Demo
-                </Link>
-              </div>
-            </div>
           </div>
 
           {/* Patient flow: chat → summary (phone-sized, right column) */}

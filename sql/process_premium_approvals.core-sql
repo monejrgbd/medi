@@ -1,6 +1,6 @@
--- Cron-only function: processes pending premium trial approvals
--- Sends approval emails after randomized delay has passed
--- Scheduled: every minute via pg_cron
+-- Cron-only function: processes pending premium trial approvals.
+-- Forks email body when the code is partner-attributed (joins partners table).
+-- Scheduled: every minute via pg_cron.
 CREATE OR REPLACE FUNCTION private.process_premium_approvals()
 RETURNS void
 LANGUAGE plpgsql
@@ -10,41 +10,69 @@ SET search_path TO ''
 AS $$
 DECLARE
   v_row record;
+  v_subject text;
+  v_body text;
 BEGIN
   FOR v_row IN
-    SELECT id, code, email
-    FROM public.approval_codes
-    WHERE send_after IS NOT NULL
-      AND send_after <= now()
-      AND email_sent = false
-    ORDER BY send_after ASC
-    FOR UPDATE SKIP LOCKED
+    SELECT
+      ac.id,
+      ac.code,
+      ac.email,
+      p.display_name AS partner_name
+    FROM public.approval_codes ac
+    LEFT JOIN public.partners p ON p.id = ac.partner_id
+    WHERE ac.send_after IS NOT NULL
+      AND ac.send_after <= now()
+      AND ac.email_sent = false
+    ORDER BY ac.send_after ASC
+    FOR UPDATE OF ac SKIP LOCKED
   LOOP
-    -- Queue approval email
-    INSERT INTO public.pending_emails (to_email, subject, html_body, priority)
-    VALUES (
-      v_row.email,
-      'Your Premium Trial Has Been Approved',
-      '<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">'
-      || '<h2 style="color: #1a1a1a; margin-bottom: 8px;">Hilt Health</h2>'
-      || '<p style="color: #555; font-size: 15px;">Your application has been reviewed and approved.</p>'
-      || '<p style="color: #555; font-size: 15px;">Here is your premium trial code:</p>'
-      || '<div style="background: #f4f4f5; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">'
-      || '<span style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #1a1a1a;">' || v_row.code || '</span>'
-      || '</div>'
-      || '<p style="color: #555; font-size: 15px;">Enter this code when you <a href="https://hilthealth.com/signup" style="color: #2563EB;">sign up</a> to activate your premium trial.</p>'
-      || '<p style="color: #555; font-size: 15px;">This code does not expire. Use it whenever you are ready.</p>'
-      || '<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5;">'
-      || '<p style="color: #888; font-size: 13px;">200 credits. 30 days. Full access to every feature.</p>'
-      || '</div>'
-      || '</div>',
-      1  -- high priority
-    );
+    IF v_row.partner_name IS NOT NULL THEN
+      -- Partner-sent template
+      v_subject := v_row.partner_name || ' shared a Hilt Health premium trial code with you';
+      v_body :=
+        '<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">'
+        || '<h2 style="color: #1a1a1a; margin-bottom: 8px;">Hilt Health</h2>'
+        || '<p style="color: #555; font-size: 15px;">'
+        || 'Hi, <strong>' || v_row.partner_name || '</strong> thought Hilt Health would be a fit for your clinic '
+        || 'and shared a 30-day premium trial code with you. No obligation.'
+        || '</p>'
+        || '<p style="color: #555; font-size: 15px;">Here is your code:</p>'
+        || '<div style="background: #f4f4f5; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">'
+        || '<span style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #1a1a1a;">' || v_row.code || '</span>'
+        || '</div>'
+        || '<p style="color: #555; font-size: 15px;">Use it when you <a href="https://hilthealth.com/signup?code=' || v_row.code || '" style="color: #2563EB;">sign up</a>.</p>'
+        || '<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5;">'
+        || '<p style="color: #888; font-size: 13px;">200 credits. 30 days. Full access to every feature.</p>'
+        || '<p style="color: #888; font-size: 11px; margin-top: 12px;">'
+        || 'You received this email because ' || v_row.partner_name || ' is a Hilt Health affiliate and provided your address. '
+        || '<a href="https://hilthealth.com/unsubscribe" style="color: #888;">Unsubscribe</a>'
+        || '</p>'
+        || '</div>'
+        || '</div>';
+    ELSE
+      -- Original organic template
+      v_subject := 'Your Premium Trial Has Been Approved';
+      v_body :=
+        '<div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">'
+        || '<h2 style="color: #1a1a1a; margin-bottom: 8px;">Hilt Health</h2>'
+        || '<p style="color: #555; font-size: 15px;">Your application has been reviewed and approved.</p>'
+        || '<p style="color: #555; font-size: 15px;">Here is your premium trial code:</p>'
+        || '<div style="background: #f4f4f5; border-radius: 8px; padding: 20px; text-align: center; margin: 24px 0;">'
+        || '<span style="font-size: 28px; font-weight: 700; letter-spacing: 4px; color: #1a1a1a;">' || v_row.code || '</span>'
+        || '</div>'
+        || '<p style="color: #555; font-size: 15px;">Enter this code when you <a href="https://hilthealth.com/signup?code=' || v_row.code || '" style="color: #2563EB;">sign up</a> to activate your premium trial.</p>'
+        || '<p style="color: #555; font-size: 15px;">This code does not expire. Use it whenever you are ready.</p>'
+        || '<div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e5e5;">'
+        || '<p style="color: #888; font-size: 13px;">200 credits. 30 days. Full access to every feature.</p>'
+        || '</div>'
+        || '</div>';
+    END IF;
 
-    -- Mark as sent
-    UPDATE public.approval_codes
-    SET email_sent = true
-    WHERE id = v_row.id;
+    INSERT INTO public.pending_emails (to_email, subject, html_body, priority)
+    VALUES (v_row.email, v_subject, v_body, 1);
+
+    UPDATE public.approval_codes SET email_sent = true WHERE id = v_row.id;
   END LOOP;
 END;
 $$;

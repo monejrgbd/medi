@@ -1,0 +1,84 @@
+-- Platform-admin-only. Lists partners with computed pending balances.
+CREATE OR REPLACE FUNCTION private.admin_list_partners(
+  p_caller_auth_uid uuid,
+  p_status          text DEFAULT NULL,
+  p_search          text DEFAULT NULL,
+  p_limit           int DEFAULT 50,
+  p_offset          int DEFAULT 0
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_rows jsonb;
+  v_total int;
+BEGIN
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  IF p_status IS NOT NULL AND p_status NOT IN ('active','suspended','banned') THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_status');
+  END IF;
+
+  SELECT COUNT(*) INTO v_total
+  FROM public.partners
+  WHERE (p_status IS NULL OR status = p_status)
+    AND (p_search IS NULL OR display_name ILIKE '%' || replace(replace(p_search, '%','\%'), '_','\_') || '%'
+                          OR email ILIKE '%' || replace(replace(p_search, '%','\%'), '_','\_') || '%');
+
+  SELECT COALESCE(jsonb_agg(row_to_json(t) ORDER BY (t->>'created_at') DESC), '[]'::jsonb)
+  INTO v_rows
+  FROM (
+    SELECT
+      p.id, p.display_name, p.email, p.country, p.status,
+      p.commission_rate, p.tax_form_status,
+      p.total_earned_cents, p.total_paid_out_cents, p.total_clawed_back_cents,
+      p.first_commission_at, p.created_at,
+      COALESCE((
+        SELECT SUM(commission_amount_cents) FROM public.partner_commissions
+        WHERE partner_id = p.id AND status = 'pending' AND eligible_for_payout_at <= now()
+      ), 0) AS pending_payable_cents,
+      COALESCE((
+        SELECT SUM(commission_amount_cents) FROM public.partner_commissions
+        WHERE partner_id = p.id AND status = 'pending' AND eligible_for_payout_at > now()
+      ), 0) AS held_balance_cents,
+      (SELECT COUNT(*) FROM public.partner_referrals WHERE partner_id = p.id) AS referrals_count
+    FROM public.partners p
+    WHERE (p_status IS NULL OR p.status = p_status)
+      AND (p_search IS NULL OR p.display_name ILIKE '%' || replace(replace(p_search, '%','\%'), '_','\_') || '%'
+                            OR p.email ILIKE '%' || replace(replace(p_search, '%','\%'), '_','\_') || '%')
+    ORDER BY p.created_at DESC
+    LIMIT GREATEST(LEAST(p_limit, 200), 1)
+    OFFSET GREATEST(p_offset, 0)
+  ) t;
+
+  RETURN jsonb_build_object('success', true, 'total', v_total, 'rows', v_rows);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_list_partners(
+  p_status text DEFAULT NULL,
+  p_search text DEFAULT NULL,
+  p_limit  int DEFAULT 50,
+  p_offset int DEFAULT 0
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_list_partners(auth.uid(), p_status, p_search, p_limit, p_offset);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_list_partners(text, text, int, int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_list_partners(text, text, int, int) TO authenticated;

@@ -1,0 +1,22 @@
+-- Multi-use, lifetime-attribution codes that partners share publicly.
+-- One active code per partner enforced via UNIQUE partial index.
+-- When regenerated, prior code stays valid 1h for in-flight signups.
+CREATE TABLE public.affiliate_codes (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  partner_id        uuid NOT NULL REFERENCES public.partners(id) ON DELETE CASCADE,
+  code              text NOT NULL,
+  uses_count        int NOT NULL DEFAULT 0,
+  is_active         boolean NOT NULL DEFAULT true,
+  deactivated_at    timestamptz,
+  created_at        timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.affiliate_codes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "partner_self_read_codes" ON public.affiliate_codes FOR SELECT
+  USING (partner_id IN (SELECT id FROM public.partners WHERE auth_uid = auth.uid()));
+
+CREATE UNIQUE INDEX idx_affiliate_codes_lower_unique ON public.affiliate_codes (lower(code));
+CREATE UNIQUE INDEX idx_affiliate_codes_one_active_per_partner
+  ON public.affiliate_codes (partner_id) WHERE is_active = true;
+CREATE INDEX idx_affiliate_codes_by_partner ON public.affiliate_codes (partner_id, created_at DESC);

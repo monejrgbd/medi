@@ -1,0 +1,64 @@
+-- Platform-admin-only. Lists partners with ≥$50 net eligible balance (positive minus clawback offsets)
+-- AND tax requirements satisfied (US partners need verified W-9 once they cross the threshold).
+CREATE OR REPLACE FUNCTION private.admin_get_pending_payouts(
+  p_caller_auth_uid uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_rows jsonb;
+BEGIN
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT COALESCE(jsonb_agg(row_to_json(t) ORDER BY (t->>'pending_payable_cents')::bigint DESC), '[]'::jsonb)
+  INTO v_rows
+  FROM (
+    SELECT
+      p.id AS partner_id,
+      p.display_name, p.email, p.country, p.payout_method, p.payout_email,
+      p.tax_form_status, p.total_earned_cents,
+      COALESCE(SUM(pc.commission_amount_cents), 0) AS pending_payable_cents,
+      COUNT(pc.id) AS commission_count,
+      -- Tax gate: US partners over $600 must have verified W-9
+      (
+        upper(p.country) <> 'US'
+        OR p.total_earned_cents < 60000
+        OR p.tax_form_status = 'verified'
+      ) AS tax_clear
+    FROM public.partners p
+    JOIN public.partner_commissions pc ON pc.partner_id = p.id
+    WHERE p.status = 'active'
+      AND pc.status = 'pending'
+      AND pc.eligible_for_payout_at <= now()
+    GROUP BY p.id
+    HAVING COALESCE(SUM(pc.commission_amount_cents), 0) >= 5000
+  ) t
+  WHERE (t->>'tax_clear')::boolean = true;
+
+  RETURN jsonb_build_object('success', true, 'rows', v_rows);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_get_pending_payouts()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_get_pending_payouts(auth.uid());
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_get_pending_payouts() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_get_pending_payouts() TO authenticated;

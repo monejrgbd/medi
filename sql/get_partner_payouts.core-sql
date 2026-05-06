@@ -1,0 +1,44 @@
+-- Paginated payout history.
+CREATE OR REPLACE FUNCTION public.get_partner_payouts(
+  p_limit  int DEFAULT 50,
+  p_offset int DEFAULT 0
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_uid     uuid := auth.uid();
+  v_partner uuid;
+  v_rows    jsonb;
+  v_total   int;
+BEGIN
+  IF v_uid IS NULL THEN
+    RAISE EXCEPTION 'Authentication required';
+  END IF;
+  SELECT id INTO v_partner FROM public.partners WHERE auth_uid = v_uid;
+  IF v_partner IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'not_a_partner');
+  END IF;
+
+  SELECT COUNT(*) INTO v_total FROM public.partner_payouts WHERE partner_id = v_partner;
+
+  SELECT COALESCE(jsonb_agg(to_jsonb(p) ORDER BY p.created_at DESC), '[]'::jsonb)
+  INTO v_rows
+  FROM (
+    SELECT id, amount_cents, currency, method, reference, status, notes, created_at
+    FROM public.partner_payouts
+    WHERE partner_id = v_partner
+    ORDER BY created_at DESC
+    LIMIT GREATEST(LEAST(p_limit, 200), 1)
+    OFFSET GREATEST(p_offset, 0)
+  ) p;
+
+  RETURN jsonb_build_object('success', true, 'total', v_total, 'rows', v_rows);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_partner_payouts(int, int) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.get_partner_payouts(int, int) TO authenticated;

@@ -1,6 +1,7 @@
-import { requireAuth, isOwner, getMyOrg, isPlatformAdmin } from "@/lib/auth";
+import { requireAuth, isOwner, getMyOrg, isPlatformAdmin, getPartnerByAuthUid, getMyRoles } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import RoleSelector from "@/components/RoleSelector";
 
 export const metadata = {
@@ -22,7 +23,17 @@ export default async function SelectRolePage() {
     redirect("/d/admin");
   }
 
-  const ownerCheck = await isOwner(user.id);
+  const [ownerCheck, partner, roles] = await Promise.all([
+    isOwner(user.id),
+    getPartnerByAuthUid(user.id),
+    getMyRoles(),
+  ]);
+
+  // Partner only (no clinic association) → affiliate dashboard
+  const hasClinicLink = ownerCheck || (Array.isArray(roles) && roles.length > 0);
+  if (partner && !hasClinicLink) {
+    redirect("/affiliate/dashboard");
+  }
 
   if (ownerCheck) {
     const org = await getMyOrg();
@@ -38,6 +49,11 @@ export default async function SelectRolePage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-snow px-4">
       <div className="w-full max-w-2xl">
+        {partner && (
+          <div className="mb-4 rounded-xl border border-hilt-blue/20 bg-hilt-blue/5 p-3 text-sm text-ink">
+            You are also a Hilt affiliate. <Link href="/affiliate/dashboard" className="font-medium text-hilt-blue hover:underline">Go to affiliate dashboard →</Link>
+          </div>
+        )}
         <RoleSelector />
       </div>
     </div>

@@ -1,0 +1,108 @@
+-- Platform-admin-only. Creates a payout for a partner, netting all eligible pending commissions
+-- (positive AND negative-offset clawbacks). Single transaction with FOR UPDATE SKIP LOCKED.
+CREATE OR REPLACE FUNCTION private.admin_create_payout(
+  p_caller_auth_uid uuid,
+  p_partner_id      uuid,
+  p_reference       text DEFAULT NULL,
+  p_notes           text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_partner public.partners%ROWTYPE;
+  v_payout_amount bigint;
+  v_payout_id uuid;
+  v_rows_affected int;
+  v_tax_clear boolean;
+BEGIN
+  IF NOT COALESCE(
+    (SELECT (raw_app_meta_data->>'is_platform_admin')::boolean FROM auth.users WHERE id = p_caller_auth_uid),
+    false
+  ) THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  SELECT * INTO v_partner FROM public.partners WHERE id = p_partner_id FOR UPDATE;
+  IF v_partner.id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'partner_not_found');
+  END IF;
+  IF v_partner.status <> 'active' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'partner_not_active');
+  END IF;
+
+  -- Tax gate
+  v_tax_clear := (
+    upper(v_partner.country) <> 'US'
+    OR v_partner.total_earned_cents < 60000
+    OR v_partner.tax_form_status = 'verified'
+  );
+  IF NOT v_tax_clear THEN
+    RETURN jsonb_build_object('success', false, 'error', 'tax_form_required');
+  END IF;
+
+  -- Lock and net the eligible rows
+  WITH locked AS (
+    SELECT id, commission_amount_cents
+    FROM public.partner_commissions
+    WHERE partner_id = p_partner_id
+      AND status = 'pending'
+      AND eligible_for_payout_at <= now()
+    FOR UPDATE SKIP LOCKED
+  )
+  SELECT COALESCE(SUM(commission_amount_cents), 0) INTO v_payout_amount FROM locked;
+
+  IF v_payout_amount < 5000 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'below_minimum_payout', 'amount_cents', v_payout_amount);
+  END IF;
+
+  INSERT INTO public.partner_payouts (
+    partner_id, amount_cents, currency, method, reference, status, notes, created_by
+  )
+  VALUES (
+    p_partner_id, v_payout_amount, 'USD', 'paypal_manual', p_reference, 'sent', p_notes, p_caller_auth_uid
+  )
+  RETURNING id INTO v_payout_id;
+
+  UPDATE public.partner_commissions
+  SET status = 'paid', payout_id = v_payout_id
+  WHERE partner_id = p_partner_id
+    AND status = 'pending'
+    AND eligible_for_payout_at <= now();
+  GET DIAGNOSTICS v_rows_affected = ROW_COUNT;
+
+  UPDATE public.partners
+  SET total_paid_out_cents = total_paid_out_cents + v_payout_amount,
+      updated_at = now()
+  WHERE id = p_partner_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'payout_id', v_payout_id,
+    'amount_cents', v_payout_amount,
+    'commissions_settled', v_rows_affected
+  );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.admin_create_payout(
+  p_partner_id uuid,
+  p_reference  text DEFAULT NULL,
+  p_notes      text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.admin_create_payout(auth.uid(), p_partner_id, p_reference, p_notes);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.admin_create_payout(uuid, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.admin_create_payout(uuid, text, text) TO authenticated;

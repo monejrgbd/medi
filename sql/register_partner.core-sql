@@ -1,0 +1,96 @@
+-- Self-serve partner signup. Called after the user has signed up with email/password
+-- and verified their OTP. Writes partner_id into auth.users.raw_app_meta_data so
+-- the requesting_partner_id() JWT helper resolves immediately on next refreshSession.
+CREATE OR REPLACE FUNCTION private.register_partner(
+  p_auth_uid       uuid,
+  p_display_name   text,
+  p_email          text,
+  p_phone          text,
+  p_country        text,
+  p_payout_email   text,
+  p_tos_version    text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_partner_id uuid;
+  v_existing   uuid;
+  v_tax_status text;
+BEGIN
+  -- Reject if a partner row already exists for this auth user
+  SELECT id INTO v_existing FROM public.partners WHERE auth_uid = p_auth_uid;
+  IF v_existing IS NOT NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'already_registered', 'partner_id', v_existing);
+  END IF;
+
+  -- Validate required fields
+  IF p_display_name IS NULL OR trim(p_display_name) = '' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'display_name_required');
+  END IF;
+  IF p_country IS NULL OR length(trim(p_country)) <> 2 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_country_code');
+  END IF;
+  IF p_tos_version IS NULL OR trim(p_tos_version) = '' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'tos_version_required');
+  END IF;
+
+  -- Confirm the TOS version actually exists
+  IF NOT EXISTS (SELECT 1 FROM public.partner_tos_versions WHERE version = p_tos_version) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'unknown_tos_version');
+  END IF;
+
+  -- Tax form status: not_required for non-US, not_collected for US
+  v_tax_status := CASE WHEN upper(p_country) = 'US' THEN 'not_collected' ELSE 'not_required' END;
+
+  INSERT INTO public.partners (
+    auth_uid, display_name, email, phone, country,
+    payout_email, tax_form_status, tos_accepted_at, tos_version
+  ) VALUES (
+    p_auth_uid, trim(p_display_name), lower(trim(p_email)), p_phone, upper(p_country),
+    COALESCE(lower(trim(p_payout_email)), lower(trim(p_email))),
+    v_tax_status, now(), p_tos_version
+  )
+  RETURNING id INTO v_partner_id;
+
+  -- Write partner_id into JWT claims so requesting_partner_id() works after refreshSession()
+  UPDATE auth.users
+  SET raw_app_meta_data = COALESCE(raw_app_meta_data, '{}'::jsonb)
+                          || jsonb_build_object('partner_id', v_partner_id)
+  WHERE id = p_auth_uid;
+
+  RETURN jsonb_build_object('success', true, 'partner_id', v_partner_id);
+END;
+$$;
+
+-- Public wrapper: validates auth.uid() matches p_auth_uid (prevents spoofing)
+CREATE OR REPLACE FUNCTION public.register_partner(
+  p_auth_uid       uuid,
+  p_display_name   text,
+  p_email          text,
+  p_phone          text,
+  p_country        text,
+  p_payout_email   text,
+  p_tos_version    text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.uid() IS NULL OR auth.uid() <> p_auth_uid THEN
+    RAISE EXCEPTION 'Cannot register a partner for another user';
+  END IF;
+  RETURN private.register_partner(
+    p_auth_uid, p_display_name, p_email, p_phone, p_country, p_payout_email, p_tos_version
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.register_partner(uuid, text, text, text, text, text, text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.register_partner(uuid, text, text, text, text, text, text) TO authenticated;

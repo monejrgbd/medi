@@ -1,0 +1,107 @@
+-- Service-role only. Reverses or offsets a previous commission when PayPal sends a refund/reversal.
+-- Behavior:
+--   If original commission is status='pending' (not yet paid out) → flip to 'clawed_back'
+--      and decrement partner.total_earned_cents.
+--   If original commission is status='paid' (money already left) → INSERT a negative-amount
+--      offset row that nets out at the next payout, leaving total_paid_out_cents intact.
+-- Partial refunds prorate. Idempotent on synthesized event_id '<sale_id>:refund:<refund_id>'.
+CREATE OR REPLACE FUNCTION public.record_partner_clawback(
+  p_payment_event_id    text,
+  p_refund_event_id     text,
+  p_refund_amount_cents bigint
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_original public.partner_commissions%ROWTYPE;
+  v_clawback_event_id text;
+  v_offset_amount bigint;
+  v_inserted_id uuid;
+BEGIN
+  IF p_refund_amount_cents IS NULL OR p_refund_amount_cents <= 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'invalid_refund_amount');
+  END IF;
+
+  SELECT * INTO v_original
+  FROM public.partner_commissions
+  WHERE payment_event_id = p_payment_event_id
+    AND commission_amount_cents > 0  -- must be a positive original (skip if this was already a clawback)
+  LIMIT 1;
+
+  IF v_original.id IS NULL THEN
+    RETURN jsonb_build_object('success', true, 'skipped', 'no_matching_commission');
+  END IF;
+
+  v_clawback_event_id := p_payment_event_id || ':refund:' || p_refund_event_id;
+
+  -- Idempotency: skip if this clawback was already recorded
+  IF EXISTS (SELECT 1 FROM public.partner_commissions WHERE payment_event_id = v_clawback_event_id) THEN
+    RETURN jsonb_build_object('success', true, 'skipped', 'duplicate_clawback');
+  END IF;
+
+  -- Prorated offset: refund_amount / original_amount × commission, capped at original
+  v_offset_amount := LEAST(
+    floor(p_refund_amount_cents::numeric / v_original.payment_amount_cents * v_original.commission_amount_cents)::bigint,
+    v_original.commission_amount_cents
+  );
+
+  IF v_original.status = 'pending' THEN
+    -- Not paid out yet — flip the original
+    UPDATE public.partner_commissions
+    SET status = 'clawed_back'
+    WHERE id = v_original.id;
+
+    UPDATE public.partners
+    SET total_earned_cents = total_earned_cents - v_offset_amount,
+        total_clawed_back_cents = total_clawed_back_cents + v_offset_amount,
+        updated_at = now()
+    WHERE id = v_original.partner_id;
+
+    -- Audit: write a synthetic negative ledger row tied to the original via parent_commission_id
+    INSERT INTO public.partner_commissions (
+      partner_id, referral_id, org_id,
+      payment_amount_cents, commission_amount_cents, commission_rate,
+      payment_event_id, parent_commission_id,
+      payment_date, eligible_for_payout_at, status
+    )
+    VALUES (
+      v_original.partner_id, v_original.referral_id, v_original.org_id,
+      -p_refund_amount_cents, -v_offset_amount, v_original.commission_rate,
+      v_clawback_event_id, v_original.id,
+      now(), now(), 'clawed_back'
+    )
+    RETURNING id INTO v_inserted_id;
+
+    RETURN jsonb_build_object('success', true, 'mode', 'pending_flipped', 'clawback_id', v_inserted_id);
+  ELSE
+    -- Already paid — insert a negative pending row that offsets the next payout
+    INSERT INTO public.partner_commissions (
+      partner_id, referral_id, org_id,
+      payment_amount_cents, commission_amount_cents, commission_rate,
+      payment_event_id, parent_commission_id,
+      payment_date, eligible_for_payout_at, status
+    )
+    VALUES (
+      v_original.partner_id, v_original.referral_id, v_original.org_id,
+      -p_refund_amount_cents, -v_offset_amount, v_original.commission_rate,
+      v_clawback_event_id, v_original.id,
+      now(), now(), 'pending'
+    )
+    RETURNING id INTO v_inserted_id;
+
+    UPDATE public.partners
+    SET total_clawed_back_cents = total_clawed_back_cents + v_offset_amount,
+        updated_at = now()
+    WHERE id = v_original.partner_id;
+
+    RETURN jsonb_build_object('success', true, 'mode', 'offset_inserted', 'clawback_id', v_inserted_id);
+  END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.record_partner_clawback(text, text, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_partner_clawback(text, text, bigint) TO service_role;

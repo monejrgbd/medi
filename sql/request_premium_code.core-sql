@@ -4,11 +4,19 @@
 -- If p_email is provided, also queues an approval email (5-15 min delay).
 -- If no p_email, code is only returned — caller delivers it however they want (call, SMS, mail, etc.)
 -- Generic domains (gmail, etc.) are never claimed as a domain.
+--
+-- AFFILIATE EXTENSION (when p_partner_id is set):
+--   1. p_consent_to_email must be true (the partner attests permission to email this clinic).
+--   2. CLAIM-OR-CREATE: if an unused code already exists for the same email/domain/phone,
+--      the partner can "claim" it by setting partner_id on the existing row instead of failing
+--      on the UNIQUE-domain constraint. First-touch attribution between partners.
 CREATE OR REPLACE FUNCTION private.request_premium_code(
-  p_email text DEFAULT NULL,
-  p_domain text DEFAULT NULL,
-  p_phone text DEFAULT NULL,
-  p_send_email boolean DEFAULT true
+  p_email             text DEFAULT NULL,
+  p_domain            text DEFAULT NULL,
+  p_phone             text DEFAULT NULL,
+  p_send_email        boolean DEFAULT true,
+  p_partner_id        uuid DEFAULT NULL,
+  p_consent_to_email  boolean DEFAULT false
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -26,6 +34,8 @@ DECLARE
   v_queue_email boolean;
   v_checks jsonb := '{}'::jsonb;
   v_any_taken boolean := false;
+  v_existing public.approval_codes%ROWTYPE;
+  v_lock_key bigint;
   v_generic_domains text[] := ARRAY[
     'gmail.com','googlemail.com','outlook.com','hotmail.com',
     'live.com','msn.com','aol.com','icloud.com','me.com','mac.com','mail.com',
@@ -33,6 +43,11 @@ DECLARE
     'yahoo.com','yahoo.ca'
   ];
 BEGIN
+  -- Partner path requires explicit consent
+  IF p_partner_id IS NOT NULL AND NOT p_consent_to_email THEN
+    RETURN jsonb_build_object('success', false, 'error', 'consent_required');
+  END IF;
+
   -- Clean phone
   IF p_phone IS NOT NULL THEN
     v_clean_phone := regexp_replace(trim(p_phone), '[^0-9+]', '', 'g');
@@ -64,54 +79,106 @@ BEGIN
   END IF;
 
   -------------------------------------------------------
-  -- CHECK: each identifier against existing codes
+  -- PARTNER PATH: claim-or-create
   -------------------------------------------------------
-  IF v_clean_email IS NOT NULL THEN
-    IF EXISTS (SELECT 1 FROM public.approval_codes WHERE email = v_clean_email) THEN
-      v_checks := v_checks || jsonb_build_object('email', 'taken');
-      v_any_taken := true;
-    ELSE
-      v_checks := v_checks || jsonb_build_object('email', 'available');
-    END IF;
-  END IF;
+  IF p_partner_id IS NOT NULL THEN
+    -- Advisory lock so two partners claiming the same target serialize cleanly
+    v_lock_key := hashtext('approval_claim:' || COALESCE(v_clean_email, '') || '|' || COALESCE(v_domain, '') || '|' || COALESCE(v_clean_phone, ''));
+    PERFORM pg_advisory_xact_lock(v_lock_key);
 
-  IF v_domain IS NOT NULL THEN
-    SELECT email INTO v_existing_email
-    FROM public.approval_codes WHERE domain = v_domain AND domain IS NOT NULL LIMIT 1;
-    IF v_existing_email IS NOT NULL THEN
-      v_checks := v_checks || jsonb_build_object('domain', 'taken', 'domain_approved_email', v_existing_email);
-      v_any_taken := true;
-    ELSE
-      v_checks := v_checks || jsonb_build_object('domain', 'available');
-    END IF;
-  END IF;
+    -- Look for an existing unused row for any identifier
+    SELECT * INTO v_existing
+    FROM public.approval_codes
+    WHERE used_by_org_id IS NULL
+      AND (expires_at IS NULL OR expires_at > now())
+      AND (
+        (v_clean_email IS NOT NULL AND email = v_clean_email)
+        OR (v_domain IS NOT NULL AND domain = v_domain)
+        OR (v_clean_phone IS NOT NULL AND phone = v_clean_phone)
+      )
+    LIMIT 1;
 
-  IF v_clean_phone IS NOT NULL THEN
-    SELECT email INTO v_existing_email
-    FROM public.approval_codes WHERE phone = v_clean_phone LIMIT 1;
-    IF v_existing_email IS NOT NULL THEN
-      v_checks := v_checks || jsonb_build_object('phone', 'taken', 'phone_approved_email', v_existing_email);
-      v_any_taken := true;
-    ELSE
-      v_checks := v_checks || jsonb_build_object('phone', 'available');
-    END IF;
-  END IF;
+    IF v_existing.id IS NOT NULL THEN
+      -- Used row would have been excluded above; here it's unused.
+      IF v_existing.partner_id IS NULL THEN
+        -- Organic applicant unclaimed — claim it
+        UPDATE public.approval_codes
+        SET partner_id = p_partner_id
+        WHERE id = v_existing.id;
 
-  -- If any identifier is taken, return check results (no code generated)
-  IF v_any_taken THEN
-    RETURN jsonb_build_object('success', false, 'error', 'identifier_taken', 'available', false) || v_checks;
+        RETURN jsonb_build_object(
+          'success', true,
+          'code', v_existing.code,
+          'claimed', true,
+          'already_emailed', COALESCE(v_existing.email_sent, false),
+          'email_queued', false
+        );
+      ELSIF v_existing.partner_id = p_partner_id THEN
+        -- Idempotent retry by same partner
+        RETURN jsonb_build_object(
+          'success', true,
+          'code', v_existing.code,
+          'claimed', true,
+          'email_queued', false
+        );
+      ELSE
+        -- Already claimed by a different partner
+        RETURN jsonb_build_object('success', false, 'error', 'code_taken_by_other_partner');
+      END IF;
+    END IF;
+    -- No existing row — fall through to standard generate path with partner_id set
   END IF;
 
   -------------------------------------------------------
-  -- GENERATE: all identifiers are available
+  -- ORGANIC PATH: identifier-availability checks
+  -------------------------------------------------------
+  IF p_partner_id IS NULL THEN
+    IF v_clean_email IS NOT NULL THEN
+      IF EXISTS (SELECT 1 FROM public.approval_codes WHERE email = v_clean_email) THEN
+        v_checks := v_checks || jsonb_build_object('email', 'taken');
+        v_any_taken := true;
+      ELSE
+        v_checks := v_checks || jsonb_build_object('email', 'available');
+      END IF;
+    END IF;
+
+    IF v_domain IS NOT NULL THEN
+      SELECT email INTO v_existing_email
+      FROM public.approval_codes WHERE domain = v_domain AND domain IS NOT NULL LIMIT 1;
+      IF v_existing_email IS NOT NULL THEN
+        v_checks := v_checks || jsonb_build_object('domain', 'taken', 'domain_approved_email', v_existing_email);
+        v_any_taken := true;
+      ELSE
+        v_checks := v_checks || jsonb_build_object('domain', 'available');
+      END IF;
+    END IF;
+
+    IF v_clean_phone IS NOT NULL THEN
+      SELECT email INTO v_existing_email
+      FROM public.approval_codes WHERE phone = v_clean_phone LIMIT 1;
+      IF v_existing_email IS NOT NULL THEN
+        v_checks := v_checks || jsonb_build_object('phone', 'taken', 'phone_approved_email', v_existing_email);
+        v_any_taken := true;
+      ELSE
+        v_checks := v_checks || jsonb_build_object('phone', 'available');
+      END IF;
+    END IF;
+
+    IF v_any_taken THEN
+      RETURN jsonb_build_object('success', false, 'error', 'identifier_taken', 'available', false) || v_checks;
+    END IF;
+  END IF;
+
+  -------------------------------------------------------
+  -- GENERATE: all identifiers are available (or partner is creating fresh)
   -------------------------------------------------------
   v_code := upper(substr(md5(random()::text), 1, 8));
   v_delay := 5 + floor(random() * 11)::int;
 
-  -- Queue email only if: email provided AND p_send_email is true (marketing form)
+  -- Queue email when: email provided AND p_send_email is true
   v_queue_email := v_clean_email IS NOT NULL AND p_send_email;
 
-  INSERT INTO public.approval_codes (code, email, domain, phone, expires_at, send_after, email_sent)
+  INSERT INTO public.approval_codes (code, email, domain, phone, expires_at, send_after, email_sent, partner_id)
   VALUES (
     v_code,
     v_clean_email,
@@ -119,18 +186,19 @@ BEGIN
     v_clean_phone,
     NULL,
     CASE WHEN v_queue_email THEN now() + (v_delay || ' minutes')::interval ELSE NULL END,
-    NOT v_queue_email
+    NOT v_queue_email,
+    p_partner_id
   );
 
-  -- Always return the code. Caller delivers it however they want.
   RETURN jsonb_build_object(
     'success', true,
     'code', v_code,
+    'claimed', false,
     'email_queued', v_queue_email
   );
 
 EXCEPTION WHEN unique_violation THEN
-  -- Race condition on domain or phone unique index
+  -- Race condition on domain or phone unique index (organic path only)
   IF v_domain IS NOT NULL THEN
     SELECT email INTO v_existing_email
     FROM public.approval_codes WHERE domain = v_domain AND domain IS NOT NULL LIMIT 1;
@@ -151,7 +219,7 @@ EXCEPTION WHEN unique_violation THEN
 END;
 $$;
 
--- Public wrapper (anon-callable)
+-- Public wrapper (anon-callable) — preserves the original 4-arg signature
 CREATE OR REPLACE FUNCTION public.request_premium_code(
   p_email text DEFAULT NULL,
   p_domain text DEFAULT NULL,
@@ -165,7 +233,7 @@ SECURITY DEFINER
 SET search_path TO ''
 AS $$
 BEGIN
-  RETURN private.request_premium_code(p_email, p_domain, p_phone, p_send_email);
+  RETURN private.request_premium_code(p_email, p_domain, p_phone, p_send_email, NULL, false);
 END;
 $$;
 
