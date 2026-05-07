@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import ChatMockup from "@/components/marketing/ChatMockup";
 import SummaryMockup from "@/components/marketing/SummaryMockup";
@@ -341,6 +342,23 @@ export default function MockupTour({ className = "" }: { className?: string }) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const autoOpenedRef = useRef(false);
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    if (autoOpenedRef.current) return;
+    if (searchParams.get("demo") !== "quick") return;
+    autoOpenedRef.current = true;
+    setView("walkthrough");
+    setStep(0);
+    setOpen(true);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("demo");
+      window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+    }
+  }, [searchParams]);
 
   const total = tourSteps.length;
   const isLast = step === total - 1;

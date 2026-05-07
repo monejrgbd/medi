@@ -47,7 +47,9 @@ function TourSection() {
     <section className="bg-white py-20 lg:py-28">
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="flex justify-center">
-          <MockupTour />
+          <Suspense fallback={<div className="min-h-[380px] w-full max-w-[920px] rounded-[24px] bg-gradient-to-br from-hilt-blue via-blue-700 to-indigo-900 sm:min-h-[460px]" />}>
+            <MockupTour />
+          </Suspense>
         </div>
       </div>
     </section>

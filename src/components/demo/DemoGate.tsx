@@ -12,6 +12,8 @@ interface DemoGateProps {
 export default function DemoGate({ existingSession }: DemoGateProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const prelogEmail = searchParams.get("prelog");
+  const isPrelog = !!prelogEmail && !existingSession;
   const [teamCode, setTeamCode] = useState(() => {
     const fromUrl = searchParams.get("team");
     if (fromUrl) {
@@ -24,12 +26,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     }
     return "";
   });
-  // Prelog: auto-fire if ?prelog=<email> is present and no existing session
-  const prelogAttempted = useRef(false);
-  const [prelogState, setPrelogState] = useState<"idle" | "loading" | "failed">(() => {
-    const prelogEmail = searchParams.get("prelog");
-    return (prelogEmail && !existingSession) ? "loading" : "idle";
-  });
+  const [prelogState, setPrelogState] = useState<"choose" | "loading" | "failed">("choose");
 
   const [showCodeInput, setShowCodeInput] = useState(false);
   const [step, setStep] = useState<"email" | "otp">("email");
@@ -57,27 +54,22 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  // Prelog auto-fire: skip OTP flow entirely for whitelisted emails
-  useEffect(() => {
-    const prelogEmail = searchParams.get("prelog");
-    if (!prelogEmail || prelogAttempted.current || existingSession) return;
-    prelogAttempted.current = true;
-
-    (async () => {
-      const result = await startPrelogDemo(prelogEmail);
-      if (result.success) {
-        if (typeof window !== "undefined" && typeof window.gtag === "function") {
-          window.gtag("event", "conversion", {
-            send_to: "AW-18032484152/BFv3CO3bpZccELi-x5ZD",
-            transaction_id: `demo-${prelogEmail}`,
-          });
-        }
-        router.refresh();
-      } else {
-        setPrelogState("failed");
-      }
-    })();
-  }, [searchParams, router, existingSession]);
+  async function handlePrelogLive() {
+    if (!prelogEmail) return;
+    setPrelogState("loading");
+    const result = await startPrelogDemo(prelogEmail);
+    if (!result.success) {
+      setPrelogState("failed");
+      return;
+    }
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("event", "conversion", {
+        send_to: "AW-18032484152/BFv3CO3bpZccELi-x5ZD",
+        transaction_id: `demo-${prelogEmail}`,
+      });
+    }
+    router.refresh();
+  }
 
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -164,14 +156,134 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     }
   }
 
+  // Prelog mode picker: show Live/Quick/Book choice before auto-login
+  if (isPrelog && prelogState === "choose") {
+    const chevron = (
+      <svg
+        className="mt-1 h-5 w-5 shrink-0 text-ash transition-transform duration-200 group-hover:translate-x-1 group-hover:text-ink"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth="2"
+        aria-hidden="true"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+      </svg>
+    );
+    const cardBase =
+      "group flex items-start gap-4 rounded-xl border border-gray-200 bg-white p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-hilt-blue/30";
+    return (
+      <div className="min-h-screen bg-snow flex items-start justify-center pt-20 px-4">
+        <div className="w-full max-w-lg">
+          <a
+            href="/"
+            className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors mb-6"
+          >
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+            Back
+          </a>
+          <div className="text-center mb-8">
+            <p className="text-2xl font-bold text-hilt-blue mb-2">Hilt Health</p>
+            <h1 className="text-xl font-semibold text-ink">How would you like to try it?</h1>
+          </div>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handlePrelogLive}
+              className={`${cardBase} hover:border-hilt-blue/50 hover:bg-blue-50/40`}
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-hilt-blue/10 text-hilt-blue">
+                <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-base font-semibold text-ink">Live demo</p>
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-ash">~3 min</span>
+                </div>
+                <p className="mt-1 text-sm leading-snug text-slate">Be the patient yourself. Type a symptom, see what the AI asks back.</p>
+              </div>
+              {chevron}
+            </button>
+            <a
+              href="/?demo=quick"
+              className={`${cardBase} hover:border-green-500/40 hover:bg-green-50/50`}
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-500/10 text-green-600">
+                <svg className="h-7 w-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-base font-semibold text-ink">Quick demo</p>
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-ash">~60 sec</span>
+                </div>
+                <p className="mt-1 text-sm leading-snug text-slate">Click through every screen, one mockup at a time.</p>
+              </div>
+              {chevron}
+            </a>
+            <a
+              href="https://cal.com/102937474/hilt-health-meeting"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`${cardBase} hover:border-violet-500/40 hover:bg-violet-50/50`}
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600">
+                <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+                </svg>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="text-base font-semibold text-ink">Book a meeting</p>
+                  <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium tabular-nums text-ash">~15 min</span>
+                </div>
+                <p className="mt-1 text-sm leading-snug text-slate">Let us be with you on a call. We will walk you through it ourselves.</p>
+              </div>
+              {chevron}
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Prelog loading state: show spinner while auto-login is in flight
-  if (prelogState === "loading") {
+  if (isPrelog && prelogState === "loading") {
     return (
       <div className="min-h-screen bg-snow flex items-center justify-center">
         <div className="text-center">
           <p className="text-2xl font-bold text-hilt-blue mb-2">Hilt Health</p>
           <div className="w-6 h-6 border-2 border-hilt-blue border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-slate text-sm">Starting your demo...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Prelog failed: show error with option to fall back to email
+  if (isPrelog && prelogState === "failed") {
+    return (
+      <div className="min-h-screen bg-snow flex items-start justify-center pt-20 px-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <p className="text-2xl font-bold text-hilt-blue mb-2">Hilt Health</p>
+            <h1 className="text-xl font-semibold text-ink">Demo link unavailable</h1>
+            <p className="text-slate mt-1 text-sm">
+              That link is not active or has been used too many times today.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/demo")}
+            className="w-full bg-hilt-blue text-white font-medium py-2.5 rounded-lg hover:bg-hilt-blue/90 transition-colors"
+          >
+            Use email instead
+          </button>
         </div>
       </div>
     );
