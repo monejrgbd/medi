@@ -187,7 +187,7 @@ function Hero() {
                   className="absolute bottom-6 left-[21px] top-6 w-[2px] rounded-full"
                   style={{ background: "linear-gradient(180deg, #2563EB, #059669, #2563EB, #7C3AED)" }}
                 />
-                {FLOW.map(({ n, title, line, Icon, tone }) => (
+                {FLOW.map(({ n, title, line, Icon, tone, tag }) => (
                   <li key={n} className="relative flex items-start gap-4">
                     <div
                       className={`relative z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border ${NODE_TILE[tone]}`}
@@ -200,7 +200,14 @@ function Hero() {
                       </span>
                     </div>
                     <div className="pt-0.5">
-                      <h3 className="text-sm font-semibold text-ink">{title}</h3>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-sm font-semibold text-ink">{title}</h3>
+                        {tag && (
+                          <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-violet-600">
+                            {tag}
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-0.5 text-xs leading-relaxed text-slate">{line}</p>
                     </div>
                   </li>
@@ -290,13 +297,13 @@ const IconSparkle = ({ className }: IconProps) => (
 
 type Tone = "blue" | "green" | "solid" | "ai";
 
-const FLOW: { n: string; title: string; line: string; Icon: React.ComponentType<IconProps>; tone: Tone }[] = [
+const FLOW: { n: string; title: string; line: string; Icon: React.ComponentType<IconProps>; tone: Tone; tag?: string }[] = [
   { n: "01", title: "Scan and start", line: "A QR on their phone, or your clinic tablet. No app.", Icon: IconScan, tone: "blue" },
   { n: "02", title: "Fills standard intake form", line: "Medications, allergies, and your fields. Fully customizable.", Icon: IconForm, tone: "blue" },
   { n: "03", title: "AI asks for the details", line: "Voice or text in 130+ languages. The AI remembers past visits and you can give it custom instructions.", Icon: IconChat, tone: "blue" },
   { n: "04", title: "Patient approves", line: "They confirm the AI summary in their language.", Icon: IconApprove, tone: "green" },
   { n: "05", title: "Doctor is briefed", line: "The approved summary and full transcript, in the doctor's language.", Icon: IconDoctor, tone: "solid" },
-  { n: "06", title: "And it keeps going", line: "Specialized agents handle paperwork, referrals, follow ups, reviews, and bringing patients back.", Icon: IconSparkle, tone: "ai" },
+  { n: "06", title: "And it keeps going", line: "Specialized agents handle paperwork, referrals, follow ups, reviews, and bringing patients back.", Icon: IconSparkle, tone: "ai", tag: "Optional" },
 ];
 
 const NODE_TILE: Record<Tone, string> = {
@@ -727,10 +734,10 @@ export default function PatientIntakeFeaturePage() {
       <DemoBand />
       <ObjectionBand />
       <Proof />
-      <FAQSection />
       <TrustControl />
       <TieToSystem />
       <Setup />
+      <FAQSection />
       <FinalCTA />
       <Footer />
       <div className="h-20 lg:hidden" aria-hidden="true" />

@@ -38,6 +38,16 @@ export default function ScribeRecorder({
   const segTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mimeRef = useRef("audio/webm");
+  const finishedRef = useRef(false);
+
+  // Guarantee onStopped fires exactly once. Without this, clicking Stop during
+  // the async segment upload between recorders can fire it twice (recorder
+  // onstop + handleStop), double-calling finalize_scribe_recording.
+  const finish = useCallback(() => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+    onStopped(segIndexRef.current, Date.now() - startedAtRef.current);
+  }, [onStopped]);
 
   const uploadSegment = useCallback(
     async (index: number, blob: Blob) => {
@@ -79,7 +89,7 @@ export default function ScribeRecorder({
       if (recordingRef.current) {
         startSegment();
       } else {
-        onStopped(segIndexRef.current, Date.now() - startedAtRef.current);
+        finish();
       }
     };
     recorderRef.current = rec;
@@ -87,7 +97,7 @@ export default function ScribeRecorder({
     segTimerRef.current = setTimeout(() => {
       if (rec.state === "recording") rec.stop();
     }, SEGMENT_MS);
-  }, [onStopped, uploadSegment]);
+  }, [finish, uploadSegment]);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,9 +148,9 @@ export default function ScribeRecorder({
     if (tickRef.current) clearInterval(tickRef.current);
     const rec = recorderRef.current;
     if (rec && rec.state === "recording") {
-      rec.stop(); // onstop uploads the final segment then calls onStopped
+      rec.stop(); // onstop uploads the final segment then calls finish()
     } else {
-      onStopped(segIndexRef.current, Date.now() - startedAtRef.current);
+      finish();
     }
   }
 

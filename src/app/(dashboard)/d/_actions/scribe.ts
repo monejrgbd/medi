@@ -73,9 +73,12 @@ export async function uploadScribeSegment(
   const name = String(segmentIndex).padStart(4, "0") + ".webm";
   const path = `${rec.audio_prefix}/${name}`;
 
+  // No upsert: the scribe-audio bucket (cloned from attachments) has no UPDATE
+  // RLS policy, so an upsert resolving to UPDATE would be blocked. Segment
+  // indices are unique; the edge function transcribes whatever objects landed.
   const { error: upErr } = await supabase.storage
     .from("scribe-audio")
-    .upload(path, file, { contentType: "audio/webm", upsert: true });
+    .upload(path, file, { contentType: "audio/webm" });
 
   if (upErr) return { success: false, error: "Upload failed" };
   return { success: true };
