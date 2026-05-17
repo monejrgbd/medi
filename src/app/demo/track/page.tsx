@@ -59,12 +59,13 @@ const TALKING_POINTS: Record<number, StepTalkingPoints> = {
     keyPoints: [
       "Patient confirmed the summary, it is not a guess",
       "Diagnostic suggestion is hidden from patients, liability protection",
+      "Scribe records the visit and turns the conversation into paperwork to review and sign, even without AI intake",
       "Care instructions go to the patient by text",
       "Follow ups carry forward, AI references them next visit",
       "Focus Mode keeps your doctor moving through the queue",
     ],
     lines: [
-      "So the patient already confirmed everything in that summary. It is not the AI guessing, the patient signed off on it. That diagnostic suggestion is hidden from them entirely, that is a liability protection. When your doctor completes, care instructions go straight to the patient by text. If they set a follow up, the AI remembers. Next time this patient comes in, the screening picks up where they left off. And in a busy day, Focus Mode keeps your doctor moving. Next patient loads automatically after each one.",
+      "So the patient already confirmed everything in that summary. It is not the AI guessing, the patient signed off on it. That diagnostic suggestion is hidden from them entirely, that is a liability protection. And if you would rather not type the note, click Scribe when the patient walks in. It records your conversation, and that plus the summary and transcript drafts the paperwork for you to review and sign. It works even for a walk in with no AI screening. When your doctor completes, care instructions go straight to the patient by text. If they set a follow up, the AI remembers. Next time this patient comes in, the screening picks up where they left off. And in a busy day, Focus Mode keeps your doctor moving. Next patient loads automatically after each one.",
     ],
   },
   6: {

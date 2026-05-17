@@ -20,41 +20,40 @@ const DashboardMockup = dynamic(() => import("@/components/marketing/DashboardMo
 /* ── Inline tour cards (smaller, hero-style) ──────────── */
 
 function ReviewsCard() {
-  const starDistribution = [
-    { stars: 5, pct: 78 },
-    { stars: 4, pct: 14 },
-    { stars: 3, pct: 5 },
-    { stars: 2, pct: 2 },
-    { stars: 1, pct: 1 },
-  ];
   return (
-    <div className="w-full max-w-md rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
+    <div className="w-full h-full rounded-2xl border border-amber-200 bg-amber-50/50 p-5">
       <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-amber-100">
         <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="#D97706" strokeWidth="1.5">
           <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
         </svg>
       </div>
-      <div className="rounded-lg bg-white/80 p-3 ring-1 ring-amber-200/60">
-        <p className="text-[10px] font-semibold text-amber-800 mb-2">This month</p>
-        <div className="flex items-center gap-3">
-          {starDistribution.map(row => (
-            <div key={row.stars} className="flex items-center gap-1 text-[10px]">
-              <span className="font-medium text-ash">{row.stars}</span>
-              <svg className="h-2.5 w-2.5 shrink-0 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
-              </svg>
-              <span className="tabular-nums text-ash">{row.pct}%</span>
-            </div>
-          ))}
+      {/* The flow: rate privately first, then routed by rating */}
+      <div className="mb-2 rounded-lg bg-white/80 p-3 ring-1 ring-amber-200/60">
+        <div className="flex items-center gap-1.5">
+          <svg className="h-3 w-3 shrink-0 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+          </svg>
+          <p className="text-[10px] font-semibold text-amber-900">Every patient rates you privately first</p>
         </div>
-        <p className="mt-2 text-[10px] text-amber-700 font-medium">48 reviews collected, 37 sent to Google</p>
+        <div className="mt-2 space-y-1">
+          <div className="flex items-center gap-1.5 rounded-md bg-green-50 px-2 py-1 ring-1 ring-green-200/70">
+            <span className="shrink-0 rounded bg-green-100 px-1 py-0.5 text-[9px] font-bold tabular-nums text-green-700">4 to 5&#9733;</span>
+            <svg className="h-2.5 w-2.5 shrink-0 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+            <span className="text-[10px] font-medium text-green-800">Asked to review on Google or any platform you set</span>
+          </div>
+          <div className="flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-1 ring-1 ring-amber-200/70">
+            <span className="shrink-0 rounded bg-amber-100 px-1 py-0.5 text-[9px] font-bold tabular-nums text-amber-700">1 to 3&#9733;</span>
+            <svg className="h-2.5 w-2.5 shrink-0 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" /></svg>
+            <span className="text-[10px] font-medium text-amber-800">Stays on your dashboard</span>
+          </div>
+        </div>
       </div>
       <div className="mt-2 rounded-lg bg-white/80 p-3 ring-1 ring-amber-200/60">
         <div className="flex items-center gap-1.5 mb-1.5">
           <svg className="h-3 w-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126Z" />
           </svg>
-          <p className="text-[10px] font-semibold text-amber-800">Caught privately</p>
+          <p className="text-[10px] font-semibold text-amber-800">Caught before it goes public</p>
         </div>
         <div className="flex items-start gap-2">
           <div className="flex gap-0.5 shrink-0 mt-0.5">
@@ -71,12 +70,6 @@ function ReviewsCard() {
           </div>
           <p className="text-[10px] leading-relaxed text-slate italic">&ldquo;Waited 40 minutes and no one told me about the delay.&rdquo;</p>
         </div>
-        <div className="mt-1.5 flex items-center gap-1 text-[10px] text-green-700 font-medium">
-          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-          </svg>
-          Sent to your dashboard, not Google
-        </div>
       </div>
     </div>
   );
@@ -84,7 +77,7 @@ function ReviewsCard() {
 
 function ContinuityCard() {
   return (
-    <div className="w-full max-w-md rounded-2xl border border-green-200 bg-gradient-to-b from-green-50/80 to-white p-5 shadow-xl ring-1 ring-green-900/5">
+    <div className="w-full h-full rounded-2xl border border-green-200 bg-gradient-to-b from-green-50/80 to-white p-5 shadow-xl ring-1 ring-green-900/5">
       <div className="mb-3 flex items-center gap-2">
         <div className="h-2.5 w-2.5 rounded-full bg-green-500" />
         <span className="text-xs font-semibold text-green-700">Continuity of care, built in</span>
@@ -118,7 +111,7 @@ function ContinuityCard() {
 
 function ReferCard() {
   return (
-    <div className="w-full max-w-md rounded-2xl border border-purple-200 bg-gradient-to-b from-purple-50/80 to-white p-4 shadow-xl ring-1 ring-purple-900/5">
+    <div className="w-full h-full rounded-2xl border border-purple-200 bg-gradient-to-b from-purple-50/80 to-white p-4 shadow-xl ring-1 ring-purple-900/5">
       <div className="mb-2 flex items-center gap-1.5">
         <div className="h-2 w-2 rounded-full bg-purple-500" />
         <span className="text-xs font-semibold text-purple-700">Send referral</span>
@@ -198,8 +191,88 @@ function MarketingCard() {
           Hi &#123;first_name&#125;, &#123;clinic_name&#125; now offers orthopedic services. Call us to book.
         </div>
         <div className="rounded bg-blue-600 py-1.5 text-center text-[11px] font-semibold text-white">Send to 31 Patients</div>
+        <p className="text-center text-[9px] text-ash">Only patients who opted in to marketing at signup</p>
       </div>
       <p className="mt-2 text-[10px] text-ash">Filter first, then AI scans visit summaries for the rest</p>
+    </div>
+  );
+}
+
+function QueueCard() {
+  // Mirrors the doctor dashboard "Pending" queue (PatientQueueCard), simplified.
+  const queue = [
+    { n: 7, name: "Sarah Martinez", sex: "Female", wait: 2, nurseReviewed: true, returning: true, high: false, focus: true },
+    { n: 8, name: "James Lee", sex: "Male", wait: 5, nurseReviewed: false, returning: true, high: false, focus: false },
+    { n: 9, name: "Aaliyah Khan", sex: "Female", wait: 8, nurseReviewed: false, returning: false, high: true, focus: false },
+  ];
+  return (
+    <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5">
+      {/* Header bar — same surface as the doctor dashboard */}
+      <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <h4 className="text-sm font-semibold text-ink">Queue</h4>
+          <span className="rounded-full bg-hilt-blue/10 px-2 py-0.5 text-[11px] font-medium tabular-nums text-hilt-blue">Pending (3)</span>
+        </div>
+        <span className="flex items-center gap-1.5 text-[11px] font-medium text-ash">
+          <span className="h-1.5 w-1.5 rounded-full bg-green-500 motion-safe:animate-pulse" />
+          Live
+        </span>
+      </div>
+
+      {/* List on a soft backdrop so the white cards have depth */}
+      <div className="space-y-2.5 bg-gray-50/60 p-4">
+        {queue.map((v) => (
+          <div
+            key={v.n}
+            className={`rounded-xl p-3.5 shadow-sm ${
+              v.high
+                ? "border-l-4 border-l-red-500 border-t border-r border-b border-gray-200"
+                : "border border-gray-200"
+            } ${v.focus ? "bg-blue-50/50" : "bg-white"}`}
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="inline-flex items-center justify-center rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-gray-600">
+                    #{v.n}
+                  </span>
+                  <h3 className="text-sm font-semibold text-ink">{v.name}</h3>
+                  {v.high && (
+                    <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700">High</span>
+                  )}
+                  {v.nurseReviewed && (
+                    <span className="inline-flex items-center rounded-full bg-teal-50 px-2 py-0.5 text-[10px] font-medium text-teal-600">Nurse Reviewed</span>
+                  )}
+                  {v.returning && (
+                    <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-600">Returning</span>
+                  )}
+                </div>
+                <div className="mt-1.5 flex items-center gap-3 text-[11px] text-slate">
+                  <span>{v.sex}</span>
+                  <span>Waiting {v.wait} min</span>
+                </div>
+              </div>
+              <div
+                className={`shrink-0 rounded-lg bg-hilt-blue px-4 py-1.5 text-xs font-medium text-white ${
+                  v.focus ? "ring-2 ring-blue-300 ring-offset-1 motion-safe:animate-pulse" : ""
+                }`}
+              >
+                Claim
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AfterVisitGrid() {
+  return (
+    <div className="grid w-full max-w-5xl grid-cols-1 gap-4 lg:grid-cols-3">
+      <ReviewsCard />
+      <ContinuityCard />
+      <ReferCard />
     </div>
   );
 }
@@ -211,6 +284,7 @@ type TourStep = {
   title: string;
   description: string;
   render: () => React.ReactNode;
+  callout?: { label: string; body: string };
 };
 
 const tourSteps: TourStep[] = [
@@ -227,33 +301,31 @@ const tourSteps: TourStep[] = [
     render: () => <SummaryMockup />,
   },
   {
+    eyebrow: "Before the doctor sees it",
+    title: "The visit enters the queue",
+    description: "Once the patient approves, the visit lands in the queue. A doctor claims it when ready, and the patient sees their place in line update live.",
+    render: () => <QueueCard />,
+  },
+  {
     eyebrow: "During the visit",
     title: "Doctor walks in already briefed",
     description: "Full summary, suggested differentials, history. A 30 second read replaces 5 minutes of intake questions.",
-    render: () => <DoctorMockup />,
+    callout: {
+      label: "Scribe",
+      body: "And if you would rather not type the note, click Scribe when the patient walks in. It records your conversation, and that plus the summary and transcript drafts the paperwork for you to review and sign. It works even for a walk in with no AI screening.",
+    },
+    render: () => <DoctorMockup highlightScribe />,
   },
   {
     eyebrow: "After the visit",
-    title: "Reviews captured the right way",
-    description: "Happy patients sent to Google. Low ratings come to you privately first, before they show up online.",
-    render: () => <ReviewsCard />,
+    title: "It keeps working after they leave",
+    description: "Reviews sent the right way, an AI that remembers next time, and full referrals in seconds. All automatic.",
+    render: () => <AfterVisitGrid />,
   },
   {
-    eyebrow: "After the visit",
-    title: "Continuity of care, built in",
-    description: "AI remembers what every patient said last visit. Doctors tag follow ups, and the AI continues with full memory next time.",
-    render: () => <ContinuityCard />,
-  },
-  {
-    eyebrow: "After the visit",
-    title: "Send a referral in seconds",
-    description: "Pick a specialty, attach the visits, send the full package. Receiving clinic gets transcript, summary, diagnosis, and notes.",
-    render: () => <ReferCard />,
-  },
-  {
-    eyebrow: "After the visit",
+    eyebrow: "Grow the practice",
     title: "Bring the right patients back",
-    description: "Filter by demographics, then let AI scan visit summaries. Review matches, write your message, send.",
+    description: "Filter by demographics, let AI scan visit summaries and transcripts, then write your message. It sends by SMS, only to patients who opted in to marketing at signup.",
     render: () => <MarketingCard />,
   },
   {
@@ -688,6 +760,17 @@ export default function MockupTour({ className = "" }: { className?: string }) {
                       <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-hilt-blue">{current.eyebrow}</p>
                       <h3 id="mockup-tour-step-title" className="mb-3 text-xl font-bold text-ink sm:text-2xl md:text-3xl">{current.title}</h3>
                       <p className="mb-6 max-w-2xl text-sm leading-relaxed text-slate sm:mb-8 sm:text-base">{current.description}</p>
+                      {current.callout && (
+                        <div className="mb-6 max-w-2xl rounded-xl border border-violet-200/80 bg-gradient-to-r from-violet-50/80 to-white p-4 ring-1 ring-violet-900/5 sm:mb-8">
+                          <div className="mb-1.5 flex items-center gap-1.5">
+                            <svg className="h-3.5 w-3.5 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                            </svg>
+                            <span className="text-xs font-bold uppercase tracking-wider text-violet-600">{current.callout.label}</span>
+                          </div>
+                          <p className="text-sm leading-relaxed text-slate">{current.callout.body}</p>
+                        </div>
+                      )}
                       <div className="flex justify-center">{current.render()}</div>
                     </div>
                   </div>

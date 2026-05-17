@@ -252,7 +252,7 @@ function HistoryTab() {
   );
 }
 
-export default function DoctorMockup() {
+export default function DoctorMockup({ highlightScribe = false }: { highlightScribe?: boolean }) {
   const [tab, setTab] = useState<Tab>("summary");
   const [hasInteracted, setHasInteracted] = useState(false);
 
@@ -362,7 +362,7 @@ export default function DoctorMockup() {
       </div>
 
       {/* Action bar */}
-      <div className="border-t border-gray-100 p-3 flex gap-1.5">
+      <div className="border-t border-gray-100 p-3 flex flex-wrap gap-1.5">
         <div className="flex-1 rounded-lg bg-green-600 py-1.5 text-center text-[10px] font-semibold text-white">
           Complete Visit
         </div>
@@ -371,6 +371,16 @@ export default function DoctorMockup() {
         </div>
         <div className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-center text-[10px] font-medium text-slate">
           Refer
+        </div>
+        <div
+          className={`flex items-center gap-1 rounded-lg border border-violet-300 bg-violet-50 px-2.5 py-1.5 text-center text-[10px] font-semibold text-violet-700 ${
+            highlightScribe ? "ring-2 ring-violet-300 motion-safe:animate-pulse" : ""
+          }`}
+        >
+          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+          </svg>
+          Scribe
         </div>
         <div className="rounded-lg border border-hilt-blue/40 bg-blue-50/60 px-2.5 py-1.5 text-center text-[10px] font-semibold text-hilt-blue">
           Create Document

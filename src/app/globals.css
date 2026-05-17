@@ -82,36 +82,28 @@
   animation-delay: var(--delay, 0s);
 }
 
-/* Pipeline progress: green bar grows step by step through 8 connectors
-   (Patient + 8 agents = 9 stops). Uses transform scaleX from a fixed
-   88.89% base width so it reliably reaches the last agent. The fully-filled
-   state holds for most of the cycle so the visitor always sees completion. */
-@keyframes pipeline-progress {
-  0%, 3% { transform: scaleX(0); opacity: 1; }
-  6%, 9% { transform: scaleX(0.125); }     /* 1/8 — past Intake */
-  12%, 15% { transform: scaleX(0.25); }    /* 2/8 — past Summary */
-  18%, 21% { transform: scaleX(0.375); }   /* 3/8 — past Diagnostic */
-  24%, 27% { transform: scaleX(0.5); }     /* 4/8 — past Paperwork */
-  30%, 33% { transform: scaleX(0.625); }   /* 5/8 — past Referrals */
-  36%, 39% { transform: scaleX(0.75); }    /* 6/8 — past Follow up */
-  42%, 45% { transform: scaleX(0.875); }   /* 7/8 — past Reviews */
-  50%, 95% { transform: scaleX(1); }       /* 8/8 — past Reactivation, hold long */
-  100% { transform: scaleX(0); opacity: 0; }
+/* Snake trace: a green highlight that glides start to end through every
+   stop and connector, then loops. Each element gets an animation-delay
+   from its position so the green sweeps the whole path (about 11s of slow
+   travel inside the 14s loop) and fades in/out gradually, so it reads as
+   one slow moving line rather than an instant blink. */
+@keyframes snake-trace {
+  0% { opacity: 0; }
+  3% { opacity: 0.12; }
+  8% { opacity: 1; }
+  15% { opacity: 1; }
+  21% { opacity: 0.12; }
+  25% { opacity: 0; }
+  100% { opacity: 0; }
 }
-
-.pipeline-progress {
-  position: absolute;
-  top: 26px;
-  left: 5.55%;
-  width: 88.89%;
-  height: 4px;
-  border-radius: 9999px;
-  background: rgb(34, 197, 94); /* green-500 */
-  box-shadow: 0 0 10px rgba(34, 197, 94, 0.45);
-  transform-origin: left center;
-  transform: scaleX(0);
-  animation: pipeline-progress 12s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-  pointer-events: none;
+.snake-trace {
+  opacity: 0;
+  animation: snake-trace 14s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .snake-trace {
+    animation: none;
+  }
 }
 
 /* Pain card description overlay: always-visible thin amber scrollbar so

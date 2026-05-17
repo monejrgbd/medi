@@ -504,7 +504,7 @@ function TieToSystem() {
     <section className="bg-white py-20">
       <div className="mx-auto max-w-2xl px-6 text-center">
         <FadeIn>
-          <h2 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">Hilt Health has eight AI agents. Intake uses two.</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">Hilt Health has nine AI agents. Intake uses two.</h2>
           <p className="mt-4 text-lg text-slate">
             The rest handle paperwork, referrals, bringing back patients, and more. Your team approves every step.
           </p>

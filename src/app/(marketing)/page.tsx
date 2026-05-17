@@ -30,7 +30,7 @@ function HeroSection() {
 
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
           <p className="text-lg leading-snug text-slate sm:text-xl lg:flex-1 lg:text-lg xl:text-xl">
-            AI agents assist every visit, handling intake in 130+ languages, briefing doctors, drafting paperwork, sending referrals, scheduling follow ups, collecting reviews, and bringing patients back, with your team approving every step.
+            AI agents assist every visit, handling intake in 130+ languages, briefing doctors, recording the visit when you would rather not type, drafting paperwork, sending referrals, scheduling follow ups, collecting reviews, and bringing patients back, with your team approving every step.
           </p>
 
           <HeroEmailCTA />
@@ -402,6 +402,16 @@ const SOLUTION_AGENTS = [
     ),
   },
   {
+    name: "AI Scribe",
+    phase: "DURING",
+    desc: "Records the visit when you would rather not type. Drafts the paperwork to review and sign. Works even for a walk in with no AI screening.",
+    icon: (
+      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5a6 6 0 0 1-6-6v-1.5m6 7.5v3.75m-3.75 0h7.5M12 15.75a3 3 0 0 1-3-3V4.5a3 3 0 1 1 6 0v8.25a3 3 0 0 1-3 3Z" />
+      </svg>
+    ),
+  },
+  {
     name: "AI Summary",
     phase: "DURING",
     desc: "Doctor reads the visit summary in their language. Patient records auto update with every visit.",
@@ -473,114 +483,242 @@ const SOLUTION_AGENTS = [
   },
 ];
 
-function AgentNode({
-  name,
-  desc,
-  icon,
-  phase,
-  isLast,
-}: {
+const PATIENT_ICON = (
+  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+  </svg>
+);
+
+type SnakeStop = {
   name: string;
   desc: string;
   icon: React.ReactNode;
-  phase: string;
-  isLast: boolean;
-}) {
+  phase?: string;
+  amber: boolean;
+};
+
+/* The green trace glides start to end over TRACE_SWEEP seconds inside the
+   14s loop (see globals.css), fading so it reads as one slow moving line. */
+const TRACE_SWEEP = 11;
+
+function traceDelay(pos: number, lastPos: number) {
+  return `${((pos / lastPos) * TRACE_SWEEP).toFixed(3)}s`;
+}
+
+/* One stop: icon + phase + name + description, on every breakpoint. flex-1 so
+   a row shares width evenly; items-stretch keeps cells equal height so the
+   connectors line up. The absolute bordered overlay is the travelling trace. */
+function SnakeCell({ stop, n, delay }: { stop: SnakeStop; n: number; delay: string }) {
   return (
-    <div className="relative flex flex-col items-center text-center">
-      {/* Desktop horizontal arrow to next agent */}
-      {!isLast && (
-        <div className="absolute left-[calc(50%+28px)] top-[26px] hidden h-1 w-[calc(100%-56px)] rounded-full bg-hilt-blue/20 lg:block">
-          <svg
-            className="absolute -right-1 -top-[4px] text-hilt-blue/60"
-            width="12"
-            height="12"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
+    <div className="relative flex min-w-0 flex-1 flex-col rounded-2xl border border-gray-200 bg-white p-4 transition hover:border-hilt-blue/40 hover:shadow-md">
+      <span
+        className="snake-trace pointer-events-none absolute inset-0 rounded-2xl border-2 border-green-500"
+        style={{ animationDelay: delay }}
+        aria-hidden="true"
+      />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold tabular-nums text-white">
+            {n}
+          </span>
+          <div
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white shadow-md ${
+              stop.amber
+                ? "bg-gradient-to-br from-amber-400 to-amber-500 shadow-amber-400/30"
+                : "bg-gradient-to-br from-hilt-blue to-blue-600 shadow-hilt-blue/30"
+            }`}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-          </svg>
+            {stop.icon}
+          </div>
         </div>
-      )}
-
-      {/* Mobile vertical arrow to next agent */}
-      {!isLast && (
-        <div className="absolute left-1/2 top-[calc(100%+0.5rem)] h-6 w-px -translate-x-1/2 bg-hilt-blue/30 md:hidden">
-          <svg
-            className="absolute -bottom-1.5 -left-[5px] text-hilt-blue/60"
-            width="12"
-            height="12"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-          </svg>
-        </div>
-      )}
-
-      <span className={`absolute -top-2 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ring-1 ${PHASE_TONES[phase] ?? "bg-white text-ash ring-gray-200"}`}>
-        {phase}
-      </span>
-
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-hilt-blue to-blue-600 text-white shadow-lg shadow-hilt-blue/30 ring-4 ring-white">
-        {icon}
+        <span
+          className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
+            stop.amber
+              ? "bg-amber-500 text-white"
+              : `ring-1 ${PHASE_TONES[stop.phase ?? ""] ?? "bg-white text-ash ring-gray-200"}`
+          }`}
+        >
+          {stop.amber ? "Patient" : stop.phase}
+        </span>
       </div>
-
-      <p className="mt-3 text-sm font-bold text-ink">{name}</p>
-      <p className="mt-1.5 px-1 text-xs leading-snug text-slate">{desc}</p>
+      <p className="mt-3 text-sm font-bold text-ink">{stop.name}</p>
+      <p className="mt-1 text-xs leading-relaxed text-slate">{stop.desc}</p>
     </div>
   );
 }
 
-function PatientStart() {
+/* Horizontal connector between cells in a row. Base line stays blue; the
+   green sibling line is the trace and lights on its delay. */
+function SnakeHConn({ dir, delay }: { dir: "right" | "left"; delay: string }) {
+  const path =
+    dir === "right" ? "m8.25 4.5 7.5 7.5-7.5 7.5" : "m15.75 19.5-7.5-7.5 7.5-7.5";
+  const end = dir === "right" ? "-right-1" : "-left-1";
   return (
-    <div className="relative flex flex-col items-center text-center">
-      <span className="absolute -top-2 left-1/2 z-10 -translate-x-1/2 rounded-full bg-amber-500 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white shadow">
-        Patient
-      </span>
+    <div
+      className={`relative flex w-8 shrink-0 items-center self-center ${
+        dir === "right" ? "justify-end" : "justify-start"
+      }`}
+      aria-hidden="true"
+    >
+      <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-ink/80" />
+      <div
+        className="snake-trace absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-green-500"
+        style={{ animationDelay: delay }}
+      />
+      <svg
+        className={`relative z-10 text-ink/80 ${dir === "right" ? "-mr-1" : "-ml-1"}`}
+        width="18"
+        height="18"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d={path} />
+      </svg>
+      <svg
+        className={`snake-trace absolute z-10 top-1/2 -translate-y-1/2 ${end} text-green-600`}
+        style={{ animationDelay: delay }}
+        width="18"
+        height="18"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth="2.5"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" d={path} />
+      </svg>
+    </div>
+  );
+}
 
-      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-500 text-white shadow-lg shadow-amber-400/30 ring-4 ring-white">
-        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-        </svg>
+/* Straight vertical connector turning the snake to the next row. Rebuilds the
+   row's exact flex skeleton (cols x flex-1 separated by w-8 spacers) and drops
+   the line in the first or last cell, so it always lands dead center under the
+   turning column for any column count. */
+function SnakeVConn({
+  side,
+  cols,
+  delay,
+}: {
+  side: "right" | "left";
+  cols: number;
+  delay: string;
+}) {
+  const segs: React.ReactNode[] = [];
+  for (let c = 0; c < cols; c++) {
+    const isBar = side === "left" ? c === 0 : c === cols - 1;
+    segs.push(
+      <div key={`c${c}`} className="flex flex-1 justify-center">
+        {isBar && (
+          <div className="relative h-9 w-1 rounded-full bg-ink/80">
+            <div
+              className="snake-trace absolute inset-0 rounded-full bg-green-500"
+              style={{ animationDelay: delay }}
+            />
+            <svg
+              className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-ink/80"
+              width="18"
+              height="18"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+            <svg
+              className="snake-trace absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-green-600"
+              style={{ animationDelay: delay }}
+              width="18"
+              height="18"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2.5"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </div>
+        )}
       </div>
+    );
+    if (c < cols - 1) segs.push(<div key={`s${c}`} className="w-8 shrink-0" />);
+  }
+  return (
+    <div className="flex" aria-hidden="true">
+      {segs}
+    </div>
+  );
+}
 
-      <p className="mt-3 text-sm font-bold text-ink">Patient enters</p>
-      <p className="mt-1.5 px-1 text-xs leading-snug text-slate">QR scan, tablet, or shared link</p>
+/* The pipeline as a connected snake of full cards. Even rows flow left to
+   right, odd rows reverse, so every row-to-row turn is a straight vertical
+   drop in the same column. A green trace travels start to end through every
+   stop and connector, looping. Responsive via two instances: 2-up below lg,
+   5-up at lg. Patient is the amber start; the nine agents follow. */
+function SnakePipeline({ cols, className }: { cols: number; className?: string }) {
+  const base: SnakeStop[] = [
+    {
+      name: "Patient enters",
+      desc: "QR scan, tablet, or shared link",
+      icon: PATIENT_ICON,
+      amber: true,
+    },
+    ...SOLUTION_AGENTS.map((a) => ({
+      name: a.name,
+      desc: a.desc,
+      icon: a.icon,
+      phase: a.phase,
+      amber: false,
+    })),
+  ];
+  const stops = base.map((stop, gi) => ({ stop, gi }));
+  const lastPos = (stops.length - 1) * 2;
+  const rows: { stop: SnakeStop; gi: number }[][] = [];
+  for (let i = 0; i < stops.length; i += cols) rows.push(stops.slice(i, i + cols));
 
-      {/* Mobile vertical arrow into first agent */}
-      <div className="absolute left-1/2 top-[calc(100%+0.5rem)] h-6 w-px -translate-x-1/2 bg-amber-400/40 md:hidden">
-        <svg
-          className="absolute -bottom-1.5 -left-[5px] text-amber-500/70"
-          width="12"
-          height="12"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-        </svg>
-      </div>
-
-      {/* Desktop horizontal arrow into first agent */}
-      <div className="absolute left-[calc(50%+28px)] top-[26px] hidden h-1 w-[calc(100%-56px)] rounded-full bg-amber-400/30 lg:block">
-        <svg
-          className="absolute -right-1 -top-[4px] text-amber-500/70"
-          width="12"
-          height="12"
-          fill="none"
-          viewBox="0 0 24 24"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-        </svg>
-      </div>
+  return (
+    <div className={className}>
+      {rows.map((row, r) => {
+        const even = r % 2 === 0;
+        const ordered = even ? row : [...row].reverse();
+        const isLast = r === rows.length - 1;
+        const items: React.ReactNode[] = [];
+        ordered.forEach((entry, c) => {
+          items.push(
+            <SnakeCell
+              key={entry.stop.name}
+              stop={entry.stop}
+              n={entry.gi + 1}
+              delay={traceDelay(entry.gi * 2, lastPos)}
+            />
+          );
+          if (c < ordered.length - 1) {
+            const lowerGi = Math.min(entry.gi, ordered[c + 1].gi);
+            items.push(
+              <SnakeHConn
+                key={`h${c}`}
+                dir={even ? "right" : "left"}
+                delay={traceDelay(lowerGi * 2 + 1, lastPos)}
+              />
+            );
+          }
+        });
+        const rowLastGi = r * cols + cols - 1;
+        return (
+          <div key={r}>
+            <div className="flex items-stretch">{items}</div>
+            {!isLast && (
+              <SnakeVConn
+                side={even ? "right" : "left"}
+                cols={cols}
+                delay={traceDelay(rowLastGi * 2 + 1, lastPos)}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -597,10 +735,10 @@ function TheSolutionSection() {
             </span>
           </div>
           <h2 className="text-3xl font-bold leading-tight text-ink sm:text-4xl lg:text-5xl">
-            Eight AI agents. The entire visit, end to end.
+            Nine AI agents. The entire visit, end to end.
           </h2>
           <p className="mt-4 max-w-[760px] text-lg leading-relaxed text-slate">
-            <span className="font-semibold text-ink">Eight specialists, one visit.</span> Voice or text in 130+ languages, with real time urgency detection and custom prompts per specialty. Your team approves, signs, and supervises every step. Encrypted at rest and in transit. Row level security per clinic. Audit trails on every action.
+            <span className="font-semibold text-ink">Nine specialists, one visit.</span> Voice or text in 130+ languages, with real time urgency detection and custom prompts per specialty. Your team approves, signs, and supervises every step. Encrypted at rest and in transit. Row level security per clinic. Audit trails on every action.
           </p>
         </FadeIn>
 
@@ -618,44 +756,19 @@ function TheSolutionSection() {
                   </span>
                 </div>
               </div>
-              <div className="hidden grid-cols-9 lg:grid">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="flex justify-center">
-                    <div className="h-3 w-px bg-gradient-to-b from-blue-200 to-transparent" />
-                  </div>
-                ))}
-              </div>
             </div>
 
-            {/* Pipeline: Patient + 7 agents */}
+            {/* Pipeline: Patient + 9 agents */}
             <div className="border-x border-gray-200 bg-white px-3 py-10 shadow-sm lg:px-6 lg:py-12">
-              <div className="relative grid grid-cols-1 gap-x-1 gap-y-10 md:grid-cols-2 lg:grid-cols-9">
-                {/* Animated blue dot jumps through each agent step by step (desktop only) */}
-                <div className="pipeline-progress hidden lg:block" aria-hidden="true" />
-                <PatientStart />
-                {SOLUTION_AGENTS.map((agent, i) => (
-                  <AgentNode
-                    key={agent.name}
-                    name={agent.name}
-                    desc={agent.desc}
-                    icon={agent.icon}
-                    phase={agent.phase}
-                    isLast={i === SOLUTION_AGENTS.length - 1}
-                  />
-                ))}
-              </div>
+              {/* below lg: 2-up connected snake */}
+              <SnakePipeline cols={2} className="lg:hidden" />
 
+              {/* lg: 5-up connected snake */}
+              <SnakePipeline cols={5} className="hidden lg:block" />
             </div>
 
             {/* Bottom analytics layer */}
             <div className="relative">
-              <div className="hidden grid-cols-9 lg:grid">
-                {Array.from({ length: 9 }).map((_, i) => (
-                  <div key={i} className="flex justify-center">
-                    <div className="h-3 w-px bg-gradient-to-b from-transparent to-blue-300/60" />
-                  </div>
-                ))}
-              </div>
               <div className="rounded-b-2xl bg-ink px-6 py-4 lg:px-8 lg:py-5">
                 <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/15 ring-1 ring-blue-300/30">
