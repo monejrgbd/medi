@@ -6,7 +6,7 @@ const CARDS = [
   {
     headline: "Eight hours of doctor time, wasted. Per day.",
     image: "/images/pain/time-lost.png",
-    pain: "At least ten minutes per patient on the same intake questions and paperwork, even for returning patients. Non English speakers take twice as long or get half the detail. Fifty patients a day. That is over eight hours of doctor time, every single day.",
+    pain: "About eight minutes per patient on the same intake questions and paperwork, even for returning patients. Non English speakers take twice as long or get half the detail. Sixty five patients a day. That is over eight hours of doctor time, every single day.",
     fix: "AI handles intake in 130+ languages while the patient waits, remembers returning patients, and asks follow ups until nothing essential is missed. Every doctor reads the summary in their preferred language before they open the door, then signs the sick note, work letter, or SOAP note already drafted from the visit. Eight hours back, better intake, and paperwork in seconds.",
   },
   {

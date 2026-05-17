@@ -116,8 +116,8 @@ function SocialProofSection() {
                 <p className="mt-1.5 text-sm font-medium text-ash">Patients Screened</p>
               </div>
               <div>
-                <p className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">12 min</p>
-                <p className="mt-1.5 text-sm font-medium text-ash">Saved Per Visit</p>
+                <p className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">8 min</p>
+                <p className="mt-1.5 text-sm font-medium text-ash">Saved Per Patient</p>
               </div>
             </div>
 
@@ -126,7 +126,7 @@ function SocialProofSection() {
                 <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
                 </svg>
-                <span className="text-slate">Avg intake drops from <span className="font-semibold text-ink">14 min to under 3</span></span>
+                <span className="text-slate">About <span className="font-semibold text-ink">8 minutes</span> saved per patient, every visit</span>
               </div>
               <div className="hidden h-4 w-px bg-gray-300 sm:block" />
               <div className="flex items-center gap-2">

@@ -43,9 +43,9 @@ export default function MigratePage() {
                 ),
               },
               {
-                value: "12 min",
-                label: "Saved Per Visit",
-                description: "Average intake drops from 14 minutes to under 3",
+                value: "8 min",
+                label: "Saved Per Patient",
+                description: "Averaged across AI intake, the doctor briefing, and drafted paperwork",
                 icon: (
                   <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />

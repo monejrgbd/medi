@@ -8,7 +8,7 @@ import SectionLink from "@/components/marketing/SectionLink";
 export const metadata = {
   title: "AI Patient Intake Software for Clinics | Hilt Health",
   description:
-    "Patients describe symptoms to AI in 130+ languages before the doctor walks in. Intake drops from 14 minutes to under 3. Book a 15 minute walkthrough.",
+    "Patients describe symptoms to AI in 130+ languages before the doctor walks in. Hilt saves about 8 minutes per patient, every visit. Book a 15 minute walkthrough.",
 };
 
 const CAL_URL = "https://cal.com/102937474/hilt-health-meeting";
@@ -239,7 +239,7 @@ function Cost() {
               </span>
               <h2 className="mt-5 text-2xl font-bold text-white">Stop losing doctor time per patient</h2>
               <p className="mt-2 leading-relaxed text-white/60">
-                Intake goes from 14 minutes to under 3, every visit.
+                Hilt saves about 8 minutes per patient, every visit.
               </p>
             </div>
           </FadeIn>
