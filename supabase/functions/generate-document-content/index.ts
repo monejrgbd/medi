@@ -13,6 +13,7 @@ interface DocumentRow {
   template_key: string;
   input_fields: Record<string, unknown>;
   physical_exam_raw: string | null;
+  scribe_transcript: string | null;
   status: string;
   created_by: string;
 }
@@ -62,7 +63,7 @@ Deno.serve(async (req) => {
     // 1. Load the document
     const { data: doc, error: docError } = await supabase
       .from("clinical_documents")
-      .select("id, org_id, location_id, visit_id, patient_id, template_key, input_fields, physical_exam_raw, status, created_by")
+      .select("id, org_id, location_id, visit_id, patient_id, template_key, input_fields, physical_exam_raw, scribe_transcript, status, created_by")
       .eq("id", document_id)
       .single();
 
@@ -316,6 +317,7 @@ Deno.serve(async (req) => {
       doctor_notes: doctorNotes,
       follow_up_instructions: followUpInstructions,
       physical_exam_raw: document.physical_exam_raw || "Not performed",
+      encounter_transcript: document.scribe_transcript || "No ambient encounter recording",
       chief_complaint: chiefComplaint,
     };
 
@@ -359,9 +361,38 @@ Deno.serve(async (req) => {
     }
 
     // 7. Render content_body from render_template by substituting AI output fields
+    // Flatten the AI JSON so BOTH flat templates (letters: top-level
+    // {letter_body}) and nested templates (SOAP: {hpi}, {physical_exam},
+    // {primary_dx} live under subjective/objective/assessment) resolve.
+    // Backward compatible: flat string values are assigned unchanged; nested
+    // objects are expanded into their leaf keys; arrays are joined.
     const renderValues: Record<string, string> = { ...placeholders };
+    const assignValue = (key: string, value: unknown): void => {
+      if (value === null || value === undefined) {
+        renderValues[key] = "";
+      } else if (typeof value === "string") {
+        renderValues[key] = value;
+      } else if (typeof value === "number" || typeof value === "boolean") {
+        renderValues[key] = String(value);
+      } else if (Array.isArray(value)) {
+        renderValues[key] = value
+          .map((v) => (typeof v === "string" ? v : JSON.stringify(v)))
+          .join(", ");
+      } else if (typeof value === "object") {
+        // Keep the stringified object under its own key as a fallback, then
+        // expand each leaf so nested placeholders resolve.
+        renderValues[key] = JSON.stringify(value);
+        for (const [childKey, childVal] of Object.entries(
+          value as Record<string, unknown>
+        )) {
+          assignValue(childKey, childVal);
+        }
+      } else {
+        renderValues[key] = String(value);
+      }
+    };
     for (const [key, value] of Object.entries(parsed)) {
-      renderValues[key] = typeof value === "string" ? value : JSON.stringify(value ?? "");
+      assignValue(key, value);
     }
     const contentBody = replacePlaceholders(template.render_template, renderValues);
 

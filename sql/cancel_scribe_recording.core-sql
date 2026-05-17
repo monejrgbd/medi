@@ -1,0 +1,94 @@
+-- cancel_scribe_recording: doctor abandoned the scribe before Stop, or the mic
+-- was denied. No clinical_documents row was ever created (creation happens at
+-- finalize), so there is nothing to clean up beyond marking the row terminal.
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.cancel_scribe_recording(
+  p_caller_auth_uid uuid,
+  p_recording_id uuid,
+  p_reason text DEFAULT 'canceled'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_staff_id uuid;
+  v_caller_org_id uuid;
+  v_rec record;
+  v_new_status text;
+BEGIN
+  SELECT su.id, su.org_id
+  INTO v_caller_staff_id, v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  SELECT id, org_id, location_id, created_by, status
+  INTO v_rec
+  FROM public.scribe_recordings
+  WHERE id = p_recording_id;
+
+  IF v_rec.id IS NULL OR v_rec.org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Recording not found');
+  END IF;
+
+  -- Only the creator (or org owner) can cancel; only before transcription starts
+  IF v_rec.created_by <> v_caller_staff_id THEN
+    PERFORM 1 FROM public.organizations WHERE id = v_caller_org_id AND owner_id = p_caller_auth_uid;
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+    END IF;
+  END IF;
+
+  IF v_rec.status NOT IN ('consented', 'recording') THEN
+    -- Idempotent: already terminal
+    RETURN jsonb_build_object('success', true, 'status', v_rec.status);
+  END IF;
+
+  v_new_status := CASE WHEN p_reason = 'mic_denied' THEN 'mic_denied' ELSE 'canceled' END;
+
+  UPDATE public.scribe_recordings
+  SET status = v_new_status, error = p_reason, updated_at = now()
+  WHERE id = p_recording_id;
+
+  INSERT INTO public.audit_trail (org_id, location_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (v_caller_org_id, v_rec.location_id, 'scribe_recording', p_recording_id,
+          v_caller_staff_id, 'doctor', 'scribe_canceled',
+          jsonb_build_object('reason', p_reason));
+
+  RETURN jsonb_build_object('success', true, 'status', v_new_status);
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.cancel_scribe_recording(
+  p_recording_id uuid,
+  p_reason text DEFAULT 'canceled'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.cancel_scribe_recording(v_auth_uid, p_recording_id, p_reason);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.cancel_scribe_recording(uuid, text) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.cancel_scribe_recording(uuid, text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.cancel_scribe_recording(uuid, text) TO authenticated;

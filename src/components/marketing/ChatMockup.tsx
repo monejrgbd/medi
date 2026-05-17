@@ -33,6 +33,43 @@ export default function ChatMockup() {
         </div>
       </div>
 
+      {/* Pre screen form (asked before the AI conversation) */}
+      <div className="w-[300px] sm:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-xl ring-1 ring-gray-900/5 overflow-hidden">
+        <div className="border-b border-gray-100 px-4 py-2.5">
+          <p className="text-xs font-semibold text-ink">A few details first</p>
+          <p className="text-[10px] text-slate">Asked before the AI, set per location</p>
+        </div>
+        <div className="space-y-2.5 px-4 py-3">
+          <div>
+            <p className="mb-1 text-[10px] font-semibold text-ink">Current medications</p>
+            <div className="flex flex-wrap gap-1">
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-ink">Ibuprofen</span>
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-ink">Lisinopril</span>
+              <span className="rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-[10px] text-ash">+ Add</span>
+            </div>
+          </div>
+          <div>
+            <p className="mb-1 text-[10px] font-semibold text-ink">Allergies</p>
+            <div className="flex flex-wrap gap-1">
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-ink">Penicillin</span>
+              <span className="rounded-full border border-dashed border-gray-300 px-2 py-0.5 text-[10px] text-ash">+ Add</span>
+            </div>
+          </div>
+        </div>
+        <div className="border-t border-gray-100 px-4 py-2">
+          <div className="rounded-lg bg-hilt-blue py-1.5 text-center text-[11px] font-semibold text-white">Continue</div>
+        </div>
+      </div>
+
+      {/* Arrow: form → chat */}
+      <div className="flex justify-center">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white shadow-md ring-1 ring-gray-900/5">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 13.5 12 21m0 0-7.5-7.5M12 21V3" />
+          </svg>
+        </div>
+      </div>
+
       {/* Chat card */}
       <div className="w-[300px] sm:w-[340px] rounded-2xl border border-gray-200 bg-white shadow-2xl ring-1 ring-gray-900/5 overflow-hidden">
         <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">

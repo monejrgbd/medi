@@ -20,6 +20,8 @@ import DiagnosisForm from "@/components/doctor/DiagnosisForm";
 import ReferralForm from "@/components/doctor/ReferralForm";
 import ReferralHistory from "@/components/doctor/ReferralHistory";
 import VisitHistoryAccordion from "@/components/doctor/VisitHistoryAccordion";
+import SoapNoteEditor from "@/components/doctor/SoapNoteEditor";
+import ScribePanel from "@/components/doctor/ScribePanel";
 import VitalsHistory from "@/components/nurse/VitalsHistory";
 import VaccineHistory from "@/components/nurse/VaccineHistory";
 import { useRoleSafe } from "@/contexts/RoleContext";
@@ -154,6 +156,9 @@ export default function FocusMode({
   const [loading, setLoading] = useState(false);
   const [autoClaiming, setAutoClaiming] = useState(false);
   const [showDiagnosis, setShowDiagnosis] = useState(false);
+  const [showScribe, setShowScribe] = useState(false);
+  const [showSoapEditor, setShowSoapEditor] = useState(false);
+  const [scribeDocId, setScribeDocId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [demoCompleted, setDemoCompleted] = useState(false);
   const [tab, setTab] = useState<FocusTab>("summary");
@@ -668,6 +673,18 @@ export default function FocusMode({
               Refer
             </button>
             <button
+              onClick={() => {
+                if (demoMode) {
+                  toast.info("Scribe is not available in the demo");
+                  return;
+                }
+                setShowScribe(true);
+              }}
+              className="rounded-lg border border-hilt-blue px-4 py-2.5 text-sm font-medium text-hilt-blue hover:bg-blue-50 transition-colors"
+            >
+              Scribe
+            </button>
+            <button
               onClick={() => setShowDiagnosis(true)}
               className={`flex-1 rounded-lg bg-green-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-green-700 transition-colors ${demoMode ? "animate-pulse ring-2 ring-green-400 ring-offset-2" : ""}`}
             >
@@ -699,6 +716,37 @@ export default function FocusMode({
           patientId={detail.patient.id}
           onClose={() => setShowReferral(false)}
           onComplete={() => setShowReferral(false)}
+        />
+      )}
+
+      {/* AI scribe panel */}
+      {showScribe && detail && (
+        <ScribePanel
+          visitId={detail.visit.id}
+          onClose={() => setShowScribe(false)}
+          onOpenSoapEditor={(documentId) => {
+            setShowScribe(false);
+            setScribeDocId(documentId);
+            setShowSoapEditor(true);
+          }}
+        />
+      )}
+
+      {/* SOAP note editor (scribe draft review) */}
+      {showSoapEditor && detail && (
+        <SoapNoteEditor
+          visitId={detail.visit.id}
+          patientId={detail.patient.id}
+          locationId={locationId}
+          documentId={scribeDocId ?? undefined}
+          onClose={() => {
+            setShowSoapEditor(false);
+            setScribeDocId(null);
+          }}
+          onComplete={() => {
+            setShowSoapEditor(false);
+            setScribeDocId(null);
+          }}
         />
       )}
     </div>

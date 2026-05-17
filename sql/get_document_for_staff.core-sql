@@ -91,6 +91,7 @@ BEGIN
     'content_language', v_doc.content_language,
     'physical_exam_raw', v_doc.physical_exam_raw,
     'physical_exam_mode', v_doc.physical_exam_mode,
+    'scribe_transcript', v_doc.scribe_transcript,
     'status', v_doc.status,
     'created_by', v_doc.created_by,
     'creator_name', COALESCE(creator.full_name, 'Unknown'),

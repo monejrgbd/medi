@@ -1,0 +1,66 @@
+-- scribe_timeout_cron: safety net for the AI scribe transcription.
+-- transcribe-encounter is fired fire-and-forget by finalize_scribe_recording;
+-- if it never runs or dies mid-way, rows would sit in 'transcribing' forever.
+-- Every minute: re-fire rows stuck 10-30 min (edge fn is idempotent and
+-- resumes from the segment cursor), and hard-fail rows stuck > 30 min.
+-- Mirrors ai_timeout_cron.
+
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+DO $$
+BEGIN
+  PERFORM cron.unschedule('scribe_timeout_check');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+SELECT cron.schedule('scribe_timeout_check', '* * * * *', $$
+  DO $do$
+  DECLARE
+    v_edge_url text;
+    v_edge_secret text;
+    v_anon_key text;
+    r record;
+  BEGIN
+    SELECT decrypted_secret INTO v_edge_url FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+    SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+    SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+    -- Re-fire rows stuck 10-30 minutes (idempotent: edge fn re-checks
+    -- status='transcribing' and resumes from transcribed_segments).
+    IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
+      FOR r IN
+        SELECT id FROM public.scribe_recordings
+        WHERE status = 'transcribing'
+          AND updated_at < now() - interval '10 minutes'
+          AND updated_at >= now() - interval '30 minutes'
+      LOOP
+        PERFORM net.http_post(
+          url := v_edge_url || '/transcribe-encounter',
+          headers := jsonb_build_object(
+            'Content-Type', 'application/json',
+            'Authorization', 'Bearer ' || v_anon_key,
+            'x-internal-secret', v_edge_secret
+          ),
+          body := jsonb_build_object('recording_id', r.id)
+        );
+      END LOOP;
+    END IF;
+
+    -- Hard-fail rows stuck more than 30 minutes.
+    UPDATE public.scribe_recordings
+    SET status = 'failed', error = 'transcription_timeout', updated_at = now()
+    WHERE status = 'transcribing'
+      AND updated_at < now() - interval '30 minutes';
+
+    -- Surface the failure on the associated document so the editor shows an
+    -- error state instead of spinning.
+    UPDATE public.clinical_documents cd
+    SET status = 'failed', updated_at = now()
+    FROM public.scribe_recordings sr
+    WHERE sr.document_id = cd.id
+      AND sr.status = 'failed'
+      AND sr.error = 'transcription_timeout'
+      AND cd.status IN ('draft', 'drafting');
+  END
+  $do$;
+$$);

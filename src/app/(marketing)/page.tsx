@@ -30,7 +30,7 @@ function HeroSection() {
 
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
           <p className="text-lg leading-snug text-slate sm:text-xl lg:flex-1 lg:text-lg xl:text-xl">
-            AI agents run every visit, handling intake in 130+ languages, briefing doctors, drafting paperwork, sending referrals, scheduling follow ups, collecting reviews, and bringing patients back, with your team approving every step.
+            AI agents assist every visit, handling intake in 130+ languages, briefing doctors, drafting paperwork, sending referrals, scheduling follow ups, collecting reviews, and bringing patients back, with your team approving every step.
           </p>
 
           <HeroEmailCTA />

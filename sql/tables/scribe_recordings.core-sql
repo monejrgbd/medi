@@ -1,0 +1,38 @@
+-- scribe_recordings: lifecycle holder for the AI ambient scribe.
+-- The clinical_documents.status enum has no recording/transcribing states, so the
+-- capture and transcription lifecycle lives here, linked 1:1 to a clinical_documents
+-- row (document_id) once the recording is finalized. Mutations only via SECURITY
+-- DEFINER functions, mirroring clinical_documents.
+
+CREATE TABLE public.scribe_recordings (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id              uuid NOT NULL REFERENCES public.organizations(id),
+  location_id         uuid NOT NULL REFERENCES public.locations(id),
+  visit_id            uuid NOT NULL REFERENCES public.visits(id),
+  patient_id          uuid NOT NULL REFERENCES public.patients(id),
+  document_id         uuid REFERENCES public.clinical_documents(id),
+  created_by          uuid NOT NULL REFERENCES public.staff_users(id),
+  status              text NOT NULL DEFAULT 'consented'
+    CHECK (status IN ('consented','recording','transcribing','transcribed','failed','mic_denied','canceled')),
+  consent_attested_at timestamptz NOT NULL DEFAULT now(),
+  segment_count       int NOT NULL DEFAULT 0,
+  transcribed_segments int NOT NULL DEFAULT 0,
+  audio_prefix        text NOT NULL,
+  duration_ms         int,
+  language            text NOT NULL DEFAULT 'en',
+  stt_minutes         numeric,
+  error               text,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.scribe_recordings ENABLE ROW LEVEL SECURITY;
+
+-- Read scoped to caller org; no INSERT/UPDATE/DELETE policy (SECURITY DEFINER only)
+CREATE POLICY "org_member_read" ON public.scribe_recordings FOR SELECT
+  USING (org_id = requesting_org_id());
+
+CREATE INDEX idx_scribe_doc ON public.scribe_recordings (document_id);
+CREATE INDEX idx_scribe_visit ON public.scribe_recordings (visit_id);
+CREATE INDEX idx_scribe_pending ON public.scribe_recordings (status, updated_at)
+  WHERE status IN ('recording', 'transcribing');

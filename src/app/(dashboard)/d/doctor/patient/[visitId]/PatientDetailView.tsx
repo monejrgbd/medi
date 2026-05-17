@@ -19,6 +19,7 @@ import ReferralForm from "@/components/doctor/ReferralForm";
 import ReferralHistory from "@/components/doctor/ReferralHistory";
 import LetterGeneratorModal from "@/components/doctor/LetterGeneratorModal";
 import SoapNoteEditor from "@/components/doctor/SoapNoteEditor";
+import ScribePanel from "@/components/doctor/ScribePanel";
 import DocumentHistory from "@/components/doctor/DocumentHistory";
 
 interface VisitNote {
@@ -106,6 +107,8 @@ export default function PatientDetailView({
   const [showReferral, setShowReferral] = useState(false);
   const [showLetterModal, setShowLetterModal] = useState(false);
   const [showSoapEditor, setShowSoapEditor] = useState(false);
+  const [showScribe, setShowScribe] = useState(false);
+  const [scribeDocId, setScribeDocId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [updateNotice, setUpdateNotice] = useState(false);
   const supabaseRef = useRef(createClient());
@@ -392,6 +395,14 @@ export default function PatientDetailView({
                 Create Document
               </button>
             )}
+            {canCreateDocument && (
+              <button
+                onClick={() => setShowScribe(true)}
+                className="flex-1 sm:flex-none rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 transition-colors whitespace-nowrap"
+              >
+                Activate Scribe
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -430,14 +441,34 @@ export default function PatientDetailView({
         />
       )}
 
+      {/* AI scribe panel */}
+      {showScribe && (
+        <ScribePanel
+          visitId={visit.id}
+          onClose={() => setShowScribe(false)}
+          onOpenSoapEditor={(documentId) => {
+            setShowScribe(false);
+            setScribeDocId(documentId);
+            setShowSoapEditor(true);
+          }}
+        />
+      )}
+
       {/* SOAP note full-screen editor */}
       {showSoapEditor && (
         <SoapNoteEditor
           visitId={visit.id}
           patientId={patient.id}
           locationId={visit.location_id}
-          onClose={() => setShowSoapEditor(false)}
-          onComplete={() => setShowSoapEditor(false)}
+          documentId={scribeDocId ?? undefined}
+          onClose={() => {
+            setShowSoapEditor(false);
+            setScribeDocId(null);
+          }}
+          onComplete={() => {
+            setShowSoapEditor(false);
+            setScribeDocId(null);
+          }}
         />
       )}
     </div>

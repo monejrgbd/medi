@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import ChatMockup from "@/components/marketing/ChatMockup";
@@ -216,7 +217,7 @@ const tourSteps: TourStep[] = [
   {
     eyebrow: "Before & during the visit",
     title: "Patient checks in",
-    description: "Scans a QR code or opens a shared link, then talks to the AI in their language about why they came in.",
+    description: "Scans a QR code or opens a shared link, fills a quick form, then talks to the AI in their language about why they came in.",
     render: () => <ChatMockup />,
   },
   {
@@ -338,6 +339,7 @@ export default function MockupTour({ className = "" }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"chooser" | "walkthrough">("chooser");
   const [step, setStep] = useState(0);
+  const [mounted, setMounted] = useState(false);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -345,6 +347,10 @@ export default function MockupTour({ className = "" }: { className?: string }) {
   const autoOpenedRef = useRef(false);
 
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (autoOpenedRef.current) return;
@@ -494,7 +500,7 @@ export default function MockupTour({ className = "" }: { className?: string }) {
       </button>
 
       {/* ── Modal ──────────────────────────────────────── */}
-      {open && (
+      {open && mounted && createPortal(
         <div
           className="fixed inset-0 z-50"
           role="dialog"
@@ -503,10 +509,17 @@ export default function MockupTour({ className = "" }: { className?: string }) {
         >
           <div aria-hidden="true" className="absolute inset-0 bg-ink/70 backdrop-blur-sm tour-fade-bg" />
 
-          <div className="relative flex h-full items-center justify-center p-3 sm:p-6" onClick={close}>
+          <div
+            className={`relative flex h-full items-center justify-center ${
+              view === "chooser" ? "p-3 sm:p-6" : "p-0"
+            }`}
+            onClick={close}
+          >
             <div
-              className={`tour-card-in flex w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl ${
-                view === "chooser" ? "max-h-[92vh] max-w-lg" : "h-full max-h-[92vh] max-w-5xl"
+              className={`tour-card-in flex w-full flex-col overflow-hidden bg-white shadow-2xl ${
+                view === "chooser"
+                  ? "max-h-[92vh] max-w-lg rounded-2xl sm:rounded-3xl"
+                  : "h-full max-w-none rounded-none"
               }`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -703,7 +716,8 @@ export default function MockupTour({ className = "" }: { className?: string }) {
               }
             }
           `}</style>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

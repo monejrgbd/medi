@@ -1,0 +1,79 @@
+-- get_scribe_recording: UI polls this for the recording lifecycle plus the
+-- joined clinical_documents.status so the panel knows when the SOAP draft is
+-- ready to open.
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_scribe_recording(
+  p_caller_auth_uid uuid,
+  p_recording_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_caller_org_id uuid;
+  v_rec record;
+BEGIN
+  SELECT su.org_id
+  INTO v_caller_org_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_caller_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  SELECT sr.id, sr.org_id, sr.status, sr.document_id, sr.segment_count,
+         sr.transcribed_segments, sr.error, cd.status AS doc_status
+  INTO v_rec
+  FROM public.scribe_recordings sr
+  LEFT JOIN public.clinical_documents cd ON cd.id = sr.document_id
+  WHERE sr.id = p_recording_id;
+
+  IF v_rec.id IS NULL OR v_rec.org_id <> v_caller_org_id THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Recording not found');
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'recording', jsonb_build_object(
+      'id', v_rec.id,
+      'status', v_rec.status,
+      'document_id', v_rec.document_id,
+      'document_status', v_rec.doc_status,
+      'segment_count', v_rec.segment_count,
+      'transcribed_segments', v_rec.transcribed_segments,
+      'error', v_rec.error
+    )
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_scribe_recording(
+  p_recording_id uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_scribe_recording(v_auth_uid, p_recording_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_scribe_recording(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_scribe_recording(uuid) FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_scribe_recording(uuid) TO authenticated;

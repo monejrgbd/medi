@@ -57,3 +57,7 @@ CREATE INDEX idx_clinical_docs_pending ON public.clinical_documents (status)
   WHERE status IN ('drafting', 'drafted', 'editing');
 CREATE INDEX idx_clinical_docs_expiry ON public.clinical_documents (public_token_expires_at)
   WHERE public_token_revoked = false;
+
+-- AI ambient scribe: assembled diarized encounter transcript (primary clinical
+-- source for scribe-generated SOAP notes). Nullable; null for non-scribe documents.
+ALTER TABLE public.clinical_documents ADD COLUMN IF NOT EXISTS scribe_transcript text;

@@ -1,0 +1,36 @@
+-- scribe-audio bucket (private) — AI ambient scribe encounter audio segments.
+-- Path pattern: {org_id}/{visit_id}/scribe/{recording_id}/{NNNN}.webm
+-- RLS predicate is identical to the attachments bucket (org-scoped first folder).
+-- The edge function reads via service role (bypasses RLS); the doctor client
+-- uploads under their own org folder so the org check holds.
+
+INSERT INTO storage.buckets (id, name, public, file_size_limit)
+VALUES ('scribe-audio', 'scribe-audio', false, 26214400)
+ON CONFLICT (id) DO UPDATE SET public = false, file_size_limit = 26214400;
+
+-- SELECT: authenticated, org match
+DROP POLICY IF EXISTS "scribe_audio_org_read" ON storage.objects;
+CREATE POLICY "scribe_audio_org_read" ON storage.objects FOR SELECT
+  TO authenticated
+  USING (
+    bucket_id = 'scribe-audio'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );
+
+-- INSERT: authenticated, org match
+DROP POLICY IF EXISTS "scribe_audio_org_insert" ON storage.objects;
+CREATE POLICY "scribe_audio_org_insert" ON storage.objects FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'scribe-audio'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );
+
+-- DELETE: authenticated, org match (cleanup on failed uploads)
+DROP POLICY IF EXISTS "scribe_audio_org_delete" ON storage.objects;
+CREATE POLICY "scribe_audio_org_delete" ON storage.objects FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'scribe-audio'
+    AND requesting_org_id()::text = (storage.foldername(name))[1]
+  );

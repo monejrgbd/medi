@@ -6,12 +6,14 @@
 - **[ai-flow]** Spot-check `generate-summary` edge function logs for the expected mode pattern: nurse-enabled visits should show two invocations per visit (`mode: summary_only` then `mode: diagnostic_only`); non-nurse should show one (`mode: full`). Repeated `mode: full` fallback fires from `claim_patient` indicate the AI is failing to emit `[CONVERSATION_COMPLETE]` — review and re-strengthen the system prompt in `start_ai_conversation.core-sql` if frequency is non-trivial.
 - **[credits]** Verify `credit_reset` cron runs successfully (check audit_trail for `monthly_credit_reset` entries)
 - **[affiliate]** Watch for `partner_velocity_suspend` audit_trail entries. Each one means a partner hit 5+ referrals in 24h and was auto-suspended; review their referrals for fraud signals (matching IP hashes, similar emails) and decide whether to ban, restore, or leave suspended.
+- **[scribe]** Spot-check `transcribe-encounter` logs and `scribe_recordings` for rows stuck in `transcribing`. The `scribe_timeout_check` cron re-fires after 10 min and hard-fails after 30 min; a rising count of `status='failed', error='transcription_timeout'` indicates Google STT or the edge function is degraded. `scribe_failed` audit_trail entries with `reason='no_audio'` are normal (doctor canceled before speaking).
 
 ## Weekly
 - **[credits]** Review recharge usage across orgs (query `recharge_used > 0` on organizations for active recharge consumption)
 - **[demo]** Check demo org credit balance (should be ~99999, each demo uses ~1.5 credits)
 - **[demo]** Review `demo_access` table for unusual patterns (spam, abuse)
 - **[reviews]** Verify review platform rotation is working (`review_rotation` cron)
+- **[scribe]** Review `scribe-audio` storage bucket growth. Raw encounter audio is retained until the org `data_retention_until` purge (handled by `purge_expired_orgs`); physical storage objects are not GC'd by that function, so prune orphaned objects for purged orgs if bucket size becomes material.
 - **[affiliate]** Process pending payouts at `/d/admin/affiliate` → Pending Payouts tab. For each partner listed, send PayPal manually to their `payout_email` and click "Mark paid" with the transaction reference. Partners with US country and `total_earned_cents >= 60000` are auto-excluded until their `tax_form_status='verified'` — chase those for a W-9.
 
 ## Monthly

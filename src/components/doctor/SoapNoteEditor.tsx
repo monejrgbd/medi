@@ -40,6 +40,9 @@ interface SoapNoteEditorProps {
   visitId: string;
   patientId: string;
   locationId: string;
+  /** When provided (AI scribe flow), reuse this document instead of creating
+   *  a new one. Backward compatible: omit for the normal create-on-open flow. */
+  documentId?: string;
   onClose: () => void;
   onComplete: () => void;
 }
@@ -168,6 +171,7 @@ export default function SoapNoteEditor({
   visitId,
   patientId,
   locationId,
+  documentId: documentIdProp,
   onClose,
   onComplete,
 }: SoapNoteEditorProps) {
@@ -204,39 +208,59 @@ export default function SoapNoteEditor({
   const [voidReason, setVoidReason] = useState("");
   const [voiding, setVoiding] = useState(false);
 
-  /* ── Create document on mount ── */
+  /* ── Open document on mount ──
+     Normal flow: create a new clinical_note_soap document.
+     AI scribe flow (documentIdProp set): reuse the scribe-created document,
+     hydrate it, and poll if the draft is still generating server-side. */
   useEffect(() => {
     (async () => {
       try {
-        const result = await createDocument(
-          visitId,
-          patientId,
-          locationId,
-          "clinical_note_soap",
-          {}
-        );
-        if (result.success && result.document_id) {
-          setDocumentId(result.document_id);
-          // Fetch initial document state to get visit context
-          const docResult = await fetchDocumentForStaff(result.document_id);
-          if (docResult.success && docResult.document) {
-            const doc = docResult.document;
-            setStatus(doc.status ?? "draft");
-            if (doc.content_body) {
-              setSections(parseSoapSections(doc.content_body));
-            }
-            if (doc.visit_context) {
-              setContext(doc.visit_context);
-            }
-            if (doc.physical_exam_raw) {
-              setExamValue(doc.physical_exam_raw);
-            }
-            if (doc.pdf_url) {
-              setPdfUrl(doc.pdf_url);
-            }
-          }
+        let docId: string;
+        if (documentIdProp) {
+          docId = documentIdProp;
         } else {
-          setError(result.error || "Failed to create SOAP note document");
+          const result = await createDocument(
+            visitId,
+            patientId,
+            locationId,
+            "clinical_note_soap",
+            {}
+          );
+          if (!result.success || !result.document_id) {
+            setError(result.error || "Failed to create SOAP note document");
+            return;
+          }
+          docId = result.document_id;
+        }
+        setDocumentId(docId);
+
+        const docResult = await fetchDocumentForStaff(docId);
+        if (docResult.success && docResult.document) {
+          const doc = docResult.document;
+          setStatus(doc.status ?? "draft");
+          if (doc.content_body) {
+            setSections(parseSoapSections(doc.content_body));
+          }
+          if (doc.visit_context) {
+            setContext(doc.visit_context);
+          }
+          if (doc.physical_exam_raw) {
+            setExamValue(doc.physical_exam_raw);
+          }
+          if (doc.pdf_url) {
+            setPdfUrl(doc.pdf_url);
+          }
+          if (
+            doc.ai_draft?.missing_context &&
+            Array.isArray(doc.ai_draft.missing_context)
+          ) {
+            setMissingContext(doc.ai_draft.missing_context);
+          }
+          // Scribe path: the draft is being generated server-side.
+          if (doc.status === "drafting") {
+            setLoading(true);
+            pollForDraft(docId);
+          }
         }
       } catch {
         setError("An unexpected error occurred");
@@ -244,7 +268,9 @@ export default function SoapNoteEditor({
         setInitLoading(false);
       }
     })();
-  }, [visitId, patientId, locationId]);
+    // pollForDraft is stable (useCallback) and assigned before this effect runs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visitId, patientId, locationId, documentIdProp]);
 
   // Cleanup save timer
   useEffect(() => {
