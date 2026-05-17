@@ -30,13 +30,16 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
   async function handleSignOut() {
     if (timerRef.current) clearTimeout(timerRef.current);
     await signOutDemoUser();
-    // Return to wherever the demo was launched from (preserves that URL),
-    // falling back to the homepage only if there is no history to go back to.
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
-    } else {
-      router.push("/");
+    // Return to the exact page the demo was launched from (captured on entry
+    // by DemoGate), falling back to the homepage only if nothing valid stored.
+    let to = "/";
+    try {
+      const saved = sessionStorage.getItem("demoReturnTo");
+      if (saved && saved.startsWith("/") && !saved.startsWith("/demo")) to = saved;
+    } catch {
+      /* keep "/" */
     }
+    router.push(to);
   }
 
   return (

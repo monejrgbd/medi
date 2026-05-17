@@ -59,6 +59,9 @@ BEGIN
     WHERE document_id IN (
       SELECT id FROM public.clinical_documents WHERE visit_id = ANY(v_visit_ids)
     );
+    -- scribe_recordings FK-references clinical_documents (NO ACTION); must be
+    -- deleted first or this clinical_documents delete FK-blocks.
+    DELETE FROM public.scribe_recordings WHERE visit_id = ANY(v_visit_ids);
     DELETE FROM public.clinical_documents WHERE visit_id = ANY(v_visit_ids);
 
     -- Delete the visits themselves
@@ -76,10 +79,14 @@ BEGIN
     SELECT id FROM public.clinical_documents
     WHERE org_id = v_demo_org_id AND created_at < v_cutoff
   );
+  DELETE FROM public.scribe_recordings
+  WHERE org_id = v_demo_org_id AND created_at < v_cutoff;
   DELETE FROM public.clinical_documents
   WHERE org_id = v_demo_org_id AND created_at < v_cutoff;
 
   -- Note: PDFs in the clinical-documents storage bucket are NOT deleted here.
+  -- The same applies to scribe-audio segments (Supabase blocks direct
+  -- storage.objects DELETE); demo audio accumulates like demo PDFs/logos.
   -- Supabase blocks direct DELETE on storage.objects via the protect_delete trigger.
   -- Orphaned PDFs accumulate in demo storage. Matches existing patterns (logos,
   -- attachments are also not cleaned up in SQL). A separate storage janitor using
@@ -116,6 +123,10 @@ BEGIN
       AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
   );
   DELETE FROM public.sms_campaign_recipients WHERE patient_id IN (
+    SELECT id FROM public.patients WHERE org_id = v_demo_org_id
+      AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
+  );
+  DELETE FROM public.scribe_recordings WHERE patient_id IN (
     SELECT id FROM public.patients WHERE org_id = v_demo_org_id
       AND NOT EXISTS (SELECT 1 FROM public.visits v WHERE v.patient_id = patients.id)
   );

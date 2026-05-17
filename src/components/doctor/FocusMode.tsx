@@ -673,13 +673,7 @@ export default function FocusMode({
               Refer
             </button>
             <button
-              onClick={() => {
-                if (demoMode) {
-                  toast.info("Scribe is not available in the demo");
-                  return;
-                }
-                setShowScribe(true);
-              }}
+              onClick={() => setShowScribe(true)}
               className="rounded-lg border border-hilt-blue px-4 py-2.5 text-sm font-medium text-hilt-blue hover:bg-blue-50 transition-colors"
             >
               Scribe

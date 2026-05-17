@@ -609,7 +609,21 @@ export default function MockupTour({ className = "" }: { className?: string }) {
                           href={opt.href}
                           target={opt.external ? "_blank" : undefined}
                           rel={opt.external ? "noopener noreferrer" : undefined}
-                          onClick={close}
+                          onClick={() => {
+                            if (
+                              !opt.external &&
+                              typeof window !== "undefined" &&
+                              !window.location.pathname.startsWith("/demo")
+                            ) {
+                              try {
+                                sessionStorage.setItem(
+                                  "demoReturnTo",
+                                  window.location.pathname + window.location.search
+                                );
+                              } catch {}
+                            }
+                            close();
+                          }}
                           className={cardClasses}
                         >
                           {inner}

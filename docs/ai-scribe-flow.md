@@ -33,3 +33,18 @@ Relies on: `private.create_document`, `generate-document-content`, `generate-doc
 Verified server side: all SQL objects deployed (5 functions, table, column, bucket private, `scribe_timeout_check` cron), template carries the encounter block, both edge functions ACTIVE with `verify_jwt=false`, `tsc` clean. `database.types.ts` is an unused artifact (no importers, clients untyped) so it was intentionally not regenerated.
 
 Needs a browser smoke test by staff (cannot be done without a mic): open a claimed patient, Activate Scribe, attest, speak two roles for ~2 minutes, Stop. Confirm `scribe_recordings` goes `consented -> transcribing -> transcribed`, segments land in `scribe-audio`, `scribe_transcript` populates with Speaker A/B, the document goes `drafting -> drafted`, the SOAP editor shows non empty HPI / Physical Exam / Assessment / Plan with no literal `{...}` tokens, and signing produces a PDF. Also test the zero intake path (a visit with no `visit_messages`) and a metered PAYG org (exactly one `credits_log` row `credit_type='scribe_transcription'`, none for subscription plans). Regression: generate one letter document and confirm its `content_body` still renders (deep flatten backward compatibility).
+
+## Demo
+
+The scribe is enabled in the live demo at `/demo`. The demo is a real
+authenticated staff session in the enterprise demo org, so the full pipeline
+runs for real (real Google STT, real `clinical_documents`); billing is a no op
+because the demo org is enterprise (`deduct_scribe_credits` returns
+`plan_unlimited`). This is also the easiest way to run the browser smoke test
+above. The only demo specific change was extending `cleanup_demo_data` to delete
+`scribe_recordings` before its three `clinical_documents` deletes (the hourly
+demo cleanup cron would otherwise FK block once a demo recording exists);
+in-flight recordings are preserved because that cleanup keeps its existing
+2 hour / visit / orphan-patient scoping. Demo `scribe-audio` segments are not
+pruned by SQL (Supabase blocks direct `storage.objects` delete), matching the
+existing demo PDF/logo behavior.

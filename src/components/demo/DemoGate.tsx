@@ -12,6 +12,20 @@ interface DemoGateProps {
 export default function DemoGate({ existingSession }: DemoGateProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  // "Back" returns to the page the demo was launched from. That page is
+  // captured at launch time (the demo trigger writes sessionStorage), because
+  // this site sends Referrer-Policy: no-referrer so document.referrer is empty.
+  const goBack = useCallback(() => {
+    let to = "/";
+    try {
+      const saved = sessionStorage.getItem("demoReturnTo");
+      if (saved && saved.startsWith("/") && !saved.startsWith("/demo")) to = saved;
+    } catch {
+      /* keep "/" */
+    }
+    router.push(to);
+  }, [router]);
   const prelogEmail = searchParams.get("prelog");
   const isPrelog = !!prelogEmail && !existingSession;
   const [teamCode, setTeamCode] = useState(() => {
@@ -175,15 +189,16 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     return (
       <div className="min-h-screen bg-snow flex items-start justify-center pt-20 px-4">
         <div className="w-full max-w-lg">
-          <a
-            href="/"
+          <button
+            type="button"
+            onClick={goBack}
             className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors mb-6"
           >
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
             </svg>
             Back
-          </a>
+          </button>
           <div className="text-center mb-8">
             <p className="text-2xl font-bold text-hilt-blue mb-2">Hilt Health</p>
             <h1 className="text-xl font-semibold text-ink">How would you like to try it?</h1>
@@ -293,15 +308,16 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
     <div className="min-h-screen bg-snow flex items-start justify-center pt-20 px-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-between mb-6">
-          <a
-            href="/"
+          <button
+            type="button"
+            onClick={goBack}
             className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors"
           >
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
             </svg>
             Back
-          </a>
+          </button>
           {teamCode ? (
             <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-1 rounded-md font-mono">
               {teamCode.toUpperCase()}

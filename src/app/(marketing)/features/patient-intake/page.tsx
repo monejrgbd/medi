@@ -3,6 +3,7 @@ import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 import MockupTour from "@/components/marketing/MockupTour";
 import OpenDemoButton from "@/components/marketing/OpenDemoButton";
+import SectionLink from "@/components/marketing/SectionLink";
 
 export const metadata = {
   title: "AI Patient Intake Software for Clinics | Hilt Health",
@@ -317,7 +318,7 @@ const NODE_BADGE: Record<Tone, string> = {
 
 function DemoBand() {
   return (
-    <section id="see-it" className="relative overflow-hidden bg-snow py-24 scroll-mt-20">
+    <section className="relative overflow-hidden bg-snow py-24">
       <GridGrain />
       <div className="relative mx-auto max-w-[1200px] px-6">
         <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2">
@@ -508,9 +509,9 @@ function TieToSystem() {
             The rest handle paperwork, referrals, bringing back patients, and more. Your team approves every step.
           </p>
           <div className="mt-7 flex justify-center text-sm font-semibold text-hilt-blue">
-            <Link href="/#problem" className="inline-flex items-center gap-1 hover:underline">
+            <SectionLink to="/" section="problem" className="inline-flex items-center gap-1 hover:underline">
               See the full system <IconArrow className="h-4 w-4" />
-            </Link>
+            </SectionLink>
           </div>
         </FadeIn>
       </div>
