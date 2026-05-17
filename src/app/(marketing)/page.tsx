@@ -356,7 +356,7 @@ function RavenSchedulerSection() {
 
 function BeforeAfterSection() {
   return (
-    <section className="bg-ink py-20 lg:py-28">
+    <section id="problem" className="bg-ink py-20 lg:py-28">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-hilt-blue">
@@ -782,6 +782,17 @@ function HowToSetUpSection() {
     },
     {
       num: "04",
+      title: "Configure forms and AI",
+      desc: "Pick the form fields. Tell the AI what to ask.",
+      icon: (
+        <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+        </svg>
+      ),
+      accent: "bg-indigo-50 text-indigo-600 ring-indigo-200/60",
+    },
+    {
+      num: "05",
       title: "Print the QR and go",
       desc: "Print the PDF. Patients scan. Live.",
       icon: (
@@ -808,7 +819,7 @@ function HowToSetUpSection() {
           </p>
         </FadeIn>
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {setupSteps.map((s, i) => (
             <FadeIn key={s.num} delay={i * 0.08}>
               <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm h-full">
@@ -835,9 +846,9 @@ function HowToSetUpSection() {
                   </svg>
                 </div>
                 <div>
-                  <p className="text-base font-semibold text-ink sm:text-lg">Or do not lift a finger.</p>
+                  <p className="text-base font-semibold text-ink sm:text-lg">Rather not do it alone?</p>
                   <p className="mt-1 text-sm leading-relaxed text-slate">
-                    Book a consultation and we handle the entire setup for you.
+                    Book a consultation and we will be with you during setup.
                   </p>
                 </div>
               </div>

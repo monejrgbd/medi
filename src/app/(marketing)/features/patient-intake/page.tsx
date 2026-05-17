@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 import MockupTour from "@/components/marketing/MockupTour";
+import OpenDemoButton from "@/components/marketing/OpenDemoButton";
 
 export const metadata = {
   title: "AI Patient Intake Software for Clinics | Hilt Health",
@@ -55,6 +56,11 @@ const IconCheck = ({ className }: IconProps) => (
 const IconArrow = ({ className }: IconProps) => (
   <svg className={className} width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
     <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+  </svg>
+);
+const IconClock = ({ className }: IconProps) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={sw} aria-hidden="true">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
   </svg>
 );
 
@@ -129,20 +135,6 @@ function PrimaryCTA({ className = "" }: { className?: string }) {
   );
 }
 
-function DemoLink({ className = "" }: { className?: string }) {
-  return (
-    <a
-      href="#see-it"
-      className={`inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-4 text-base font-semibold text-ink shadow-sm transition-all hover:border-hilt-blue/40 hover:text-hilt-blue hover:-translate-y-0.5 ${className}`}
-    >
-      <svg className="h-4 w-4 text-hilt-blue" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-      </svg>
-      Try the 60 second demo
-    </a>
-  );
-}
-
 /* ── Hero ─────────────────────────────────────────────── */
 
 function Hero() {
@@ -162,13 +154,13 @@ function Hero() {
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-hilt-blue">
                 Built for clinics, by clinicians
               </p>
-              <h1 className="mt-5 text-[2.6rem] font-bold leading-[1.04] tracking-tight text-ink sm:text-5xl lg:text-[3.9rem]">
+              <h1 className="mt-5 text-[1.95rem] font-bold leading-[1.1] tracking-tight text-ink sm:text-4xl lg:text-[2.8rem]">
                 AI patient intake, finished{" "}
                 <span className="text-hilt-blue">before the doctor walks in</span>
               </h1>
               <div className="mt-9 flex flex-wrap items-center gap-3">
                 <PrimaryCTA />
-                <DemoLink />
+                <OpenDemoButton variant="light" />
               </div>
               <p className="mt-4 text-sm text-ash">$200 in free credits. No credit card.</p>
               <Link
@@ -240,9 +232,11 @@ function Cost() {
         </FadeIn>
         <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-3xl bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
           <FadeIn>
-            <div className="h-full bg-ink p-8 sm:p-10">
-              <p className="text-5xl font-bold tracking-tight text-white tabular-nums">11 min</p>
-              <h2 className="mt-4 text-2xl font-bold text-white">Stop losing doctor time per patient</h2>
+            <div className="flex h-full flex-col bg-ink p-8 sm:p-10">
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
+                <IconClock className="h-6 w-6" />
+              </span>
+              <h2 className="mt-5 text-2xl font-bold text-white">Stop losing doctor time per patient</h2>
               <p className="mt-2 leading-relaxed text-white/60">
                 Intake goes from 14 minutes to under 3, every visit.
               </p>
@@ -275,9 +269,9 @@ function Cost() {
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 text-white">
                 <IconForm className="h-6 w-6" />
               </span>
-              <h2 className="mt-5 text-2xl font-bold text-white">Hunting through old notes</h2>
+              <h2 className="mt-5 text-2xl font-bold text-white">Digging up the last visit</h2>
               <p className="mt-2 leading-relaxed text-white/60">
-                Shuffling through charts to recall what they said last visit.
+                Someone has to search old charts before each visit to recall what the patient said last time.
               </p>
             </div>
           </FadeIn>
@@ -298,7 +292,7 @@ const IconSparkle = ({ className }: IconProps) => (
 type Tone = "blue" | "green" | "solid" | "ai";
 
 const FLOW: { n: string; title: string; line: string; Icon: React.ComponentType<IconProps>; tone: Tone; tag?: string }[] = [
-  { n: "01", title: "Scan and start", line: "A QR on their phone, or your clinic tablet. No app.", Icon: IconScan, tone: "blue" },
+  { n: "01", title: "Scan and start", line: "A QR on their phone. You can also preconfigure your clinic tablet or a kiosk. No app.", Icon: IconScan, tone: "blue" },
   { n: "02", title: "Fills standard intake form", line: "Medications, allergies, and your fields. Fully customizable.", Icon: IconForm, tone: "blue" },
   { n: "03", title: "AI asks for the details", line: "Voice or text in 130+ languages. The AI remembers past visits and you can give it custom instructions.", Icon: IconChat, tone: "blue" },
   { n: "04", title: "Patient approves", line: "They confirm the AI summary in their language.", Icon: IconApprove, tone: "green" },
@@ -384,49 +378,9 @@ function ObjectionBand() {
   );
 }
 
-/* ── Proof (honest mechanism, no invented testimonials) ─ */
-/*
-  NOTE FOR THE TEAM: no real customer testimonials exist yet. We do not invent them.
-  Highest ROI action for this page: two real clinic testimonials, each with a number.
-*/
-
-const PROOFS = [
-  { Icon: IconApprove, title: "The patient approves it", body: "Reviewed and confirmed by the patient before it reaches the doctor." },
-  { Icon: IconDoctor, title: "The doctor reviews it", body: "The full transcript, summary, and AI analysis reach the doctor before the visit. The doctor decides." },
-  { Icon: IconCheck, title: "Nothing is hidden", body: "Full audit trail. AI never diagnoses. Diagnostics stay doctor eyes only." },
-];
-
-function Proof() {
-  return (
-    <section className="bg-snow py-24">
-      <div className="mx-auto max-w-[1200px] px-6">
-        <FadeIn>
-          <div className="text-center">
-            <Eyebrow>Built for trust</Eyebrow>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink sm:text-4xl">Built so you stay in control</h2>
-          </div>
-        </FadeIn>
-        <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-3">
-          {PROOFS.map(({ Icon, title, body }, i) => (
-            <FadeIn key={title} delay={i * 0.07}>
-              <div className="h-full rounded-2xl border border-gray-200 bg-white p-7 shadow-sm">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-hilt-blue/10 text-hilt-blue">
-                  <Icon className="h-6 w-6" />
-                </div>
-                <h3 className="mt-5 font-semibold text-ink">{title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-slate">{body}</p>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ── FAQ ──────────────────────────────────────────────── */
 
-const FAQS = [
+const FAQS: { q: string; a: string; href?: string; linkText?: string }[] = [
   {
     q: "Half my patients are older or do not speak English well. Will they actually use an AI?",
     a: "Yes. 130+ languages, by voice if they will not type, on their phone or your tablet. If one truly will not, your receptionist takes that visit the old way.",
@@ -437,7 +391,12 @@ const FAQS = [
     q: "Does this work with our EMR?",
     a: "Yes. Ask our team to enable the EMR connection for your clinic. It can be set up one way or two way.",
   },
-  { q: "Is it actually faster, or just different?", a: "Faster. Average intake goes from 14 minutes to under 3." },
+  {
+    q: "How much does it cost?",
+    a: "Plans start at $79 per provider per month.",
+    href: "/pricing",
+    linkText: "See full pricing",
+  },
 ];
 
 function FAQSection() {
@@ -463,6 +422,14 @@ function FAQSection() {
                   </span>
                 </summary>
                 <p className="mt-3 leading-relaxed text-slate">{faq.a}</p>
+                {faq.href && (
+                  <Link
+                    href={faq.href}
+                    className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-hilt-blue hover:underline"
+                  >
+                    {faq.linkText} <IconArrow className="h-4 w-4" />
+                  </Link>
+                )}
               </details>
             </FadeIn>
           ))}
@@ -472,7 +439,8 @@ function FAQSection() {
   );
 }
 
-/* ── Trust and control (verbatim from homepage) ───────── */
+/* ── Trust and control (merged: replaces former Proof + Trust sections;
+      no real testimonials yet, mechanism-as-proof until then) ── */
 
 const TRUST_BADGES = [
   "PHIPA, PIPEDA, HIPAA & more compliant",
@@ -482,9 +450,9 @@ const TRUST_BADGES = [
 ];
 
 const CONTROL_POINTS = [
-  { Icon: IconDoctor, title: "Doctors see everything", body: "Full transcript, summary, and AI analysis, all visible to the doctor." },
-  { Icon: IconApprove, title: "AI never diagnoses", body: "Diagnostics and clinical notes are doctor eyes only. Patients see only the conversation." },
-  { Icon: IconCheck, title: "Patient approves first", body: "Summary reviewed and confirmed before it reaches the doctor." },
+  { Icon: IconApprove, title: "Patient approves the summary", body: "The patient reviews and confirms the AI summary before it reaches the doctor." },
+  { Icon: IconDoctor, title: "The doctor decides", body: "The doctor gets the full transcript, summary, and AI analysis. The AI never gives the patient a diagnosis." },
+  { Icon: IconCheck, title: "Nothing is hidden", body: "Full audit trail, with advanced analytics." },
 ];
 
 function TrustControl() {
@@ -493,7 +461,7 @@ function TrustControl() {
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <div className="text-center">
-            <Eyebrow>Control</Eyebrow>
+            <Eyebrow>Trust and control</Eyebrow>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
               The AI prepares. The doctor decides.
             </h2>
@@ -535,15 +503,12 @@ function TieToSystem() {
     <section className="bg-white py-20">
       <div className="mx-auto max-w-2xl px-6 text-center">
         <FadeIn>
-          <h2 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">Intake is step one of eight</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-ink sm:text-4xl">Hilt Health has eight AI agents. Intake uses two.</h2>
           <p className="mt-4 text-lg text-slate">
-            It flows into AI Summary, AI Paperwork, and Referrals. Your team approves every step.
+            The rest handle paperwork, referrals, bringing back patients, and more. Your team approves every step.
           </p>
-          <div className="mt-7 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm font-semibold text-hilt-blue">
-            <Link href="/features/paperwork" className="inline-flex items-center gap-1 hover:underline">
-              See AI Paperwork <IconArrow className="h-4 w-4" />
-            </Link>
-            <Link href="/" className="inline-flex items-center gap-1 hover:underline">
+          <div className="mt-7 flex justify-center text-sm font-semibold text-hilt-blue">
+            <Link href="/#problem" className="inline-flex items-center gap-1 hover:underline">
               See the full system <IconArrow className="h-4 w-4" />
             </Link>
           </div>
@@ -559,7 +524,8 @@ const SETUP_STEPS = [
   { n: "1", title: "Create your account", body: "Up to $200 in free credits. No card." },
   { n: "2", title: "Add your locations", body: "One QR per location. Your logo on it." },
   { n: "3", title: "Add your staff", body: "About 30 seconds per staff member." },
-  { n: "4", title: "Print the QR and go", body: "Print the PDF. Patients scan. Live." },
+  { n: "4", title: "Configure forms and AI", body: "Pick the form fields. Tell the AI what to ask." },
+  { n: "5", title: "Print the QR and go", body: "Print the PDF. Patients scan. Live." },
 ];
 
 function Setup() {
@@ -579,16 +545,16 @@ function Setup() {
           <div className="relative mt-16">
             <span
               aria-hidden="true"
-              className="absolute left-[8%] right-[8%] top-5 hidden h-[2px] bg-gray-200 lg:block"
+              className="absolute left-[10%] right-[10%] top-[14px] h-[2px] bg-gray-200 sm:top-4"
             />
-            <ol className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+            <ol className="grid grid-cols-5 gap-2 sm:gap-4 lg:gap-6">
               {SETUP_STEPS.map((step) => (
                 <li key={step.n} className="relative flex flex-col items-center text-center">
-                  <span className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-hilt-blue text-sm font-bold text-white ring-8 ring-snow">
+                  <span className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full bg-hilt-blue text-[10px] font-bold text-white ring-4 ring-snow sm:h-8 sm:w-8 sm:text-[11px]">
                     {step.n}
                   </span>
-                  <h3 className="mt-5 font-semibold text-ink">{step.title}</h3>
-                  <p className="mt-2 max-w-[15rem] text-sm leading-relaxed text-slate">{step.body}</p>
+                  <h3 className="mt-3 text-[11px] font-semibold leading-tight text-ink sm:mt-4 sm:text-sm">{step.title}</h3>
+                  <p className="mt-1 text-[10px] leading-snug text-slate sm:mt-2 sm:text-xs">{step.body}</p>
                 </li>
               ))}
             </ol>
@@ -597,8 +563,8 @@ function Setup() {
 
         <FadeIn delay={0.14}>
           <div className="mx-auto mt-16 max-w-2xl rounded-2xl border border-hilt-blue/15 bg-gradient-to-br from-blue-50/70 to-white p-8 text-center">
-            <p className="text-lg font-semibold text-ink">Or do not lift a finger.</p>
-            <p className="mt-2 text-slate">Book a consultation and we handle the entire setup for you.</p>
+            <p className="text-lg font-semibold text-ink">Rather not do it alone?</p>
+            <p className="mt-2 text-slate">Book a consultation and we will be with you during setup.</p>
             <div className="mt-6 flex justify-center">
               <PrimaryCTA />
             </div>
@@ -622,20 +588,9 @@ function FinalCTA() {
           <h2 className="mx-auto mt-5 max-w-2xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
             See it on your own patients.
           </h2>
-          <p className="mx-auto mt-4 max-w-lg text-lg text-white/70">
-            We set up your clinic on a 15 minute call.
-          </p>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
             <PrimaryCTA />
-            <a
-              href="#see-it"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/5 px-6 py-4 text-base font-semibold text-white backdrop-blur transition-all hover:bg-white/10 hover:-translate-y-0.5"
-            >
-              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
-              </svg>
-              Try the 60 second demo
-            </a>
+            <OpenDemoButton variant="dark" />
           </div>
           <p className="mt-4 text-sm text-white/55">$200 in free credits, no credit card.</p>
           <Link
@@ -733,7 +688,6 @@ export default function PatientIntakeFeaturePage() {
       <Cost />
       <DemoBand />
       <ObjectionBand />
-      <Proof />
       <TrustControl />
       <TieToSystem />
       <Setup />

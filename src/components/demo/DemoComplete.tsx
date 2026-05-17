@@ -30,7 +30,13 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
   async function handleSignOut() {
     if (timerRef.current) clearTimeout(timerRef.current);
     await signOutDemoUser();
-    router.push("/");
+    // Return to wherever the demo was launched from (preserves that URL),
+    // falling back to the homepage only if there is no history to go back to.
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/");
+    }
   }
 
   return (
@@ -96,7 +102,7 @@ export default function DemoComplete({ onRestart }: DemoCompleteProps) {
           className="inline-flex items-center gap-1.5 text-sm text-slate hover:text-ink transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Homepage
+          Back
         </button>
       </div>
     </div>

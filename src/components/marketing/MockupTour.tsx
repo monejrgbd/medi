@@ -352,6 +352,19 @@ export default function MockupTour({ className = "" }: { className?: string }) {
     setMounted(true);
   }, []);
 
+  // External trigger: any "Try the demo" control can open the chooser via
+  // window.dispatchEvent(new Event("hilt:open-demo")). Purely additive;
+  // nothing dispatches this on the homepage, so it is inert there.
+  useEffect(() => {
+    function openChooser() {
+      setView("chooser");
+      setStep(0);
+      setOpen(true);
+    }
+    window.addEventListener("hilt:open-demo", openChooser);
+    return () => window.removeEventListener("hilt:open-demo", openChooser);
+  }, []);
+
   useEffect(() => {
     if (autoOpenedRef.current) return;
     if (searchParams.get("demo") !== "quick") return;
@@ -374,7 +387,7 @@ export default function MockupTour({ className = "" }: { className?: string }) {
     setOpen(false);
     setView("chooser");
     setStep(0);
-    requestAnimationFrame(() => triggerRef.current?.focus());
+    requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
   }, []);
 
   const next = useCallback(() => {
