@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
 import { countryFromISO2 } from "@/lib/countries";
+import { edgeCountryISO2 } from "@/lib/edge-geo";
 
 export const metadata = {
   title: "Get Started — Hilt Health",
@@ -29,10 +30,10 @@ export default async function OnboardingPage() {
     (l: { id: string; name: string }) => ({ id: l.id, name: l.name })
   );
 
-  // Best-effort country prefill from the Vercel edge geo header. Empty when
-  // unavailable (local dev, non-Vercel) so the dropdown just starts blank.
+  // Best-effort country prefill from the host edge geo signal (Netlify
+  // x-nf-geo). Empty when unavailable (local dev) so the dropdown starts blank.
   const hdrs = await headers();
-  const detectedCountry = countryFromISO2(hdrs.get("x-vercel-ip-country"));
+  const detectedCountry = countryFromISO2(edgeCountryISO2(hdrs));
 
   return (
     <OnboardingWizard
