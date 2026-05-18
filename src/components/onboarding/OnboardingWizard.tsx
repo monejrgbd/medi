@@ -17,6 +17,8 @@ import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Phon
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
+import CountryCombobox from "@/components/CountryCombobox";
+import { COUNTRIES } from "@/lib/countries";
 
 interface OrgInfo {
   id: string;
@@ -25,6 +27,7 @@ interface OrgInfo {
   credits_total: number;
   credits_used: number;
   trial_end_date: string;
+  country?: string | null;
 }
 
 interface ExistingLocation {
@@ -35,9 +38,11 @@ interface ExistingLocation {
 export default function OnboardingWizard({
   org,
   existingLocations,
+  detectedCountry = "",
 }: {
   org: OrgInfo;
   existingLocations: ExistingLocation[];
+  detectedCountry?: string;
 }) {
   const router = useRouter();
   const storageKey = `hilt_onboarding_${org.id}`;
@@ -57,6 +62,7 @@ export default function OnboardingWizard({
   // Step 0 state (Profile)
   const [profileFullName, setProfileFullName] = useState("");
   const [profileOrgName, setProfileOrgName] = useState(org.name === "My Clinic" ? "" : org.name);
+  const [profileCountry, setProfileCountry] = useState(org.country ?? detectedCountry ?? "");
   const [premiumCode, setPremiumCode] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
@@ -302,6 +308,18 @@ export default function OnboardingWizard({
               />
             </div>
             <div>
+              <label className="mb-1 block text-sm font-medium text-ink">Country</label>
+              <CountryCombobox
+                name="country"
+                id="onboarding-country"
+                options={COUNTRIES}
+                required
+                defaultValue={profileCountry}
+                onValueChange={setProfileCountry}
+                placeholder="Start typing your country..."
+              />
+            </div>
+            <div>
               <label className="mb-1 block text-sm font-medium text-ink">
                 Premium Code <span className="font-normal text-ash">(optional)</span>
               </label>
@@ -322,13 +340,13 @@ export default function OnboardingWizard({
 
           <button
             onClick={async () => {
-              if (!profileFullName.trim() || !profileOrgName.trim()) {
-                setProfileError("Both fields are required");
+              if (!profileFullName.trim() || !profileOrgName.trim() || !profileCountry.trim()) {
+                setProfileError("Name, organization, and country are required");
                 return;
               }
               setProfileSaving(true);
               setProfileError("");
-              const result = await updateOrganizationProfile(profileOrgName.trim(), profileFullName.trim());
+              const result = await updateOrganizationProfile(profileOrgName.trim(), profileFullName.trim(), profileCountry.trim());
               if (!result.success) {
                 setProfileSaving(false);
                 setProfileError(result.error || "Something went wrong");
@@ -352,7 +370,7 @@ export default function OnboardingWizard({
               setProfileSaving(false);
               setStep(1);
             }}
-            disabled={profileSaving || !profileFullName.trim() || !profileOrgName.trim()}
+            disabled={profileSaving || !profileFullName.trim() || !profileOrgName.trim() || !profileCountry.trim()}
             className="mt-6 w-full rounded-lg bg-hilt-blue px-6 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark disabled:opacity-50"
           >
             {profileSaving ? "Saving..." : "Continue"}

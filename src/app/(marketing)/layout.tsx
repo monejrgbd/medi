@@ -1,6 +1,8 @@
 import Navbar from "@/components/Navbar";
 import FadeObserver from "@/components/FadeObserver";
 import ScrollTo from "@/components/marketing/ScrollTo";
+import CountryDetector from "@/components/marketing/country/CountryDetector";
+import { buildDetectScript } from "@/lib/country";
 
 export default function MarketingLayout({
   children,
@@ -20,7 +22,15 @@ export default function MarketingLayout({
       <FadeObserver />
       <ScrollTo />
       <Navbar />
-      {children}
+      {/* Multi-country personalization root. data-country defaults to
+          "GENERIC" server-side so the no-JS crawler sees the strong GENERIC
+          copy; the blocking inline script overwrites it before first paint
+          (no flash); CountryDetector re-applies it after hydration. */}
+      <div id="country-root" data-country="GENERIC" suppressHydrationWarning>
+        <script dangerouslySetInnerHTML={{ __html: buildDetectScript() }} />
+        <CountryDetector />
+        {children}
+      </div>
     </>
   );
 }

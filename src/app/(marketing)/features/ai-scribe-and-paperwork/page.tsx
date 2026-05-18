@@ -5,6 +5,8 @@ import MockupTour from "@/components/marketing/MockupTour";
 import OpenDemoButton from "@/components/marketing/OpenDemoButton";
 import SectionLink from "@/components/marketing/SectionLink";
 import TrialEmailCTA from "@/components/marketing/TrialEmailCTA";
+import ComplianceText from "@/components/marketing/country/ComplianceText";
+import SocialProofSection from "@/components/marketing/SocialProofSection";
 
 export const metadata = {
   title: "AI Medical Scribe & Paperwork for Clinics | Hilt Health",
@@ -213,18 +215,6 @@ function Hero() {
               >
                 Prefer a walkthrough? Book a consultation
               </a>
-              <ul className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ash">
-                {[
-                  "2M+ visits processed",
-                  "About 8 minutes saved per patient",
-                  "PHIPA, PIPEDA, HIPAA compliant",
-                ].map((t) => (
-                  <li key={t} className="flex items-center gap-1.5">
-                    <IconCheck className="h-3.5 w-3.5 shrink-0 text-green-600" />
-                    {t}
-                  </li>
-                ))}
-              </ul>
             </div>
 
             <div className="rounded-3xl border border-gray-100 bg-white/70 p-6 shadow-[0_30px_70px_-25px_rgba(37,99,235,0.3)] ring-1 ring-gray-900/5 backdrop-blur-sm sm:p-7">
@@ -504,7 +494,6 @@ function ObjectionBand() {
       testimonials exist) ──────────────────────────────── */
 
 const TRUST_BADGES = [
-  "PHIPA, PIPEDA, HIPAA & more compliant",
   "End to end encrypted",
   "Role based access controls",
   "Full audit trail",
@@ -527,6 +516,10 @@ function TrustControl() {
               The AI drafts. The doctor signs.
             </h2>
             <div className="mt-7 flex flex-wrap justify-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-hilt-blue/15 bg-white px-3.5 py-1.5 text-xs font-semibold text-hilt-blue">
+                <IconCheck className="h-3.5 w-3.5" />
+                <ComplianceText />
+              </span>
               {TRUST_BADGES.map((b) => (
                 <span
                   key={b}
@@ -867,6 +860,7 @@ export default function AiScribeAndPaperworkFeaturePage() {
     <main>
       <StructuredData />
       <Hero />
+      <SocialProofSection />
       <Cost />
       <Solution />
       <Outcomes />

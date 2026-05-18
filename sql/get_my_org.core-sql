@@ -20,6 +20,7 @@ BEGIN
     'credits_used', o.credits_used,
     'trial_end_date', o.trial_end_date,
     'onboarding_completed_at', o.onboarding_completed_at,
+    'country', o.country,
     'cancel_at_period_end', o.cancel_at_period_end,
     'verified', o.verified,
     'created_at', o.created_at
@@ -41,6 +42,7 @@ BEGIN
       'credits_used', o.credits_used,
       'trial_end_date', o.trial_end_date,
       'onboarding_completed_at', o.onboarding_completed_at,
+      'country', o.country,
       'verified', o.verified,
       'created_at', o.created_at
     )

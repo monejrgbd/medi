@@ -46,3 +46,37 @@ export const COUNTRIES: string[] = [
   "Yemen",
   "Zambia", "Zimbabwe",
 ];
+
+const COUNTRY_SET = new Set(COUNTRIES);
+
+// ISO 3166-1 alpha-2 codes whose Intl.DisplayNames label differs from the
+// curated COUNTRIES spelling. Only the exceptions are listed; everything else
+// resolves via Intl and is validated against COUNTRY_SET below.
+const ISO2_OVERRIDES: Record<string, string> = {
+  TR: "Turkey",
+  CI: "Ivory Coast",
+  ST: "Sao Tome and Principe",
+  PS: "Palestine",
+  CD: "Congo",
+  CG: "Congo",
+  HK: "Hong Kong",
+  MO: "Macau",
+  CV: "Cape Verde",
+};
+
+// Resolve a 2-letter country code (e.g. the Vercel x-vercel-ip-country header)
+// to a name that exactly matches a COUNTRIES entry. Returns "" when it cannot
+// be resolved so callers can fall back to no prefill.
+export function countryFromISO2(code?: string | null): string {
+  if (!code) return "";
+  const cc = code.trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(cc)) return "";
+  if (ISO2_OVERRIDES[cc]) return ISO2_OVERRIDES[cc];
+  try {
+    const name = new Intl.DisplayNames(["en"], { type: "region" }).of(cc);
+    if (name && COUNTRY_SET.has(name)) return name;
+  } catch {
+    // Intl.DisplayNames unavailable — fall through to no prefill
+  }
+  return "";
+}

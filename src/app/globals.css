@@ -284,3 +284,36 @@ body {
   .intake-aurora { animation: none; }
   .intake-node:hover { transform: none; }
 }
+
+/* ── Multi-country personalization ──────────────────────────────────────────
+   Overlapping [data-show-for] spans are all rendered server-side; only the
+   one matching #country-root[data-country] is shown. SSR default is
+   data-country="GENERIC", so the no-JS crawler always sees the GENERIC copy. */
+[data-show-for] { display: none; }
+[data-country="AU"] [data-show-for="AU"] { display: inline; }
+[data-country="BH"] [data-show-for="BH"] { display: inline; }
+[data-country="CA"] [data-show-for="CA"] { display: inline; }
+[data-country="CY"] [data-show-for="CY"] { display: inline; }
+[data-country="DK"] [data-show-for="DK"] { display: inline; }
+[data-country="EE"] [data-show-for="EE"] { display: inline; }
+[data-country="FJ"] [data-show-for="FJ"] { display: inline; }
+[data-country="FI"] [data-show-for="FI"] { display: inline; }
+[data-country="IS"] [data-show-for="IS"] { display: inline; }
+[data-country="IE"] [data-show-for="IE"] { display: inline; }
+[data-country="JO"] [data-show-for="JO"] { display: inline; }
+[data-country="KW"] [data-show-for="KW"] { display: inline; }
+[data-country="LU"] [data-show-for="LU"] { display: inline; }
+[data-country="MT"] [data-show-for="MT"] { display: inline; }
+[data-country="OM"] [data-show-for="OM"] { display: inline; }
+[data-country="NL"] [data-show-for="NL"] { display: inline; }
+[data-country="NZ"] [data-show-for="NZ"] { display: inline; }
+[data-country="NO"] [data-show-for="NO"] { display: inline; }
+[data-country="PR"] [data-show-for="PR"] { display: inline; }
+[data-country="QA"] [data-show-for="QA"] { display: inline; }
+[data-country="SA"] [data-show-for="SA"] { display: inline; }
+[data-country="SG"] [data-show-for="SG"] { display: inline; }
+[data-country="SE"] [data-show-for="SE"] { display: inline; }
+[data-country="AE"] [data-show-for="AE"] { display: inline; }
+[data-country="UK"] [data-show-for="UK"] { display: inline; }
+[data-country="US"] [data-show-for="US"] { display: inline; }
+[data-country="GENERIC"] [data-show-for="GENERIC"] { display: inline; }

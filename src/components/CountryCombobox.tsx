@@ -9,6 +9,7 @@ type Props = {
   placeholder?: string;
   defaultValue?: string;
   id?: string;
+  onValueChange?: (value: string) => void;
 };
 
 export default function CountryCombobox({
@@ -18,6 +19,7 @@ export default function CountryCombobox({
   placeholder = "Start typing your country...",
   defaultValue = "",
   id,
+  onValueChange,
 }: Props) {
   const [value, setValue] = useState(defaultValue);
   const [query, setQuery] = useState("");
@@ -52,14 +54,32 @@ export default function CountryCombobox({
     return () => window.removeEventListener("keydown", handler);
   }, [open]);
 
-  const filtered = query
-    ? options.filter((c) => c.toLowerCase().includes(query.toLowerCase()))
-    : options;
+  // Relevance ranked: exact, then prefix, then word-start, then substring.
+  // Ties keep the original (alphabetical) order via a stable sort.
+  const filtered = (() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    const scored: { c: string; score: number; i: number }[] = [];
+    options.forEach((c, i) => {
+      const lc = c.toLowerCase();
+      let score: number;
+      if (lc === q) score = 0;
+      else if (lc.startsWith(q)) score = 1;
+      else if (lc.includes(" " + q)) score = 2;
+      else if (lc.includes(q)) score = 3;
+      else return;
+      scored.push({ c, score, i });
+    });
+    return scored
+      .sort((a, b) => a.score - b.score || a.i - b.i)
+      .map((s) => s.c);
+  })();
 
   function selectOption(opt: string) {
     setValue(opt);
     setOpen(false);
     setQuery("");
+    onValueChange?.(opt);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -88,6 +108,13 @@ export default function CountryCombobox({
   useEffect(() => {
     setHighlighted(0);
   }, [query]);
+
+  // Keep the highlighted option visible during keyboard navigation
+  useEffect(() => {
+    if (!open) return;
+    const el = listRef.current?.children[highlighted] as HTMLElement | undefined;
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlighted, open]);
 
   return (
     <div ref={wrapperRef} className="relative">

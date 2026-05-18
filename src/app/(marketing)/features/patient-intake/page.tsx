@@ -5,6 +5,8 @@ import MockupTour from "@/components/marketing/MockupTour";
 import OpenDemoButton from "@/components/marketing/OpenDemoButton";
 import SectionLink from "@/components/marketing/SectionLink";
 import TrialEmailCTA from "@/components/marketing/TrialEmailCTA";
+import ComplianceText from "@/components/marketing/country/ComplianceText";
+import SocialProofSection from "@/components/marketing/SocialProofSection";
 
 export const metadata = {
   title: "AI Patient Intake Software for Clinics | Hilt Health",
@@ -448,7 +450,6 @@ function FAQSection() {
       no real testimonials yet, mechanism-as-proof until then) ── */
 
 const TRUST_BADGES = [
-  "PHIPA, PIPEDA, HIPAA & more compliant",
   "End to end encrypted",
   "Role based access controls",
   "Full audit trail",
@@ -471,6 +472,10 @@ function TrustControl() {
               The AI prepares. The doctor decides.
             </h2>
             <div className="mt-7 flex flex-wrap justify-center gap-2.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-hilt-blue/15 bg-white px-3.5 py-1.5 text-xs font-semibold text-hilt-blue">
+                <IconCheck className="h-3.5 w-3.5" />
+                <ComplianceText />
+              </span>
               {TRUST_BADGES.map((b) => (
                 <span
                   key={b}
@@ -690,6 +695,7 @@ export default function PatientIntakeFeaturePage() {
     <main>
       <StructuredData />
       <Hero />
+      <SocialProofSection />
       <Cost />
       <DemoBand />
       <ObjectionBand />

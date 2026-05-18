@@ -1,7 +1,9 @@
 import { requireAuth, isOwner, getMyOrg } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import OnboardingWizard from "@/components/onboarding/OnboardingWizard";
+import { countryFromISO2 } from "@/lib/countries";
 
 export const metadata = {
   title: "Get Started — Hilt Health",
@@ -27,6 +29,11 @@ export default async function OnboardingPage() {
     (l: { id: string; name: string }) => ({ id: l.id, name: l.name })
   );
 
+  // Best-effort country prefill from the Vercel edge geo header. Empty when
+  // unavailable (local dev, non-Vercel) so the dropdown just starts blank.
+  const hdrs = await headers();
+  const detectedCountry = countryFromISO2(hdrs.get("x-vercel-ip-country"));
+
   return (
     <OnboardingWizard
       org={{
@@ -36,7 +43,9 @@ export default async function OnboardingPage() {
         credits_total: org.credits_total,
         credits_used: org.credits_used,
         trial_end_date: org.trial_end_date,
+        country: org.country ?? null,
       }}
+      detectedCountry={detectedCountry}
       existingLocations={existingLocations}
     />
   );

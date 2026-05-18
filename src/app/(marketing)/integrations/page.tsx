@@ -2,12 +2,12 @@ import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
 
 export const metadata = {
-  title: "Free Data Migration | Hilt Health",
+  title: "EHR Integration | Hilt Health",
   description:
-    "Switch to Hilt Health with zero downtime. We handle your full data migration at no cost.",
+    "Hilt works with the EHR you already use. No rip and replace. From formatted notes you paste in seconds to a full two way connection, you choose how deep it goes.",
 };
 
-export default function MigratePage() {
+export default function IntegrationsPage() {
   return (
     <div className="bg-gradient-to-b from-blue-50/50 to-snow min-h-[calc(100vh-80px)]">
       <div className="mx-auto max-w-4xl px-6 pt-24 pb-20 lg:pt-32">
@@ -20,10 +20,10 @@ export default function MigratePage() {
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-ink sm:text-4xl lg:text-5xl tracking-tight">
-              Free Data Migration
+              Works With Your EHR
             </h1>
             <p className="mt-4 text-lg text-slate max-w-2xl mx-auto">
-              Switching systems should not slow your clinic down. We migrate your patient records, visit history, and configurations at no cost, with zero downtime.
+              Hilt runs alongside the system you already use. No rip and replace. From clean formatted notes your team pastes in seconds, to a full two way connection, you choose how deep the integration goes.
             </p>
           </div>
         </FadeIn>
@@ -37,10 +37,10 @@ export default function MigratePage() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-ink mb-2">
-              Ready to switch?
+              Want it wired into your EHR?
             </h2>
             <p className="text-sm text-slate mb-6 max-w-md mx-auto">
-              Book a 15 minute call. We will walk through your current setup and build a migration plan tailored to your clinic.
+              Book a 15 minute call. We will look at your current system and map the cleanest way to connect Hilt to it.
             </p>
             <a
               href="https://cal.com/102937474/hilt-health-meeting"
@@ -61,32 +61,32 @@ export default function MigratePage() {
           <div className="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-6">
             {[
               {
-                value: "2M+",
-                label: "Patients Screened",
-                description: "Clinics trust Hilt Health to handle their patient intake at scale",
+                value: "Any EHR",
+                label: "Works Day One",
+                description: "Formatted notes paste cleanly into any system, no setup required",
                 icon: (
                   <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
                   </svg>
                 ),
               },
               {
-                value: "8 min",
-                label: "Saved Per Patient",
-                description: "Averaged across AI intake, the doctor briefing, and drafted paperwork",
+                value: "1 or 2 way",
+                label: "Connection Options",
+                description: "Optional one way push or a full two way sync, configured for your clinic",
                 icon: (
                   <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                   </svg>
                 ),
               },
               {
                 value: "$0",
-                label: "Migration Cost",
-                description: "Full migration included free with every plan",
+                label: "To Get Started",
+                description: "Formatted copy and paste is included free on every plan",
                 icon: (
                   <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="1.5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                   </svg>
                 ),
               },
@@ -120,21 +120,21 @@ export default function MigratePage() {
               {[
                 {
                   step: "1",
-                  title: "Meet With Us",
+                  title: "Tell Us Your EHR",
                   description:
-                    "A quick 15 minute call to understand your current system and what needs to move over.",
+                    "A quick 15 minute call. Tell us what you run, Epic, athenahealth, Oracle Health, or anything else.",
                 },
                 {
                   step: "2",
-                  title: "We Handle Everything",
+                  title: "We Configure It",
                   description:
-                    "Our team migrates patient records, visit history, and settings. You keep working as usual.",
+                    "Formatted notes work the moment you start. For a deeper link, our team sets up a one way or two way connection.",
                 },
                 {
                   step: "3",
                   title: "Go Live",
                   description:
-                    "Verify your data, flip the switch. Your staff is up and running in minutes.",
+                    "Your team works in Hilt, the record lands in your EHR. Nothing changes about how you chart.",
                 },
               ].map((item, i) => (
                 <div key={i} className="relative flex flex-col items-center text-center px-6 py-6">
@@ -156,22 +156,22 @@ export default function MigratePage() {
           </div>
         </FadeIn>
 
-        {/* What we migrate */}
+        {/* What connects */}
         <FadeIn delay={0.2}>
           <div className="mt-14 rounded-2xl border border-gray-100 bg-white p-8 shadow-sm">
             <h2 className="text-lg font-bold text-ink mb-5">
-              What We Migrate
+              What Flows Into Your EHR
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                "Patient demographics and contact info",
-                "Visit history and medical records",
-                "Medications, allergies, and conditions",
-                "Provider and staff accounts",
-                "Appointment and scheduling data",
-                "Insurance and billing info",
-                "Documents and attachments",
-                "Custom fields and configurations",
+                "AI visit summaries",
+                "SOAP and clinical notes",
+                "Structured intake data",
+                "Sick notes and letters",
+                "Diagnoses and problem lists",
+                "Medications and allergies",
+                "Patient demographics",
+                "Attachments and documents",
               ].map((item, i) => (
                 <div key={i} className="flex items-center gap-2.5">
                   <svg
@@ -205,10 +205,10 @@ export default function MigratePage() {
               </svg>
             </div>
             <h2 className="text-xl font-semibold text-ink mb-2">
-              Ready to switch?
+              Want it wired into your EHR?
             </h2>
             <p className="text-sm text-slate mb-6 max-w-md mx-auto">
-              Book a 15 minute call. We will walk through your current setup and build a migration plan tailored to your clinic.
+              Book a 15 minute call. We will look at your current system and map the cleanest way to connect Hilt to it.
             </p>
             <a
               href="https://cal.com/102937474/hilt-health-meeting"

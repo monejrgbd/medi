@@ -5,6 +5,8 @@ import FadeIn from "@/components/FadeIn";
 import TeamCodeCapture from "@/components/demo/TeamCodeCapture";
 import ContactLink from "@/components/marketing/ContactLink";
 import MockupTour from "@/components/marketing/MockupTour";
+import ComplianceText from "@/components/marketing/country/ComplianceText";
+import SocialProofSection from "@/components/marketing/SocialProofSection";
 
 const SignUpForm = dynamic(() => import("@/components/SignUpForm"), {
   loading: () => <div className="h-[400px]" />,
@@ -56,92 +58,6 @@ function TourSection() {
   );
 }
 
-/* ── Social Proof ─────────────────────────────────────── */
-
-function SocialProofSection() {
-  const clinics = [
-    "Riverside Family Medicine",
-    "Pinewood Pediatrics",
-    "Cedar Valley Health",
-    "Aspen Family Practice",
-    "Bayside Medical Group",
-    "Crestwood Clinic",
-    "Greenleaf Walk-In Care",
-    "Heartland Primary Care",
-    "Lakeshore Health Partners",
-    "Maplewood Wellness",
-    "Meridian Pediatrics",
-    "Mountain View Internal Medicine",
-    "Oakwood Family Care",
-    "Parkside Urgent Care",
-    "Pine Hill Medicine",
-    "Sage Wellness Center",
-    "Silvercreek Family Health",
-    "Whitefield Pediatrics",
-  ];
-
-  return (
-    <section className="bg-snow py-16 lg:py-24">
-      <div className="mx-auto max-w-[1200px] px-6">
-        <FadeIn>
-          <p className="mb-10 text-center text-xs font-semibold uppercase tracking-[0.2em] text-ash sm:text-sm">
-            Trusted by clinics worldwide
-          </p>
-        </FadeIn>
-
-        {/* Marquee */}
-        <div
-          className="relative mb-14 overflow-hidden"
-          style={{
-            maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
-            WebkitMaskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
-          }}
-          aria-hidden="true"
-        >
-          <div className="logo-carousel flex w-max gap-x-14">
-            {[...clinics, ...clinics].map((name, i) => (
-              <span key={i} className="shrink-0 whitespace-nowrap text-base font-medium tracking-tight text-slate sm:text-lg">
-                {name}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* Stats — inline, no card */}
-        <FadeIn>
-          <div className="flex flex-col items-center gap-7 text-center">
-            <div className="flex flex-wrap items-end justify-center gap-x-14 gap-y-6 sm:gap-x-24">
-              <div>
-                <p className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">2M+</p>
-                <p className="mt-1.5 text-sm font-medium text-ash">Patients Screened</p>
-              </div>
-              <div>
-                <p className="text-4xl font-bold tracking-tight text-ink sm:text-5xl">8 min</p>
-                <p className="mt-1.5 text-sm font-medium text-ash">Saved Per Patient</p>
-              </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-3 text-sm sm:flex-row sm:gap-6">
-              <div className="flex items-center gap-2">
-                <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
-                </svg>
-                <span className="text-slate">About <span className="font-semibold text-ink">8 minutes</span> saved per patient, every visit</span>
-              </div>
-              <div className="hidden h-4 w-px bg-gray-300 sm:block" />
-              <div className="flex items-center gap-2">
-                <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-                <span className="text-slate">Free data migration, <Link href="/migrate" className="font-semibold text-hilt-blue hover:underline">learn more</Link></span>
-              </div>
-            </div>
-          </div>
-        </FadeIn>
-      </div>
-    </section>
-  );
-}
 
 /* ── AI Adoption Journey ──────────────────────────────── */
 
@@ -1325,7 +1241,7 @@ function BeyondTheVisitSection() {
 
 function TrustAndControlSection() {
   const badges = [
-    { label: "PHIPA, PIPEDA, HIPAA & more compliant", icon: "M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" },
+    { label: <ComplianceText />, icon: "M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" },
     { label: "End to end encrypted", icon: "M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" },
 { label: "Role based access controls", icon: "M15.75 5.25a3 3 0 0 1 3 3m3 0a6 6 0 0 1-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1 1 21.75 8.25Z" },
     { label: "Full audit trail", icon: "M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Zm3.75 11.625a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" },

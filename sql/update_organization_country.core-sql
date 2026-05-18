@@ -1,0 +1,58 @@
+-- Private implementation
+-- Sets organizations.country for the caller's org. Owner only, mirroring
+-- update_organization_name (canonical ownership = organizations.owner_id).
+-- Called from onboarding Step 0 (Profile) alongside update_organization_name.
+CREATE OR REPLACE FUNCTION private.update_organization_country(
+  p_auth_uid uuid,
+  p_country text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_org_id uuid;
+  v_clean text;
+BEGIN
+  -- Sanitize: strip tags, trim, cap length
+  v_clean := substring(trim(regexp_replace(COALESCE(p_country, ''), '<[^>]*>', '', 'g')), 1, 100);
+
+  IF length(v_clean) = 0 THEN
+    RAISE EXCEPTION 'Country is required';
+  END IF;
+
+  SELECT o.id INTO v_org_id
+  FROM public.organizations o
+  WHERE o.owner_id = p_auth_uid;
+
+  IF v_org_id IS NULL THEN
+    RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  UPDATE public.organizations
+  SET country = v_clean
+  WHERE id = v_org_id;
+END;
+$function$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.update_organization_country(
+  p_country text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  PERFORM private.update_organization_country(v_auth_uid, p_country);
+END;
+$function$;
+
+REVOKE EXECUTE ON FUNCTION public.update_organization_country(text) FROM anon;
+GRANT EXECUTE ON FUNCTION public.update_organization_country(text) TO authenticated;
