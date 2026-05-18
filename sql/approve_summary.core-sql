@@ -35,31 +35,9 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Session expired');
   END IF;
 
-  -- Set audit context for trigger
-  PERFORM set_config('app.audit_actor_id', v_visit.patient_id::text, true);
-  PERFORM set_config('app.audit_actor_type', 'patient', true);
-  PERFORM set_config('app.audit_action', 'summary_approved', true);
-
-  -- Branch on snapshotted check-in mode:
-  --   approve_to_start  -> straight to doctor queue (current behavior)
-  --   approve_on_arrival / self_service_on_arrival -> arrival gate first; entered_queue_at
-  --     is stamped later by confirm_arrival so queue order anchors on physical arrival.
-  IF v_visit.checkin_mode = 'approve_to_start' THEN
-    UPDATE public.visits
-    SET status = 'waiting_doctor_claim',
-        entered_queue_at = now(),
-        patient_approved = true,
-        patient_approved_at = now(),
-        updated_at = now()
-    WHERE id = p_visit_id;
-  ELSE
-    UPDATE public.visits
-    SET status = 'awaiting_arrival',
-        patient_approved = true,
-        patient_approved_at = now(),
-        updated_at = now()
-    WHERE id = p_visit_id;
-  END IF;
+  -- Move to the queue / arrival gate. Shared with the forms-only path
+  -- (advance_after_prescreening) so queue bookkeeping is identical.
+  PERFORM private.finalize_intake_to_queue(p_visit_id, v_visit.patient_id, 'summary_approved');
 
   RETURN jsonb_build_object('success', true);
 END;

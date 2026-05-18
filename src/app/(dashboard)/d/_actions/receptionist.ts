@@ -10,6 +10,76 @@ function validUUID(id: string): boolean {
   return UUID_RE.test(id);
 }
 
+// Register a walk-in patient straight into the queue. Receptionists never
+// claim — p_claim is hard-coded false (defense in depth over the SQL guard).
+export async function registerWalkIn(input: {
+  locationId: string;
+  patientId?: string;
+  firstName?: string;
+  lastName?: string;
+  birthday?: string;
+  sex?: string;
+  phone?: string;
+  language?: string;
+  forceNew?: boolean;
+}) {
+  await requireAuth();
+
+  if (!input.locationId || !validUUID(input.locationId))
+    return { success: false, error: "Invalid location ID" };
+
+  let firstName = "";
+  let lastName = "";
+
+  if (input.patientId) {
+    if (!validUUID(input.patientId))
+      return { success: false, error: "Invalid patient ID" };
+  } else {
+    firstName = stripHtml(input.firstName ?? "").slice(0, 100).trim();
+    lastName = stripHtml(input.lastName ?? "").slice(0, 100).trim();
+    if (!firstName || !lastName)
+      return { success: false, error: "First and last name are required" };
+    if (!input.birthday)
+      return { success: false, error: "Birthday is required" };
+  }
+
+  const rpcParams: Record<string, unknown> = {
+    p_location_id: input.locationId,
+    p_claim: false,
+    p_force_new: input.forceNew ?? false,
+  };
+  if (input.patientId) {
+    rpcParams.p_patient_id = input.patientId;
+  } else {
+    rpcParams.p_first_name = firstName;
+    rpcParams.p_last_name = lastName;
+    rpcParams.p_birthday = input.birthday;
+    if (input.sex) rpcParams.p_sex = input.sex;
+    if (input.phone) rpcParams.p_phone = input.phone;
+    if (input.language) rpcParams.p_language = input.language;
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("add_patient_to_queue", rpcParams);
+
+  if (error) return { success: false, error: "Failed to add patient to queue" };
+  if (data && !data.success) return { success: false, error: data.error };
+
+  if (data?.needs_resolution) {
+    return { success: true, needs_resolution: true, similar: data.similar ?? [] };
+  }
+
+  revalidatePath("/d/receptionist");
+  return {
+    success: true,
+    needs_resolution: false,
+    visit_id: data.visit_id,
+    patient_id: data.patient_id,
+    status: data.status,
+    claimed: false,
+  };
+}
+
 export async function approvePatient(
   visitId: string,
   followUpInfo?: { followUpOfVisitId: string; followUpId: string }

@@ -26,6 +26,9 @@ DECLARE
   v_low_credits boolean := false;
   v_org record;
   v_lang text;
+  v_location_ai_model text;
+  v_model text;
+  v_min numeric;
 BEGIN
   v_lang := COALESCE(NULLIF(trim(p_language), ''), 'en');
 
@@ -42,7 +45,7 @@ BEGIN
   END IF;
 
   -- Visit (derive org/location/patient server-side; do not trust client)
-  SELECT id, org_id, location_id, patient_id
+  SELECT id, org_id, location_id, patient_id, ai_model_override
   INTO v_visit
   FROM public.visits
   WHERE id = p_visit_id;
@@ -69,6 +72,36 @@ BEGIN
     END IF;
   END IF;
 
+  -- Credit preflight (metered plans only): refuse to start a recording the
+  -- clinic cannot afford. Subscription plans are plan_included and skip this
+  -- (mirrors deduct_scribe_credits plan partitioning, so PAYG/trials and
+  -- expired/suspended are all gated). Minutes are unknown until Stop, so the
+  -- floor is one minute at the resolved tier rate (CASE replicates
+  -- aiModelToTier + the deduct_scribe_credits rate). We never interrupt a
+  -- recording mid-encounter; a bounded one-recording overrun is accepted.
+  SELECT subscription_plan, credits_total, credits_used INTO v_org
+  FROM public.organizations WHERE id = v_caller_org_id;
+
+  IF v_org.subscription_plan NOT IN ('starter', 'professional', 'business', 'enterprise') THEN
+    SELECT ai_model INTO v_location_ai_model
+    FROM public.locations WHERE id = v_visit.location_id;
+
+    v_model := COALESCE(v_visit.ai_model_override, v_location_ai_model);
+    v_min := CASE
+      WHEN v_model = 'premium'   THEN 0.5
+      WHEN v_model = 'precision' THEN 0.5
+      WHEN v_model = 'advanced'  THEN 0.2
+      ELSE 0.1  -- standard / null / unknown
+    END;
+
+    IF (v_org.credits_total - v_org.credits_used) < v_min THEN
+      RETURN jsonb_build_object(
+        'success', false,
+        'error', 'Out of credits. Add credits to use the AI scribe.'
+      );
+    END IF;
+  END IF;
+
   v_audio_prefix := v_caller_org_id::text || '/' || v_visit.id::text
                     || '/scribe/' || v_recording_id::text;
 
@@ -91,7 +124,10 @@ BEGIN
                        'consent_text_version', 'scribe_v1', 'language', v_lang)
   );
 
-  -- Scribe is free on every plan: no credit preflight, no low-credit warning.
+  -- Passed the credit preflight (or plan_included). The hard gate above
+  -- blocks insufficient-credit starts; the soft low_credits warning is left
+  -- false here (the actual per-minute charge happens post-recording in
+  -- transcribe-encounter via deduct_scribe_credits).
   RETURN jsonb_build_object(
     'success', true,
     'recording_id', v_recording_id,

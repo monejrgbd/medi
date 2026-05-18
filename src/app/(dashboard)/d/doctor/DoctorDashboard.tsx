@@ -446,6 +446,7 @@ export default function DoctorDashboard({
         demoMode={demoMode}
         nurseEnabled={nurseEnabled}
         currentRoom={currentRoom}
+        role={isOwner ? "owner" : "doctor"}
       />
     );
   }
@@ -475,6 +476,8 @@ export default function DoctorDashboard({
         presetRooms={locationPresetRooms}
         recentRooms={recentRooms}
         showRoomToPatients={locationShowRoomToPatients}
+        locationId={locationId}
+        role={isOwner ? "owner" : "doctor"}
       />
 
       <div className="px-4 py-4 lg:px-6">

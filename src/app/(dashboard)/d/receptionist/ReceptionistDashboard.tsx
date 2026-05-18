@@ -24,6 +24,7 @@ import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
 import NoDoctorsWarning from "@/components/dashboard/NoDoctorsWarning";
 import PatientSearch from "@/components/dashboard/PatientSearch";
 import ShareCheckinLink from "@/components/receptionist/ShareCheckinLink";
+import AddPatientToQueueModal from "@/components/dashboard/AddPatientToQueueModal";
 import { toast } from "sonner";
 
 interface PendingVisit {
@@ -155,6 +156,7 @@ export default function ReceptionistDashboard({
   const { org } = useRole();
   const [tab, setTab] = useState<"pending" | "active" | "referrals">("pending");
   const [showShareLink, setShowShareLink] = useState(false);
+  const [showAddPatient, setShowAddPatient] = useState(false);
   const [pending, setPending] = useState<PendingVisit[]>(
     demoMode ? (demoVisitId ? initialPending.filter((p) => p.visit_id === demoVisitId) : []) : initialPending
   );
@@ -574,6 +576,24 @@ export default function ReceptionistDashboard({
           </div>
         </button>
 
+        {/* Register walk in */}
+        {locationId && (
+          <button
+            onClick={() => setShowAddPatient(true)}
+            className="mb-4 w-full rounded-lg border border-hilt-blue/20 bg-blue-50 px-4 py-3 text-left transition-colors hover:bg-blue-100 flex items-center gap-3"
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-hilt-blue/10">
+              <svg className="h-4 w-4 text-hilt-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-hilt-blue">Register walk in</p>
+              <p className="text-xs text-slate">Add a patient straight to the queue</p>
+            </div>
+          </button>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-1 mb-4 border-b border-gray-200">
           {tabs.map((t) => (
@@ -622,6 +642,14 @@ export default function ReceptionistDashboard({
           locationId={locationId}
           onClose={() => setShowShareLink(false)}
           demoMode={demoMode}
+        />
+      )}
+
+      {showAddPatient && locationId && (
+        <AddPatientToQueueModal
+          locationId={locationId}
+          role="receptionist"
+          onClose={() => setShowAddPatient(false)}
         />
       )}
     </div>

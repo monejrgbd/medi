@@ -1,6 +1,6 @@
 // Internal function — deploy with --no-verify-jwt
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { loadPlanConfig, getAdapter, pickPlanTaskCall } from "../_ai-providers/index.ts";
+import { loadPlanConfig, getAdapter, pickPlanTaskCall, aiModelToTier } from "../_ai-providers/index.ts";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
 
@@ -127,20 +127,20 @@ Deno.serve(async (req) => {
       document.visit_id
         ? supabase
             .from("visits")
-            .select("doctor_diagnosis, ai_summary, care_instructions, nurse_notes, claimed_by, created_at")
+            .select("doctor_diagnosis, ai_summary, care_instructions, nurse_notes, claimed_by, created_at, ai_model_override")
             .eq("id", document.visit_id)
             .single()
         : Promise.resolve({ data: null, error: null }),
       // Organization name + plan (plan drives document model selection via ai_plan_config)
       supabase
         .from("organizations")
-        .select("name, subscription_plan")
+        .select("name, subscription_plan, credits_total, credits_used")
         .eq("id", document.org_id)
         .single(),
       // Location name
       supabase
         .from("locations")
-        .select("name")
+        .select("name, ai_model")
         .eq("id", document.location_id)
         .single(),
       // Creator (doctor) name
@@ -332,6 +332,33 @@ Deno.serve(async (req) => {
 
     // 6. Load plan-based AI config and call adapter
     const subscriptionPlan = orgRes.data?.subscription_plan || "pay_as_you_go";
+
+    // Paperwork billing tier = the clinic's configured AI tier (same lever as
+    // scribe), resolved from the visit override then the location default.
+    const tier = aiModelToTier(visit?.ai_model_override ?? location?.ai_model);
+    const docRate =
+      tier === "advanced" ? 0.3 : tier === "precision" || tier === "premium" ? 0.5 : 0.2;
+
+    // Preflight (metered plans only): refuse BEFORE the expensive AI call if
+    // the org cannot afford one document. Subscription plans are plan_included
+    // and skip this. Mirrors deduct_scribe_credits / deduct_document_credits
+    // plan partitioning. The actual deduction is still the idempotent
+    // post-success call below.
+    const meteredPlan = !["starter", "professional", "business", "enterprise"].includes(
+      subscriptionPlan
+    );
+    if (meteredPlan) {
+      const remaining =
+        (orgRes.data?.credits_total ?? 0) - (orgRes.data?.credits_used ?? 0);
+      if (remaining < docRate) {
+        await markFailed(supabase, document_id);
+        return new Response(
+          JSON.stringify({ success: false, error: "insufficient_credits" }),
+          { status: 402, headers: { "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     const planConfig = await loadPlanConfig(supabase, subscriptionPlan);
     const docCall = pickPlanTaskCall(planConfig, "document");
     const adapter = getAdapter(docCall.provider, supabase);
@@ -417,6 +444,21 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: false, error: "Failed to save AI draft" }),
         { status: 500, headers: { "Content-Type": "application/json" } }
       );
+    }
+
+    // 9b. Bill the finalized document. Non-fatal: the document is already
+    // saved, so a billing hiccup must never fail the response (mirrors
+    // scribe's non-fatal billError). Idempotent per document_id in the shared
+    // primitive; subscription plans return plan_included (0); scribe-origin
+    // SOAP notes are intentionally charged too ("charge both").
+    try {
+      await supabase.rpc("deduct_document_credits", {
+        p_org_id: document.org_id,
+        p_document_id: document_id,
+        p_tier: tier,
+      });
+    } catch (e) {
+      console.error("paperwork billing failed (non-fatal):", document_id, e);
     }
 
     // 10. Return success

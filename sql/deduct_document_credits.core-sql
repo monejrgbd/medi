@@ -1,0 +1,102 @@
+-- deduct_document_credits: AI paperwork billing POLICY wrapper.
+-- AI paperwork = clinical_documents drafted by the generate-document-content
+-- edge function (SOAP notes, referral/work letters, prior-auth). It owns only
+-- the paperwork-specific pricing policy (per finalized document, by model tier)
+-- and delegates the actual metering to the shared primitive
+-- private.check_and_deduct_feature_budget — the same engine deduct_credits and
+-- deduct_scribe_credits delegate to. One metering engine; only the amount and
+-- the idempotency domain are paperwork-specific.
+--
+-- Policy (paperwork is PAID; there is no universal free tier):
+--   Subscription plans (starter/professional/business/enterprise): the plan
+--     includes unlimited paperwork — no charge (mirrors deduct_scribe_credits).
+--   PAYG / trials: metered per finalized document by model tier — Standard
+--     0.2, Advanced 0.3, Precision/Premium 0.5 credits/document.
+-- Idempotency is DOCUMENT-scoped (not visit-scoped like scribe): a single
+-- visit can produce many documents, so the shared primitive keys on
+-- p_document_id. Retrying generation for the same document never double
+-- charges; a new document is a new charge. Called by generate-document-content
+-- (service role) AFTER a document is successfully drafted. Scribe-originated
+-- SOAP notes are NOT exempt — they incur both the per-minute scribe charge and
+-- this per-document charge ("charge both", by product decision).
+
+-- Drop any prior signatures so no stale overload remains.
+DROP FUNCTION IF EXISTS public.deduct_document_credits(uuid, uuid, text);
+DROP FUNCTION IF EXISTS private.deduct_document_credits(text, uuid, uuid, text);
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.deduct_document_credits(
+  p_caller_role text,
+  p_org_id uuid,
+  p_document_id uuid,
+  p_tier text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_plan text;
+  v_rate numeric;
+BEGIN
+  SELECT subscription_plan INTO v_plan
+  FROM public.organizations WHERE id = p_org_id;
+
+  IF v_plan IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  -- Subscription plans include unlimited paperwork at the plan's document
+  -- model. The caller resolves the tier, so the plan's paperwork is never
+  -- charged (identical short-circuit to deduct_scribe_credits).
+  IF v_plan IN ('starter', 'professional', 'business', 'enterprise') THEN
+    RETURN jsonb_build_object('success', true, 'source', 'plan_included', 'credits_deducted', 0);
+  END IF;
+
+  -- PAYG / trials: metered per finalized document by chosen model tier.
+  -- There is no free tier; Standard (and any unknown tier) is 0.2/document.
+  v_rate := CASE p_tier
+    WHEN 'advanced'  THEN 0.3
+    WHEN 'precision' THEN 0.5
+    WHEN 'premium'   THEN 0.5
+    ELSE 0.2  -- standard / unknown
+  END;
+
+  IF v_rate <= 0 THEN
+    -- Defensive (never with the constants above); nothing to charge.
+    RETURN jsonb_build_object('success', true, 'source', 'metered', 'credits_deducted', 0);
+  END IF;
+
+  -- Delegate metering to the shared primitive, document-scoped idempotent.
+  -- p_visit_id passed NULL (5th arg); p_document_id is the 6th arg → the
+  -- primitive takes its document path and forces the credits_log row's
+  -- visit_id NULL so it cannot collide with the visit unique index.
+  RETURN private.check_and_deduct_feature_budget(
+    p_org_id, 'paperwork', v_rate,
+    'AI paperwork (' || p_tier || ')', NULL, p_document_id
+  );
+END;
+$$;
+
+-- Public wrapper (service-role only)
+CREATE OR REPLACE FUNCTION public.deduct_document_credits(
+  p_org_id uuid,
+  p_document_id uuid,
+  p_tier text
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  RETURN private.deduct_document_credits(auth.role(), p_org_id, p_document_id, p_tier);
+END;
+$$;

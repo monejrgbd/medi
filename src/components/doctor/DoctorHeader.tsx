@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { setStaffRoom } from "@/app/(dashboard)/d/_actions/doctor";
 import { useRouter } from "next/navigation";
+import AddPatientToQueueModal from "@/components/dashboard/AddPatientToQueueModal";
 
 interface DoctorHeaderProps {
   locationName: string;
@@ -18,6 +19,8 @@ interface DoctorHeaderProps {
   presetRooms?: string[];
   recentRooms?: string[];
   showRoomToPatients?: boolean;
+  locationId?: string | null;
+  role?: "doctor" | "owner";
 }
 
 export default function DoctorHeader({
@@ -33,9 +36,12 @@ export default function DoctorHeader({
   presetRooms = [],
   recentRooms = [],
   showRoomToPatients = true,
+  locationId = null,
+  role = "doctor",
 }: DoctorHeaderProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [roomInput, setRoomInput] = useState(currentRoom ?? "");
   const [displayRoom, setDisplayRoom] = useState<string | null>(currentRoom);
   const [saving, setSaving] = useState(false);
@@ -107,6 +113,14 @@ export default function DoctorHeader({
           )}
         </div>
         <div className="flex items-center gap-3">
+          {locationId && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="rounded-lg bg-hilt-blue px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+            >
+              + Add patient
+            </button>
+          )}
           {onToggleFocusMode && (
             <button
               onClick={onToggleFocusMode}
@@ -209,6 +223,14 @@ export default function DoctorHeader({
           </div>
         ))}
       </div>
+
+      {showAdd && locationId && (
+        <AddPatientToQueueModal
+          locationId={locationId}
+          role={role}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
     </div>
   );
 }

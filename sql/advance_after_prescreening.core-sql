@@ -1,0 +1,68 @@
+-- Forms-only intake: after the patient completes the prescreening form on a
+-- skip_ai + forms_before_queue visit, move it out of still_answering_ai to the
+-- queue / arrival gate WITHOUT an AI chat or summary. Anon-callable (patient
+-- flow), guarded by session token. Mirrors approve_summary but for the no-AI path.
+CREATE OR REPLACE FUNCTION private.advance_after_prescreening(
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_visit record;
+BEGIN
+  SELECT v.id, v.status, v.session_token, v.created_at, v.patient_id, v.ai_skipped
+  INTO v_visit
+  FROM public.visits v
+  WHERE v.session_token = p_session_token;
+
+  IF v_visit IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session not found');
+  END IF;
+
+  -- 24-hour session expiry
+  IF v_visit.created_at < now() - interval '24 hours' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Session expired');
+  END IF;
+
+  -- Idempotent: already advanced (double tap, realtime race, resume after the
+  -- form was saved but the advance call did not land). Safe no-op.
+  IF v_visit.status <> 'still_answering_ai' THEN
+    RETURN jsonb_build_object('success', true, 'already_advanced', true, 'status', v_visit.status);
+  END IF;
+
+  -- Refuse to skip the chat on a real AI visit.
+  IF NOT COALESCE(v_visit.ai_skipped, false) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'AI not skipped for this visit');
+  END IF;
+
+  -- Deliberately NOT requiring prescreening_data: when the location has no
+  -- visible prescreening sections, PreScreeningForm auto-completes without a
+  -- save. Such a visit must still advance cleanly rather than strand the patient.
+  PERFORM private.finalize_intake_to_queue(v_visit.id, v_visit.patient_id, 'prescreening_completed');
+
+  SELECT v.status INTO v_visit.status FROM public.visits v WHERE v.id = v_visit.id;
+  RETURN jsonb_build_object('success', true, 'status', v_visit.status);
+END;
+$$;
+
+-- Public wrapper (anon-callable; no auth.uid() capture, session token is the guard)
+CREATE OR REPLACE FUNCTION public.advance_after_prescreening(
+  p_session_token uuid
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN private.advance_after_prescreening(p_session_token);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.advance_after_prescreening(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.advance_after_prescreening(uuid) TO anon, authenticated;

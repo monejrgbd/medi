@@ -70,6 +70,11 @@ BEGIN
     -- NO ACTION, and scribe_recordings FK-references clinical_documents. The
     -- delivery/access logs FK-reference clinical_documents. Without this block
     -- the org purge fails for any org that ever produced a clinical document.
+    -- NOTE: credits_log.document_id also FK-references clinical_documents but
+    -- is ON DELETE SET NULL (unlike the NO ACTION refs above), so it is
+    -- deliberately exempt from this ordering constraint -- credits_log is
+    -- already deleted org-wide above (financial ledger), and even out of order
+    -- a clinical_documents delete would null the ref rather than FK-block.
     DELETE FROM public.scribe_recordings WHERE org_id = v_org.id;
     DELETE FROM public.document_delivery_log
       WHERE document_id IN (SELECT id FROM public.clinical_documents WHERE org_id = v_org.id);

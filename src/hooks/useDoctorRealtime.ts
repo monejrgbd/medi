@@ -48,9 +48,30 @@ export function useDoctorRealtime(
           filter: `location_id=eq.${locationId}`,
         },
         (payload) => {
+          const visit = payload.new as Record<string, unknown>;
+
+          // A manually added walk-in is inserted straight at
+          // waiting_doctor_claim (no status UPDATE), so the queue chime in the
+          // UPDATE handler never fires. Alert here too.
+          if (visit.status === "waiting_doctor_claim") {
+            const soundOn = optionsRef.current?.soundEnabled ?? true;
+            playNotificationChime(soundOn);
+
+            if (
+              typeof Notification !== "undefined" &&
+              Notification.permission === "granted"
+            ) {
+              new Notification("New patient in queue", {
+                tag: `queue-${visit.id}`,
+              });
+            }
+
+            optionsRef.current?.onNotification?.({ type: "new_queue" });
+          }
+
           callbackRef.current({
             eventType: "INSERT",
-            new: payload.new as Record<string, unknown>,
+            new: visit,
             old: {},
           });
         }

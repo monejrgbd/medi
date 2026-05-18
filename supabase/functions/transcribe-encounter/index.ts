@@ -6,7 +6,8 @@
 // SOAP pipeline. Idempotent and cursor-resumable (scribe_timeout_cron re-fires
 // stuck rows; processing resumes from scribe_recordings.transcribed_segments).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { loadTaskCall, getAdapter } from "../_ai-providers/index.ts";
+import { loadTaskCall, getAdapter, aiModelToTier } from "../_ai-providers/index.ts";
+import type { AiTier } from "../_ai-providers/types.ts";
 import { PLAN_SCRIBE_TIER } from "../_ai-providers/plan-config.ts";
 
 const INTERNAL_SECRET = Deno.env.get("INTERNAL_EDGE_SECRET");
@@ -291,16 +292,38 @@ Deno.serve(async (req) => {
     // the org plan (scribe is free; the plan only buys a better cleanup model).
     // Best-effort: any failure falls back to the verbatim transcript so an
     // encounter is never lost.
-    let cleaned: string | null = null;
+    // Resolve the scribe model tier. Subscription plans get their
+    // PLAN_SCRIBE_TIER as a free perk; PAYG/trials reuse the clinic's existing
+    // AI tier pick (visit override > location ai_model, same control as intake)
+    // and are billed per-minute for advanced/precision.
+    let scribeTier: AiTier = "standard";
     try {
       const { data: orgRow } = await supabase
-        .from("organizations")
-        .select("subscription_plan")
-        .eq("id", rec.org_id)
-        .single();
+        .from("organizations").select("subscription_plan").eq("id", rec.org_id).single();
       const plan = (orgRow?.subscription_plan as string) ?? "";
-      const tier = PLAN_SCRIBE_TIER[plan] ?? "standard";
-      const { call } = await loadTaskCall(supabase, tier, "scribe");
+      if (
+        plan === "starter" || plan === "professional" ||
+        plan === "business" || plan === "enterprise"
+      ) {
+        scribeTier = PLAN_SCRIBE_TIER[plan] ?? "standard";
+      } else {
+        const { data: visitRow } = await supabase
+          .from("visits").select("ai_model_override, location_id").eq("id", rec.visit_id).single();
+        let aiModel = (visitRow?.ai_model_override as string | null) || null;
+        if (!aiModel && visitRow?.location_id) {
+          const { data: locRow } = await supabase
+            .from("locations").select("ai_model").eq("id", visitRow.location_id).single();
+          aiModel = (locRow?.ai_model as string | null) || null;
+        }
+        scribeTier = aiModelToTier(aiModel);
+      }
+    } catch (e) {
+      console.error("scribe tier resolution failed, using standard", e);
+    }
+
+    let cleaned: string | null = null;
+    try {
+      const { call } = await loadTaskCall(supabase, scribeTier, "scribe");
       const adapter = getAdapter(call.provider, supabase);
       const system =
         "You are given the raw automatic speech-to-text transcription of a live, " +
@@ -365,6 +388,7 @@ Deno.serve(async (req) => {
         p_org_id: rec.org_id,
         p_visit_id: rec.visit_id,
         p_audio_minutes: audioMinutes,
+        p_tier: scribeTier,
       });
       if (bill && bill.success === false) billError = bill.error ?? "billing_failed";
     } catch (e) {

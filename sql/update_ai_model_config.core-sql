@@ -45,6 +45,11 @@ BEGIN
     diagnostic_model_display = COALESCE(p_combo->>'diagnostic_model_display', diagnostic_model_display),
     diagnostic_max_tokens    = COALESCE((p_combo->>'diagnostic_max_tokens')::int, diagnostic_max_tokens),
     diagnostic_temperature   = COALESCE((p_combo->>'diagnostic_temperature')::numeric, diagnostic_temperature),
+    scribe_provider          = COALESCE(p_combo->>'scribe_provider', scribe_provider),
+    scribe_model             = COALESCE(p_combo->>'scribe_model', scribe_model),
+    scribe_model_display     = COALESCE(p_combo->>'scribe_model_display', scribe_model_display),
+    scribe_max_tokens        = COALESCE((p_combo->>'scribe_max_tokens')::int, scribe_max_tokens),
+    scribe_temperature       = COALESCE((p_combo->>'scribe_temperature')::numeric, scribe_temperature),
     notes                    = COALESCE(p_combo->>'notes', notes),
     updated_at               = now(),
     updated_by               = p_caller_auth_uid

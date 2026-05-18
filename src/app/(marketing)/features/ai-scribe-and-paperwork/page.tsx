@@ -4,15 +4,17 @@ import FadeIn from "@/components/FadeIn";
 import MockupTour from "@/components/marketing/MockupTour";
 import OpenDemoButton from "@/components/marketing/OpenDemoButton";
 import SectionLink from "@/components/marketing/SectionLink";
+import TrialEmailCTA from "@/components/marketing/TrialEmailCTA";
 
 export const metadata = {
   title: "AI Medical Scribe & Paperwork for Clinics | Hilt Health",
   description:
-    "An AI medical scribe that drafts your SOAP notes, sick notes, and letters from the visit. You edit and sign. Works with your EMR. $200 free trial.",
+    "An AI medical scribe that drafts your SOAP notes, sick notes, and letters from the visit. You edit and sign. Works with your EMR. Start free, no credit card.",
 };
 
 const CAL_URL = "https://cal.com/102937474/hilt-health-meeting";
-const SIGNUP_URL = "/signup";
+const START_TRIAL_URL = "/start-trial";
+const SOURCE = "ai_scribe_and_paperwork_feature";
 
 /* ── Icons (one cohesive stroke set) ──────────────────── */
 
@@ -132,16 +134,16 @@ function GridGrain({ className = "" }: { className?: string }) {
 
 /* ── Shared CTA ───────────────────────────────────────── */
 
-function PrimaryCTA({ className = "" }: { className?: string }) {
+function ConsultationButton({ className = "" }: { className?: string }) {
   return (
     <a
       href={CAL_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-8 py-4 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:bg-hilt-blue-dark hover:shadow-xl hover:-translate-y-0.5 ${className}`}
+      className={`inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-4 text-base font-semibold text-ink shadow-sm transition-all hover:border-hilt-blue/40 hover:text-hilt-blue hover:-translate-y-0.5 ${className}`}
     >
       Book a consultation
-      <IconArrow className="transition-transform group-hover:translate-x-0.5" />
+      <IconArrow />
     </a>
   );
 }
@@ -199,16 +201,18 @@ function Hero() {
                 Drafts the note and the letters from the visit. You edit and sign. Works with your EMR.
               </p>
               <div className="mt-9 flex flex-wrap items-center gap-3">
-                <PrimaryCTA />
+                <TrialEmailCTA source={SOURCE} />
                 <OpenDemoButton variant="light" />
               </div>
-              <p className="mt-4 text-sm text-ash">$200 in free credits. No credit card.</p>
-              <Link
-                href={SIGNUP_URL}
+              <p className="mt-4 text-sm text-ash">No credit card required.</p>
+              <a
+                href={CAL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="mt-1.5 inline-block text-xs text-ash/70 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-slate"
               >
-                or do it yourself
-              </Link>
+                Prefer a walkthrough? Book a consultation
+              </a>
               <ul className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-ash">
                 {[
                   "2M+ visits processed",
@@ -627,7 +631,7 @@ function TieToSystem() {
 /* ── Setup (connected stepper) ────────────────────────── */
 
 const SETUP_STEPS = [
-  { n: "1", title: "Create your account", body: "Up to $200 in free credits. No card." },
+  { n: "1", title: "Create your account", body: "No credit card to start." },
   { n: "2", title: "Add your doctors", body: "License and credentials go on every letter." },
   { n: "3", title: "Pick your templates", body: "Your SOAP layout and your letter set." },
   { n: "4", title: "Tell the AI how you chart", body: "Your sections, your style, your phrasing." },
@@ -673,7 +677,7 @@ function Setup() {
             <p className="text-lg font-semibold text-ink">Rather not do it alone?</p>
             <p className="mt-2 text-slate">Book a consultation and we will be with you during setup.</p>
             <div className="mt-6 flex justify-center">
-              <PrimaryCTA />
+              <ConsultationButton />
             </div>
           </div>
         </FadeIn>
@@ -707,7 +711,7 @@ const FAQS: { q: string; a: string; href?: string; linkText?: string }[] = [
   },
   {
     q: "How much does it cost?",
-    a: "Plans start at $79 per provider per month. Clinical documents are included on every plan, with no per document fees.",
+    a: "Clinical documents are included on every plan, with no per document fees. See full pricing for current plan rates.",
     href: "/pricing",
     linkText: "See full pricing",
   },
@@ -767,16 +771,18 @@ function FinalCTA() {
             See it draft your next note.
           </h2>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <PrimaryCTA />
+            <TrialEmailCTA source={SOURCE} />
             <OpenDemoButton variant="dark" />
           </div>
-          <p className="mt-4 text-sm text-white/55">$200 in free credits, no credit card.</p>
-          <Link
-            href={SIGNUP_URL}
+          <p className="mt-4 text-sm text-white/55">No credit card required.</p>
+          <a
+            href={CAL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-3 inline-block text-sm text-white/55 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white/80"
           >
-            Prefer to start on your own? Start the free trial &rarr;
-          </Link>
+            Prefer a walkthrough? Book a consultation &rarr;
+          </a>
         </FadeIn>
       </div>
     </section>
@@ -815,15 +821,13 @@ function Footer() {
 function StickyMobileCTA() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 p-3 backdrop-blur lg:hidden">
-      <a
-        href={CAL_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        href={START_TRIAL_URL}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25"
       >
-        Book a consultation
+        Start free
         <IconArrow />
-      </a>
+      </Link>
     </div>
   );
 }
@@ -841,7 +845,7 @@ function StructuredData() {
         operatingSystem: "Web",
         description:
           "AI medical scribe and clinical paperwork software. It records the visit and drafts the SOAP note, sick notes, and work letters in 130+ languages. The doctor edits and signs. Works with any EMR.",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free trial with up to $200 in credits, no credit card" },
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free trial, no credit card" },
       },
       {
         "@type": "FAQPage",

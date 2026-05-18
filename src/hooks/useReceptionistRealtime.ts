@@ -69,6 +69,22 @@ export function useReceptionistRealtime(
             optionsRef.current?.onNotification?.({
               type: "new_patient",
             });
+          } else if (visit.status === "waiting_doctor_claim") {
+            // Manually registered walk-in: inserted straight into the queue
+            // (no status UPDATE), so the UPDATE-handler chime never fires.
+            const soundOn = optionsRef.current?.soundEnabled ?? true;
+            playNotificationChime(soundOn);
+
+            if (
+              typeof Notification !== "undefined" &&
+              Notification.permission === "granted"
+            ) {
+              new Notification("Patient ready for queue", {
+                tag: `queue-${visit.id}`,
+              });
+            }
+
+            optionsRef.current?.onNotification?.({ type: "queue_ready" });
           }
 
           callbackRef.current({

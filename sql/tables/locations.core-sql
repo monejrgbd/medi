@@ -48,7 +48,11 @@ ALTER TABLE public.locations
   ADD COLUMN IF NOT EXISTS tv_queue_duration_seconds int NOT NULL DEFAULT 10
     CHECK (tv_queue_duration_seconds BETWEEN 3 AND 60),
   ADD COLUMN IF NOT EXISTS tv_audio_muted boolean NOT NULL DEFAULT true,
-  ADD COLUMN IF NOT EXISTS always_accepting_checkins boolean DEFAULT false;
+  ADD COLUMN IF NOT EXISTS always_accepting_checkins boolean DEFAULT false,
+  -- Intake depth: skip_ai=false -> AI prescreens. skip_ai=true + forms_before_queue=true
+  -- -> Forms only (prescreening form, then straight to queue, no AI chat).
+  -- skip_ai=true + forms_before_queue=false -> Express (straight to queue, no form).
+  ADD COLUMN IF NOT EXISTS forms_before_queue boolean NOT NULL DEFAULT false;
 
 ALTER TABLE public.locations ENABLE ROW LEVEL SECURITY;
 

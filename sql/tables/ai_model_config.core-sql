@@ -88,11 +88,12 @@ INSERT INTO public.ai_model_config (
    'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    2048, 0.3)
 ON CONFLICT (tier) DO NOTHING;
 
--- Scribe columns: ON CONFLICT DO NOTHING above never backfills existing rows,
--- so add the columns (no-op if already present) and set the scribe model per
--- tier. This UPDATE is the single deterministic seed for scribe on BOTH fresh
--- and existing databases, and is idempotent (sets the same values each deploy).
--- It only writes the scribe_* columns; intake/summary/diagnostic are untouched.
+-- Scribe task columns + per-tier backfill. Idempotent and rerun-safe: the seed
+-- INSERT above is ON CONFLICT DO NOTHING so it never backfills existing rows;
+-- these ADD COLUMN IF NOT EXISTS + value-stable UPDATEs are the single
+-- deterministic seed for the scribe model on BOTH fresh and existing databases
+-- and can be re-applied any number of times with no effect. Only scribe_*
+-- columns are written; intake/summary/diagnostic are never touched.
 ALTER TABLE public.ai_model_config ADD COLUMN IF NOT EXISTS scribe_provider text
   CHECK (scribe_provider IS NULL OR scribe_provider IN ('anthropic', 'google_vertex', 'openai'));
 ALTER TABLE public.ai_model_config ADD COLUMN IF NOT EXISTS scribe_model text;

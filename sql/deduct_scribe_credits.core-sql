@@ -1,16 +1,30 @@
--- deduct_scribe_credits: AI ambient scribe billing.
--- Scribe is FREE on every plan (PAYG, trials, and all subscription plans).
--- This is a no-op kept as a stable seam so the transcribe-encounter edge
--- function call site, signature, and service-role gate do not change. The
--- scribe model quality still varies by plan (see PLAN_SCRIBE_TIER), but no
--- credits are ever deducted and no credits_log row is written for scribe.
+-- deduct_scribe_credits: AI ambient scribe billing POLICY wrapper.
+-- It owns only the scribe-specific pricing policy (per audio-minute rate by
+-- model tier) and delegates the actual metering to the shared primitive
+-- private.check_and_deduct_feature_budget (the same engine marketing uses and
+-- deduct_credits delegates to). One metering engine; only the amount is
+-- scribe-specific.
+--
+-- Policy (scribe is PAID; there is no universal free tier):
+--   Subscription plans (starter/professional/business/enterprise): the plan
+--     includes unlimited scribe at its PLAN_SCRIBE_TIER (Starter=Standard,
+--     Professional=Advanced, Business/Enterprise=Precision) — no charge.
+--   PAYG / trials: metered per ceil(audio minutes) — Standard 0.1, Advanced
+--     0.2, Precision/Premium 0.5 credits/min.
+-- Idempotency, recharge, no_credits handling all come from the shared primitive
+-- (now visit-scoped idempotent). Called by transcribe-encounter (service role).
+
+-- Drop the old 3-arg signatures (pre-p_tier) so no stale overload remains.
+DROP FUNCTION IF EXISTS public.deduct_scribe_credits(uuid, uuid, numeric);
+DROP FUNCTION IF EXISTS private.deduct_scribe_credits(text, uuid, uuid, numeric);
 
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.deduct_scribe_credits(
   p_caller_role text,
   p_org_id uuid,
   p_visit_id uuid,
-  p_audio_minutes numeric
+  p_audio_minutes numeric,
+  p_tier text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -18,9 +32,49 @@ VOLATILE
 SECURITY DEFINER
 SET search_path TO ''
 AS $$
+DECLARE
+  v_plan text;
+  v_rate numeric;
+  v_minutes int;
+  v_amount numeric;
 BEGIN
-  -- Scribe is free for all plans. No lookup, no deduction, no logging.
-  RETURN jsonb_build_object('success', true, 'source', 'free', 'credits_deducted', 0);
+  SELECT subscription_plan INTO v_plan
+  FROM public.organizations WHERE id = p_org_id;
+
+  IF v_plan IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Organization not found');
+  END IF;
+
+  -- Subscription plans include unlimited scribe at their PLAN_SCRIBE_TIER
+  -- (Starter = Standard, Professional = Advanced, Business/Enterprise =
+  -- Precision). The caller resolves the tier from the plan, so the plan's
+  -- scribe is never charged.
+  IF v_plan IN ('starter', 'professional', 'business', 'enterprise') THEN
+    RETURN jsonb_build_object('success', true, 'source', 'plan_included', 'credits_deducted', 0);
+  END IF;
+
+  -- PAYG / trials: metered per audio minute by chosen scribe model tier.
+  -- There is no free tier; Standard (and any unknown tier) is 0.1/min.
+  v_rate := CASE p_tier
+    WHEN 'advanced'  THEN 0.2
+    WHEN 'precision' THEN 0.5
+    WHEN 'premium'   THEN 0.5
+    ELSE 0.1  -- standard / unknown
+  END;
+
+  v_minutes := ceil(GREATEST(COALESCE(p_audio_minutes, 0), 0));
+  v_amount := v_minutes * v_rate;
+
+  IF v_amount <= 0 THEN
+    -- No audio captured; nothing to charge (not a free tier, just zero usage).
+    RETURN jsonb_build_object('success', true, 'source', 'metered', 'credits_deducted', 0);
+  END IF;
+
+  -- Delegate metering to the shared primitive (idempotent per visit+feature).
+  RETURN private.check_and_deduct_feature_budget(
+    p_org_id, 'scribe', v_amount,
+    'AI scribe ' || p_tier || ' (' || v_minutes || ' min)', p_visit_id
+  );
 END;
 $$;
 
@@ -28,7 +82,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.deduct_scribe_credits(
   p_org_id uuid,
   p_visit_id uuid,
-  p_audio_minutes numeric
+  p_audio_minutes numeric,
+  p_tier text
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -41,6 +96,6 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
   END IF;
 
-  RETURN private.deduct_scribe_credits(auth.role(), p_org_id, p_visit_id, p_audio_minutes);
+  RETURN private.deduct_scribe_credits(auth.role(), p_org_id, p_visit_id, p_audio_minutes, p_tier);
 END;
 $$;

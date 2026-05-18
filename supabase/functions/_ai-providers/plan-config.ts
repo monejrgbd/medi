@@ -55,14 +55,16 @@ export const PLAN_AI: Record<string, PlanAiConfig> = {
   },
 };
 
-/** Plan -> AI scribe cleanup tier. Scribe is FREE on every plan; this only
- *  selects the cleanup model quality. Standard for free/PAYG/trials; Starter
- *  buys Advanced; Professional/Business/Enterprise buy Precision. Unknown or
- *  special states (expired/suspended/read_only/cancelled) fall back to standard
- *  via the caller's `?? "standard"`. */
+/** Plan -> AI scribe model tier the subscription plan includes unlimited (no
+ *  per-minute charge at that tier). Scribe is PAID; there is no universal free
+ *  tier. Starter includes unlimited Standard; Professional includes unlimited
+ *  Advanced; Business/Enterprise include unlimited Precision. PAYG/trials are
+ *  not subscription plans: the caller meters them per minute (Standard 0.1,
+ *  Advanced 0.2, Precision/Premium 0.5) and only uses this map's
+ *  `?? "standard"` fallback for tier resolution. */
 export const PLAN_SCRIBE_TIER: Record<string, "standard" | "advanced" | "precision"> = {
-  starter: "advanced",
-  professional: "precision",
+  starter: "standard",
+  professional: "advanced",
   business: "precision",
   enterprise: "precision",
   pay_as_you_go: "standard",

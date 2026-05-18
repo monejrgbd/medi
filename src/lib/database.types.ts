@@ -67,6 +67,11 @@ export type Database = {
           intake_provider: string
           intake_temperature: number
           notes: string | null
+          scribe_max_tokens: number | null
+          scribe_model: string | null
+          scribe_model_display: string | null
+          scribe_provider: string | null
+          scribe_temperature: number | null
           summary_max_tokens: number
           summary_model: string
           summary_model_display: string
@@ -90,6 +95,11 @@ export type Database = {
           intake_provider: string
           intake_temperature?: number
           notes?: string | null
+          scribe_max_tokens?: number | null
+          scribe_model?: string | null
+          scribe_model_display?: string | null
+          scribe_provider?: string | null
+          scribe_temperature?: number | null
           summary_max_tokens?: number
           summary_model: string
           summary_model_display: string
@@ -113,6 +123,11 @@ export type Database = {
           intake_provider?: string
           intake_temperature?: number
           notes?: string | null
+          scribe_max_tokens?: number | null
+          scribe_model?: string | null
+          scribe_model_display?: string | null
+          scribe_provider?: string | null
+          scribe_temperature?: number | null
           summary_max_tokens?: number
           summary_model?: string
           summary_model_display?: string
@@ -456,6 +471,8 @@ export type Database = {
           public_token_expires_at: string | null
           public_token_revoked: boolean
           requires_pin: boolean
+          scribe_transcript: string | null
+          scribe_transcript_raw: string | null
           sent_at: string | null
           signed_at: string | null
           signed_by: string | null
@@ -493,6 +510,8 @@ export type Database = {
           public_token_expires_at?: string | null
           public_token_revoked?: boolean
           requires_pin?: boolean
+          scribe_transcript?: string | null
+          scribe_transcript_raw?: string | null
           sent_at?: string | null
           signed_at?: string | null
           signed_by?: string | null
@@ -530,6 +549,8 @@ export type Database = {
           public_token_expires_at?: string | null
           public_token_revoked?: boolean
           requires_pin?: boolean
+          scribe_transcript?: string | null
+          scribe_transcript_raw?: string | null
           sent_at?: string | null
           signed_at?: string | null
           signed_by?: string | null
@@ -2734,6 +2755,112 @@ export type Database = {
           },
         ]
       }
+      scribe_recordings: {
+        Row: {
+          audio_prefix: string
+          consent_attested_at: string
+          created_at: string
+          created_by: string
+          document_id: string | null
+          duration_ms: number | null
+          error: string | null
+          id: string
+          language: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          segment_count: number
+          status: string
+          stt_minutes: number | null
+          transcribed_segments: number
+          updated_at: string
+          visit_id: string
+        }
+        Insert: {
+          audio_prefix: string
+          consent_attested_at?: string
+          created_at?: string
+          created_by: string
+          document_id?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          language?: string
+          location_id: string
+          org_id: string
+          patient_id: string
+          segment_count?: number
+          status?: string
+          stt_minutes?: number | null
+          transcribed_segments?: number
+          updated_at?: string
+          visit_id: string
+        }
+        Update: {
+          audio_prefix?: string
+          consent_attested_at?: string
+          created_at?: string
+          created_by?: string
+          document_id?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          id?: string
+          language?: string
+          location_id?: string
+          org_id?: string
+          patient_id?: string
+          segment_count?: number
+          status?: string
+          stt_minutes?: number | null
+          transcribed_segments?: number
+          updated_at?: string
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scribe_recordings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scribe_recordings_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scribe_recordings_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scribe_recordings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scribe_recordings_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scribe_recordings_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visits"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sms_campaign_recipients: {
         Row: {
           campaign_id: string
@@ -3408,6 +3535,7 @@ export type Database = {
           is_return_visit: boolean | null
           is_sensitive: boolean | null
           location_id: string
+          manually_added: boolean | null
           nurse_notes: string | null
           nurse_reviewed: boolean | null
           org_id: string
@@ -3467,6 +3595,7 @@ export type Database = {
           is_return_visit?: boolean | null
           is_sensitive?: boolean | null
           location_id: string
+          manually_added?: boolean | null
           nurse_notes?: string | null
           nurse_reviewed?: boolean | null
           org_id: string
@@ -3526,6 +3655,7 @@ export type Database = {
           is_return_visit?: boolean | null
           is_sensitive?: boolean | null
           location_id?: string
+          manually_added?: boolean | null
           nurse_notes?: string | null
           nurse_reviewed?: boolean | null
           org_id?: string
@@ -3659,6 +3789,21 @@ export type Database = {
         }
         Returns: Json
       }
+      add_patient_to_queue: {
+        Args: {
+          p_birthday?: string
+          p_claim?: boolean
+          p_first_name?: string
+          p_force_new?: boolean
+          p_language?: string
+          p_last_name?: string
+          p_location_id: string
+          p_patient_id?: string
+          p_phone?: string
+          p_sex?: string
+        }
+        Returns: Json
+      }
       add_vaccine_schedule_entry: {
         Args: {
           p_dose_number?: number
@@ -3736,6 +3881,10 @@ export type Database = {
       cancel_claim: { Args: { p_visit_id: string }; Returns: Json }
       cancel_patient_checkin: {
         Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      cancel_scribe_recording: {
+        Args: { p_reason?: string; p_recording_id: string }
         Returns: Json
       }
       cancel_subscription: { Args: never; Returns: Json }
@@ -3914,6 +4063,15 @@ export type Database = {
         Args: { p_ai_model: string; p_org_id: string; p_visit_id: string }
         Returns: Json
       }
+      deduct_scribe_credits: {
+        Args: {
+          p_audio_minutes: number
+          p_org_id: string
+          p_tier: string
+          p_visit_id: string
+        }
+        Returns: Json
+      }
       delete_location_video: { Args: { p_video_id: string }; Returns: Json }
       delete_staff: { Args: { p_staff_user_id: string }; Returns: Json }
       deny_patient: { Args: { p_visit_id: string }; Returns: Json }
@@ -3944,6 +4102,14 @@ export type Database = {
       extend_document_token: { Args: { p_document_id: string }; Returns: Json }
       finalize_campaign_scan: {
         Args: { p_campaign_id: string; p_total_scanned: number }
+        Returns: Json
+      }
+      finalize_scribe_recording: {
+        Args: {
+          p_duration_ms: number
+          p_recording_id: string
+          p_segment_count: number
+        }
         Returns: Json
       }
       generate_summary_token: { Args: { p_visit_id: string }; Returns: Json }
@@ -4125,6 +4291,7 @@ export type Database = {
       }
       get_review_page: { Args: { p_token: string }; Returns: Json }
       get_review_platforms: { Args: { p_location_id: string }; Returns: Json }
+      get_scribe_recording: { Args: { p_recording_id: string }; Returns: Json }
       get_similar_patients: {
         Args: {
           p_birthday: string
@@ -4460,6 +4627,10 @@ export type Database = {
       }
       start_ai_conversation: {
         Args: { p_session_token: string; p_visit_id: string }
+        Returns: Json
+      }
+      start_scribe_recording: {
+        Args: { p_language?: string; p_visit_id: string }
         Returns: Json
       }
       store_ai_message: {

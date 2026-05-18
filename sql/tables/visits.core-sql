@@ -51,6 +51,7 @@ CREATE TABLE public.visits (
   care_instructions     text DEFAULT NULL,
   queue_number           integer,
   ai_skipped            boolean DEFAULT false,
+  manually_added        boolean DEFAULT false,
   demo_features         jsonb DEFAULT NULL,
   self_reported_referral boolean DEFAULT false,
   self_reported_referrer text,

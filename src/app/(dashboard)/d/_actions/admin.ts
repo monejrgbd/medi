@@ -112,12 +112,17 @@ export interface AiComboInput {
   diagnostic_model_display: string;
   diagnostic_max_tokens: number;
   diagnostic_temperature: number;
+  scribe_provider: string;
+  scribe_model: string;
+  scribe_model_display: string;
+  scribe_max_tokens: number;
+  scribe_temperature: number;
   notes?: string | null;
 }
 
 function validateCombo(input: AiComboInput): string | null {
   if (!ALLOWED_TIERS.includes(input.tier as typeof ALLOWED_TIERS[number])) return "Invalid tier";
-  for (const task of ["intake", "summary", "diagnostic"] as const) {
+  for (const task of ["intake", "summary", "diagnostic", "scribe"] as const) {
     const provider = input[`${task}_provider` as keyof AiComboInput] as string;
     const model = input[`${task}_model` as keyof AiComboInput] as string;
     const display = input[`${task}_model_display` as keyof AiComboInput] as string;

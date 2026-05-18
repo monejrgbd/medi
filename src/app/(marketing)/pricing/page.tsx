@@ -29,7 +29,8 @@ const EVERY_PLAN_FEATURES = [
   "Patient profile card (meds, allergies, history)",
   "Doctor notes, letters, and clinical documents (AI drafted)",
   "AI SOAP note generator (one click, full note from the visit, the AI scribe recording, and your dictated physical exam)",
-  "AI Scribe (records the visit, AI cleaned Clinician and Patient transcript, drafts the note, free on every plan)",
+  "AI Scribe (records the visit, AI cleaned Clinician and Patient transcript, drafts the note)",
+  "AI paperwork (SOAP notes, referral and work letters, prior authorization, drafted from the visit)",
   "Daily letter templates (sick notes, return to work, school absence, work accommodation, and more)",
   "All documents clinic branded and doctor signed",
   "File attachments per visit",
@@ -58,7 +59,7 @@ const PLAN_FEATURES = {
     features: [
       "Unlimited Standard AI intake",
       "30 messages per intake conversation limit",
-      "AI Scribe uses Advanced AI",
+      "Unlimited Standard AI scribe",
     ],
     premiumAi: [
       "1 Premium AI intake/mo",
@@ -72,7 +73,7 @@ const PLAN_FEATURES = {
     features: [
       "Unlimited Advanced AI intake",
       "60 messages per intake conversation limit",
-      "AI Scribe uses Precision AI",
+      "Unlimited Advanced AI scribe",
     ],
     premiumAi: [
       "5 Premium AI intakes/mo",
@@ -87,7 +88,7 @@ const PLAN_FEATURES = {
       "Unlimited Precision AI intake",
       "100 messages per intake conversation limit",
       "Embeddable widget for your website",
-      "AI Scribe uses Precision AI",
+      "Unlimited Precision AI scribe",
     ],
     premiumAi: [
       "25 Premium AI intakes/mo",
@@ -129,7 +130,7 @@ const FAQS = [
   },
   {
     q: "What is the difference between the AI tiers?",
-    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Precision AI is the Business tier, delivering superior clinical depth for high volume clinics. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Every tier also generates a doctor facing diagnostic suggestion at the end of each visit at no extra cost, bundled into the per visit credit cost. The AI Scribe is included free on every plan; it uses the Standard model on pay as you go and trials, Advanced on Starter, and Precision on Professional, Business and Enterprise.",
+    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Precision AI is the Business tier, delivering superior clinical depth for high volume clinics. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Every tier also generates a doctor facing diagnostic suggestion at the end of each visit at no extra cost, bundled into the per visit credit cost. The AI Scribe is included on every plan but is not free: Starter includes the Standard scribe model unlimited, Professional includes the Advanced scribe model unlimited, and Business and Enterprise include the Precision scribe model unlimited, at no extra cost. On pay as you go and trials the scribe is metered per minute: Standard 0.1, Advanced 0.2, Precision 0.5 credits per minute. AI paperwork (SOAP notes, letters, prior authorization) follows the same model: included unlimited on every plan, and on pay as you go and trials it is metered per finished document: Standard 0.2, Advanced 0.3, Precision 0.5 credits per document.",
   },
   {
     q: "Who pays per seat?",
@@ -438,6 +439,12 @@ function PlanCards() {
               { service: "Advanced AI", cost: "1.5 credits" },
               { service: "Precision AI", cost: "2.5 credits" },
               { service: "Premium AI", cost: "4 credits" },
+              { service: "Scribe (Standard)", cost: "0.1 credits/min" },
+              { service: "Scribe (Advanced)", cost: "0.2 credits/min" },
+              { service: "Scribe (Precision)", cost: "0.5 credits/min" },
+              { service: "AI paperwork (Standard)", cost: "0.2 credits/document" },
+              { service: "AI paperwork (Advanced)", cost: "0.3 credits/document" },
+              { service: "AI paperwork (Precision)", cost: "0.5 credits/document" },
               { service: "Review SMS", cost: "0.1 credits" },
               { service: "Marketing SMS", cost: "0.1 credits" },
               { service: "Marketing AI Scan", cost: "1 credit/1K" },

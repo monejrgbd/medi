@@ -26,6 +26,7 @@ import ScribePanel from "@/components/doctor/ScribePanel";
 import VitalsHistory from "@/components/nurse/VitalsHistory";
 import VaccineHistory from "@/components/nurse/VaccineHistory";
 import { useRoleSafe } from "@/contexts/RoleContext";
+import AddPatientToQueueModal from "@/components/dashboard/AddPatientToQueueModal";
 import { toast } from "sonner";
 import type { ClaimedVisit, QueueVisit } from "@/app/(dashboard)/d/doctor/DoctorDashboard";
 
@@ -97,6 +98,7 @@ interface VisitDetail {
     nurse_notes?: string;
     diagnostic_enabled: boolean;
     ai_skipped?: boolean;
+    manually_added?: boolean;
   };
   patient: {
     id: string;
@@ -134,6 +136,7 @@ interface FocusModeProps {
   demoMode?: boolean;
   nurseEnabled?: boolean;
   currentRoom?: string | null;
+  role?: "doctor" | "owner";
 }
 
 export default function FocusMode({
@@ -147,10 +150,12 @@ export default function FocusMode({
   demoMode = false,
   nurseEnabled = false,
   currentRoom = null,
+  role = "doctor",
 }: FocusModeProps) {
   const router = useRouter();
   const roleCtx = useRoleSafe();
   const [showReferral, setShowReferral] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
   const [currentVisit, setCurrentVisit] = useState<ClaimedVisit | null>(
     initialClaimed[0] || null
   );
@@ -357,6 +362,25 @@ export default function FocusMode({
     }
   }
 
+  const addModal =
+    showAdd && locationId ? (
+      <AddPatientToQueueModal
+        locationId={locationId}
+        role={role}
+        onClose={() => setShowAdd(false)}
+        onSuccess={() => handleVisitChange()}
+      />
+    ) : null;
+
+  const addButton = !demoMode ? (
+    <button
+      onClick={() => setShowAdd(true)}
+      className="rounded-lg bg-hilt-blue px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+    >
+      + Add patient
+    </button>
+  ) : null;
+
   if (!currentVisit) {
     if (demoCompleted) {
       return (
@@ -427,14 +451,17 @@ export default function FocusMode({
           );
         })()}
 
+        {addButton && <div className="mt-6">{addButton}</div>}
+
         {!demoMode && (
           <button
             onClick={onExit}
-            className="mt-6 text-sm text-slate hover:text-ink transition-colors"
+            className="mt-4 text-sm text-slate hover:text-ink transition-colors"
           >
             Exit Focus Mode
           </button>
         )}
+        {addModal}
       </div>
     );
   }
@@ -462,7 +489,7 @@ export default function FocusMode({
               </h2>
               {detail?.visit.ai_skipped && (
                 <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                  AI Skipped
+                  {detail.visit.manually_added ? "Manually added" : "AI Skipped"}
                 </span>
               )}
             </div>
@@ -473,6 +500,7 @@ export default function FocusMode({
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {addButton}
             {nurseEnabled && (
               <label className="flex items-center gap-2 text-xs text-slate">
                 <input
@@ -584,7 +612,9 @@ export default function FocusMode({
               detail.visit.ai_skipped ? (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
                   <p className="text-sm text-amber-800">
-                    AI intake was skipped for this visit
+                    {detail.visit.manually_added
+                      ? "Manually added, no AI screening"
+                      : "AI intake was skipped for this visit"}
                   </p>
                 </div>
               ) : (
@@ -601,6 +631,7 @@ export default function FocusMode({
                 prescreening={detail.prescreening_data ?? null}
                 scribeTranscript={detail.scribe_transcript ?? null}
                 aiSkipped={detail.visit.ai_skipped}
+                manuallyAdded={detail.visit.manually_added}
               />
             )}
 
@@ -743,6 +774,8 @@ export default function FocusMode({
           }}
         />
       )}
+
+      {addModal}
     </div>
   );
 }

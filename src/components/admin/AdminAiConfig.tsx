@@ -8,7 +8,7 @@ import {
 } from "@/app/(dashboard)/d/_actions/admin";
 
 type Provider = "anthropic" | "google_vertex" | "openai";
-type Task = "intake" | "summary" | "diagnostic";
+type Task = "intake" | "summary" | "diagnostic" | "scribe";
 type PlanTask = "document" | "scan";
 
 interface Combo {
@@ -30,6 +30,11 @@ interface Combo {
   diagnostic_model_display: string;
   diagnostic_max_tokens: number;
   diagnostic_temperature: number;
+  scribe_provider: Provider;
+  scribe_model: string;
+  scribe_model_display: string;
+  scribe_max_tokens: number;
+  scribe_temperature: number;
   notes: string | null;
   updated_at: string;
 }
@@ -51,6 +56,7 @@ const TASKS: { key: Task; label: string; desc: string }[] = [
   { key: "intake", label: "Intake", desc: "Patient-facing conversation, streaming" },
   { key: "summary", label: "Summary", desc: "JSON extraction after conversation" },
   { key: "diagnostic", label: "Diagnostic", desc: "Doctor-facing diagnostic suggestion" },
+  { key: "scribe", label: "Scribe", desc: "Post-visit ambient transcript cleanup + speaker attribution" },
 ];
 
 const PLAN_TASKS: { key: PlanTask; label: string; desc: string }[] = [
@@ -124,6 +130,11 @@ export default function AdminAiConfig() {
       diagnostic_model_display: editing.diagnostic_model_display,
       diagnostic_max_tokens: editing.diagnostic_max_tokens,
       diagnostic_temperature: editing.diagnostic_temperature,
+      scribe_provider: editing.scribe_provider,
+      scribe_model: editing.scribe_model,
+      scribe_model_display: editing.scribe_model_display,
+      scribe_max_tokens: editing.scribe_max_tokens,
+      scribe_temperature: editing.scribe_temperature,
       notes: editing.notes,
     };
     const res = await updateAiModelConfig(input);
@@ -187,6 +198,7 @@ export default function AdminAiConfig() {
               <TaskRow label="Intake" model={combo.intake_model_display} provider={combo.intake_provider} />
               <TaskRow label="Summary" model={combo.summary_model_display} provider={combo.summary_provider} />
               <TaskRow label="Diagnostic" model={combo.diagnostic_model_display} provider={combo.diagnostic_provider} />
+              <TaskRow label="Scribe" model={combo.scribe_model_display} provider={combo.scribe_provider} />
             </div>
 
             {combo.notes && (

@@ -1,0 +1,387 @@
+-- Manually add a patient to the doctor queue (staff-initiated, no AI screening).
+--
+-- Doctors/owners (and receptionists) drop a visit straight into the queue for
+-- walk-ins / phone bookings, skipping kiosk check-in, AI pre-screening and
+-- receptionist approval entirely. Mirrors claim_patient's auth model and
+-- checkin_patient's sanitize/dedup, but inserts the visit directly at
+-- waiting_doctor_claim (or claimed_by_doctor when the caller claims it in the
+-- same transaction). Visits are flagged ai_skipped + manually_added so every
+-- existing skip-AI guard keeps working and the UI only swaps its copy.
+CREATE OR REPLACE FUNCTION private.add_patient_to_queue(
+  p_caller_auth_uid uuid,
+  p_location_id uuid,
+  p_patient_id  uuid    DEFAULT NULL,
+  p_first_name  text    DEFAULT NULL,
+  p_last_name   text    DEFAULT NULL,
+  p_birthday    date    DEFAULT NULL,
+  p_sex         text    DEFAULT NULL,
+  p_phone       text    DEFAULT NULL,
+  p_language    text    DEFAULT NULL,
+  p_claim       boolean DEFAULT true,
+  p_force_new   boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org_id uuid;
+  v_owner_id uuid;
+  v_caller_staff_id uuid;
+  v_is_owner boolean := false;
+  v_is_doctor boolean := false;
+  v_is_receptionist boolean := false;
+  v_can_claim boolean := false;
+  v_claim_skipped_reason text := NULL;
+  v_clean_first text;
+  v_clean_last text;
+  v_clean_phone text;
+  v_clean_lang text;
+  v_patient record;
+  v_similar jsonb;
+  v_resolved_patient_id uuid;
+  v_active record;
+  v_has_previous boolean;
+  v_staff_room text;
+  v_status text;
+  v_actor_type text;
+  v_new_visit record;
+BEGIN
+  -- ── A. Validate location + resolve caller ──────────────────────────────
+  SELECT l.org_id INTO v_org_id
+  FROM public.locations l
+  WHERE l.id = p_location_id;
+
+  IF v_org_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Location not found');
+  END IF;
+
+  SELECT su.id INTO v_caller_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.org_id = v_org_id
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  SELECT owner_id INTO v_owner_id
+  FROM public.organizations
+  WHERE id = v_org_id;
+
+  v_is_owner := (v_owner_id = p_caller_auth_uid);
+
+  v_is_doctor := EXISTS(
+    SELECT 1 FROM public.staff_roles sr
+    WHERE sr.staff_user_id = v_caller_staff_id
+      AND sr.location_id = p_location_id
+      AND sr.role = 'doctor'
+  );
+
+  v_is_receptionist := EXISTS(
+    SELECT 1 FROM public.staff_roles sr
+    WHERE sr.staff_user_id = v_caller_staff_id
+      AND sr.location_id = p_location_id
+      AND sr.role = 'receptionist'
+  );
+
+  IF NOT (v_is_owner OR v_is_doctor OR v_is_receptionist) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authorized');
+  END IF;
+
+  -- ── B. Subscription gate (manual add is a new billable visit) ──────────
+  IF EXISTS (
+    SELECT 1 FROM public.organizations o
+    WHERE o.id = v_org_id
+      AND o.subscription_plan IN ('expired', 'suspended', 'read_only')
+  ) THEN
+    RETURN jsonb_build_object('success', false, 'error', 'subscription_inactive');
+  END IF;
+
+  -- ── C. Resolve claim capability ────────────────────────────────────────
+  -- Only a doctor or owner WITH a staff account can claim (claimed_by is a
+  -- FK to staff_users, and claim_patient itself forbids a NULL claimer).
+  -- Receptionists never claim. An owner with no staff record cannot claim.
+  v_can_claim := COALESCE(p_claim, true)
+                 AND v_caller_staff_id IS NOT NULL
+                 AND (v_is_doctor OR v_is_owner);
+
+  IF COALESCE(p_claim, true) AND NOT v_can_claim
+     AND v_is_owner AND v_caller_staff_id IS NULL THEN
+    v_claim_skipped_reason := 'no_staff_account';
+  END IF;
+
+  -- ── D. Patient resolution ──────────────────────────────────────────────
+  IF p_patient_id IS NOT NULL THEN
+    -- Existing patient: must belong to this org (never leak cross-org).
+    SELECT p.* INTO v_patient
+    FROM public.patients p
+    WHERE p.id = p_patient_id
+      AND p.org_id = v_org_id
+      AND NOT p.is_orphaned;
+
+    IF v_patient.id IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Patient not found');
+    END IF;
+
+    v_resolved_patient_id := v_patient.id;
+  ELSE
+    -- New patient: sanitize (same rules as checkin_patient).
+    v_clean_first := substring(trim(regexp_replace(COALESCE(p_first_name, ''), '<[^>]*>', '', 'g')), 1, 100);
+    v_clean_last  := substring(trim(regexp_replace(COALESCE(p_last_name, ''), '<[^>]*>', '', 'g')), 1, 100);
+
+    IF v_clean_first = '' OR v_clean_last = '' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'First and last name are required');
+    END IF;
+
+    IF v_clean_first ~ '[<>&;\\0-9]' OR v_clean_first ~ '[\x00-\x1F]' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'First name contains invalid characters');
+    END IF;
+
+    IF v_clean_last ~ '[<>&;\\0-9]' OR v_clean_last ~ '[\x00-\x1F]' THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Last name contains invalid characters');
+    END IF;
+
+    IF p_birthday IS NULL THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Birthday is required');
+    END IF;
+
+    IF p_birthday >= CURRENT_DATE THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Birthday must be in the past');
+    END IF;
+
+    IF p_birthday < '1900-01-01'::date THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid birthday');
+    END IF;
+
+    IF p_sex IS NOT NULL AND p_sex NOT IN ('male', 'female', 'other') THEN
+      RETURN jsonb_build_object('success', false, 'error', 'Invalid sex value');
+    END IF;
+
+    IF p_phone IS NOT NULL AND p_phone <> '' THEN
+      v_clean_phone := regexp_replace(p_phone, '[^0-9+]', '', 'g');
+      IF left(v_clean_phone, 1) = '+' THEN
+        v_clean_phone := '+' || regexp_replace(substring(v_clean_phone, 2), '[^0-9]', '', 'g');
+      END IF;
+      IF v_clean_phone !~ '^\+[1-9][0-9]{1,14}$' THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Invalid phone number format');
+      END IF;
+    ELSE
+      v_clean_phone := NULL;
+    END IF;
+
+    v_clean_lang := COALESCE(NULLIF(substring(trim(COALESCE(p_language, '')), 1, 10), ''), 'en');
+
+    -- Primary exact match → collapse to that existing patient (no dup).
+    IF v_clean_phone IS NOT NULL THEN
+      SELECT p.* INTO v_patient
+      FROM public.patients p
+      WHERE p.org_id = v_org_id
+        AND lower(p.first_name) = lower(v_clean_first)
+        AND lower(p.last_name) = lower(v_clean_last)
+        AND p.birthday = p_birthday
+        AND p.phone = v_clean_phone
+        AND NOT p.is_orphaned
+      LIMIT 1;
+    ELSE
+      SELECT p.* INTO v_patient
+      FROM public.patients p
+      WHERE p.org_id = v_org_id
+        AND lower(p.first_name) = lower(v_clean_first)
+        AND lower(p.last_name) = lower(v_clean_last)
+        AND p.birthday = p_birthday
+        AND p.phone IS NULL
+        AND NOT p.is_orphaned
+      LIMIT 1;
+    END IF;
+
+    IF v_patient.id IS NOT NULL THEN
+      v_resolved_patient_id := v_patient.id;
+    ELSE
+      -- Near-match confirm gate: same name + same date of birth already on
+      -- file (a different or absent phone kept it from the exact match).
+      -- Surface a "did you mean?" list unless the caller forced a new record.
+      -- Self-contained (no pg_trgm / no cross-schema dependency) so it is
+      -- safe under SET search_path TO ''.
+      IF NOT COALESCE(p_force_new, false) THEN
+        SELECT jsonb_agg(jsonb_build_object(
+                 'patient_id', p.id,
+                 'first_name', p.first_name,
+                 'last_name', p.last_name,
+                 'birthday', p.birthday
+               ) ORDER BY p.created_at)
+          INTO v_similar
+        FROM public.patients p
+        WHERE p.org_id = v_org_id
+          AND lower(p.first_name) = lower(v_clean_first)
+          AND lower(p.last_name) = lower(v_clean_last)
+          AND p.birthday = p_birthday
+          AND NOT p.is_orphaned;
+
+        IF v_similar IS NOT NULL THEN
+          RETURN jsonb_build_object(
+            'success', true,
+            'needs_resolution', true,
+            'similar', v_similar
+          );
+        END IF;
+      END IF;
+
+      -- Create (race-safe against the partial unique indexes).
+      BEGIN
+        INSERT INTO public.patients (
+          org_id, first_name, last_name, birthday, phone, phone_verified, sex, language
+        )
+        VALUES (
+          v_org_id, v_clean_first, v_clean_last, p_birthday, v_clean_phone, false, p_sex, v_clean_lang
+        )
+        RETURNING id INTO v_resolved_patient_id;
+      EXCEPTION WHEN unique_violation THEN
+        SELECT p.id INTO v_resolved_patient_id
+        FROM public.patients p
+        WHERE p.org_id = v_org_id
+          AND lower(p.first_name) = lower(v_clean_first)
+          AND lower(p.last_name) = lower(v_clean_last)
+          AND p.birthday = p_birthday
+          AND NOT p.is_orphaned
+        LIMIT 1;
+
+        IF v_resolved_patient_id IS NULL THEN
+          RETURN jsonb_build_object('success', false, 'error', 'Unable to create patient record');
+        END IF;
+      END;
+    END IF;
+  END IF;
+
+  -- ── E. Active-visit guard (no double queue entry) ──────────────────────
+  SELECT v.* INTO v_active
+  FROM public.visits v
+  WHERE v.patient_id = v_resolved_patient_id
+    AND v.status NOT IN ('completed', 'left')
+  ORDER BY v.created_at DESC
+  LIMIT 1;
+
+  IF v_active.id IS NOT NULL THEN
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', 'patient_already_active',
+      'active_visit_id', v_active.id,
+      'active_status', v_active.status
+    );
+  END IF;
+
+  -- ── F. Snapshot caller's current room (only if claiming) ───────────────
+  IF v_can_claim THEN
+    SELECT current_room INTO v_staff_room
+    FROM public.staff_checkins
+    WHERE staff_user_id = v_caller_staff_id
+      AND role IN ('doctor', 'nurse')
+      AND checked_out_at IS NULL
+    ORDER BY checked_in_at DESC
+    LIMIT 1
+    FOR UPDATE;
+  END IF;
+
+  -- ── G. Status + return-visit flag ──────────────────────────────────────
+  v_status := CASE WHEN v_can_claim THEN 'claimed_by_doctor' ELSE 'waiting_doctor_claim' END;
+
+  SELECT EXISTS(
+    SELECT 1 FROM public.visits v
+    WHERE v.patient_id = v_resolved_patient_id
+      AND v.status = 'completed'
+  ) INTO v_has_previous;
+
+  -- ── H. Insert the visit (queue_number auto-assigned by BEFORE INSERT
+  --       trigger; broadcast/status-audit triggers are UPDATE-only) ───────
+  INSERT INTO public.visits (
+    org_id, location_id, patient_id, status, checkin_mode, priority,
+    entered_queue_at, arrived_at, phone_verification_pending,
+    ai_skipped, manually_added, ai_started_at, ai_completed_at, ai_summary,
+    has_previous_visits, is_return_visit,
+    claimed_by, claimed_at, staff_room
+  )
+  VALUES (
+    v_org_id, p_location_id, v_resolved_patient_id, v_status, 'self_service_on_arrival', 1,
+    now(), now(), false,
+    true, true, NULL, NULL, NULL,
+    v_has_previous, v_has_previous,
+    CASE WHEN v_can_claim THEN v_caller_staff_id ELSE NULL END,
+    CASE WHEN v_can_claim THEN now() ELSE NULL END,
+    CASE WHEN v_can_claim THEN v_staff_room ELSE NULL END
+  )
+  RETURNING * INTO v_new_visit;
+
+  -- ── I. Audit ───────────────────────────────────────────────────────────
+  v_actor_type := CASE
+    WHEN v_is_owner THEN 'owner'
+    WHEN v_is_doctor THEN 'doctor'
+    ELSE 'receptionist'
+  END;
+
+  PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
+  PERFORM set_config('app.audit_actor_type', v_actor_type, true);
+  PERFORM set_config('app.audit_action', 'manually_added_to_queue', true);
+
+  INSERT INTO public.audit_trail (
+    org_id, location_id, actor_id, actor_type, action, entity_type, entity_id, details
+  )
+  VALUES (
+    v_org_id, p_location_id,
+    COALESCE(v_caller_staff_id, p_caller_auth_uid),
+    v_actor_type,
+    'manually_added_to_queue', 'visit', v_new_visit.id,
+    jsonb_build_object(
+      'claimed', v_can_claim,
+      'patient_id', v_resolved_patient_id,
+      'new_patient', (p_patient_id IS NULL)
+    )
+  );
+
+  -- ── J. Return ──────────────────────────────────────────────────────────
+  RETURN jsonb_build_object(
+    'success', true,
+    'visit_id', v_new_visit.id,
+    'patient_id', v_resolved_patient_id,
+    'status', v_new_visit.status,
+    'claimed', v_can_claim,
+    'queue_number', v_new_visit.queue_number,
+    'claim_skipped_reason', v_claim_skipped_reason
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.add_patient_to_queue(
+  p_location_id uuid,
+  p_patient_id  uuid    DEFAULT NULL,
+  p_first_name  text    DEFAULT NULL,
+  p_last_name   text    DEFAULT NULL,
+  p_birthday    date    DEFAULT NULL,
+  p_sex         text    DEFAULT NULL,
+  p_phone       text    DEFAULT NULL,
+  p_language    text    DEFAULT NULL,
+  p_claim       boolean DEFAULT true,
+  p_force_new   boolean DEFAULT false
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.add_patient_to_queue(
+    v_auth_uid, p_location_id, p_patient_id, p_first_name, p_last_name,
+    p_birthday, p_sex, p_phone, p_language, p_claim, p_force_new
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.add_patient_to_queue(uuid,uuid,text,text,date,text,text,text,boolean,boolean) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.add_patient_to_queue(uuid,uuid,text,text,date,text,text,text,boolean,boolean) FROM anon;
+GRANT EXECUTE ON FUNCTION public.add_patient_to_queue(uuid,uuid,text,text,date,text,text,text,boolean,boolean) TO authenticated;

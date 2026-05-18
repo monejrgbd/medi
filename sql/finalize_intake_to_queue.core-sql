@@ -1,0 +1,51 @@
+-- Private helper: move a visit out of still_answering_ai into the queue / arrival gate.
+-- Extracted verbatim from approve_summary so the AI summary path and the new
+-- forms-only (advance_after_prescreening) path share identical queue bookkeeping.
+--
+-- Branch on the snapshotted check-in mode:
+--   approve_to_start  -> straight to doctor queue (stamp entered_queue_at now)
+--   approve_on_arrival / self_service_on_arrival -> arrival gate first;
+--     entered_queue_at is stamped later by confirm_arrival so queue order
+--     anchors on physical arrival.
+-- Internal only (no public wrapper): called by other SECURITY DEFINER functions.
+CREATE OR REPLACE FUNCTION private.finalize_intake_to_queue(
+  p_visit_id uuid,
+  p_actor_id uuid,
+  p_audit_action text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_checkin_mode text;
+BEGIN
+  SELECT v.checkin_mode INTO v_checkin_mode
+  FROM public.visits v
+  WHERE v.id = p_visit_id;
+
+  -- Set audit context for the broadcast / audit trigger
+  PERFORM set_config('app.audit_actor_id', p_actor_id::text, true);
+  PERFORM set_config('app.audit_actor_type', 'patient', true);
+  PERFORM set_config('app.audit_action', p_audit_action, true);
+
+  IF v_checkin_mode = 'approve_to_start' THEN
+    UPDATE public.visits
+    SET status = 'waiting_doctor_claim',
+        entered_queue_at = now(),
+        patient_approved = true,
+        patient_approved_at = now(),
+        updated_at = now()
+    WHERE id = p_visit_id;
+  ELSE
+    UPDATE public.visits
+    SET status = 'awaiting_arrival',
+        patient_approved = true,
+        patient_approved_at = now(),
+        updated_at = now()
+    WHERE id = p_visit_id;
+  END IF;
+END;
+$$;

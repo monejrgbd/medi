@@ -68,6 +68,7 @@ interface VisitDetail {
     nurse_notes?: string;
     ai_session_instructions?: string;
     ai_skipped?: boolean;
+    manually_added?: boolean;
   };
   patient: {
     id: string;
@@ -305,10 +306,20 @@ export default function PatientDetailView({
         <div className="mt-4">
           {tab === "summary" && (
             <div>
-              <SummaryDisplay
-                summary={visit.ai_summary}
-                structuredCard={visit.ai_structured_card}
-              />
+              {visit.ai_skipped ? (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
+                  <p className="text-sm text-amber-800">
+                    {visit.manually_added
+                      ? "Manually added, no AI screening"
+                      : "AI screening was skipped for this visit"}
+                  </p>
+                </div>
+              ) : (
+                <SummaryDisplay
+                  summary={visit.ai_summary}
+                  structuredCard={visit.ai_structured_card}
+                />
+              )}
               {addendums.length > 0 && (
                 <div className="mt-6 space-y-3">
                   <h4 className="text-xs font-semibold uppercase tracking-wide text-slate">
@@ -336,6 +347,7 @@ export default function PatientDetailView({
               prescreening={detail.prescreening_data ?? null}
               scribeTranscript={detail.scribe_transcript ?? null}
               aiSkipped={visit.ai_skipped}
+              manuallyAdded={visit.manually_added}
             />
           )}
 

@@ -58,11 +58,9 @@ CREATE INDEX idx_clinical_docs_pending ON public.clinical_documents (status)
 CREATE INDEX idx_clinical_docs_expiry ON public.clinical_documents (public_token_expires_at)
   WHERE public_token_revoked = false;
 
--- AI ambient scribe: assembled diarized encounter transcript (primary clinical
--- source for scribe-generated SOAP notes). Nullable; null for non-scribe documents.
+-- AI ambient scribe columns (idempotent: ADD COLUMN IF NOT EXISTS, rerun-safe).
+-- Deploy by running just these ALTERs; validate vs live DB after.
+-- scribe_transcript     = AI-cleaned Clinician/Patient transcript (displayed + fed to SOAP)
+-- scribe_transcript_raw = verbatim Google STT output, retained for audit
 ALTER TABLE public.clinical_documents ADD COLUMN IF NOT EXISTS scribe_transcript text;
-
--- AI ambient scribe: verbatim Google STT output (Speaker A/B), retained for
--- audit/medico-legal. scribe_transcript holds the AI-cleaned Clinician/Patient
--- version that is displayed and fed to the SOAP generator.
 ALTER TABLE public.clinical_documents ADD COLUMN IF NOT EXISTS scribe_transcript_raw text;

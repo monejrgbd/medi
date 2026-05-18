@@ -4,15 +4,17 @@ import FadeIn from "@/components/FadeIn";
 import MockupTour from "@/components/marketing/MockupTour";
 import OpenDemoButton from "@/components/marketing/OpenDemoButton";
 import SectionLink from "@/components/marketing/SectionLink";
+import TrialEmailCTA from "@/components/marketing/TrialEmailCTA";
 
 export const metadata = {
   title: "AI Patient Intake Software for Clinics | Hilt Health",
   description:
-    "Patients describe symptoms to AI in 130+ languages before the doctor walks in. Hilt saves about 8 minutes per patient, every visit. Book a 15 minute walkthrough.",
+    "Patients describe symptoms to AI in 130+ languages before the doctor walks in. Hilt saves about 8 minutes per patient, every visit. Start free, no credit card.",
 };
 
 const CAL_URL = "https://cal.com/102937474/hilt-health-meeting";
-const SIGNUP_URL = "/signup";
+const START_TRIAL_URL = "/start-trial";
+const SOURCE = "patient_intake_feature";
 
 /* ── Icons (one cohesive stroke set) ──────────────────── */
 
@@ -122,16 +124,16 @@ function GridGrain({ className = "" }: { className?: string }) {
 
 /* ── Shared CTA ───────────────────────────────────────── */
 
-function PrimaryCTA({ className = "" }: { className?: string }) {
+function ConsultationButton({ className = "" }: { className?: string }) {
   return (
     <a
       href={CAL_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group inline-flex items-center gap-2 rounded-xl bg-hilt-blue px-8 py-4 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25 transition-all hover:bg-hilt-blue-dark hover:shadow-xl hover:-translate-y-0.5 ${className}`}
+      className={`inline-flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-6 py-4 text-base font-semibold text-ink shadow-sm transition-all hover:border-hilt-blue/40 hover:text-hilt-blue hover:-translate-y-0.5 ${className}`}
     >
       Book a consultation
-      <IconArrow className="transition-transform group-hover:translate-x-0.5" />
+      <IconArrow />
     </a>
   );
 }
@@ -160,16 +162,18 @@ function Hero() {
                 <span className="text-hilt-blue">before the doctor walks in</span>
               </h1>
               <div className="mt-9 flex flex-wrap items-center gap-3">
-                <PrimaryCTA />
+                <TrialEmailCTA source={SOURCE} />
                 <OpenDemoButton variant="light" />
               </div>
-              <p className="mt-4 text-sm text-ash">$200 in free credits. No credit card.</p>
-              <Link
-                href={SIGNUP_URL}
+              <p className="mt-4 text-sm text-ash">No credit card required.</p>
+              <a
+                href={CAL_URL}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="mt-1.5 inline-block text-xs text-ash/70 underline decoration-gray-300 underline-offset-2 transition-colors hover:text-slate"
               >
-                or do it yourself
-              </Link>
+                Prefer a walkthrough? Book a consultation
+              </a>
             </div>
 
             <div className="rounded-3xl border border-gray-100 bg-white/70 p-6 shadow-[0_30px_70px_-25px_rgba(37,99,235,0.3)] ring-1 ring-gray-900/5 backdrop-blur-sm sm:p-7">
@@ -394,7 +398,7 @@ const FAQS: { q: string; a: string; href?: string; linkText?: string }[] = [
   },
   {
     q: "How much does it cost?",
-    a: "Plans start at $79 per provider per month.",
+    a: "Intake is included on every plan, with no per visit fees. See full pricing for current plan rates.",
     href: "/pricing",
     linkText: "See full pricing",
   },
@@ -522,7 +526,7 @@ function TieToSystem() {
 /* ── Setup (connected stepper, echoes the pipeline) ───── */
 
 const SETUP_STEPS = [
-  { n: "1", title: "Create your account", body: "Up to $200 in free credits. No card." },
+  { n: "1", title: "Create your account", body: "No credit card to start." },
   { n: "2", title: "Add your locations", body: "One QR per location. Your logo on it." },
   { n: "3", title: "Add your staff", body: "About 30 seconds per staff member." },
   { n: "4", title: "Configure forms and AI", body: "Pick the form fields. Tell the AI what to ask." },
@@ -567,7 +571,7 @@ function Setup() {
             <p className="text-lg font-semibold text-ink">Rather not do it alone?</p>
             <p className="mt-2 text-slate">Book a consultation and we will be with you during setup.</p>
             <div className="mt-6 flex justify-center">
-              <PrimaryCTA />
+              <ConsultationButton />
             </div>
           </div>
         </FadeIn>
@@ -590,16 +594,18 @@ function FinalCTA() {
             See it on your own patients.
           </h2>
           <div className="mt-9 flex flex-wrap items-center justify-center gap-3">
-            <PrimaryCTA />
+            <TrialEmailCTA source={SOURCE} />
             <OpenDemoButton variant="dark" />
           </div>
-          <p className="mt-4 text-sm text-white/55">$200 in free credits, no credit card.</p>
-          <Link
-            href={SIGNUP_URL}
+          <p className="mt-4 text-sm text-white/55">No credit card required.</p>
+          <a
+            href={CAL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
             className="mt-3 inline-block text-sm text-white/55 underline decoration-white/25 underline-offset-4 transition-colors hover:text-white/80"
           >
-            Prefer to start on your own? Start the free trial &rarr;
-          </Link>
+            Prefer a walkthrough? Book a consultation &rarr;
+          </a>
         </FadeIn>
       </div>
     </section>
@@ -638,15 +644,13 @@ function Footer() {
 function StickyMobileCTA() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 p-3 backdrop-blur lg:hidden">
-      <a
-        href={CAL_URL}
-        target="_blank"
-        rel="noopener noreferrer"
+      <Link
+        href={START_TRIAL_URL}
         className="flex w-full items-center justify-center gap-2 rounded-xl bg-hilt-blue px-6 py-3.5 text-base font-semibold text-white shadow-lg shadow-hilt-blue/25"
       >
-        Book a consultation
+        Start free
         <IconArrow />
-      </a>
+      </Link>
     </div>
   );
 }
@@ -664,7 +668,7 @@ function StructuredData() {
         operatingSystem: "Web",
         description:
           "AI patient intake software. Patients describe symptoms to AI in 130+ languages before the doctor walks in. The doctor opens the door with a patient approved summary ready for any EMR.",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free trial with up to $200 in credits, no credit card" },
+        offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free trial, no credit card" },
       },
       {
         "@type": "FAQPage",

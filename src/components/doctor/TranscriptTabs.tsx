@@ -18,6 +18,7 @@ interface TranscriptTabsProps {
   prescreening: PrescreeningData | null;
   scribeTranscript: string | null;
   aiSkipped?: boolean;
+  manuallyAdded?: boolean;
 }
 
 function hasFormContent(p: PrescreeningData | null): boolean {
@@ -114,6 +115,7 @@ export default function TranscriptTabs({
   prescreening,
   scribeTranscript,
   aiSkipped,
+  manuallyAdded,
 }: TranscriptTabsProps) {
   const hasChat = messages.length > 0;
   const hasScribe = !!scribeTranscript && scribeTranscript.trim().length > 0;
@@ -150,9 +152,11 @@ export default function TranscriptTabs({
         ) : (
           <Empty
             text={
-              aiSkipped
-                ? "AI screening was skipped for this visit."
-                : "No AI chat for this visit."
+              manuallyAdded
+                ? "Manually added, no AI screening."
+                : aiSkipped
+                  ? "AI screening was skipped for this visit."
+                  : "No AI chat for this visit."
             }
           />
         ))}

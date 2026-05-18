@@ -20,3 +20,39 @@ CREATE POLICY "owner_read_credits" ON public.credits_log FOR SELECT
 CREATE INDEX idx_credits_log_org ON public.credits_log (org_id, created_at DESC);
 CREATE UNIQUE INDEX idx_credits_log_visit_type_unique ON public.credits_log (visit_id, credit_type) WHERE visit_id IS NOT NULL;
 CREATE INDEX idx_credits_log_visit ON public.credits_log (visit_id);
+
+-- ---------------------------------------------------------------------------
+-- AI-paperwork billing: document-scoped idempotency (idempotent, rerun-safe).
+-- A visit can produce MANY documents (SOAP + letters + prior-auth) and
+-- clinical_documents.visit_id is nullable, so paperwork billing keys on the
+-- document's own id, NOT (visit_id, credit_type). Existing rows and all
+-- visit/marketing rows keep document_id = NULL and are excluded from the
+-- partial unique index below. Deploy by running just this block (the file is
+-- a bare CREATE TABLE); validated against live DB before first deploy.
+-- NOTE: this FK is intentionally ON DELETE SET NULL, deliberately asymmetric
+-- vs credits_log_visit_id_fkey (NO ACTION): credits_log is an immutable
+-- financial ledger that must outlive a deleted document (CASCADE would erase
+-- charge history; NO ACTION would couple document deletion to the ledger and
+-- could FK-block ad hoc document deletes). SET NULL also fully decouples this
+-- constraint from purge_expired_orgs delete ordering.
+ALTER TABLE public.credits_log ADD COLUMN IF NOT EXISTS document_id uuid;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'credits_log_document_id_fkey'
+      AND conrelid = 'public.credits_log'::regclass
+  ) THEN
+    ALTER TABLE public.credits_log
+      ADD CONSTRAINT credits_log_document_id_fkey
+      FOREIGN KEY (document_id) REFERENCES public.clinical_documents(id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_credits_log_document_type_unique
+  ON public.credits_log (document_id, credit_type) WHERE document_id IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_credits_log_document
+  ON public.credits_log (document_id);
