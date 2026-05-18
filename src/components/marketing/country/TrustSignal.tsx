@@ -14,10 +14,16 @@ const TAKES_THE = new Set(["UK", "US", "AE", "NL"]);
 export default function TrustSignal() {
   return (
     <>
-      <span data-show-for="GENERIC">Operating worldwide</span>
+      <span data-show-for="GENERIC">
+        Operating <span className="text-hilt-blue">worldwide</span>
+      </span>
       {COUNTRY_CODES.map((code) => (
         <span key={code} data-show-for={code}>
-          Operating and compliant in {TAKES_THE.has(code) ? "the " : ""}{COUNTRY_NAME[code]}
+          Operating and compliant in{" "}
+          <span className="text-hilt-blue">
+            {TAKES_THE.has(code) ? "the " : ""}
+            {COUNTRY_NAME[code]}
+          </span>
         </span>
       ))}
     </>

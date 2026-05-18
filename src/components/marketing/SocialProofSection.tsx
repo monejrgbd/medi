@@ -33,7 +33,7 @@ export default function SocialProofSection() {
     <section className="bg-snow py-16 lg:py-24">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <p className="mb-10 text-center text-base font-semibold uppercase tracking-[0.15em] text-slate sm:text-lg">
+          <p className="mb-10 text-center text-xl font-bold tracking-tight text-ink sm:text-2xl">
             <TrustSignal />
           </p>
         </FadeIn>

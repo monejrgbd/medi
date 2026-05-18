@@ -74,6 +74,17 @@ export const COUNTRY_CODES = Object.values(GOOGLE_LOC_TO_COUNTRY);
 export const ALL_VARIANTS = [...COUNTRY_CODES, "GENERIC"];
 
 /**
+ * ISO 3166-1 alpha-2 (e.g. Vercel's `x-vercel-ip-country` header) → internal
+ * country code. Every supported code equals its ISO2 except the United
+ * Kingdom, whose ISO2 is "GB" while we key it as "UK". Used only by the
+ * server-side IP geo route; never affects SSR output.
+ */
+export const ISO2_TO_COUNTRY: Record<string, string> = {
+  ...Object.fromEntries(COUNTRY_CODES.map((c) => [c, c])),
+  GB: "UK",
+};
+
+/**
  * The detection logic, serialized for a blocking inline <script>. Runs before
  * first paint and sets data-country on #country-root, so there is no
  * GENERIC→country flash and the SSR default ("GENERIC") survives for crawlers.
