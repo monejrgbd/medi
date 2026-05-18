@@ -54,3 +54,18 @@ export const PLAN_AI: Record<string, PlanAiConfig> = {
     messageLimit: { def: 30, max: 100 },
   },
 };
+
+/** Plan -> AI scribe cleanup tier. Scribe is FREE on every plan; this only
+ *  selects the cleanup model quality. Standard for free/PAYG/trials; Starter
+ *  buys Advanced; Professional/Business/Enterprise buy Precision. Unknown or
+ *  special states (expired/suspended/read_only/cancelled) fall back to standard
+ *  via the caller's `?? "standard"`. */
+export const PLAN_SCRIBE_TIER: Record<string, "standard" | "advanced" | "precision"> = {
+  starter: "advanced",
+  professional: "precision",
+  business: "precision",
+  enterprise: "precision",
+  pay_as_you_go: "standard",
+  standard_trial: "standard",
+  premium_trial: "standard",
+};

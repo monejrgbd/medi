@@ -91,24 +91,12 @@ BEGIN
                        'consent_text_version', 'scribe_v1', 'language', v_lang)
   );
 
-  -- Metered plans only: non-blocking low-credit warning so the doctor is not
-  -- surprised after a long recording. Recording is never hard-blocked.
-  SELECT subscription_plan, credits_total, credits_used, recharge_limit, recharge_used
-  INTO v_org
-  FROM public.organizations WHERE id = v_caller_org_id;
-
-  IF v_org.subscription_plan NOT IN ('starter', 'professional', 'business', 'enterprise') THEN
-    IF (v_org.credits_total - v_org.credits_used)
-       + GREATEST(COALESCE(v_org.recharge_limit, 0) - COALESCE(v_org.recharge_used, 0), 0) <= 0 THEN
-      v_low_credits := true;
-    END IF;
-  END IF;
-
+  -- Scribe is free on every plan: no credit preflight, no low-credit warning.
   RETURN jsonb_build_object(
     'success', true,
     'recording_id', v_recording_id,
     'audio_prefix', v_audio_prefix,
-    'low_credits', v_low_credits
+    'low_credits', false
   );
 END;
 $$;

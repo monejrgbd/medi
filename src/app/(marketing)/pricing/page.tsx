@@ -28,7 +28,8 @@ const EVERY_PLAN_FEATURES = [
   "Full transcript + AI diagnostic for doctors",
   "Patient profile card (meds, allergies, history)",
   "Doctor notes, letters, and clinical documents (AI drafted)",
-  "AI SOAP note generator (one click, full note from visit context and your dictated physical exam)",
+  "AI SOAP note generator (one click, full note from the visit, the AI scribe recording, and your dictated physical exam)",
+  "AI Scribe (records the visit, AI cleaned Clinician and Patient transcript, drafts the note, free on every plan)",
   "Daily letter templates (sick notes, return to work, school absence, work accommodation, and more)",
   "All documents clinic branded and doctor signed",
   "File attachments per visit",
@@ -57,6 +58,7 @@ const PLAN_FEATURES = {
     features: [
       "Unlimited Standard AI intake",
       "30 messages per intake conversation limit",
+      "AI Scribe uses Advanced AI",
     ],
     premiumAi: [
       "1 Premium AI intake/mo",
@@ -70,6 +72,7 @@ const PLAN_FEATURES = {
     features: [
       "Unlimited Advanced AI intake",
       "60 messages per intake conversation limit",
+      "AI Scribe uses Precision AI",
     ],
     premiumAi: [
       "5 Premium AI intakes/mo",
@@ -84,6 +87,7 @@ const PLAN_FEATURES = {
       "Unlimited Precision AI intake",
       "100 messages per intake conversation limit",
       "Embeddable widget for your website",
+      "AI Scribe uses Precision AI",
     ],
     premiumAi: [
       "25 Premium AI intakes/mo",
@@ -125,7 +129,7 @@ const FAQS = [
   },
   {
     q: "What is the difference between the AI tiers?",
-    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Precision AI is the Business tier, delivering superior clinical depth for high volume clinics. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Every tier also generates a doctor facing diagnostic suggestion at the end of each visit at no extra cost, bundled into the per visit credit cost.",
+    a: "Standard AI handles routine visits quickly. Advanced AI provides deeper clinical reasoning and more thorough follow ups. Precision AI is the Business tier, delivering superior clinical depth for high volume clinics. Premium AI offers the deepest reasoning available for complex, multi symptom cases. Every tier also generates a doctor facing diagnostic suggestion at the end of each visit at no extra cost, bundled into the per visit credit cost. The AI Scribe is included free on every plan; it uses the Standard model on pay as you go and trials, Advanced on Starter, and Precision on Professional, Business and Enterprise.",
   },
   {
     q: "Who pays per seat?",

@@ -31,6 +31,16 @@ CREATE TABLE IF NOT EXISTS public.ai_model_config (
   diagnostic_max_tokens int NOT NULL DEFAULT 2048,
   diagnostic_temperature numeric NOT NULL DEFAULT 0.3,
 
+  -- Scribe (post-visit ambient transcript cleanup + Clinician/Patient attribution).
+  -- Nullable so the ALTER on the already-populated prod table succeeds; the
+  -- per-tier UPDATE below backfills both fresh and existing databases.
+  scribe_provider text
+    CHECK (scribe_provider IS NULL OR scribe_provider IN ('anthropic', 'google_vertex', 'openai')),
+  scribe_model text,
+  scribe_model_display text,
+  scribe_max_tokens int DEFAULT 8000,
+  scribe_temperature numeric DEFAULT 0.2,
+
   notes text,
   updated_at timestamptz DEFAULT now(),
   updated_by uuid REFERENCES auth.users(id)
@@ -77,3 +87,35 @@ INSERT INTO public.ai_model_config (
    'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    2048, 0.5,
    'anthropic', 'claude-opus-4-6',    'Claude Opus 4.6',    2048, 0.3)
 ON CONFLICT (tier) DO NOTHING;
+
+-- Scribe columns: ON CONFLICT DO NOTHING above never backfills existing rows,
+-- so add the columns (no-op if already present) and set the scribe model per
+-- tier. This UPDATE is the single deterministic seed for scribe on BOTH fresh
+-- and existing databases, and is idempotent (sets the same values each deploy).
+-- It only writes the scribe_* columns; intake/summary/diagnostic are untouched.
+ALTER TABLE public.ai_model_config ADD COLUMN IF NOT EXISTS scribe_provider text
+  CHECK (scribe_provider IS NULL OR scribe_provider IN ('anthropic', 'google_vertex', 'openai'));
+ALTER TABLE public.ai_model_config ADD COLUMN IF NOT EXISTS scribe_model text;
+ALTER TABLE public.ai_model_config ADD COLUMN IF NOT EXISTS scribe_model_display text;
+ALTER TABLE public.ai_model_config ADD COLUMN IF NOT EXISTS scribe_max_tokens int DEFAULT 8000;
+ALTER TABLE public.ai_model_config ADD COLUMN IF NOT EXISTS scribe_temperature numeric DEFAULT 0.2;
+
+UPDATE public.ai_model_config SET
+  scribe_provider = 'anthropic', scribe_model = 'claude-haiku-4-5-20251001',
+  scribe_model_display = 'Claude Haiku 4.5', scribe_max_tokens = 8000, scribe_temperature = 0.2
+WHERE tier = 'standard';
+
+UPDATE public.ai_model_config SET
+  scribe_provider = 'anthropic', scribe_model = 'claude-sonnet-4-6',
+  scribe_model_display = 'Claude Sonnet 4.6', scribe_max_tokens = 8000, scribe_temperature = 0.2
+WHERE tier = 'advanced';
+
+UPDATE public.ai_model_config SET
+  scribe_provider = 'anthropic', scribe_model = 'claude-sonnet-4-6',
+  scribe_model_display = 'Claude Sonnet 4.6', scribe_max_tokens = 8000, scribe_temperature = 0.2
+WHERE tier = 'precision';
+
+UPDATE public.ai_model_config SET
+  scribe_provider = 'anthropic', scribe_model = 'claude-opus-4-6',
+  scribe_model_display = 'Claude Opus 4.6', scribe_max_tokens = 8000, scribe_temperature = 0.2
+WHERE tier = 'premium';

@@ -128,12 +128,12 @@ function TranscriptTab({ defaultScribe = false }: { defaultScribe?: boolean }) {
 
       {sub === "scribe" && (
         <div>
-          <p className="mb-2 text-[9px] text-ash">Automated transcription of the in person visit, speaker labels approximate.</p>
+          <p className="mb-2 text-[9px] text-ash">AI cleaned transcript, speaker roles estimated by AI.</p>
           <div className="space-y-1.5">
             {scribe.map((m, i) => (
               <div key={i}>
                 <p className="text-[8px] font-semibold uppercase tracking-wider text-ash mb-0.5">
-                  {m.sp === "A" ? "Speaker A" : "Speaker B"}
+                  {m.sp === "A" ? "Clinician" : "Patient"}
                 </p>
                 <div className={`rounded-lg px-2.5 py-1.5 ${m.sp === "A" ? "bg-violet-50" : "bg-gray-50"}`}>
                   <p className="text-[10px] leading-relaxed text-ink">{m.text}</p>

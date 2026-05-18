@@ -163,7 +163,7 @@ export default function TranscriptTabs({
         (hasScribe ? (
           <div>
             <p className="text-xs text-ash mb-2">
-              Automated transcription, speaker labels approximate.
+              AI cleaned transcript, speaker roles estimated by AI, verify against your recollection.
             </p>
             <div className="max-h-[600px] overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4">
               <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">

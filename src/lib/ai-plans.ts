@@ -55,6 +55,19 @@ export const PLAN_AI: Record<string, PlanAiConfig> = {
   },
 };
 
+/** Plan -> AI scribe cleanup tier. Mirror of PLAN_SCRIBE_TIER in
+ *  supabase/functions/_ai-providers/plan-config.ts (keep in sync). Scribe is
+ *  free on every plan; this only selects the cleanup model quality. */
+export const PLAN_SCRIBE_TIER: Record<string, "standard" | "advanced" | "precision"> = {
+  starter: "advanced",
+  professional: "precision",
+  business: "precision",
+  enterprise: "precision",
+  pay_as_you_go: "standard",
+  standard_trial: "standard",
+  premium_trial: "standard",
+};
+
 // Plan-dependent labels no longer needed since Precision is a real tier with its own slot.
 // Labels are universal.
 export const TIER_LABEL: Record<AiTier, string> = {

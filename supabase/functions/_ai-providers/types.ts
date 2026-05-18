@@ -3,7 +3,7 @@
 
 export type Provider = 'anthropic' | 'google_vertex' | 'openai';
 export type AiTier = 'standard' | 'advanced' | 'precision' | 'premium';
-export type AiTask = 'intake' | 'summary' | 'diagnostic' | 'document' | 'scan';
+export type AiTask = 'intake' | 'summary' | 'diagnostic' | 'document' | 'scan' | 'scribe';
 
 /** One row from ai_plan_config — per-plan config for org-level tasks. */
 export interface PlanConfig {
@@ -63,6 +63,14 @@ export interface TierConfig {
   diagnostic_model_display: string;
   diagnostic_max_tokens: number;
   diagnostic_temperature: number;
+
+  // Scribe (post-visit ambient transcript cleanup). Nullable: a tier row may
+  // predate the scribe migration; callers fall back when absent.
+  scribe_provider: Provider | null;
+  scribe_model: string | null;
+  scribe_model_display: string | null;
+  scribe_max_tokens: number | null;
+  scribe_temperature: number | null;
 }
 
 /** The subset of config fields an adapter needs for one task. */
@@ -141,6 +149,14 @@ export function pickTaskCall(tierConfig: TierConfig, task: AiTask): ModelCall {
         model: tierConfig.diagnostic_model,
         max_tokens: tierConfig.diagnostic_max_tokens,
         temperature: tierConfig.diagnostic_temperature,
+      };
+    case 'scribe':
+      // Coalesce in case a tier row predates the scribe migration.
+      return {
+        provider: tierConfig.scribe_provider ?? 'anthropic',
+        model: tierConfig.scribe_model ?? 'claude-haiku-4-5-20251001',
+        max_tokens: tierConfig.scribe_max_tokens ?? 8000,
+        temperature: tierConfig.scribe_temperature ?? 0.2,
       };
   }
 }
