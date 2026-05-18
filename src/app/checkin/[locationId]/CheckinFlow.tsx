@@ -39,6 +39,7 @@ type FlowState =
   | "first_timer"
   | "language"
   | "prescreening"
+  | "advance_error"
   | "chatting"
   | "generating_summary"
   | "summary_review"
@@ -115,6 +116,10 @@ export default function CheckinFlow({
   const [patientFirstName, setPatientFirstName] = useState("");
   const [hasPreviousVisits, setHasPreviousVisits] = useState(false);
   const [consentGiven, setConsentGiven] = useState(false);
+  // Forms-only intake (skip_ai + forms_before_queue): patient fills the
+  // prescreening form then goes straight to the queue, no AI chat. Per-visit
+  // truth from checkin_patient/checkin_with_token returns + get_patient_session.
+  const [aiSkipped, setAiSkipped] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [languageLoading, setLanguageLoading] = useState(false);
@@ -161,6 +166,8 @@ export default function CheckinFlow({
   hasPreviousVisitsRef.current = hasPreviousVisits;
   const consentGivenRef = useRef(consentGiven);
   consentGivenRef.current = consentGiven;
+  const aiSkippedRef = useRef(aiSkipped);
+  aiSkippedRef.current = aiSkipped;
   const demoModeRef = useRef(demoMode);
 
   function shouldShowPrescreening(): boolean {
@@ -304,19 +311,7 @@ export default function CheckinFlow({
               setState("waiting");
               break;
             case "still_answering_ai":
-              if (session.ai_summary) {
-                setSummaryData({ summary: session.ai_summary, structured_card: session.ai_structured_card });
-                setState("summary_review");
-              } else if (session.ai_completed_at) {
-                setState("generating_summary");
-              } else if (!session.consent_given) {
-                setState("first_timer");
-              } else if (!session.prescreening_data && !session.ai_summary && shouldShowPrescreening()) {
-                fetchMedicalInfo();
-                setState("prescreening");
-              } else {
-                setState("chatting");
-              }
+              routeStillAnsweringAi(session, data.session_token);
               break;
             case "awaiting_arrival":
               setState("awaiting_arrival");
@@ -420,22 +415,7 @@ export default function CheckinFlow({
           }
           break;
         case "still_answering_ai":
-          if (data.ai_summary) {
-            setSummaryData({
-              summary: data.ai_summary,
-              structured_card: data.ai_structured_card,
-            });
-            setState("summary_review");
-          } else if (data.ai_completed_at) {
-            setState("generating_summary");
-          } else if (!data.consent_given) {
-            setState("first_timer");
-          } else if (!data.prescreening_data && !data.ai_summary && shouldShowPrescreening()) {
-            fetchMedicalInfo();
-            setState("prescreening");
-          } else {
-            setState("chatting");
-          }
+          routeStillAnsweringAi(data, saved);
           break;
         case "awaiting_arrival":
           setState("awaiting_arrival");
@@ -501,25 +481,28 @@ export default function CheckinFlow({
 
       if (status === "still_answering_ai") {
         const current = stateRef.current;
-        if (current === "chatting" || current === "generating_summary" || current === "summary_review") {
+        // Do not yank the patient off an active screen. prescreening +
+        // advance_error added so a forms-only patient mid-form (or retrying the
+        // advance) is not interrupted by a duplicate still_answering_ai echo.
+        if (
+          current === "chatting" ||
+          current === "generating_summary" ||
+          current === "summary_review" ||
+          current === "prescreening" ||
+          current === "advance_error"
+        ) {
           return;
         }
-        if (!consentGivenRef.current) {
-          setState("first_timer");
-        } else if (shouldShowPrescreening()) {
-          (async () => {
-            const supabase = createClient();
-            const { data: sess } = await supabase.rpc("get_patient_session", { p_session_token: sessionToken });
-            if (sess?.success && !sess.prescreening_data && !sess.ai_summary) {
-              fetchMedicalInfo();
-              setState("prescreening");
-            } else {
-              setState("chatting");
-            }
-          })();
-        } else {
-          setState("chatting");
-        }
+        (async () => {
+          const supabase = createClient();
+          const { data: sess } = await supabase.rpc("get_patient_session", { p_session_token: sessionToken });
+          if (sess?.success) {
+            routeStillAnsweringAi(sess, sessionToken ?? undefined);
+          } else if (!consentGivenRef.current) {
+            // No session yet but pre-consent we can still show the right intro.
+            setState(aiSkippedRef.current ? "language" : "first_timer");
+          }
+        })();
         return;
       }
 
@@ -711,11 +694,7 @@ export default function CheckinFlow({
               setState("waiting");
               break;
             case "still_answering_ai":
-              if (!session.consent_given) setState("first_timer");
-              else if (!session.prescreening_data && !session.ai_summary && shouldShowPrescreening()) {
-                fetchMedicalInfo();
-                setState("prescreening");
-              } else setState("chatting");
+              routeStillAnsweringAi(session, tokenData.session_token);
               break;
             case "awaiting_arrival":
               setState("awaiting_arrival");
@@ -750,6 +729,7 @@ export default function CheckinFlow({
       // behave correctly (approve_to_start -> waiting for receptionist,
       // approve_on_arrival/self_service with skip_ai -> straight to arrival gate,
       // otherwise -> enter chat flow).
+      setAiSkipped(!!tokenData.ai_skipped);
       switch (tokenData.status) {
         case "pending_approval":
           setState("waiting");
@@ -762,7 +742,9 @@ export default function CheckinFlow({
           break;
         case "still_answering_ai":
         default:
-          setState("first_timer");
+          // Forms only skips the AI-framed consent screen; language is still
+          // shown so the prescreening form is localized.
+          setState(tokenData.ai_skipped ? "language" : "first_timer");
       }
       return;
     }
@@ -800,6 +782,7 @@ export default function CheckinFlow({
         setVisitId(data.visit_id);
         localStorage.setItem(STORAGE_KEY, data.session_token);
         if (onVisitCreated && data.visit_id) onVisitCreated(data.visit_id);
+        if (typeof data.ai_skipped === "boolean") setAiSkipped(data.ai_skipped);
         // If phone was provided but not yet verified, go to phone verification
         if (data.phone_verified === false && phone) {
           setPatientPhone(phone);
@@ -843,22 +826,7 @@ export default function CheckinFlow({
               setState("waiting");
             }
           } else if (session.status === "still_answering_ai") {
-            if (session.ai_summary) {
-              setSummaryData({
-                summary: session.ai_summary,
-                structured_card: session.ai_structured_card,
-              });
-              setState("summary_review");
-            } else if (session.ai_completed_at) {
-              setState("generating_summary");
-            } else if (!session.consent_given) {
-              setState("first_timer");
-            } else if (!session.prescreening_data && !session.ai_summary && shouldShowPrescreening()) {
-              fetchMedicalInfo();
-              setState("prescreening");
-            } else {
-              setState("chatting");
-            }
+            routeStillAnsweringAi(session, data.session_token);
           } else if (session.status === "awaiting_arrival") {
             setState("awaiting_arrival");
           } else if (session.status === "waiting_doctor_claim") {
@@ -976,13 +944,120 @@ export default function CheckinFlow({
       await fetchMedicalInfo();
       setLanguageLoading(false);
       setState("prescreening");
+    } else if (aiSkippedRef.current) {
+      // Forms only with no visible prescreening sections: nothing to fill,
+      // go straight to the queue (no AI chat).
+      setLanguageLoading(false);
+      void advanceFormsOnly();
     } else {
       setLanguageLoading(false);
       setState("chatting");
     }
   }
 
+  // Forms-only: after the prescreening form, advance the visit to the queue /
+  // arrival gate with no AI chat or summary. Mirrors handleSummaryApprove for
+  // the no-AI path. On failure surface a retry instead of faking a queued state.
+  // tokenOverride is used by resume paths where sessionToken state is not yet
+  // committed (just-set via setSessionToken in the same render).
+  async function advanceFormsOnly(tokenOverride?: string) {
+    const tok = tokenOverride ?? sessionToken;
+    if (!tok) {
+      setState("advance_error");
+      return;
+    }
+    const supabase = createClient();
+    try {
+      const { data: adv, error: advErr } = await supabase.rpc("advance_after_prescreening", {
+        p_session_token: tok,
+      });
+      if (advErr || !adv?.success) {
+        setError(adv?.error || advErr?.message || "");
+        setState("advance_error");
+        return;
+      }
+    } catch {
+      setState("advance_error");
+      return;
+    }
+
+    const { data } = await supabase.rpc("get_patient_session", {
+      p_session_token: tok,
+    });
+    if (!data?.success) {
+      setState("advance_error");
+      return;
+    }
+    if (data.queue_position !== undefined) setQueuePosition(data.queue_position);
+    if (data.estimated_wait_minutes !== undefined) setEstimatedWait(data.estimated_wait_minutes);
+    if (onPhoneComplete) onPhoneComplete();
+    switch (data.status) {
+      case "awaiting_arrival":
+        setState("awaiting_arrival");
+        break;
+      case "waiting_doctor_claim":
+        setState(data.timeout_flagged ? "timeout" : "queued");
+        break;
+      case "pending_approval":
+        setState("waiting");
+        break;
+      case "claimed_by_doctor":
+        setStaffRoom(data.staff_room ?? null);
+        setState("claimed");
+        break;
+      case "completed":
+        setState("visit_completed");
+        break;
+      case "left":
+        setState(data.patient_denied ? "denied" : "patient_left");
+        break;
+      default:
+        setState("queued");
+    }
+  }
+
+  // Shared router for a visit in still_answering_ai. One place so the AI path
+  // and the forms-only (ai_skipped) path stay consistent across every resume,
+  // recovery and realtime entry point. Forms-only never enters chat: pre-consent
+  // it goes to the language picker (not the AI-framed first_timer), and once the
+  // form is done (or there are no fields) it advances straight to the queue.
+  function routeStillAnsweringAi(
+    s: {
+      ai_summary?: string | null;
+      ai_structured_card?: Record<string, unknown> | null;
+      ai_completed_at?: string | null;
+      consent_given?: boolean;
+      prescreening_data?: unknown;
+      ai_skipped?: boolean;
+    },
+    tokenOverride?: string
+  ) {
+    if (typeof s.ai_skipped === "boolean") setAiSkipped(s.ai_skipped);
+    if (s.ai_summary) {
+      setSummaryData({ summary: s.ai_summary, structured_card: s.ai_structured_card ?? null });
+      setState("summary_review");
+    } else if (s.ai_completed_at) {
+      setState("generating_summary");
+    } else if (!s.consent_given) {
+      setState(s.ai_skipped ? "language" : "first_timer");
+    } else if (!s.prescreening_data && !s.ai_summary && shouldShowPrescreening()) {
+      fetchMedicalInfo();
+      setState("prescreening");
+    } else if (s.ai_skipped) {
+      // Forms only: form saved (or no visible fields) but not yet advanced.
+      // advance_after_prescreening is idempotent, so this is safe on resume.
+      void advanceFormsOnly(tokenOverride);
+    } else {
+      setState("chatting");
+    }
+  }
+
   function handlePrescreeningComplete() {
+    if (aiSkippedRef.current) {
+      // Forms only: no chat — advance straight to the queue / arrival gate.
+      void advanceFormsOnly();
+      return;
+    }
     setState("chatting");
   }
 
@@ -1291,19 +1366,10 @@ export default function CheckinFlow({
                       setState("waiting");
                     }
                   } else if (status === "still_answering_ai") {
-                    if (data.ai_summary) {
-                      setSummaryData({ summary: data.ai_summary as string, structured_card: data.ai_structured_card as Record<string, unknown> | null });
-                      setState("summary_review");
-                    } else if (data.ai_completed_at) {
-                      setState("generating_summary");
-                    } else if (!(data.consent_given as boolean)) {
-                      setState("first_timer");
-                    } else if (!data.prescreening_data && !data.ai_summary && shouldShowPrescreening()) {
-                      fetchMedicalInfo();
-                      setState("prescreening");
-                    } else {
-                      setState("chatting");
-                    }
+                    routeStillAnsweringAi(
+                      data as Parameters<typeof routeStillAnsweringAi>[0],
+                      pendingSession?.token
+                    );
                   } else if (status === "awaiting_arrival") {
                     setState("awaiting_arrival");
                   } else if (status === "waiting_doctor_claim") {
@@ -1486,6 +1552,25 @@ export default function CheckinFlow({
     case "claimed":
       return <DoctorClaimedNotice staffRoom={staffRoom} claimerRole={claimerRole} />;
 
+    case "advance_error":
+      return (
+        <div className="w-full max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-50">
+            <Clock className="h-8 w-8 text-amber-500" />
+          </div>
+          <h2 className="text-xl font-bold text-ink mb-2">One more step</h2>
+          <p className="text-sm text-slate mb-4">
+            We saved your information but could not add you to the queue. Please try again.
+          </p>
+          <button
+            onClick={() => { void advanceFormsOnly(); }}
+            className="rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark"
+          >
+            Try again
+          </button>
+        </div>
+      );
+
     case "timeout": {
       const timeoutContent = (
         <div className="w-full max-w-md text-center">
@@ -1628,19 +1713,7 @@ export default function CheckinFlow({
                 setState("waiting");
                 break;
               case "still_answering_ai":
-                if (data.ai_summary) {
-                  setSummaryData({ summary: data.ai_summary, structured_card: data.ai_structured_card });
-                  setState("summary_review");
-                } else if (data.ai_completed_at) {
-                  setState("generating_summary");
-                } else if (!data.consent_given) {
-                  setState("first_timer");
-                } else if (!data.prescreening_data && !data.ai_summary && shouldShowPrescreening()) {
-                  fetchMedicalInfo();
-                  setState("prescreening");
-                } else {
-                  setState("chatting");
-                }
+                routeStillAnsweringAi(data, sessionToken ?? undefined);
                 break;
               case "awaiting_arrival":
                 setState("awaiting_arrival");

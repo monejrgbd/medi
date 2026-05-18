@@ -10,11 +10,22 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   left: { label: "Left", className: "bg-red-100 text-red-800" },
 };
 
-export default function PatientStatusBadge({ status }: { status: string }) {
-  const config = STATUS_CONFIG[status] ?? {
-    label: status,
-    className: "bg-gray-100 text-gray-800",
-  };
+export default function PatientStatusBadge({
+  status,
+  aiSkipped = false,
+}: {
+  status: string;
+  aiSkipped?: boolean;
+}) {
+  // Forms-only visits sit in still_answering_ai but are filling the
+  // prescreening form, not chatting with the AI. Label them accordingly.
+  const config =
+    status === "still_answering_ai" && aiSkipped
+      ? { label: "Filling form", className: "bg-teal-100 text-teal-800" }
+      : STATUS_CONFIG[status] ?? {
+          label: status,
+          className: "bg-gray-100 text-gray-800",
+        };
 
   return (
     <span

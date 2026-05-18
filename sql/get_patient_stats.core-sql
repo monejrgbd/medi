@@ -61,7 +61,7 @@ BEGIN
 
   -- Aggregate stats
   SELECT jsonb_build_object(
-    'avg_ai_minutes', round(avg(EXTRACT(EPOCH FROM (v.entered_queue_at - v.ai_started_at)) / 60.0) FILTER (WHERE v.entered_queue_at IS NOT NULL AND v.ai_started_at IS NOT NULL), 1),
+    'avg_ai_minutes', round(avg(EXTRACT(EPOCH FROM (v.entered_queue_at - v.ai_started_at)) / 60.0) FILTER (WHERE v.entered_queue_at IS NOT NULL AND v.ai_started_at IS NOT NULL AND NOT COALESCE(v.ai_skipped, false)), 1),
     'avg_wait_minutes', round(avg(EXTRACT(EPOCH FROM (v.claimed_at - v.entered_queue_at)) / 60.0) FILTER (WHERE v.claimed_at IS NOT NULL AND v.entered_queue_at IS NOT NULL), 1),
     'avg_handling_minutes', round(avg(EXTRACT(EPOCH FROM (v.completed_at - v.claimed_at)) / 60.0) FILTER (WHERE v.completed_at IS NOT NULL AND v.claimed_at IS NOT NULL), 1),
     'total', count(*),
@@ -80,7 +80,7 @@ BEGIN
   FROM (
     SELECT jsonb_build_object(
       'date', v.created_at::date,
-      'avg_ai_minutes', round(avg(EXTRACT(EPOCH FROM (v.entered_queue_at - v.ai_started_at)) / 60.0) FILTER (WHERE v.entered_queue_at IS NOT NULL AND v.ai_started_at IS NOT NULL), 1),
+      'avg_ai_minutes', round(avg(EXTRACT(EPOCH FROM (v.entered_queue_at - v.ai_started_at)) / 60.0) FILTER (WHERE v.entered_queue_at IS NOT NULL AND v.ai_started_at IS NOT NULL AND NOT COALESCE(v.ai_skipped, false)), 1),
       'avg_wait_minutes', round(avg(EXTRACT(EPOCH FROM (v.claimed_at - v.entered_queue_at)) / 60.0) FILTER (WHERE v.claimed_at IS NOT NULL AND v.entered_queue_at IS NOT NULL), 1),
       'avg_handling_minutes', round(avg(EXTRACT(EPOCH FROM (v.completed_at - v.claimed_at)) / 60.0) FILTER (WHERE v.completed_at IS NOT NULL AND v.claimed_at IS NOT NULL), 1),
       'total', count(*),

@@ -19,6 +19,8 @@ DECLARE
   v_caller_staff_id uuid;
   v_is_receptionist boolean := false;
   v_loc_skip_ai boolean;
+  v_loc_forms_before_queue boolean;
+  v_skip_requested boolean;
 BEGIN
   -- Get visit details
   SELECT v.* INTO v_visit
@@ -88,10 +90,16 @@ BEGIN
   END IF;
 
   -- Mode 1 (approve_to_start): existing behavior — approval gates chat start.
-  -- Check if AI should be skipped at location level
-  SELECT l.skip_ai INTO v_loc_skip_ai FROM public.locations l WHERE l.id = v_visit.location_id;
+  -- Resolve intake depth: skip AI? run the prescreening form first (forms only)?
+  SELECT COALESCE(l.skip_ai, false), COALESCE(l.forms_before_queue, false)
+  INTO v_loc_skip_ai, v_loc_forms_before_queue
+  FROM public.locations l WHERE l.id = v_visit.location_id;
 
-  IF COALESCE(v_loc_skip_ai, false) = true THEN
+  v_skip_requested := v_loc_skip_ai
+    OR (v_visit.demo_features IS NOT NULL AND COALESCE((v_visit.demo_features->>'skipAi')::boolean, false));
+
+  -- Express (skip AI, no form): straight to the doctor queue (current behavior).
+  IF v_skip_requested AND NOT v_loc_forms_before_queue THEN
     UPDATE public.visits
     SET status = 'waiting_doctor_claim',
         entered_queue_at = now(),
@@ -100,22 +108,7 @@ BEGIN
 
     PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
     PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
-    PERFORM set_config('app.audit_action', 'approved_skip_ai', true);
-
-    RETURN jsonb_build_object('success', true, 'ai_skipped', true);
-  END IF;
-
-  -- Per-visit demo config: check demo_features on the visit itself
-  IF v_visit.demo_features IS NOT NULL AND (v_visit.demo_features->>'skipAi')::boolean = true THEN
-    UPDATE public.visits
-    SET status = 'waiting_doctor_claim',
-        entered_queue_at = now(),
-        ai_skipped = true
-    WHERE id = p_visit_id;
-
-    PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
-    PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
-    PERFORM set_config('app.audit_action', 'approved_skip_ai_demo', true);
+    PERFORM set_config('app.audit_action', CASE WHEN v_loc_skip_ai THEN 'approved_skip_ai' ELSE 'approved_skip_ai_demo' END, true);
 
     RETURN jsonb_build_object('success', true, 'ai_skipped', true);
   END IF;
@@ -123,12 +116,15 @@ BEGIN
   -- Set audit context for trigger
   PERFORM set_config('app.audit_actor_id', COALESCE(v_caller_staff_id::text, p_caller_auth_uid::text), true);
   PERFORM set_config('app.audit_actor_type', CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'receptionist' END, true);
-  PERFORM set_config('app.audit_action', 'approved', true);
+  PERFORM set_config('app.audit_action', CASE WHEN v_skip_requested THEN 'approved_forms_only' ELSE 'approved' END, true);
 
-  -- Update visit status
+  -- AI path: still_answering_ai -> chat. Forms only (skip AI + forms_before_queue):
+  -- still_answering_ai with ai_skipped=true; the client runs the prescreening
+  -- form and advance_after_prescreening moves it to the queue with no chat.
   UPDATE public.visits
   SET status = 'still_answering_ai',
-      ai_started_at = now()
+      ai_started_at = now(),
+      ai_skipped = v_skip_requested
   WHERE id = p_visit_id;
 
   -- Handle follow-up linkage

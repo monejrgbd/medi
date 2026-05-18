@@ -23,6 +23,7 @@ interface ActiveVisit {
   claimed_is_nurse: boolean;
   staff_room?: string | null;
   queue_number?: number | null;
+  ai_skipped?: boolean | null;
   patients: {
     id?: string;
     first_name: string;
@@ -154,7 +155,10 @@ export default function ActivePatientsList({
                       <h3 className="font-medium text-ink truncate">
                         {visit.patients.first_name} {visit.patients.last_name}
                       </h3>
-                      <PatientStatusBadge status={visit.status} />
+                      <PatientStatusBadge
+                        status={visit.status}
+                        aiSkipped={Boolean(visit.ai_skipped)}
+                      />
                     </div>
                     <p className="text-xs text-ash">
                       DOB: {visit.patients.birthday}{(visit.patients as Record<string, unknown>).sex ? ` · ${(visit.patients as Record<string, unknown>).sex}` : ""}

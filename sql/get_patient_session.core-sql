@@ -26,7 +26,7 @@ BEGIN
          v.pending_phone, v.queue_number,
          v.entered_queue_at, v.patient_denied, v.patient_id,
          v.staff_room, v.checkin_mode, v.arrived_at,
-         v.prescreening_data,
+         v.prescreening_data, v.ai_skipped,
          p.first_name AS patient_first_name, p.language, p.consent_given,
          p.birthday AS patient_birthday,
          p.sex,
@@ -141,6 +141,7 @@ BEGIN
     'checkin_mode', v_visit.checkin_mode,
     'arrived_at', v_visit.arrived_at,
     'prescreening_data', v_visit.prescreening_data,
+    'ai_skipped', v_visit.ai_skipped,
     'custom_fields', v_custom_fields
   );
 END;

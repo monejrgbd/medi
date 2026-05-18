@@ -368,7 +368,24 @@ export default function FocusMode({
         locationId={locationId}
         role={role}
         onClose={() => setShowAdd(false)}
-        onSuccess={() => handleVisitChange()}
+        onSuccess={(r) => {
+          // If the doctor claimed a walk-in while idle, pull it into focus
+          // (it is claimed, so it never enters the queue / doClaimNext).
+          // Never interrupt an in-progress consult.
+          if (r.claimed && r.visitId && !currentVisitRef.current) {
+            setCurrentVisit({
+              visit_id: r.visitId,
+              first_name: "",
+              last_name: "",
+              claimed_at: new Date().toISOString(),
+              priority: 1,
+              is_sensitive: false,
+              has_previous_visits: false,
+            });
+          } else {
+            handleVisitChange();
+          }
+        }}
       />
     ) : null;
 
@@ -485,7 +502,8 @@ export default function FocusMode({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-ink">
-                {currentVisit.first_name} {currentVisit.last_name}
+                {currentVisit.first_name || detail?.patient.first_name || ""}{" "}
+                {currentVisit.last_name || detail?.patient.last_name || ""}
               </h2>
               {detail?.visit.ai_skipped && (
                 <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">

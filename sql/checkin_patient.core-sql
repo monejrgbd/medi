@@ -34,6 +34,7 @@ DECLARE
   v_team_code text;
   v_checkin_mode text;
   v_loc_skip_ai boolean;
+  v_loc_forms_before_queue boolean;
   v_initial_status text;
   v_initial_ai_started_at timestamptz;
   v_initial_ai_skipped boolean;
@@ -101,8 +102,8 @@ BEGIN
   END IF;
 
   -- Validate location exists and get org_id + mode config
-  SELECT l.org_id, l.name, l.checkin_mode, COALESCE(l.skip_ai, false)
-  INTO v_org_id, v_location_name, v_checkin_mode, v_loc_skip_ai
+  SELECT l.org_id, l.name, l.checkin_mode, COALESCE(l.skip_ai, false), COALESCE(l.forms_before_queue, false)
+  INTO v_org_id, v_location_name, v_checkin_mode, v_loc_skip_ai, v_loc_forms_before_queue
   FROM public.locations l
   WHERE l.id = p_location_id;
 
@@ -118,7 +119,14 @@ BEGIN
     v_initial_status := 'pending_approval';
     v_initial_ai_started_at := NULL;
     v_initial_ai_skipped := false;
+  ELSIF v_loc_skip_ai AND v_loc_forms_before_queue THEN
+    -- Forms only: prescreening form runs via still_answering_ai, then
+    -- advance_after_prescreening moves the visit to the queue. No AI chat.
+    v_initial_status := 'still_answering_ai';
+    v_initial_ai_started_at := now();
+    v_initial_ai_skipped := true;
   ELSIF v_loc_skip_ai THEN
+    -- Express: straight to the arrival gate, no form, no chat.
     v_initial_status := 'awaiting_arrival';
     v_initial_ai_started_at := NULL;
     v_initial_ai_skipped := true;
@@ -258,6 +266,7 @@ BEGIN
       'visit_id', v_new_visit.id,
       'has_previous_visits', v_has_previous,
       'phone_verified', v_phone_verified,
+      'ai_skipped', v_initial_ai_skipped,
       'queue_number', v_new_visit.queue_number
     );
   END IF;
@@ -398,6 +407,7 @@ BEGIN
       'visit_id', v_new_visit.id,
       'has_previous_visits', false,
       'phone_verified', false,
+      'ai_skipped', v_initial_ai_skipped,
       'queue_number', v_new_visit.queue_number
     );
   END;

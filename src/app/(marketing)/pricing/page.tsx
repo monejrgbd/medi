@@ -60,6 +60,7 @@ const PLAN_FEATURES = {
       "Unlimited Standard AI intake",
       "30 messages per intake conversation limit",
       "Unlimited Standard AI scribe",
+      "Unlimited Standard AI paperwork",
     ],
     premiumAi: [
       "1 Premium AI intake/mo",
@@ -74,6 +75,7 @@ const PLAN_FEATURES = {
       "Unlimited Advanced AI intake",
       "60 messages per intake conversation limit",
       "Unlimited Advanced AI scribe",
+      "Unlimited Advanced AI paperwork",
     ],
     premiumAi: [
       "5 Premium AI intakes/mo",
@@ -89,6 +91,7 @@ const PLAN_FEATURES = {
       "100 messages per intake conversation limit",
       "Embeddable widget for your website",
       "Unlimited Precision AI scribe",
+      "Unlimited Precision AI paperwork",
     ],
     premiumAi: [
       "25 Premium AI intakes/mo",
@@ -181,7 +184,7 @@ function PlanCards() {
   const [providerInput, setProviderInput] = useState("1");
 
   return (
-    <div className="mx-auto mt-16 max-w-[1100px]">
+    <div className="mx-auto mt-16 max-w-[1180px]">
       <FadeIn>
         <h2 className="mb-2 text-center text-2xl font-bold text-ink">Choose your plan</h2>
         <p className="mb-6 text-center text-slate">

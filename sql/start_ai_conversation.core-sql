@@ -138,7 +138,8 @@ BEGIN
       FROM public.visits v2
       WHERE v2.org_id = v_visit.org_id
         AND v2.created_at >= COALESCE(v_org.billing_cycle_start, v2.created_at)
-        AND v2.ai_started_at IS NOT NULL;
+        AND v2.ai_started_at IS NOT NULL
+        AND NOT COALESCE(v2.ai_skipped, false);
 
       IF v_cycle_ai >= v_provider_count * 2000 THEN
         RETURN jsonb_build_object('success', false, 'error', 'ai_cycle_limit');

@@ -213,6 +213,7 @@ BEGIN
   -- =====================================================
   DECLARE
     v_loc_skip_ai boolean;
+    v_loc_forms_before_queue boolean;
     v_resolved_skip boolean := false;
     v_resolved_model text := NULL;
     v_ai_fallback boolean := false;
@@ -222,7 +223,8 @@ BEGIN
     v_initial_ai_started_at timestamptz;
     v_initial_entered_queue_at timestamptz;
   BEGIN
-    SELECT COALESCE(l.skip_ai, false), l.checkin_mode INTO v_loc_skip_ai, v_loc_mode
+    SELECT COALESCE(l.skip_ai, false), l.checkin_mode, COALESCE(l.forms_before_queue, false)
+    INTO v_loc_skip_ai, v_loc_mode, v_loc_forms_before_queue
     FROM public.locations l WHERE l.id = v_location_id;
 
     -- Per-link override wins over location default
@@ -295,7 +297,14 @@ BEGIN
       v_initial_status := 'pending_approval';
       v_initial_ai_started_at := NULL;
       v_initial_entered_queue_at := NULL;
+    ELSIF v_resolved_skip AND v_loc_forms_before_queue THEN
+      -- Forms only: prescreening form runs via still_answering_ai, then
+      -- advance_after_prescreening moves the visit to the queue. No AI chat.
+      v_initial_status := 'still_answering_ai';
+      v_initial_ai_started_at := now();
+      v_initial_entered_queue_at := NULL;
     ELSIF v_resolved_skip THEN
+      -- Express: straight to the arrival gate, no form, no chat.
       v_initial_status := 'awaiting_arrival';
       v_initial_ai_started_at := NULL;
       v_initial_entered_queue_at := NULL;

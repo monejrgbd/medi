@@ -69,6 +69,7 @@ BEGIN
       'vitals_enabled', l.vitals_enabled,
       'vaccines_enabled', l.vaccines_enabled,
       'skip_ai', l.skip_ai,
+      'forms_before_queue', l.forms_before_queue,
       'ai_custom_instructions', l.ai_custom_instructions,
       'ai_message_limit', l.ai_message_limit,
       'review_sms_enabled', l.review_sms_enabled,
