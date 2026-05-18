@@ -7,7 +7,8 @@ import { cancelClaim, fetchVisitDetail } from "@/app/(dashboard)/d/_actions/doct
 import { useRole } from "@/contexts/RoleContext";
 import { toast } from "sonner";
 import PatientProfileCard from "@/components/doctor/PatientProfileCard";
-import TranscriptView from "@/components/doctor/TranscriptView";
+import TranscriptTabs from "@/components/doctor/TranscriptTabs";
+import type { PrescreeningData } from "@/types/medical";
 import SummaryDisplay from "@/components/doctor/SummaryDisplay";
 import AIDiagnosticPanel from "@/components/doctor/AIDiagnosticPanel";
 import DiagnosisForm from "@/components/doctor/DiagnosisForm";
@@ -66,6 +67,7 @@ interface VisitDetail {
     nurse_reviewed?: boolean;
     nurse_notes?: string;
     ai_session_instructions?: string;
+    ai_skipped?: boolean;
   };
   patient: {
     id: string;
@@ -81,6 +83,8 @@ interface VisitDetail {
     last_visit_summary: string | null;
   };
   transcript: { id: string; role: string; content: string; created_at: string }[];
+  prescreening_data?: PrescreeningData | null;
+  scribe_transcript?: string | null;
   addendums: { id: string; content: string; created_at: string }[];
   notes: VisitNote[];
   attachments: VisitAttachment[];
@@ -326,7 +330,14 @@ export default function PatientDetailView({
             </div>
           )}
 
-          {tab === "transcript" && <TranscriptView messages={transcript} />}
+          {tab === "transcript" && (
+            <TranscriptTabs
+              messages={transcript}
+              prescreening={detail.prescreening_data ?? null}
+              scribeTranscript={detail.scribe_transcript ?? null}
+              aiSkipped={visit.ai_skipped}
+            />
+          )}
 
           {tab === "notes" && (
             <NotesPanel

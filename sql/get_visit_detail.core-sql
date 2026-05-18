@@ -271,6 +271,16 @@ BEGIN
       'last_visit_summary', pv.last_visit_summary
     ),
     'transcript', t.messages,
+    'prescreening_data', v.prescreening_data,
+    'scribe_transcript', (
+      SELECT cd.scribe_transcript
+      FROM public.clinical_documents cd
+      WHERE cd.visit_id = p_visit_id
+        AND cd.document_type = 'clinical_note_soap'
+        AND cd.scribe_transcript IS NOT NULL
+      ORDER BY cd.created_at DESC
+      LIMIT 1
+    ),
     'addendums', a.items,
     'notes', vnc.notes,
     'attachments', vac.files,

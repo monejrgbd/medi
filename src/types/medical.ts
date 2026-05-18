@@ -18,3 +18,25 @@ export interface PrescreeningConfig {
     none_label?: string;
   }[];
 }
+
+/** Raw patient pre-screening form submission, stored on visits.prescreening_data
+ *  (jsonb). All fields optional/defensive — treat values as untrusted. */
+export interface PrescreeningCustomField {
+  type: "list" | "yes_no";
+  label: string;
+  values?: string[];
+  none?: boolean;
+  value?: boolean | null;
+}
+
+export interface PrescreeningData {
+  medications?: string[];
+  medications_none?: boolean;
+  allergies?: string[];
+  allergies_none?: boolean;
+  pets?: string[];
+  pets_none?: boolean;
+  is_pregnant?: boolean | null;
+  pregnancy_asked?: boolean;
+  custom_fields?: Record<string, PrescreeningCustomField>;
+}

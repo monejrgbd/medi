@@ -297,6 +297,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Bump the visit so the doctor views' existing realtime subscription fires
+    // a "Visit updated" notice and the Transcript tab's scribe section appears
+    // on refresh. Best-effort; does not gate the pipeline. The broadcast trigger
+    // is UPDATE OF status,staff_room so a bare updated_at write does not fire it.
+    try {
+      await supabase
+        .from("visits")
+        .update({ updated_at: new Date().toISOString() })
+        .eq("id", rec.visit_id);
+    } catch (e) {
+      console.error("visits updated_at bump failed", e);
+    }
+
     // Billing: PAYG/trials metered, subscription plans unlimited no-op.
     // Non-blocking — never lose the clinical note over billing.
     const audioMinutes = rec.duration_ms && rec.duration_ms > 0

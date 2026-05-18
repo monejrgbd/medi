@@ -11,7 +11,8 @@ import {
   fetchQueue,
 } from "@/app/(dashboard)/d/_actions/doctor";
 import PatientProfileCard from "@/components/doctor/PatientProfileCard";
-import TranscriptView from "@/components/doctor/TranscriptView";
+import TranscriptTabs from "@/components/doctor/TranscriptTabs";
+import type { PrescreeningData } from "@/types/medical";
 import SummaryDisplay from "@/components/doctor/SummaryDisplay";
 import AIDiagnosticPanel from "@/components/doctor/AIDiagnosticPanel";
 import NotesPanel from "@/components/doctor/NotesPanel";
@@ -111,6 +112,8 @@ interface VisitDetail {
     last_visit_summary: string | null;
   };
   transcript: { id: string; role: string; content: string; created_at: string }[];
+  prescreening_data?: PrescreeningData | null;
+  scribe_transcript?: string | null;
   addendums: { id: string; content: string; created_at: string }[];
   notes: VisitNote[];
   attachments: VisitAttachment[];
@@ -593,15 +596,12 @@ export default function FocusMode({
             )}
 
             {tab === "transcript" && (
-              detail.visit.ai_skipped ? (
-                <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-center">
-                  <p className="text-sm text-amber-800">
-                    No transcript available, AI was skipped
-                  </p>
-                </div>
-              ) : (
-                <TranscriptView messages={detail.transcript} />
-              )
+              <TranscriptTabs
+                messages={detail.transcript}
+                prescreening={detail.prescreening_data ?? null}
+                scribeTranscript={detail.scribe_transcript ?? null}
+                aiSkipped={detail.visit.ai_skipped}
+              />
             )}
 
             {tab === "notes" && (

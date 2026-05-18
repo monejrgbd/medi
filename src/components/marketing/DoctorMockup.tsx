@@ -33,7 +33,11 @@ function SummaryTab() {
   );
 }
 
-function TranscriptTab() {
+function TranscriptTab({ defaultScribe = false }: { defaultScribe?: boolean }) {
+  const [sub, setSub] = useState<"chat" | "form" | "scribe">(
+    defaultScribe ? "scribe" : "chat"
+  );
+
   const messages = [
     { role: "ai", text: "Hi Sarah, welcome back! Last time you came in for knee pain. Is today\u2019s visit related?", time: "9:03" },
     { role: "patient", text: "ya its worse now... my hands r stiff every morning too idk whats going on", time: "9:04" },
@@ -51,8 +55,49 @@ function TranscriptTab() {
     { role: "patient", text: "no i think thats everything. i just want to know whats going on with my body", time: "9:09" },
   ];
 
+  const formRows: { label: string; value: string; alert?: boolean }[] = [
+    { label: "Medications", value: "Ibuprofen (as needed)" },
+    { label: "Allergies", value: "Penicillin", alert: true },
+    { label: "Pets", value: "Cat" },
+    { label: "Chronic conditions", value: "None reported" },
+    { label: "Pregnant", value: "No" },
+    { label: "Recent travel", value: "No" },
+  ];
+
+  const scribe = [
+    { sp: "A", text: "Good morning Sarah, I have read the intake. Let me take a look at those hands." },
+    { sp: "B", text: "Thanks. The morning stiffness is the worst part, it is lasting over an hour now." },
+    { sp: "A", text: "I can see swelling across the knuckles, and the right knee feels warm. Tender when I press here?" },
+    { sp: "B", text: "Yes, that is sore. It has been getting harder to grip things at work." },
+    { sp: "A", text: "Given the symmetry, the prolonged morning stiffness, and the family history, I want to run RF, anti CCP, ESR and CRP today, and start a short course of naproxen." },
+    { sp: "B", text: "Okay. Do you think this is rheumatoid arthritis?" },
+    { sp: "A", text: "The labs will tell us more. If they come back positive I will refer you to rheumatology this week." },
+  ];
+
+  const SUBS: { key: "chat" | "form" | "scribe"; label: string }[] = [
+    { key: "chat", label: "AI Chat" },
+    { key: "form", label: "Form Responses" },
+    { key: "scribe", label: "AI Scribe" },
+  ];
+
   return (
     <div>
+      <div className="mb-2.5 flex flex-wrap gap-1">
+        {SUBS.map((s) => (
+          <button
+            key={s.key}
+            onClick={() => setSub(s.key)}
+            className={`rounded-md px-2 py-0.5 text-[9px] font-medium transition-colors cursor-pointer ${
+              sub === s.key ? "bg-hilt-blue text-white" : "bg-gray-100 text-slate hover:bg-gray-200"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {sub === "chat" && (
+      <div>
       <p className="mb-2 text-[9px] text-ash">9:03 AM to 9:09 AM · 6 minutes · 14 messages</p>
       <div className="space-y-1.5">
         {messages.map((m, i) => (
@@ -64,6 +109,40 @@ function TranscriptTab() {
           </div>
         ))}
       </div>
+      </div>
+      )}
+
+      {sub === "form" && (
+        <div className="rounded-lg border border-gray-200 p-2.5">
+          {formRows.map((r, i) => (
+            <div
+              key={i}
+              className={`flex items-baseline justify-between py-1.5 ${i < formRows.length - 1 ? "border-b border-gray-100" : ""}`}
+            >
+              <span className={`text-[10px] ${r.alert ? "font-medium text-red-600" : "text-slate"}`}>{r.label}</span>
+              <span className="text-[10px] text-ink font-medium">{r.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {sub === "scribe" && (
+        <div>
+          <p className="mb-2 text-[9px] text-ash">Automated transcription of the in person visit, speaker labels approximate.</p>
+          <div className="space-y-1.5">
+            {scribe.map((m, i) => (
+              <div key={i}>
+                <p className="text-[8px] font-semibold uppercase tracking-wider text-ash mb-0.5">
+                  {m.sp === "A" ? "Speaker A" : "Speaker B"}
+                </p>
+                <div className={`rounded-lg px-2.5 py-1.5 ${m.sp === "A" ? "bg-violet-50" : "bg-gray-50"}`}>
+                  <p className="text-[10px] leading-relaxed text-ink">{m.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -352,7 +431,7 @@ export default function DoctorMockup({ highlightScribe = false }: { highlightScr
 
         <div>
           {tab === "summary" && <SummaryTab />}
-          {tab === "transcript" && <TranscriptTab />}
+          {tab === "transcript" && <TranscriptTab defaultScribe={highlightScribe} />}
           {tab === "notes" && <NotesTab />}
           {tab === "paperwork" && <PaperworkTab />}
           {tab === "vitals" && <VitalsTab />}
