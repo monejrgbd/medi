@@ -192,8 +192,8 @@ function Hero() {
                 AI scribe + paperwork
               </p>
               <h1 className="mt-5 text-[1.95rem] font-bold leading-[1.1] tracking-tight text-ink sm:text-4xl lg:text-[2.8rem]">
-                The AI medical scribe that finishes{" "}
-                <span className="text-hilt-blue">your charting before you go home</span>
+                The AI medical scribe that finishes the note{" "}
+                <span className="text-hilt-blue">the moment the visit ends</span>
               </h1>
               <p className="mt-5 max-w-xl text-lg text-slate">
                 Drafts the note and the letters from the visit. You edit and sign. Works with your EMR.
@@ -399,7 +399,7 @@ function Solution() {
 /* ── Outcomes ─────────────────────────────────────────── */
 
 const OUTCOMES: { stat: string; label: string; sub: string; accent: string }[] = [
-  { stat: "0", label: "notes left for after hours", sub: "Drafted before you leave the room.", accent: "text-green-600" },
+  { stat: "0", label: "notes left for after hours", sub: "Done by the time you stand up.", accent: "text-green-600" },
   { stat: "~8 min", label: "back per patient", sub: "Every visit, on the clinic average.", accent: "text-hilt-blue" },
   { stat: "~8 hrs", label: "back per week", sub: "Illustrative: a 20 patient day with 10 letters.", accent: "text-hilt-blue" },
 ];
@@ -631,7 +631,7 @@ const SETUP_STEPS = [
   { n: "2", title: "Add your doctors", body: "License and credentials go on every letter." },
   { n: "3", title: "Pick your templates", body: "Your SOAP layout and your letter set." },
   { n: "4", title: "Tell the AI how you chart", body: "Your sections, your style, your phrasing." },
-  { n: "5", title: "See your first patient", body: "The note is drafted before you leave the room." },
+  { n: "5", title: "See your first patient", body: "It works from the first visit." },
 ];
 
 function Setup() {
