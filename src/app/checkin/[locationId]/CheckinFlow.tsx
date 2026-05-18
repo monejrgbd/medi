@@ -508,7 +508,14 @@ export default function CheckinFlow({
 
       if (status === "awaiting_arrival") {
         const current = stateRef.current;
-        if (current === "summary_review" || current === "generating_summary") {
+        // prescreening + advance_error: forms-only owns its own transition via
+        // advanceFormsOnly; do not double-drive it from the realtime echo.
+        if (
+          current === "summary_review" ||
+          current === "generating_summary" ||
+          current === "prescreening" ||
+          current === "advance_error"
+        ) {
           return;
         }
         setState("awaiting_arrival");
@@ -528,12 +535,15 @@ export default function CheckinFlow({
 
       if (status === "waiting_doctor_claim") {
         // Skip if summary_review, generating_summary, or phone_verification —
-        // those flows handle their own transitions
+        // those flows handle their own transitions. prescreening + advance_error:
+        // forms-only owns its own transition via advanceFormsOnly.
         const current = stateRef.current;
         if (
           current === "summary_review" ||
           current === "generating_summary" ||
-          current === "phone_verification"
+          current === "phone_verification" ||
+          current === "prescreening" ||
+          current === "advance_error"
         ) {
           return;
         }

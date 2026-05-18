@@ -434,6 +434,7 @@ BEGIN
     'visit_id', v_new_visit.id,
     'has_previous_visits', false,
     'phone_verified', false,
+    'ai_skipped', v_initial_ai_skipped,
     'queue_number', v_new_visit.queue_number
   );
 END;
