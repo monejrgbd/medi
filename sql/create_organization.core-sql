@@ -3,7 +3,10 @@ CREATE OR REPLACE FUNCTION private.create_organization(
   p_owner_auth_uid uuid,
   p_name           text,
   p_approval_code  text DEFAULT NULL,
-  p_signup_ip      text DEFAULT NULL
+  p_signup_ip      text DEFAULT NULL,
+  p_gclid          text DEFAULT NULL,
+  p_gbraid         text DEFAULT NULL,
+  p_wbraid         text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -147,10 +150,11 @@ BEGIN
     BEGIN
       INSERT INTO public.organizations (
         name, slug, owner_id, subscription_plan, credits_total, credits_used,
-        trial_end_date, signup_ip_hash
+        trial_end_date, signup_ip_hash, gclid, gbraid, wbraid
       )
       VALUES (
-        p_name, v_slug, p_owner_auth_uid, v_plan, v_credits, 0, NULL, v_ip_hash
+        p_name, v_slug, p_owner_auth_uid, v_plan, v_credits, 0, NULL, v_ip_hash,
+        p_gclid, p_gbraid, p_wbraid
       )
       RETURNING id INTO v_org_id;
       EXIT;  -- success
@@ -252,7 +256,10 @@ CREATE OR REPLACE FUNCTION public.create_organization(
   p_owner_auth_uid uuid,
   p_name           text,
   p_approval_code  text DEFAULT NULL,
-  p_signup_ip      text DEFAULT NULL
+  p_signup_ip      text DEFAULT NULL,
+  p_gclid          text DEFAULT NULL,
+  p_gbraid         text DEFAULT NULL,
+  p_wbraid         text DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -264,6 +271,9 @@ BEGIN
   IF auth.uid() IS NOT NULL AND auth.uid() <> p_owner_auth_uid THEN
     RAISE EXCEPTION 'Cannot create organization for another user';
   END IF;
-  RETURN private.create_organization(p_owner_auth_uid, p_name, p_approval_code, p_signup_ip);
+  RETURN private.create_organization(
+    p_owner_auth_uid, p_name, p_approval_code, p_signup_ip,
+    p_gclid, p_gbraid, p_wbraid
+  );
 END;
 $$;

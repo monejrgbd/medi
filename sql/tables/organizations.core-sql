@@ -27,6 +27,9 @@ CREATE TABLE public.organizations (
   verified              boolean DEFAULT false,
   signup_ip_hash        text,
   country               text,
+  gclid                 text,
+  gbraid                text,
+  wbraid                text,
   created_at            timestamptz DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now()
 );

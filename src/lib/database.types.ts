@@ -660,6 +660,7 @@ export type Database = {
           credit_type: string | null
           credits_amount: number
           description: string | null
+          document_id: string | null
           id: string
           org_id: string
           visit_id: string | null
@@ -670,6 +671,7 @@ export type Database = {
           credit_type?: string | null
           credits_amount: number
           description?: string | null
+          document_id?: string | null
           id?: string
           org_id: string
           visit_id?: string | null
@@ -680,11 +682,19 @@ export type Database = {
           credit_type?: string | null
           credits_amount?: number
           description?: string | null
+          document_id?: string | null
           id?: string
           org_id?: string
           visit_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "credits_log_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "clinical_documents"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "credits_log_org_id_fkey"
             columns: ["org_id"]
@@ -1127,6 +1137,7 @@ export type Database = {
           diagnostic_enabled: boolean | null
           display_format: string | null
           estimated_wait_minutes: number | null
+          forms_before_queue: boolean
           id: string
           logo_url: string | null
           name: string
@@ -1168,6 +1179,7 @@ export type Database = {
           diagnostic_enabled?: boolean | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
+          forms_before_queue?: boolean
           id?: string
           logo_url?: string | null
           name: string
@@ -1209,6 +1221,7 @@ export type Database = {
           diagnostic_enabled?: boolean | null
           display_format?: string | null
           estimated_wait_minutes?: number | null
+          forms_before_queue?: boolean
           id?: string
           logo_url?: string | null
           name?: string
@@ -1342,11 +1355,14 @@ export type Database = {
           clinician_license_number: string | null
           clinician_npi: string | null
           clinician_signature_url: string | null
+          country: string | null
           created_at: string | null
           credits_total: number | null
           credits_used: number | null
           current_period_end: string | null
           data_retention_until: string | null
+          gbraid: string | null
+          gclid: string | null
           id: string
           last_credit_alert_at: string | null
           letterhead_disclaimer: string | null
@@ -1369,6 +1385,7 @@ export type Database = {
           trial_end_date: string | null
           updated_at: string
           verified: boolean | null
+          wbraid: string | null
         }
         Insert: {
           anthropic_baa_verified?: boolean
@@ -1380,11 +1397,14 @@ export type Database = {
           clinician_license_number?: string | null
           clinician_npi?: string | null
           clinician_signature_url?: string | null
+          country?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
           current_period_end?: string | null
           data_retention_until?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           id?: string
           last_credit_alert_at?: string | null
           letterhead_disclaimer?: string | null
@@ -1407,6 +1427,7 @@ export type Database = {
           trial_end_date?: string | null
           updated_at?: string
           verified?: boolean | null
+          wbraid?: string | null
         }
         Update: {
           anthropic_baa_verified?: boolean
@@ -1418,11 +1439,14 @@ export type Database = {
           clinician_license_number?: string | null
           clinician_npi?: string | null
           clinician_signature_url?: string | null
+          country?: string | null
           created_at?: string | null
           credits_total?: number | null
           credits_used?: number | null
           current_period_end?: string | null
           data_retention_until?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           id?: string
           last_credit_alert_at?: string | null
           letterhead_disclaimer?: string | null
@@ -1445,6 +1469,7 @@ export type Database = {
           trial_end_date?: string | null
           updated_at?: string
           verified?: boolean | null
+          wbraid?: string | null
         }
         Relationships: []
       }
@@ -2205,6 +2230,74 @@ export type Database = {
             foreignKeyName: "patients_org_id_fkey"
             columns: ["org_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_ad_conversions: {
+        Row: {
+          attempt_count: number
+          conversion_action: string
+          conversion_time: string
+          created_at: string
+          currency: string | null
+          error_message: string | null
+          gbraid: string | null
+          gclid: string | null
+          id: string
+          last_attempt_at: string | null
+          metadata: Json | null
+          order_id: string | null
+          org_id: string
+          status: string
+          user_data: Json | null
+          value: number | null
+          wbraid: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          conversion_action: string
+          conversion_time?: string
+          created_at?: string
+          currency?: string | null
+          error_message?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          metadata?: Json | null
+          order_id?: string | null
+          org_id: string
+          status?: string
+          user_data?: Json | null
+          value?: number | null
+          wbraid?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          conversion_action?: string
+          conversion_time?: string
+          created_at?: string
+          currency?: string | null
+          error_message?: string | null
+          gbraid?: string | null
+          gclid?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          metadata?: Json | null
+          order_id?: string | null
+          org_id?: string
+          status?: string
+          user_data?: Json | null
+          value?: number | null
+          wbraid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_ad_conversions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -3859,6 +3952,10 @@ export type Database = {
         }
         Returns: Json
       }
+      advance_after_prescreening: {
+        Args: { p_session_token: string }
+        Returns: Json
+      }
       apply_premium_code: { Args: { p_code: string }; Returns: Json }
       approve_patient: {
         Args: {
@@ -3897,6 +3994,7 @@ export type Database = {
         Args: {
           p_amount: number
           p_description?: string
+          p_document_id?: string
           p_feature: string
           p_org_id: string
           p_visit_id?: string
@@ -4000,15 +4098,28 @@ export type Database = {
         }
         Returns: Json
       }
-      create_organization: {
-        Args: {
-          p_approval_code?: string
-          p_name: string
-          p_owner_auth_uid: string
-          p_signup_ip?: string
-        }
-        Returns: Json
-      }
+      create_organization:
+        | {
+            Args: {
+              p_approval_code?: string
+              p_name: string
+              p_owner_auth_uid: string
+              p_signup_ip?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_approval_code?: string
+              p_gbraid?: string
+              p_gclid?: string
+              p_name: string
+              p_owner_auth_uid: string
+              p_signup_ip?: string
+              p_wbraid?: string
+            }
+            Returns: Json
+          }
       create_pre_checkin_token: {
         Args: {
           p_ai_model?: string
@@ -4063,6 +4174,10 @@ export type Database = {
         Args: { p_ai_model: string; p_org_id: string; p_visit_id: string }
         Returns: Json
       }
+      deduct_document_credits: {
+        Args: { p_document_id: string; p_org_id: string; p_tier: string }
+        Returns: Json
+      }
       deduct_scribe_credits: {
         Args: {
           p_audio_minutes: number
@@ -4086,6 +4201,15 @@ export type Database = {
           p_sex?: string
         }
         Returns: Json
+      }
+      enqueue_ad_conversion: {
+        Args: {
+          p_currency: string
+          p_order_id: string
+          p_org_id: string
+          p_value: number
+        }
+        Returns: undefined
       }
       exclude_campaign_recipient: {
         Args: {
@@ -4772,6 +4896,10 @@ export type Database = {
         Returns: Json
       }
       update_organization: { Args: { p_name: string }; Returns: Json }
+      update_organization_country: {
+        Args: { p_country: string }
+        Returns: undefined
+      }
       update_organization_name: { Args: { p_name: string }; Returns: undefined }
       update_partner_profile: {
         Args: {

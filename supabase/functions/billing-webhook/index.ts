@@ -319,6 +319,34 @@ Deno.serve(async (req) => {
             details: { event_id: eventId, error: String(err) },
           });
         }
+
+        // Google Ads: enqueue the offline Purchase conversion for this org's
+        // first real payment. enqueue_ad_conversion is idempotent + first-only
+        // and no-ops when the org has no captured gclid or value <= 0. Never
+        // fail the webhook over ad attribution.
+        try {
+          const adCurrency = resource.amount?.currency;
+          const adTotal = resource.amount?.total
+            ? parseFloat(resource.amount.total)
+            : 0;
+          if (adTotal > 0) {
+            await supabase.rpc("enqueue_ad_conversion", {
+              p_org_id: orgId,
+              p_order_id: resource.id || eventId,
+              p_value: adTotal,
+              p_currency: adCurrency || "USD",
+            });
+          }
+        } catch (err) {
+          await supabase.from("audit_trail").insert({
+            org_id: orgId,
+            actor_type: "system",
+            action: "ad_conversion_enqueue_error",
+            entity_type: "organization",
+            entity_id: orgId,
+            details: { event_id: eventId, error: String(err) },
+          });
+        }
         break;
       }
 

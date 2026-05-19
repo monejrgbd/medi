@@ -1,0 +1,76 @@
+-- Enqueue a Google Ads offline Purchase conversion for an org's FIRST real
+-- payment. Called from the billing-webhook (PAYMENT.SALE.COMPLETED).
+--
+-- No-ops (returns quietly) when:
+--   * the org has no captured click id (organic / non-ad signup), or
+--   * the payment value is missing or <= 0 (e.g. a $0 trial), or
+--   * a row already exists for the org (renewals / webhook redelivery).
+--
+-- The ON CONFLICT (org_id) DO NOTHING plus the value/click guards make this
+-- idempotent and "first paid payment only".
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.enqueue_ad_conversion(
+  p_org_id    uuid,
+  p_order_id  text,
+  p_value     numeric,
+  p_currency  text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_gclid  text;
+  v_gbraid text;
+  v_wbraid text;
+  v_email  text;
+BEGIN
+  IF p_value IS NULL OR p_value <= 0 THEN
+    RETURN;
+  END IF;
+
+  SELECT o.gclid, o.gbraid, o.wbraid, lower(u.email)
+  INTO v_gclid, v_gbraid, v_wbraid, v_email
+  FROM public.organizations o
+  JOIN auth.users u ON u.id = o.owner_id
+  WHERE o.id = p_org_id;
+
+  -- Nothing to attribute without a Google click identifier.
+  IF v_gclid IS NULL AND v_gbraid IS NULL AND v_wbraid IS NULL THEN
+    RETURN;
+  END IF;
+
+  INSERT INTO public.pending_ad_conversions (
+    org_id, gclid, gbraid, wbraid, conversion_action,
+    value, currency, conversion_time, order_id, user_data
+  )
+  VALUES (
+    p_org_id, v_gclid, v_gbraid, v_wbraid, 'purchase',
+    p_value, p_currency, now(), p_order_id,
+    CASE WHEN v_email IS NOT NULL THEN jsonb_build_object('email', v_email) END
+  )
+  ON CONFLICT (org_id) DO NOTHING;
+END;
+$$;
+
+-- Public wrapper (called by the billing-webhook with the service role key,
+-- same pattern as activate_subscription / record_partner_commission).
+CREATE OR REPLACE FUNCTION public.enqueue_ad_conversion(
+  p_org_id    uuid,
+  p_order_id  text,
+  p_value     numeric,
+  p_currency  text
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  PERFORM private.enqueue_ad_conversion(p_org_id, p_order_id, p_value, p_currency);
+END;
+$$;

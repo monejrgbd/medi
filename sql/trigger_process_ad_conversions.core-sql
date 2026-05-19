@@ -1,0 +1,45 @@
+-- Trigger function: calls process-ad-conversions edge function on INSERT into
+-- pending_ad_conversions. Uses pg_net for async HTTP so the INSERT isn't
+-- blocked. Mirrors trigger_process_email_queue. A pg_cron job
+-- (process_ad_conversions, every 5 min) is the retry safety net for rows that
+-- stay pending after a transient upload failure.
+CREATE OR REPLACE FUNCTION private.trigger_process_ad_conversions()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_edge_url text;
+  v_secret text;
+  v_anon_key text;
+BEGIN
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+  SELECT decrypted_secret INTO v_secret
+  FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
+
+  SELECT decrypted_secret INTO v_anon_key
+  FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
+
+  -- Fire-and-forget HTTP POST via pg_net (non-blocking)
+  PERFORM net.http_post(
+    url := v_edge_url || '/process-ad-conversions',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ' || v_anon_key,
+      'x-internal-secret', v_secret
+    ),
+    body := '{}'::jsonb
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_process_ad_conversions_on_insert ON public.pending_ad_conversions;
+CREATE TRIGGER trg_process_ad_conversions_on_insert
+  AFTER INSERT ON public.pending_ad_conversions
+  FOR EACH ROW
+  EXECUTE FUNCTION private.trigger_process_ad_conversions();
