@@ -71,11 +71,11 @@ export default function SocialProofSection() {
             </div>
 
             <div className="flex flex-col items-center gap-3 text-sm sm:flex-row sm:gap-6">
-              <div className="flex items-center gap-2">
-                <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
+              <div className="flex items-start gap-2 sm:items-center">
+                <svg className="mt-0.5 shrink-0 sm:mt-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
                 </svg>
-                <span className="text-slate">Integrates with existing EHR systems, <Link href="/integrations" className="font-semibold text-hilt-blue hover:underline">learn more</Link></span>
+                <span className="text-slate">Integrates with existing EHR systems,{" "}<br className="sm:hidden" /><Link href="/integrations" className="font-semibold text-hilt-blue hover:underline">learn more</Link></span>
               </div>
               <div className="hidden h-4 w-px bg-gray-300 sm:block" />
               <div className="flex items-center gap-2">
