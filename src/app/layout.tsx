@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import CalConversionTracker from "@/components/marketing/CalConversionTracker";
+import ClickIdCapture from "@/components/marketing/ClickIdCapture";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -50,6 +51,7 @@ export default function RootLayout({
       </Script>
       <body className="antialiased">
         <CalConversionTracker />
+        <ClickIdCapture />
         {children}
       </body>
     </html>

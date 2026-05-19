@@ -1,3 +1,10 @@
+-- Drop the legacy 4-arg signatures. CREATE OR REPLACE does NOT replace a
+-- function when the argument list changes, so adding p_gclid/p_gbraid/p_wbraid
+-- created overloads. These DROPs (signature-specific, IF EXISTS) keep this
+-- file idempotent and prevent DB drift / PostgREST ambiguity (PGRST203).
+DROP FUNCTION IF EXISTS public.create_organization(uuid, text, text, text);
+DROP FUNCTION IF EXISTS private.create_organization(uuid, text, text, text);
+
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.create_organization(
   p_owner_auth_uid uuid,

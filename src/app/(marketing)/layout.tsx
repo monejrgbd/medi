@@ -1,7 +1,6 @@
 import Navbar from "@/components/Navbar";
 import FadeObserver from "@/components/FadeObserver";
 import ScrollTo from "@/components/marketing/ScrollTo";
-import ClickIdCapture from "@/components/marketing/ClickIdCapture";
 import CountryDetector from "@/components/marketing/country/CountryDetector";
 import { buildDetectScript } from "@/lib/country";
 
@@ -22,7 +21,6 @@ export default function MarketingLayout({
       </noscript>
       <FadeObserver />
       <ScrollTo />
-      <ClickIdCapture />
       <Navbar />
       {/* Multi-country personalization root. data-country defaults to
           "GENERIC" server-side so the no-JS crawler sees the strong GENERIC

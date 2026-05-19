@@ -74,3 +74,9 @@ BEGIN
   PERFORM private.enqueue_ad_conversion(p_org_id, p_order_id, p_value, p_currency);
 END;
 $$;
+
+-- Webhook-only: callable solely by the billing-webhook (service role key).
+-- Mirrors record_partner_commission. Without this, anon could inject fake
+-- Purchase conversions for any org that has a captured gclid.
+REVOKE EXECUTE ON FUNCTION public.enqueue_ad_conversion(uuid, text, numeric, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.enqueue_ad_conversion(uuid, text, numeric, text) TO service_role;
