@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRIES } from "@/lib/countries";
 import CountryCombobox from "@/components/CountryCombobox";
+import { fireEmailCaptureConversion } from "@/lib/conversions";
 
 function Spinner() {
   return (
@@ -112,12 +113,8 @@ export default function SignUpForm() {
     setLoading(false);
     setSubmittedEmail(emailValue);
     setSubmitted(true);
-    if (typeof window !== "undefined" && typeof window.gtag === "function") {
-      window.gtag("event", "conversion", {
-        send_to: "AW-18032484152/P8SxCPDbpZccELi-x5ZD",
-        transaction_id: `email-${emailValue}`,
-      });
-    }
+    // No navigation here (success state renders in place), so no onDone.
+    fireEmailCaptureConversion(emailValue);
   }
 
   return (

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { requestDemoOtp, verifyDemoOtp, startPrelogDemo } from "@/app/demo/_actions/demo";
+import { setAdsUserData } from "@/lib/conversions";
 import { Shield } from "lucide-react";
 
 interface DemoGateProps {
@@ -76,6 +77,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
       setPrelogState("failed");
       return;
     }
+    setAdsUserData({ email: prelogEmail });
     if (typeof window !== "undefined" && typeof window.gtag === "function") {
       window.gtag("event", "conversion", {
         send_to: "AW-18032484152/BFv3CO3bpZccELi-x5ZD",
@@ -113,6 +115,7 @@ export default function DemoGate({ existingSession }: DemoGateProps) {
       setLoading(false);
 
       if (result.success) {
+        setAdsUserData({ email });
         if (typeof window !== "undefined" && typeof window.gtag === "function") {
           window.gtag("event", "conversion", {
             send_to: "AW-18032484152/BFv3CO3bpZccELi-x5ZD",

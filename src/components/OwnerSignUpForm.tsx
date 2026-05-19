@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { REF_COOKIE_NAME } from "@/lib/constants";
+import { REF_COOKIE_NAME, GCLID_COOKIE_NAME } from "@/lib/constants";
+import { setAdsUserData } from "@/lib/conversions";
 
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
@@ -120,12 +121,33 @@ export default function OwnerSignUpForm() {
     }
 
     const trimmedCode = code.trim() || null;
+
+    // Google Ads click ids: URL param first (ad pointed straight at /signup),
+    // else the hh_gclid cookie captured by ClickIdCapture on the marketing
+    // landing page. Persisted to the org for the server-side Purchase upload.
+    const clickFromCookie = (() => {
+      try {
+        const raw = readCookie(GCLID_COOKIE_NAME);
+        return raw
+          ? (JSON.parse(raw) as { gclid?: string; gbraid?: string; wbraid?: string })
+          : {};
+      } catch {
+        return {};
+      }
+    })();
+    const gclid = searchParams.get("gclid") || clickFromCookie.gclid || null;
+    const gbraid = searchParams.get("gbraid") || clickFromCookie.gbraid || null;
+    const wbraid = searchParams.get("wbraid") || clickFromCookie.wbraid || null;
+
     const { data: orgResult, error: orgError } = await supabase.rpc(
       "create_organization",
       {
         p_owner_auth_uid: userId,
         p_name: "My Clinic",
         p_approval_code: trimmedCode,
+        p_gclid: gclid,
+        p_gbraid: gbraid,
+        p_wbraid: wbraid,
       }
     );
 
@@ -135,12 +157,14 @@ export default function OwnerSignUpForm() {
       return;
     }
 
-    // Clear ref cookie after successful attribution
+    // Clear ref + gclid cookies after successful attribution
     clearCookie(REF_COOKIE_NAME);
+    clearCookie(GCLID_COOKIE_NAME);
 
     await supabase.auth.refreshSession();
     setLoading(false);
 
+    setAdsUserData({ email });
     if (typeof window !== "undefined" && typeof window.gtag === "function") {
       window.gtag("event", "conversion", {
         send_to: "AW-18032484152/Zz_ACOfbpZccELi-x5ZD",

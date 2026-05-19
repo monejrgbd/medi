@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { fireEmailCaptureConversion } from "@/lib/conversions";
 
 const ArrowIcon = ({ className = "" }: { className?: string }) => (
   <svg
@@ -52,7 +53,12 @@ export default function TrialEmailCTA({
       // Capture is best effort, do not block the trial if it fails
     }
 
-    router.push(`/start-trial?email=${encodeURIComponent(trimmed)}`);
+    // Fire the Email Capture conversion, then navigate. The helper guarantees
+    // the callback runs (event_callback, or 1s timeout, or immediately if gtag
+    // is blocked), so the redirect can never be trapped behind the tag.
+    fireEmailCaptureConversion(trimmed, () => {
+      router.push(`/start-trial?email=${encodeURIComponent(trimmed)}`);
+    });
   }
 
   if (showEmail) {

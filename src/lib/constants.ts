@@ -117,6 +117,11 @@ export const PARTNER_TAX_FORM_BANNER_CENTS = 40000;    // $400
 export const PARTNER_TOS_VERSION = "v1-2026-05-05";
 export const REF_COOKIE_NAME = "hh_ref";
 export const REF_COOKIE_TTL_SECONDS = 60 * 60 * 24 * 90; // 90 days (UX prefill only)
+// Google Ads click id captured on ad landing, read at signup, persisted to the
+// org for server-side offline conversion upload. 90 days matches Google's
+// click-through conversion window (a gclid older than that is unusable).
+export const GCLID_COOKIE_NAME = "hh_gclid";
+export const GCLID_COOKIE_TTL_SECONDS = 60 * 60 * 24 * 90;
 
 export const DOCUMENT_TEMPLATES = [
   { key: "letter_sick_note", label: "Sick note", icon: "file-text", category: "letter" },

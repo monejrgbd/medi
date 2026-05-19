@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { fireEmailCaptureConversion } from "@/lib/conversions";
 
 export default function HeroEmailCTA() {
   const router = useRouter();
@@ -24,7 +25,12 @@ export default function HeroEmailCTA() {
       // Capture is best effort, do not block signup if it fails
     }
 
-    router.push(`/signup?email=${encodeURIComponent(trimmed)}`);
+    // Fire the Email Capture conversion, then navigate. The helper guarantees
+    // the callback runs (event_callback, or 1s timeout, or immediately if gtag
+    // is blocked), so the redirect can never be trapped behind the tag.
+    fireEmailCaptureConversion(trimmed, () => {
+      router.push(`/signup?email=${encodeURIComponent(trimmed)}`);
+    });
   }
 
   return (
