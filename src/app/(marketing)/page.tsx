@@ -1326,7 +1326,7 @@ function PricingHintSection() {
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <p className="text-3xl font-bold text-ink sm:text-4xl">
-            As low as $99/month for unlimited patients
+            As low as $79/month for unlimited patients
           </p>
           <Link
             href="/pricing"

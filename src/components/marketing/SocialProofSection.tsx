@@ -70,20 +70,35 @@ export default function SocialProofSection() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center gap-3 text-sm sm:flex-row sm:gap-6">
-              <div className="flex items-start gap-2 sm:items-center">
-                <svg className="mt-0.5 shrink-0 sm:mt-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-                </svg>
-                <span className="text-slate">Integrates with existing EHR systems,{" "}<br className="sm:hidden" /><Link href="/integrations" className="font-semibold text-hilt-blue hover:underline">learn more</Link></span>
-              </div>
-              <div className="hidden h-4 w-px bg-gray-300 sm:block" />
-              <div className="flex items-center gap-2">
-                <svg className="shrink-0" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                </svg>
-                <span className="text-slate">Free data migration, <Link href="/migrate" className="font-semibold text-hilt-blue hover:underline">learn more</Link></span>
-              </div>
+            <div className="grid w-full max-w-3xl gap-4 sm:grid-cols-2">
+              <Link
+                href="/integrations"
+                className="group flex items-center gap-4 rounded-2xl border-2 border-blue-100 bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-hilt-blue/40 hover:shadow-lg"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-100">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#2563EB" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-ink sm:text-base">Integrates with your EHR/EMR</p>
+                  <p className="mt-0.5 text-xs font-semibold text-hilt-blue group-hover:underline">Learn more →</p>
+                </div>
+              </Link>
+              <Link
+                href="/migrate"
+                className="group flex items-center gap-4 rounded-2xl border-2 border-green-100 bg-white p-5 text-left transition hover:-translate-y-0.5 hover:border-green-500/40 hover:shadow-lg"
+              >
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-green-100">
+                  <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-ink sm:text-base">Free data migration</p>
+                  <p className="mt-0.5 text-xs font-semibold text-green-700 group-hover:underline">Learn more →</p>
+                </div>
+              </Link>
             </div>
           </div>
         </FadeIn>
