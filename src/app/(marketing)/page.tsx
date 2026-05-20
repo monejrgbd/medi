@@ -127,9 +127,6 @@ function AIJourneySection() {
           <h2 className="mb-3 text-2xl font-bold text-ink sm:text-3xl md:text-4xl">
             Use as much AI as you want.<span className="text-hilt-blue"> Or as little.</span>
           </h2>
-          <p className="mb-10 max-w-2xl text-base text-slate">
-            Some clinics want patients to drive intake themselves. Others want every conversation to go through their staff. Hilt fits all three.
-          </p>
         </FadeIn>
 
         <div className="grid items-stretch gap-4 md:grid-cols-3">
@@ -656,8 +653,8 @@ function TheSolutionSection() {
           <h2 className="text-3xl font-bold leading-tight text-ink sm:text-4xl lg:text-5xl">
             Nine AI agents. The entire visit, end to end.
           </h2>
-          <p className="mt-4 max-w-[760px] text-lg leading-relaxed text-slate">
-            <span className="font-semibold text-ink">Nine specialists, one visit.</span> Voice or text in 130+ languages, with real time urgency detection and custom prompts per specialty. Your team approves, signs, and supervises every step. Encrypted at rest and in transit. Row level security per clinic. Audit trails on every action.
+          <p className="mt-4 max-w-[680px] text-lg leading-relaxed text-slate">
+            <span className="font-semibold text-ink">Use all nine. Use one. Use none.</span> Every agent toggles on or off per location.
           </p>
         </FadeIn>
 
