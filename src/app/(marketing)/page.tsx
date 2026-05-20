@@ -22,9 +22,12 @@ const PainCards = dynamic(() => import("@/components/marketing/PainCards"), {
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-snow pt-24 pb-28 lg:pt-36 lg:pb-40">
+    <section className="relative overflow-hidden bg-snow pt-24 pb-10 lg:pt-36 lg:pb-14">
       <div className="mx-auto max-w-[1200px] px-6">
-        <h1 className="mb-12 text-balance text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-ink sm:text-4xl lg:mb-20 lg:text-5xl xl:text-6xl">
+        <p className="mb-5 text-xs font-semibold uppercase tracking-[0.22em] text-hilt-blue">
+          Built by clinicians, for clinics
+        </p>
+        <h1 className="mb-5 text-balance text-3xl font-bold leading-[1.05] tracking-[-0.02em] text-ink sm:text-4xl lg:text-5xl xl:text-6xl">
           AI for your clinic.
           <br />
           Before, during, and after every visit.
@@ -32,7 +35,7 @@ function HeroSection() {
 
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-12">
           <p className="text-lg leading-snug text-slate sm:text-xl lg:flex-1 lg:text-lg xl:text-xl">
-            AI agents assist every visit, handling intake in 130+ languages, briefing doctors, recording the visit when you would rather not type, drafting paperwork, sending referrals, scheduling follow ups, collecting reviews, and bringing patients back, with your team approving every step.
+            Healthcare AI agents built to grow profits, improve patient care, and lighten staff load. Fully customizable to your needs.
           </p>
 
           <HeroEmailCTA />
@@ -46,7 +49,7 @@ function HeroSection() {
 
 function TourSection() {
   return (
-    <section className="bg-white py-20 lg:py-28">
+    <section className="bg-white pt-8 pb-20 lg:pt-10 lg:pb-28">
       <div className="mx-auto max-w-[1200px] px-6">
         <div className="flex justify-center">
           <Suspense fallback={<div className="min-h-[380px] w-full max-w-[920px] rounded-[24px] bg-gradient-to-br from-hilt-blue via-blue-700 to-indigo-900 sm:min-h-[460px]" />}>
