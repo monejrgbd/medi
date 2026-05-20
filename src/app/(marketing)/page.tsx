@@ -435,7 +435,7 @@ function SnakeCell({ stop, n, delay }: { stop: SnakeStop; n: number; delay: stri
         style={{ animationDelay: delay }}
         aria-hidden="true"
       />
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1.5 sm:justify-between">
         <div className="flex min-w-0 items-center gap-2">
           <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[11px] font-bold tabular-nums text-white">
             {n}
