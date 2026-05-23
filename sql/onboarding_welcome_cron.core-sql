@@ -1,0 +1,17 @@
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Unschedule existing job if present so we can overwrite with new logic
+DO $$
+BEGIN
+  PERFORM cron.unschedule('onboarding_welcome');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- Every minute: queue welcome for any new org that has lived 2+ minutes and not been welcomed.
+-- The 2-minute delay gives the owner time to push through the rest of the setup wizard
+-- before the welcome lands in their inbox, instead of arriving mid-wizard.
+SELECT cron.schedule(
+  'onboarding_welcome',
+  '* * * * *',
+  $$SELECT private.send_onboarding_welcome_check()$$
+);

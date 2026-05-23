@@ -247,12 +247,9 @@ BEGIN
     END IF;
   END IF;
 
-  -- Onboarding welcome email (failures never abort signup)
-  BEGIN
-    PERFORM private.send_onboarding_email(v_org_id, 'welcome');
-  EXCEPTION WHEN OTHERS THEN
-    RAISE NOTICE 'Welcome email failed for org %: %', v_org_id, SQLERRM;
-  END;
+  -- Welcome email is NOT fired here. The `onboarding_welcome_check` cron runs every
+  -- minute and queues the welcome 2+ minutes after org creation so the owner has time
+  -- to push through the rest of the setup wizard before the email lands in their inbox.
 
   RETURN jsonb_build_object(
     'success', true,

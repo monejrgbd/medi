@@ -1,7 +1,17 @@
+-- Drop prior signature explicitly so adding the new optional p_full_name
+-- parameter does not create a second overload.
+DROP FUNCTION IF EXISTS public.update_organization_name(text);
+DROP FUNCTION IF EXISTS private.update_organization_name(uuid, text);
+
 -- Private implementation
+-- Updates the org name (and slug if no non-owner staff exist) and, if
+-- p_full_name is supplied, also updates the owner's staff_users.full_name in
+-- the same transaction. Used by onboarding's profile step where the owner sets
+-- both their own name and the clinic name at once.
 CREATE OR REPLACE FUNCTION private.update_organization_name(
   p_auth_uid uuid,
-  p_name text
+  p_name text,
+  p_full_name text DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -14,6 +24,7 @@ DECLARE
   v_base_slug text;
   v_suffix text;
   v_new_slug text;
+  v_clean_full_name text;
 BEGIN
   IF p_name IS NULL OR length(trim(p_name)) = 0 THEN
     RAISE EXCEPTION 'Organization name is required';
@@ -27,6 +38,24 @@ BEGIN
 
   IF v_org_id IS NULL THEN
     RAISE EXCEPTION 'Not authorized';
+  END IF;
+
+  -- Owner full name (optional). Runs BEFORE the org update because the org
+  -- update can throw unique_violation on slug collision, jumping to the
+  -- EXCEPTION handler below. Doing the staff_users update first ensures the
+  -- owner's name is saved regardless of how the slug-retry path resolves.
+  IF p_full_name IS NOT NULL THEN
+    v_clean_full_name := NULLIF(trim(p_full_name), '');
+    IF v_clean_full_name IS NOT NULL THEN
+      IF length(v_clean_full_name) > 100 THEN
+        v_clean_full_name := substring(v_clean_full_name from 1 for 100);
+      END IF;
+      UPDATE public.staff_users
+      SET full_name = v_clean_full_name
+      WHERE auth_uid = p_auth_uid
+        AND org_id = v_org_id
+        AND is_deleted = false;
+    END IF;
   END IF;
 
   -- Only regenerate slug if no non-owner staff exist (safe during onboarding,
@@ -67,7 +96,8 @@ $function$;
 
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.update_organization_name(
-  p_name text
+  p_name text,
+  p_full_name text DEFAULT NULL
 )
 RETURNS void
 LANGUAGE plpgsql
@@ -78,6 +108,6 @@ AS $function$
 DECLARE
   v_auth_uid uuid := auth.uid();
 BEGIN
-  PERFORM private.update_organization_name(v_auth_uid, p_name);
+  PERFORM private.update_organization_name(v_auth_uid, p_name, p_full_name);
 END;
 $function$;

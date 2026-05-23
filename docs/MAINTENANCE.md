@@ -2,6 +2,9 @@
 
 ## Daily
 - **[email]** Verify `process-email-queue` edge function is running (check pending_emails for stuck rows)
+- **[onboarding]** Spot-check `onboarding_stuckness` cron ran at 14:00 UTC (`SELECT * FROM cron.job_run_details WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'onboarding_stuckness') ORDER BY start_time DESC LIMIT 3;`). A missed run skips state emails for that day. Cross-check that any rows added to `onboarding_email_log` in the last 24h correspond to expected state transitions.
+- **[onboarding]** Spot-check `capture_nurture` cron ran at 14:15 UTC. A missed run delays the nurture by a day for any captures that hit 7 days that day. Confirm via `cron.job_run_details` for jobname `capture_nurture`.
+- **[onboarding]** Spot-check `onboarding_welcome` cron ran in the last 60 seconds. If new signups are happening, look for welcome rows in `pending_emails` queued within ~2 to 3 minutes of org creation. A persistent backlog (`SELECT o.id, o.created_at, now() - o.created_at AS age FROM organizations o LEFT JOIN onboarding_email_log oel ON oel.org_id = o.id AND oel.email_key='welcome' WHERE oel.org_id IS NULL AND o.created_at >= '2026-05-23'::date`) indicates the cron is failing.
 - **[ai]** Monitor AI conversation edge function errors in Supabase logs
 - **[ai-flow]** Spot-check `generate-summary` edge function logs for the expected mode pattern: nurse-enabled visits should show two invocations per visit (`mode: summary_only` then `mode: diagnostic_only`); non-nurse should show one (`mode: full`). Repeated `mode: full` fallback fires from `claim_patient` indicate the AI is failing to emit `[CONVERSATION_COMPLETE]` — review and re-strengthen the system prompt in `start_ai_conversation.core-sql` if frequency is non-trivial.
 - **[credits]** Verify `credit_reset` cron runs successfully (check audit_trail for `monthly_credit_reset` entries)
@@ -9,6 +12,8 @@
 - **[scribe]** Spot-check `transcribe-encounter` logs and `scribe_recordings` for rows stuck in `transcribing`. The `scribe_timeout_check` cron re-fires after 10 min and hard-fails after 30 min; a rising count of `status='failed', error='transcription_timeout'` indicates Google STT or the edge function is degraded. `scribe_failed` audit_trail entries with `reason='no_audio'` are normal (doctor canceled before speaking).
 
 ## Weekly
+- **[onboarding]** Read replies to `mike@hilthealth.com`. The onboarding sequence is companion-mode: every email invites a reply only when the owner needs help. Replies are the primary signal of where new clinics are stuck. Acknowledge / actually help. If reply volume becomes unmanageable, that is a signal to add a CS lead before scaling further.
+- **[onboarding]** Review `onboarding_email_log` for state-email patterns. If lots of orgs are getting `distribution_help` or `visit_abandoned`, that is product feedback — the post-setup flow needs work.
 - **[credits]** Review recharge usage across orgs (query `recharge_used > 0` on organizations for active recharge consumption)
 - **[demo]** Check demo org credit balance (should be ~99999, each demo uses ~1.5 credits)
 - **[demo]** Review `demo_access` table for unusual patterns (spam, abuse)

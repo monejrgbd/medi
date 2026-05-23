@@ -27,6 +27,7 @@ export async function updateOrganizationProfile(
 
   const { error: nameError } = await supabase.rpc("update_organization_name", {
     p_name: trimmedOrg,
+    p_full_name: fullName.trim() || undefined,
   });
   if (nameError) {
     console.error("update_organization_name failed:", nameError);

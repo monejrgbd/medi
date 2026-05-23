@@ -1,0 +1,38 @@
+-- Private only — called by cron, no public wrapper needed.
+-- Finds email_captures that are between 7 and 30 days old, have not been nurtured,
+-- and whose email has not become a Hilt Health user. Sends one nurture email per
+-- unique email address (case insensitive).
+CREATE OR REPLACE FUNCTION private.send_capture_nurture_check()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_capture record;
+BEGIN
+  FOR v_capture IN
+    SELECT DISTINCT lower(ec.email) AS email
+    FROM public.email_captures ec
+    WHERE ec.created_at <= now() - interval '7 days'
+      AND ec.created_at >= now() - interval '30 days'  -- avoid blasting ancient captures
+      AND NOT EXISTS (
+        SELECT 1 FROM public.email_captures ec2
+        WHERE lower(ec2.email) = lower(ec.email)
+          AND ec2.nurture_email_sent_at IS NOT NULL
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM auth.users au
+        WHERE lower(au.email) = lower(ec.email)
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM public.notification_preferences np
+        WHERE lower(np.email) = lower(ec.email)
+          AND np.email_onboarding = false
+      )
+  LOOP
+    PERFORM private.send_capture_nurture(v_capture.email);
+  END LOOP;
+END;
+$$;

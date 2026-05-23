@@ -1,0 +1,28 @@
+-- Private only — called by minute cron. Queues the welcome email for any org
+-- that signed up 2+ minutes ago and has not yet received one. Helper's log PK
+-- enforces send-once even if the cron fires twice in rapid succession.
+CREATE OR REPLACE FUNCTION private.send_onboarding_welcome_check()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+BEGIN
+  FOR v_org IN
+    SELECT o.id
+    FROM public.organizations o
+    WHERE o.created_at <= now() - interval '2 minutes'
+      AND o.created_at >= '2026-05-23'::date  -- DEPLOY DATE, DO NOT BUMP
+      AND o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
+      AND NOT EXISTS (
+        SELECT 1 FROM public.onboarding_email_log oel
+        WHERE oel.org_id = o.id AND oel.email_key = 'welcome'
+      )
+  LOOP
+    PERFORM private.send_onboarding_email(v_org.id, 'welcome');
+  END LOOP;
+END;
+$$;

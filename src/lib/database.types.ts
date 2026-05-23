@@ -1266,6 +1266,8 @@ export type Database = {
           email: string
           email_credit_alerts: boolean | null
           email_daily_digest: boolean | null
+          email_onboarding: boolean | null
+          email_retention_checkins: boolean | null
           id: string
           updated_at: string
         }
@@ -1274,6 +1276,8 @@ export type Database = {
           email: string
           email_credit_alerts?: boolean | null
           email_daily_digest?: boolean | null
+          email_onboarding?: boolean | null
+          email_retention_checkins?: boolean | null
           id?: string
           updated_at?: string
         }
@@ -1282,10 +1286,38 @@ export type Database = {
           email?: string
           email_credit_alerts?: boolean | null
           email_daily_digest?: boolean | null
+          email_onboarding?: boolean | null
+          email_retention_checkins?: boolean | null
           id?: string
           updated_at?: string
         }
         Relationships: []
+      }
+      onboarding_email_log: {
+        Row: {
+          email_key: string
+          org_id: string
+          sent_at: string
+        }
+        Insert: {
+          email_key: string
+          org_id: string
+          sent_at?: string
+        }
+        Update: {
+          email_key?: string
+          org_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "onboarding_email_log_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       org_vital_configs: {
         Row: {
@@ -1365,6 +1397,7 @@ export type Database = {
           gclid: string | null
           id: string
           last_credit_alert_at: string | null
+          last_silent_dropoff_at: string | null
           letterhead_disclaimer: string | null
           letterhead_logo_url: string | null
           marketing_sms_addon: boolean | null
@@ -1407,6 +1440,7 @@ export type Database = {
           gclid?: string | null
           id?: string
           last_credit_alert_at?: string | null
+          last_silent_dropoff_at?: string | null
           letterhead_disclaimer?: string | null
           letterhead_logo_url?: string | null
           marketing_sms_addon?: boolean | null
@@ -1449,6 +1483,7 @@ export type Database = {
           gclid?: string | null
           id?: string
           last_credit_alert_at?: string | null
+          last_silent_dropoff_at?: string | null
           letterhead_disclaimer?: string | null
           letterhead_logo_url?: string | null
           marketing_sms_addon?: boolean | null
@@ -2309,6 +2344,7 @@ export type Database = {
           attempt_count: number
           created_at: string
           error_message: string | null
+          from_email: string | null
           from_name: string | null
           html_body: string
           id: string
@@ -2326,6 +2362,7 @@ export type Database = {
           attempt_count?: number
           created_at?: string
           error_message?: string | null
+          from_email?: string | null
           from_name?: string | null
           html_body: string
           id?: string
@@ -2343,6 +2380,7 @@ export type Database = {
           attempt_count?: number
           created_at?: string
           error_message?: string | null
+          from_email?: string | null
           from_name?: string | null
           html_body?: string
           id?: string
@@ -4908,7 +4946,10 @@ export type Database = {
         Args: { p_country: string }
         Returns: undefined
       }
-      update_organization_name: { Args: { p_name: string }; Returns: undefined }
+      update_organization_name: {
+        Args: { p_full_name?: string; p_name: string }
+        Returns: undefined
+      }
       update_partner_profile: {
         Args: {
           p_country?: string

@@ -1,0 +1,76 @@
+-- Private only — called by cron after a 7-day silence on an email_captures row.
+-- Builds the nurture email, inserts into pending_emails, and stamps
+-- email_captures.nurture_email_sent_at atomically so timestamp only advances if
+-- the queue insert succeeds.
+CREATE OR REPLACE FUNCTION private.send_capture_nurture(p_email text)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_unsub_token text;
+  v_edge_url text;
+  v_subject text;
+  v_text_body text;
+  v_html_body text;
+  v_cal_url text := 'https://cal.com/102937474/hilt-health-meeting';
+BEGIN
+  -- No personalized greeting. Captures often come from generic clinic emails
+  -- (info@, hello@, contact@) where the email local part makes a poor name.
+  -- A neutral "Hello," reads cleaner across the board.
+
+  v_unsub_token := private.generate_unsubscribe_token(p_email, 'onboarding');
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+  v_subject := 'Following up from Hilt Health';
+  v_text_body :=
+    E'Hello,\n\n' ||
+    E'You tried signing up to Hilt Health. You can learn more of what we offer here:\n' ||
+    E'https://hilthealth.com/#problem\n\n' ||
+    E'If your clinic has specific requirements, our team can build custom features or integrations for your setup, including EHR integrations or workflow changes for your specialty.\n\n' ||
+    E'Want to talk through whether Hilt Health fits what your clinic needs? Grab a slot:\n' ||
+    v_cal_url || E'\n\n' ||
+    E'Or reply to this email and I will respond personally.\n\n' ||
+    'Mike';
+
+  v_html_body :=
+    '<pre style="white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 15px; line-height: 1.55; color: #1a1a1a; margin: 0;">' ||
+    replace(replace(v_text_body, '&', '&amp;'), '<', '&lt;') ||
+    '</pre>' ||
+    CASE WHEN v_unsub_token IS NOT NULL AND v_edge_url IS NOT NULL
+      THEN '<p style="color:#94a3b8;font-size:12px;margin-top:24px;font-family: -apple-system, BlinkMacSystemFont, sans-serif;">' ||
+           '<a href="' || v_edge_url || '/unsubscribe?pref=' || v_unsub_token || '" style="color:#94a3b8;">' ||
+           'Unsubscribe from Hilt Health emails' ||
+           '</a></p>'
+      ELSE ''
+    END;
+
+  INSERT INTO public.pending_emails (
+    to_email, subject, html_body, text_body, from_name, from_email, reply_to, priority, metadata
+  ) VALUES (
+    p_email,
+    v_subject,
+    v_html_body,
+    v_text_body,
+    'Mike at Hilt Health',
+    'mike@hilthealth.com',
+    'mike@hilthealth.com',
+    2,
+    jsonb_build_object(
+      'type', 'capture_nurture',
+      'pref_key', 'onboarding',
+      'email', p_email
+    )
+  );
+
+  -- Mark all capture rows for this email as nurtured (case-insensitive, atomic with the INSERT)
+  UPDATE public.email_captures
+  SET nurture_email_sent_at = now()
+  WHERE lower(email) = lower(p_email);
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'send_capture_nurture failed for %: %', p_email, SQLERRM;
+END;
+$$;

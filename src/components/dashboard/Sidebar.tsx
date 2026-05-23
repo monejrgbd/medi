@@ -19,6 +19,7 @@ import {
   Wrench,
   LogOut,
   FileText,
+  LifeBuoy,
 } from "lucide-react";
 
 const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
@@ -33,6 +34,7 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
   { href: "/d/owner/templates", label: "Documents", icon: <FileText className="h-4 w-4" /> },
   { href: "/d/owner/developer", label: "Developer", icon: <Code className="h-4 w-4" /> },
   { href: "/d/owner/kiosk", label: "Tablet and TV Setup", icon: <Tablet className="h-4 w-4" /> },
+  { href: "/d/owner/support", label: "Support", icon: <LifeBuoy className="h-4 w-4" /> },
   { href: "/d/owner/settings", label: "Settings", icon: <Settings className="h-4 w-4" /> },
 ];
 

@@ -5,6 +5,7 @@ import FadeIn from "@/components/FadeIn";
 import TeamCodeCapture from "@/components/demo/TeamCodeCapture";
 import ContactLink from "@/components/marketing/ContactLink";
 import MockupTour from "@/components/marketing/MockupTour";
+import OpenDemoButton from "@/components/marketing/OpenDemoButton";
 import ComplianceText from "@/components/marketing/country/ComplianceText";
 import SocialProofSection from "@/components/marketing/SocialProofSection";
 
@@ -705,6 +706,11 @@ function TheSolutionSection() {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Try Demo CTA */}
+            <div className="mt-10 flex justify-center">
+              <OpenDemoButton variant="light" />
             </div>
           </div>
         </FadeIn>

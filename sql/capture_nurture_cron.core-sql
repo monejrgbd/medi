@@ -1,0 +1,16 @@
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Unschedule existing job if present so we can overwrite with new logic
+DO $$
+BEGIN
+  PERFORM cron.unschedule('capture_nurture');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- Run daily at 14:15 UTC (15 min after onboarding_stuckness) so the daily
+-- nurture wave does not collide with the onboarding cron load.
+SELECT cron.schedule(
+  'capture_nurture',
+  '15 14 * * *',
+  $$SELECT private.send_capture_nurture_check()$$
+);
