@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { createStaffUser } from "@/app/(dashboard)/d/_actions/staff";
 import { createClient } from "@/lib/supabase/client";
-import { Check, Eye, EyeOff, Copy } from "lucide-react";
+import { Check } from "lucide-react";
+import StaffCredentialCards, { type AddedStaff } from "./StaffCredentialCards";
 
 interface ExistingStaff {
   id: string;
@@ -12,19 +13,14 @@ interface ExistingStaff {
   roles: { role: string; location_id: string }[];
 }
 
-interface AddedStaff {
-  name: string;
-  username: string;
-  password: string;
-  roles: string[];
-}
-
 export default function AddStaffStep({
   orgId,
   orgSlug,
   locationId,
   locationName,
   nurseEnabled,
+  addedStaff,
+  onStaffAdded,
   onContinue,
   onBack,
 }: {
@@ -33,6 +29,8 @@ export default function AddStaffStep({
   locationId: string;
   locationName: string;
   nurseEnabled?: boolean;
+  addedStaff: AddedStaff[];
+  onStaffAdded: (staff: AddedStaff) => void;
   onContinue: () => void;
   onBack?: () => void;
 }) {
@@ -40,13 +38,11 @@ export default function AddStaffStep({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [notificationEmail, setNotificationEmail] = useState("");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [addedStaff, setAddedStaff] = useState<AddedStaff[]>([]);
   const [existingStaff, setExistingStaff] = useState<ExistingStaff[]>([]);
-  const [visiblePasswords, setVisiblePasswords] = useState<Set<number>>(new Set());
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   // Fetch existing staff for this location on mount
   useEffect(() => {
@@ -85,6 +81,9 @@ export default function AddStaffStep({
     setLoading(true);
     setError("");
 
+    const trimmedEmail = notificationEmail.trim();
+    const wantsEmail = trimmedEmail.length > 0;
+
     const result = await createStaffUser({
       orgId,
       fullName,
@@ -92,6 +91,8 @@ export default function AddStaffStep({
       password,
       locationId,
       roles: selectedRoles,
+      notificationEmail: trimmedEmail || null,
+      sendCredentialsEmail: wantsEmail,
     });
 
     if (!result.success) {
@@ -100,37 +101,21 @@ export default function AddStaffStep({
       return;
     }
 
-    setAddedStaff((prev) => [
-      ...prev,
-      { name: fullName.trim(), username, password, roles: [...selectedRoles] },
-    ]);
+    onStaffAdded({
+      name: fullName.trim(),
+      username,
+      password,
+      roles: [...selectedRoles],
+      notificationEmail: trimmedEmail || undefined,
+      emailSent: Boolean(result.emailSent),
+    });
     setFullName("");
     setUsername("");
     setPassword("");
     setShowPassword(false);
+    setNotificationEmail("");
     setSelectedRoles([]);
     setLoading(false);
-  }
-
-  function toggleCredentialPassword(index: number) {
-    setVisiblePasswords((prev) => {
-      const next = new Set(prev);
-      if (next.has(index)) next.delete(index);
-      else next.add(index);
-      return next;
-    });
-  }
-
-  async function copyCredentials(staff: AddedStaff, index: number) {
-    try {
-      const text = `Login: ${staff.username}@${orgSlug}.staff.hilt\nPassword: ${staff.password}`;
-      await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch {
-      // Clipboard API unavailable — toggle password visible as fallback
-      setVisiblePasswords((prev) => new Set(prev).add(index));
-    }
   }
 
   const canSubmit =
@@ -196,76 +181,8 @@ export default function AddStaffStep({
         </div>
       )}
 
-      {/* Newly added staff credential cards */}
-      {addedStaff.length > 0 && (
-        <div className="mb-6 space-y-3">
-          <p className="text-xs font-semibold text-ash uppercase tracking-wider">
-            Just added ({addedStaff.length})
-          </p>
-          {addedStaff.map((staff, i) => (
-            <div
-              key={i}
-              className="rounded-xl border border-green-200 bg-green-50 p-4"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <Check className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-semibold text-ink">
-                  {staff.name}
-                </span>
-                <div className="flex gap-1.5 ml-auto">
-                  {staff.roles.map((role) => (
-                    <span
-                      key={role}
-                      className="rounded-full bg-white px-2 py-0.5 text-[10px] font-medium text-slate ring-1 ring-green-200 capitalize"
-                    >
-                      {role}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="text-xs text-slate space-y-1">
-                <p>
-                  Login:{" "}
-                  <span className="font-mono text-ink">
-                    {staff.username}@{orgSlug}.staff.hilt
-                  </span>
-                </p>
-                <div className="flex items-center gap-2">
-                  <span>Password:</span>
-                  <span className="font-mono text-ink">
-                    {visiblePasswords.has(i)
-                      ? staff.password
-                      : "\u2022".repeat(8)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => toggleCredentialPassword(i)}
-                    className="text-slate hover:text-ink"
-                  >
-                    {visiblePasswords.has(i) ? (
-                      <EyeOff className="h-3.5 w-3.5" />
-                    ) : (
-                      <Eye className="h-3.5 w-3.5" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => copyCredentials(staff, i)}
-                    className="text-slate hover:text-ink flex items-center gap-1"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    {copiedIndex === i && (
-                      <span className="text-green-600 text-[10px]">
-                        Copied
-                      </span>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <StaffCredentialCards addedStaff={addedStaff} orgSlug={orgSlug} />
+
 
       {/* Add staff form */}
       <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -344,11 +261,29 @@ export default function AddStaffStep({
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-ink mb-1">
+              Email login details to staff member
+            </label>
+            <input
+              type="email"
+              value={notificationEmail}
+              onChange={(e) => setNotificationEmail(e.target.value)}
+              maxLength={254}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+              placeholder="staff@example.com"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-ash">
+              Leave blank to share the login yourself.
+            </p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-ink mb-2">
               Roles
             </label>
             <div className="flex flex-wrap gap-3">
-              {["doctor", "receptionist", ...(nurseEnabled ? ["nurse"] : []), "manager"].map((role) => (
+              {["doctor", "receptionist", "nurse", "manager"].map((role) => (
                 <label
                   key={role}
                   className="flex items-center gap-2 cursor-pointer"
@@ -378,6 +313,18 @@ export default function AddStaffStep({
       <p className="mt-4 text-center text-xs text-ash">
         You can always add more from the dashboard later.
       </p>
+
+      {/* Continue / Skip — mirror of the top button so users do not have to scroll back up */}
+      <button
+        onClick={onContinue}
+        className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white mt-4 ${
+          addedStaff.length > 0 || existingStaff.length > 0
+            ? "bg-hilt-blue hover:bg-hilt-blue-dark"
+            : "bg-gray-300 hover:bg-gray-400"
+        }`}
+      >
+        {addedStaff.length > 0 || existingStaff.length > 0 ? "Continue" : "Skip for now"}
+      </button>
 
       {onBack && (
         <button

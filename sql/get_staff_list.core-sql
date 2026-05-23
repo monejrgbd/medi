@@ -59,6 +59,7 @@ BEGIN
       'id', su.id,
       'full_name', su.full_name,
       'username', su.username,
+      'notification_email', su.notification_email,
       'is_active', su.is_active,
       'is_deleted', su.is_deleted,
       'created_at', su.created_at,

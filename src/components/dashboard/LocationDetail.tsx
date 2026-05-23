@@ -45,6 +45,7 @@ interface StaffMember {
   id: string;
   full_name: string;
   username: string;
+  notification_email: string | null;
   is_active: boolean;
   is_deleted: boolean;
   created_at: string;

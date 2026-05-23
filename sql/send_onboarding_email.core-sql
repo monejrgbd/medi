@@ -1,0 +1,254 @@
+-- Private only — called by create_organization, complete_visit, deduct_credits, and cron
+CREATE OR REPLACE FUNCTION private.send_onboarding_email(
+  p_org_id uuid,
+  p_email_key text,
+  p_skip_log boolean DEFAULT false
+)
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_owner_auth_uid uuid;
+  v_owner_email text;
+  v_full_name text;
+  v_first_name text;
+  v_org_name text;
+  v_edge_url text;
+  v_pref_key text;
+  v_unsub_token text;
+  v_unsub_label text;
+  v_subject text;
+  v_text_body text;
+  v_html_body text;
+  v_priority int;
+  v_claimed boolean;
+  v_safe_first_name text;
+  v_safe_org_name text;
+  v_dashboard_url text := 'https://hilthealth.com/d/owner';
+  v_pricing_url text := 'https://hilthealth.com/pricing';
+  v_cal_url text := 'https://cal.com/102937474/hilt-health-meeting';
+BEGIN
+  -- Look up owner from staff_users (owner row uses username='owner' per create_organization convention)
+  SELECT su.auth_uid, su.full_name, o.name
+  INTO v_owner_auth_uid, v_full_name, v_org_name
+  FROM public.staff_users su
+  JOIN public.organizations o ON o.id = su.org_id
+  WHERE su.org_id = p_org_id
+    AND su.username = 'owner'
+  LIMIT 1;
+
+  IF v_owner_auth_uid IS NULL THEN
+    RAISE NOTICE 'send_onboarding_email: no owner staff_users row found for org %', p_org_id;
+    RETURN;
+  END IF;
+
+  -- Owner real email lives on auth.users
+  SELECT email INTO v_owner_email
+  FROM auth.users
+  WHERE id = v_owner_auth_uid;
+
+  IF v_owner_email IS NULL OR v_owner_email = '' THEN
+    RAISE NOTICE 'send_onboarding_email: no auth email for owner of org %', p_org_id;
+    RETURN;
+  END IF;
+
+  -- First name: split_part(full_name, ' ', 1). Wizard defaults full_name to 'Owner'
+  -- when the signup user does not enter a name, so treat that as a missing value
+  -- and fall back to the email local part.
+  v_first_name := COALESCE(
+    NULLIF(split_part(COALESCE(v_full_name, ''), ' ', 1), ''),
+    ''
+  );
+  IF v_first_name = '' OR lower(v_first_name) = 'owner' THEN
+    v_first_name := split_part(v_owner_email, '@', 1);
+  END IF;
+
+  -- HTML escape for interpolated values
+  v_safe_first_name := replace(replace(v_first_name, '&', '&amp;'), '<', '&lt;');
+  v_safe_org_name := replace(replace(COALESCE(v_org_name, ''), '&', '&amp;'), '<', '&lt;');
+
+  -- Atomic claim via log table unless caller is managing idempotency externally
+  IF NOT p_skip_log THEN
+    INSERT INTO public.onboarding_email_log (org_id, email_key)
+    VALUES (p_org_id, p_email_key)
+    ON CONFLICT (org_id, email_key) DO NOTHING;
+
+    GET DIAGNOSTICS v_claimed = ROW_COUNT;
+    IF v_claimed = false OR v_claimed IS NULL THEN
+      -- Another transaction already sent this, exit silently
+      RETURN;
+    END IF;
+  END IF;
+
+  -- Determine pref_key. silent_dropoff is a retention check-in, not onboarding
+  v_pref_key := CASE WHEN p_email_key = 'silent_dropoff' THEN 'retention_checkins' ELSE 'onboarding' END;
+  v_unsub_label := CASE WHEN p_email_key = 'silent_dropoff' THEN 'retention check-ins' ELSE 'onboarding emails' END;
+
+  v_unsub_token := private.generate_unsubscribe_token(v_owner_email, v_pref_key);
+  SELECT decrypted_secret INTO v_edge_url
+  FROM vault.decrypted_secrets WHERE name = 'edge_function_url';
+
+  -- Build subject and text_body per email_key
+  IF p_email_key = 'welcome' THEN
+    v_priority := 1;
+    v_subject := 'Welcome to Hilt Health';
+    v_text_body :=
+      'Hi ' || v_first_name || E',\n\n' ||
+      E'I am Mike and I run Hilt Health.\n\n' ||
+      E'Hilt Health was built by clinicians who spent months brainstorming every single way a clinic can benefit from AI, with the aim of helping clinics grow profits, improve patient care, and lighten staff load. Every part of what you just set up has been pressure tested in a real clinic before it landed in your dashboard.\n\n' ||
+      E'Finish the setup wizard and your clinic is ready to start running real patients through Hilt Health. Takes a few more minutes.\n\n' ||
+      E'If you would like help getting set up, reply to this email and I will respond personally.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'setup_incomplete' THEN
+    v_priority := 2;
+    v_subject := 'Your Hilt Health setup is half finished';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'The Hilt Health setup wizard has a few minutes left. Once you finish, your clinic is ready to start running real patients through.\n\n' ||
+      'Pick up where you left off: ' || v_dashboard_url || E'\n\n' ||
+      E'If you need help finishing setup, reply to this email and I will respond.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'distribution_help' THEN
+    v_priority := 2;
+    v_subject := 'Your Hilt Health is live but no patients yet';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'Your Hilt Health is live but no patient has gone through the system yet.\n\n' ||
+      E'If you would like help figuring out what is going on at your clinic, or if you need custom features or integrations built for your setup, grab 15 minutes with our team:\n' ||
+      v_cal_url || E'\n\n' ||
+      E'If you would prefer email, reply to this email and we will work through it with you.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'visit_abandoned' THEN
+    v_priority := 2;
+    v_subject := 'Your first patient walked away';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'A patient at your clinic started checking in through Hilt Health but walked away before finishing.\n\n' ||
+      E'If you would like our team to pull up the conversation and look at what happened with you, we can:\n' ||
+      v_cal_url || E'\n\n' ||
+      E'If you would prefer email, reply to this email and we will respond with what we see in the conversation.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'first_completion' THEN
+    v_priority := 1;
+    v_subject := 'Your first patient just made it through';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'A patient just completed the full Hilt Health flow at your clinic.\n\n' ||
+      E'That is about 8 minutes of doctor and reception time saved, knowledge the AI will remember the next time this patient walks in, and the patient''s record updated for next time, all from this one visit.\n\n' ||
+      E'At scale this compounds into hours of doctor time back per week, smoother patient experience, and patients you can later contact through Hilt Health''s AI marketing, which lets you target based on each patient''s record.\n\n' ||
+      E'If you would like help with what to scale next, reply to this email. I read every reply personally.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'scale_to_ten' THEN
+    v_priority := 2;
+    v_subject := 'You got it working, but volume dropped off';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'You had Hilt Health running for your first few patients, but the rhythm has slowed over the past week.\n\n' ||
+      E'A 15 minute audit of your setup with our team usually surfaces what is in the way, plus we can build custom features or integrations for your setup if that would help:\n' ||
+      v_cal_url || E'\n\n' ||
+      E'Or reply to this email and we will respond with what we see.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'graduation' THEN
+    v_priority := 1;
+    v_subject := 'Ten patients through Hilt Health';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'Ten patients have now gone through Hilt Health at your clinic. This is the last onboarding email from me.\n\n' ||
+      E'From here on, our team is on standby. If you need help, want custom features built for your clinic, or want to integrate Hilt Health with your EHR or other tools, grab a slot:\n' ||
+      v_cal_url || E'\n\n' ||
+      E'Or reply to this email anytime, I read every reply personally.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'activated_dropoff' THEN
+    v_priority := 2;
+    v_subject := 'Everything okay at your clinic?';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'It has been about three weeks since a patient went through Hilt Health at your clinic.\n\n' ||
+      E'If you would like our team to look at what changed and help you get back to the rhythm you had, plus we can build custom features or integrations for your setup if that would help, grab a slot:\n' ||
+      v_cal_url || E'\n\n' ||
+      E'Or reply to this email and we will work through it with you.\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'first_credit_low' THEN
+    v_priority := 2;
+    v_subject := 'You are using Hilt Health enough that a plan saves you money';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'Your clinic has used 80% of its Hilt Health credits this cycle. At your usage level, a monthly plan is dramatically cheaper than pay as you go.\n\n' ||
+      E'Pay as you go is $1 per credit. Plans start at $79 per doctor and nurse per month with unlimited Standard AI intake, unlimited scribe, unlimited paperwork, and free monthly marketing credits included.\n\n' ||
+      'Compare plans: ' || v_pricing_url || E'\n\n' ||
+      E'If you would like our team to walk through which plan fits your clinic''s volume, grab a slot:\n' ||
+      v_cal_url || E'\n\n' ||
+      'Mike';
+
+  ELSIF p_email_key = 'silent_dropoff' THEN
+    v_priority := 2;
+    v_subject := 'Quiet at your clinic lately';
+    v_text_body :=
+      v_first_name || E',\n\n' ||
+      E'Hilt Health has not processed a patient at your clinic in about three weeks. You had been on a strong rhythm before, so I wanted to check in.\n\n' ||
+      E'If anything changed at the clinic or with how Hilt Health is fitting into your flow, our team is here to help, and we can also build custom features or integrations if that would help:\n' ||
+      v_cal_url || E'\n\n' ||
+      E'Or reply to this email and we will work through it with you.\n\n' ||
+      'Mike';
+
+  ELSE
+    RAISE NOTICE 'send_onboarding_email: unknown email_key %', p_email_key;
+    RETURN;
+  END IF;
+
+  -- HTML body: wrap text in <pre> for inbox-rendered plain-text, then append unsubscribe footer.
+  -- The text body is escaped for HTML safety. We also rewrite first_name and org_name escapes
+  -- so any user-supplied content in the body is safe.
+  v_html_body :=
+    '<pre style="white-space: pre-wrap; font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 15px; line-height: 1.55; color: #1a1a1a; margin: 0;">' ||
+    replace(replace(v_text_body, '&', '&amp;'), '<', '&lt;') ||
+    '</pre>' ||
+    CASE WHEN v_unsub_token IS NOT NULL AND v_edge_url IS NOT NULL
+      THEN '<p style="color:#94a3b8;font-size:12px;margin-top:24px;font-family: -apple-system, BlinkMacSystemFont, sans-serif;">' ||
+           '<a href="' || v_edge_url || '/unsubscribe?pref=' || v_unsub_token || '" style="color:#94a3b8;">' ||
+           'Unsubscribe from ' || v_unsub_label ||
+           '</a></p>'
+      ELSE ''
+    END;
+
+  INSERT INTO public.pending_emails (
+    to_email, subject, html_body, text_body, from_name, from_email, reply_to, priority, metadata
+  ) VALUES (
+    v_owner_email,
+    v_subject,
+    v_html_body,
+    v_text_body,
+    'Mike at Hilt Health',
+    'mike@hilthealth.com',
+    'mike@hilthealth.com',
+    v_priority,
+    jsonb_build_object(
+      'type', 'onboarding',
+      'pref_key', v_pref_key,
+      'org_id', p_org_id,
+      'email_key', p_email_key
+    )
+  );
+
+  -- For multi-fire emails, update the per-key timestamp atomically with the queue INSERT
+  -- so that timestamp only advances if the email actually queued.
+  IF p_email_key = 'silent_dropoff' THEN
+    UPDATE public.organizations
+    SET last_silent_dropoff_at = now()
+    WHERE id = p_org_id;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE NOTICE 'send_onboarding_email failed for org % key %: %', p_org_id, p_email_key, SQLERRM;
+END;
+$$;

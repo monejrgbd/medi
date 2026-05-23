@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { deactivateStaff, reactivateStaff, deleteStaff } from "@/app/(dashboard)/d/_actions/staff";
 import ConfirmModal from "./ConfirmModal";
 import ResetPasswordModal from "./ResetPasswordModal";
+import EmailCredentialsModal from "./EmailCredentialsModal";
 import RoleAssignmentModal from "./RoleAssignmentModal";
 import AddStaffModal from "./AddStaffModal";
 
@@ -18,6 +19,7 @@ interface StaffMember {
   id: string;
   full_name: string;
   username: string;
+  notification_email: string | null;
   is_active: boolean;
   is_deleted: boolean;
   created_at: string;
@@ -51,6 +53,7 @@ export default function StaffTable({
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [actionMenu, setActionMenu] = useState<string | null>(null);
   const [resetModal, setResetModal] = useState<StaffMember | null>(null);
+  const [emailModal, setEmailModal] = useState<StaffMember | null>(null);
   const [roleModal, setRoleModal] = useState<StaffMember | null>(null);
   const [confirmModal, setConfirmModal] = useState<{
     staff: StaffMember;
@@ -193,6 +196,15 @@ export default function StaffTable({
                         <button
                           onClick={() => {
                             setActionMenu(null);
+                            setEmailModal(s);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-ink hover:bg-gray-50"
+                        >
+                          Email new login
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActionMenu(null);
                             setResetModal(s);
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-ink hover:bg-gray-50"
@@ -252,6 +264,17 @@ export default function StaffTable({
           staffUserId={resetModal.id}
           staffName={resetModal.full_name}
           onClose={() => setResetModal(null)}
+          onSuccess={() => router.refresh()}
+        />
+      )}
+
+      {emailModal && (
+        <EmailCredentialsModal
+          open
+          staffUserId={emailModal.id}
+          staffName={emailModal.full_name}
+          currentNotificationEmail={emailModal.notification_email}
+          onClose={() => setEmailModal(null)}
           onSuccess={() => router.refresh()}
         />
       )}

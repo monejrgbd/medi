@@ -3290,6 +3290,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_deleted: boolean | null
+          notification_email: string | null
           org_id: string
           username: string
         }
@@ -3301,6 +3302,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_deleted?: boolean | null
+          notification_email?: string | null
           org_id: string
           username: string
         }
@@ -3312,6 +3314,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_deleted?: boolean | null
+          notification_email?: string | null
           org_id?: string
           username?: string
         }
@@ -4098,28 +4101,18 @@ export type Database = {
         }
         Returns: Json
       }
-      create_organization:
-        | {
-            Args: {
-              p_approval_code?: string
-              p_name: string
-              p_owner_auth_uid: string
-              p_signup_ip?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_approval_code?: string
-              p_gbraid?: string
-              p_gclid?: string
-              p_name: string
-              p_owner_auth_uid: string
-              p_signup_ip?: string
-              p_wbraid?: string
-            }
-            Returns: Json
-          }
+      create_organization: {
+        Args: {
+          p_approval_code?: string
+          p_gbraid?: string
+          p_gclid?: string
+          p_name: string
+          p_owner_auth_uid: string
+          p_signup_ip?: string
+          p_wbraid?: string
+        }
+        Returns: Json
+      }
       create_pre_checkin_token: {
         Args: {
           p_ai_model?: string
@@ -4161,9 +4154,11 @@ export type Database = {
         Args: {
           p_full_name: string
           p_location_id: string
+          p_notification_email?: string
           p_org_id: string
           p_password: string
           p_roles: string[]
+          p_send_credentials_email?: boolean
           p_username: string
         }
         Returns: Json
@@ -4199,6 +4194,14 @@ export type Database = {
           p_patient_id: string
           p_phone?: string
           p_sex?: string
+        }
+        Returns: Json
+      }
+      email_staff_credentials: {
+        Args: {
+          p_override_email?: string
+          p_password: string
+          p_staff_user_id: string
         }
         Returns: Json
       }
@@ -4628,7 +4631,12 @@ export type Database = {
       }
       reset_monthly_credits: { Args: { p_org_id: string }; Returns: Json }
       reset_staff_password: {
-        Args: { p_new_password: string; p_staff_user_id: string }
+        Args: {
+          p_new_password: string
+          p_override_email?: string
+          p_send_credentials_email?: boolean
+          p_staff_user_id: string
+        }
         Returns: Json
       }
       resolve_potential_match: {

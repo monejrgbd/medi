@@ -1,0 +1,77 @@
+-- Private only — called by cron, no public wrapper needed
+CREATE OR REPLACE FUNCTION private.send_onboarding_stuckness_check()
+RETURNS void
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_org record;
+BEGIN
+  FOR v_org IN
+    SELECT
+      o.id,
+      o.created_at,
+      o.onboarding_completed_at,
+      o.subscription_plan,
+      o.last_silent_dropoff_at,
+      (SELECT COUNT(*) FROM public.visits v WHERE v.org_id = o.id) AS total_visits,
+      (SELECT COUNT(*) FROM public.visits v WHERE v.org_id = o.id AND v.status = 'completed') AS completed_count,
+      (SELECT MIN(v.created_at) FROM public.visits v WHERE v.org_id = o.id) AS oldest_visit_at,
+      (SELECT MAX(v.completed_at) FROM public.visits v WHERE v.org_id = o.id AND v.status = 'completed') AS latest_completion_at
+    FROM public.organizations o
+    WHERE o.created_at >= '2026-05-23'::date  -- DEPLOY DATE, DO NOT BUMP
+      AND o.subscription_plan NOT IN ('expired', 'suspended', 'read_only')
+  LOOP
+    -- Each state is evaluated INDEPENDENTLY. The helper's log PK + ON CONFLICT
+    -- enforces send-once per state for the single-fire emails. For silent_dropoff,
+    -- cron manages its own cooldown via last_silent_dropoff_at.
+
+    -- setup_incomplete: 1+ day since signup, wizard never finished
+    IF v_org.onboarding_completed_at IS NULL
+       AND v_org.created_at <= now() - interval '1 day'
+       AND v_org.completed_count < 10 THEN
+      PERFORM private.send_onboarding_email(v_org.id, 'setup_incomplete');
+    END IF;
+
+    -- distribution_help: 2+ days since setup done, zero visits ever
+    IF v_org.onboarding_completed_at IS NOT NULL
+       AND v_org.total_visits = 0
+       AND v_org.onboarding_completed_at <= now() - interval '2 days'
+       AND v_org.completed_count < 10 THEN
+      PERFORM private.send_onboarding_email(v_org.id, 'distribution_help');
+    END IF;
+
+    -- visit_abandoned: has visits, none completed, oldest visit 1+ day old
+    IF v_org.total_visits > 0
+       AND v_org.completed_count = 0
+       AND v_org.oldest_visit_at <= now() - interval '1 day' THEN
+      PERFORM private.send_onboarding_email(v_org.id, 'visit_abandoned');
+    END IF;
+
+    -- scale_to_ten: 1-9 completed, no new completion in 7+ days
+    IF v_org.completed_count BETWEEN 1 AND 9
+       AND v_org.latest_completion_at <= now() - interval '7 days' THEN
+      PERFORM private.send_onboarding_email(v_org.id, 'scale_to_ten');
+    END IF;
+
+    -- activated_dropoff: 1-9 completed, no new completion in 21+ days (escalation from scale_to_ten)
+    IF v_org.completed_count BETWEEN 1 AND 9
+       AND v_org.latest_completion_at <= now() - interval '21 days' THEN
+      PERFORM private.send_onboarding_email(v_org.id, 'activated_dropoff');
+    END IF;
+
+    -- silent_dropoff: 10+ completed, no new completion in 21+ days, MULTI-FIRE every 21 days.
+    -- Cooldown via organizations.last_silent_dropoff_at (NOT the log table).
+    -- Helper updates the timestamp itself atomically with the queue INSERT, so timestamp
+    -- only advances if the email actually queued (avoids 21-day silent skip on failure).
+    IF v_org.completed_count >= 10
+       AND v_org.latest_completion_at <= now() - interval '21 days'
+       AND (v_org.last_silent_dropoff_at IS NULL
+            OR v_org.last_silent_dropoff_at <= now() - interval '21 days') THEN
+      PERFORM private.send_onboarding_email(v_org.id, 'silent_dropoff', p_skip_log => true);
+    END IF;
+  END LOOP;
+END;
+$$;

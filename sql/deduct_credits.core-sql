@@ -137,6 +137,16 @@ BEGIN
     v_usage_pct := v_effective_used / NULLIF(v_effective_total, 0);
 
     IF v_usage_pct >= 0.80 THEN
+      -- Onboarding first_credit_low email: one-time-ever conversion pitch for trial/PAYG orgs.
+      -- Helper uses onboarding_email_log PK so duplicate calls are silently no-ops.
+      BEGIN
+        IF v_org.subscription_plan IN ('standard_trial', 'premium_trial', 'pay_as_you_go') THEN
+          PERFORM private.send_onboarding_email(p_org_id, 'first_credit_low');
+        END IF;
+      EXCEPTION WHEN OTHERS THEN
+        RAISE NOTICE 'first_credit_low email failed for org %: %', p_org_id, SQLERRM;
+      END;
+
       -- Only alert once per billing cycle
       IF v_last_alert IS NULL OR v_last_alert < COALESCE(v_billing_start, now() - interval '30 days') THEN
         SELECT email INTO v_owner_email

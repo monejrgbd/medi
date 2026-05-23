@@ -27,6 +27,7 @@ export default function AddStaffModal({
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [notificationEmail, setNotificationEmail] = useState("");
   const [locationId, setLocationId] = useState(preselectedLocationId || "");
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -61,6 +62,9 @@ export default function AddStaffModal({
     setLoading(true);
     setError("");
 
+    const trimmedEmail = notificationEmail.trim();
+    const wantsEmail = trimmedEmail.length > 0;
+
     const result = await createStaffUser({
       orgId: org.id,
       fullName,
@@ -68,6 +72,8 @@ export default function AddStaffModal({
       password,
       locationId,
       roles: selectedRoles,
+      notificationEmail: trimmedEmail || null,
+      sendCredentialsEmail: wantsEmail,
     });
 
     if (!result.success) {
@@ -79,6 +85,7 @@ export default function AddStaffModal({
     setFullName("");
     setUsername("");
     setPassword("");
+    setNotificationEmail("");
     setSelectedRoles([]);
     setLocationId(preselectedLocationId || "");
     setLoading(false);
@@ -90,6 +97,7 @@ export default function AddStaffModal({
     setFullName("");
     setUsername("");
     setPassword("");
+    setNotificationEmail("");
     setError("");
     setSelectedRoles([]);
     setLocationId(preselectedLocationId || "");
@@ -171,6 +179,24 @@ export default function AddStaffModal({
 
           <div>
             <label className="block text-sm font-medium text-ink mb-1">
+              Email login details to staff member
+            </label>
+            <input
+              type="email"
+              value={notificationEmail}
+              onChange={(e) => setNotificationEmail(e.target.value)}
+              maxLength={254}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none"
+              placeholder="staff@example.com"
+              autoComplete="off"
+            />
+            <p className="mt-1 text-xs text-ash">
+              Leave blank to share the login yourself.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-ink mb-1">
               Location <span className="text-red-500">*</span>
             </label>
             <select
@@ -193,7 +219,7 @@ export default function AddStaffModal({
               Roles
             </label>
             <div className="flex flex-wrap gap-3">
-              {["doctor", "receptionist", "manager"].map((role) => (
+              {["doctor", "receptionist", "nurse", "manager"].map((role) => (
                 <label key={role} className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"

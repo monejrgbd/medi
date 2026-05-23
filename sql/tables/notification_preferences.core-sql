@@ -1,11 +1,20 @@
 CREATE TABLE IF NOT EXISTS public.notification_preferences (
-  id                   uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  email                text        UNIQUE NOT NULL,
-  email_daily_digest   boolean     DEFAULT true,
-  email_credit_alerts  boolean     DEFAULT true,
-  created_at           timestamptz DEFAULT now() NOT NULL,
-  updated_at           timestamptz DEFAULT now() NOT NULL
+  id                        uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  email                     text        UNIQUE NOT NULL,
+  email_daily_digest        boolean     DEFAULT true,
+  email_credit_alerts       boolean     DEFAULT true,
+  email_onboarding          boolean     DEFAULT true,
+  email_retention_checkins  boolean     DEFAULT true,
+  created_at                timestamptz DEFAULT now() NOT NULL,
+  updated_at                timestamptz DEFAULT now() NOT NULL
 );
+
+-- Idempotent additions for environments where the table already exists
+ALTER TABLE public.notification_preferences
+  ADD COLUMN IF NOT EXISTS email_onboarding boolean DEFAULT true;
+
+ALTER TABLE public.notification_preferences
+  ADD COLUMN IF NOT EXISTS email_retention_checkins boolean DEFAULT true;
 
 ALTER TABLE public.notification_preferences ENABLE ROW LEVEL SECURITY;
 -- No public access — managed by SECURITY DEFINER functions and service_role

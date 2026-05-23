@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS public.onboarding_email_log (
+  org_id    uuid        NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
+  email_key text        NOT NULL,
+  sent_at   timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (org_id, email_key)
+);
+
+ALTER TABLE public.onboarding_email_log ENABLE ROW LEVEL SECURITY;
+-- No public access — managed by SECURITY DEFINER functions only

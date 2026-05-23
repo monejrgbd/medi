@@ -19,7 +19,6 @@ import ReturnRateChart from "@/components/analytics/ReturnRateChart";
 import FollowUpComplianceFunnel from "@/components/analytics/FollowUpComplianceFunnel";
 import ReferralAnalyticsChart from "@/components/analytics/ReferralAnalyticsChart";
 import DiscoverySourceChart from "@/components/analytics/DiscoverySourceChart";
-import PatientSearch from "@/components/dashboard/PatientSearch";
 import { TableSkeleton, CardSkeleton, ChartSkeleton } from "@/components/ui/Skeleton";
 
 type Tab = "employees" | "patients" | "waittimes" | "returns" | "followups" | "referrals";
@@ -175,11 +174,6 @@ export default function ManagerDashboard({
 
   return (
     <div className="mx-auto max-w-7xl">
-      {/* Patient search */}
-      <div className="mb-4">
-        <PatientSearch />
-      </div>
-
       {/* Location selector */}
       {activeTab !== "returns" && activeTab !== "referrals" && (
         <div className="mb-4">

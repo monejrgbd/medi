@@ -19,7 +19,6 @@ import ClaimedPatientCard from "@/components/doctor/ClaimedPatientCard";
 import CompletedVisitCard from "@/components/doctor/CompletedVisitCard";
 import CheckInOutButton from "@/components/doctor/CheckInOutButton";
 import NotificationPermission from "@/components/dashboard/NotificationPermission";
-import RoleSwitchBar from "@/components/dashboard/RoleSwitchBar";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
 import PatientSearch from "@/components/dashboard/PatientSearch";
@@ -419,14 +418,6 @@ export default function DoctorDashboard({
             </p>
           )}
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => router.push("/d/select-role")}
-              className="text-sm text-slate hover:text-ink transition-colors"
-            >
-              Back to role selection
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -461,7 +452,6 @@ export default function DoctorDashboard({
 
   return (
     <div>
-      <RoleSwitchBar currentRole="doctor" />
       <DoctorHeader
         locationName={locationName}
         queueCount={queue.length}

@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS public.pending_emails (
   html_body       text        NOT NULL,
   text_body       text,
   from_name       text        DEFAULT 'Hilt Health',
+  from_email      text,
   reply_to        text,
   attachments     jsonb,
   created_at      timestamptz DEFAULT now() NOT NULL,
@@ -17,6 +18,9 @@ CREATE TABLE IF NOT EXISTS public.pending_emails (
     CHECK (priority BETWEEN 1 AND 3),
   metadata        jsonb
 );
+
+-- Idempotent addition for environments where the table already exists
+ALTER TABLE public.pending_emails ADD COLUMN IF NOT EXISTS from_email text;
 
 CREATE INDEX IF NOT EXISTS idx_pending_emails_queue
   ON public.pending_emails (priority DESC, created_at ASC)

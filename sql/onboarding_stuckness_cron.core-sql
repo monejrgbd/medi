@@ -1,0 +1,15 @@
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Unschedule existing job if present so we can overwrite with new logic
+DO $$
+BEGIN
+  PERFORM cron.unschedule('onboarding_stuckness');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+-- Run daily at 14:00 UTC (9 AM ET, 2 PM London, 10 PM Singapore)
+SELECT cron.schedule(
+  'onboarding_stuckness',
+  '0 14 * * *',
+  $$SELECT private.send_onboarding_stuckness_check()$$
+);

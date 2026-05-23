@@ -1,10 +1,27 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { stripHtml } from "@/lib/utils";
 import { requireAuth } from "@/lib/auth";
 import { PROVIDER_ROLES } from "@/lib/constants";
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function generateStrongPassword(): string {
+  return randomBytes(12).toString("base64url");
+}
+
+function normalizeEmail(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const cleaned = raw.trim().toLowerCase();
+  if (!cleaned) return null;
+  if (cleaned.length > 254 || !EMAIL_REGEX.test(cleaned)) {
+    return null;
+  }
+  return cleaned;
+}
 
 const PAYPAL_API_BASE = process.env.PAYPAL_API_BASE || "https://api-m.paypal.com";
 
@@ -55,11 +72,15 @@ export async function createStaffUser(formData: {
   password: string;
   locationId: string;
   roles: string[];
+  notificationEmail?: string | null;
+  sendCredentialsEmail?: boolean;
 }) {
   await requireAuth();
   const fullName = stripHtml(formData.fullName).slice(0, 100);
   const username = formData.username.toLowerCase().trim().slice(0, 50);
   const password = formData.password;
+  const notificationEmail = normalizeEmail(formData.notificationEmail);
+  const requestedSend = Boolean(formData.sendCredentialsEmail);
 
   if (!fullName || !username || !password) {
     return { success: false, error: "All fields are required" };
@@ -77,6 +98,14 @@ export async function createStaffUser(formData: {
     return { success: false, error: "Password must be at most 72 characters" };
   }
 
+  if (requestedSend && !notificationEmail) {
+    return { success: false, error: "Enter a valid email address to send login details" };
+  }
+
+  if (formData.notificationEmail && formData.notificationEmail.trim() && !notificationEmail) {
+    return { success: false, error: "Enter a valid email address" };
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("create_staff_user", {
@@ -86,6 +115,8 @@ export async function createStaffUser(formData: {
     p_password: password,
     p_location_id: formData.locationId,
     p_roles: formData.roles,
+    p_notification_email: notificationEmail,
+    p_send_credentials_email: requestedSend && Boolean(notificationEmail),
   });
 
   if (error) {
@@ -106,7 +137,12 @@ export async function createStaffUser(formData: {
   }
 
   revalidatePath("/d/owner");
-  return { success: true, staffUserId: data?.staff_user_id };
+  return {
+    success: true,
+    staffUserId: data?.staff_user_id,
+    emailSent: Boolean(data?.email_sent),
+    emailSkipped: Boolean(data?.email_skipped),
+  };
 }
 
 export async function deactivateStaff(staffUserId: string, orgId?: string) {
@@ -160,7 +196,8 @@ export async function deleteStaff(staffUserId: string, orgId?: string) {
 
 export async function resetStaffPassword(
   staffUserId: string,
-  newPassword: string
+  newPassword: string,
+  options: { sendEmail?: boolean; overrideEmail?: string | null } = {}
 ) {
   await requireAuth();
 
@@ -171,17 +208,77 @@ export async function resetStaffPassword(
   if (newPassword.length > 72) {
     return { success: false, error: "Password must be at most 72 characters" };
   }
+
+  const sendEmail = Boolean(options.sendEmail);
+  const overrideEmail = sendEmail ? normalizeEmail(options.overrideEmail) : null;
+
+  if (sendEmail && options.overrideEmail !== undefined && options.overrideEmail !== null && options.overrideEmail.trim() !== "" && !overrideEmail) {
+    return { success: false, error: "Enter a valid email address" };
+  }
+
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("reset_staff_password", {
     p_staff_user_id: staffUserId,
     p_new_password: newPassword,
+    p_send_credentials_email: sendEmail,
+    p_override_email: overrideEmail,
   });
 
   if (error) return { success: false, error: "Failed to reset password" };
   if (data && !data.success) return { success: false, error: data.error };
 
-  return { success: true };
+  return {
+    success: true,
+    emailSent: Boolean(data?.email_sent),
+    emailError: data?.email_error as string | null | undefined,
+  };
+}
+
+export type EmailCredentialsResult =
+  | { success: false; error: string }
+  | {
+      success: true;
+      emailSent: boolean;
+      emailError: string | null;
+      newPassword: string;
+    };
+
+/**
+ * Resets the staff member's password to a strong server-generated value and
+ * emails the new credentials. Returns the new password so the UI can display it
+ * as a fallback in case the email fails. If overrideEmail is provided, it is
+ * persisted to staff_users.notification_email for future resends.
+ */
+export async function emailStaffCredentials(
+  staffUserId: string,
+  overrideEmail?: string | null
+): Promise<EmailCredentialsResult> {
+  await requireAuth();
+
+  const cleanOverride = normalizeEmail(overrideEmail ?? null);
+  if (overrideEmail && overrideEmail.trim() && !cleanOverride) {
+    return { success: false, error: "Enter a valid email address" };
+  }
+
+  const newPassword = generateStrongPassword();
+
+  const result = await resetStaffPassword(staffUserId, newPassword, {
+    sendEmail: true,
+    overrideEmail: cleanOverride,
+  });
+
+  if (!result.success) {
+    return { success: false, error: result.error || "Failed to send credentials" };
+  }
+
+  revalidatePath("/d/owner/staff");
+  return {
+    success: true,
+    emailSent: Boolean(result.emailSent),
+    emailError: result.emailError ?? null,
+    newPassword,
+  };
 }
 
 export async function assignRole(

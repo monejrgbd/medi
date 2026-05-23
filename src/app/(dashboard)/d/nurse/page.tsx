@@ -82,9 +82,6 @@ export default async function NursePage({
               <p className="text-sm text-slate mb-4">
                 The nurse role is not enabled at this location. Ask your administrator to enable it in location settings.
               </p>
-              <a href="/d/select-role" className="text-sm text-hilt-blue hover:underline">
-                Back to role selection
-              </a>
             </div>
           </div>
         );

@@ -4,10 +4,9 @@ import { useState, useEffect } from "react";
 import StatCard from "./StatCard";
 import LocationCard from "./LocationCard";
 import LocationFormModal from "./LocationFormModal";
-import PatientSearch from "./PatientSearch";
 import { fetchDiscoveryStats } from "@/app/(dashboard)/d/_actions/analytics";
 import { getPlanLabel, getTrialDaysLeft } from "@/lib/utils";
-import { MapPin, Users, CreditCard, ClipboardList } from "lucide-react";
+import { MapPin, Users, CreditCard, ClipboardList, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink } from "lucide-react";
 
 interface OrgOverview {
   org: {
@@ -62,10 +61,6 @@ export default function OwnerOverview({
 
   return (
     <div>
-      <div className="mb-6">
-        <PatientSearch />
-      </div>
-
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         <StatCard
           label="Locations"
@@ -155,6 +150,67 @@ export default function OwnerOverview({
           ))}
         </div>
       )}
+
+      <div className="mt-8">
+        <h2 className="text-lg font-semibold text-ink mb-3">Recommended Integrations</h2>
+        <div className="grid gap-4 sm:grid-cols-1">
+          <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-5">
+            <div className="flex items-start gap-4 mb-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-100">
+                <Phone className="h-5 w-5 text-violet-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="text-base font-semibold text-ink">Raven Scheduler</h3>
+                  <span className="text-[10px] font-medium text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full">AI receptionist</span>
+                </div>
+                <p className="text-sm text-slate">
+                  An AI phone line that books appointments, sends reminders, and recovers no shows. Works directly with Hilt queues, so scheduled patients are prioritized automatically.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="flex items-start gap-2">
+                <Phone className="h-3.5 w-3.5 text-violet-600 mt-0.5 shrink-0" />
+                <span className="text-xs text-slate">24/7 call answering</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <MessageSquare className="h-3.5 w-3.5 text-violet-600 mt-0.5 shrink-0" />
+                <span className="text-xs text-slate">SMS automation</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <PhoneForwarded className="h-3.5 w-3.5 text-violet-600 mt-0.5 shrink-0" />
+                <span className="text-xs text-slate">No show recovery</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <ListChecks className="h-3.5 w-3.5 text-violet-600 mt-0.5 shrink-0" />
+                <span className="text-xs text-slate">Waitlist management</span>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <a
+                href="https://ravenscheduler.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 inline-flex items-center gap-1.5"
+              >
+                Connect Raven
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+              <a
+                href="https://ravenscheduler.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-violet-600 hover:text-violet-800 font-medium"
+              >
+                Learn more at ravenscheduler.com
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <LocationFormModal
         open={addModalOpen}

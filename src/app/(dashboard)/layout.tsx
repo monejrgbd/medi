@@ -3,6 +3,7 @@ import { RoleProvider } from "@/contexts/RoleContext";
 import { Toaster } from "sonner";
 import SubscriptionWarningBanner from "@/components/dashboard/SubscriptionWarningBanner";
 import OnboardingBanner from "@/components/dashboard/OnboardingBanner";
+import RoleSwitchBar from "@/components/dashboard/RoleSwitchBar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default async function DashboardLayout({
@@ -30,6 +31,7 @@ export default async function DashboardLayout({
     >
       <SubscriptionWarningBanner />
       <OnboardingBanner />
+      <RoleSwitchBar />
       <ErrorBoundary>
         {children}
       </ErrorBoundary>

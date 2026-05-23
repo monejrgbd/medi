@@ -30,9 +30,18 @@ CREATE TABLE public.organizations (
   gclid                 text,
   gbraid                text,
   wbraid                text,
+  onboarding_completed_at timestamptz,
+  last_silent_dropoff_at  timestamptz,
   created_at            timestamptz DEFAULT now(),
   updated_at            timestamptz NOT NULL DEFAULT now()
 );
+
+-- Idempotent additions for environments where the table already exists
+ALTER TABLE public.organizations
+  ADD COLUMN IF NOT EXISTS onboarding_completed_at timestamptz;
+
+ALTER TABLE public.organizations
+  ADD COLUMN IF NOT EXISTS last_silent_dropoff_at timestamptz;
 
 ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 

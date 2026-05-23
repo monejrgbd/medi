@@ -7,16 +7,15 @@ import { createClient } from "@/lib/supabase/client";
 import { createLocation } from "@/app/(dashboard)/d/_actions/locations";
 import {
   completeOnboarding,
-  setupOnboardingDemo,
-  approveOnboardingVisit,
   updateOrganizationProfile,
 } from "@/app/(dashboard)/d/_actions/onboarding";
 import { ALLOWED_SPECIALTIES } from "@/lib/constants";
 import SearchableSelect from "@/components/ui/SearchableSelect";
-import { Check, Tablet, Star, CreditCard, ArrowRight, Users, CalendarClock, Phone, MessageSquare, PhoneForwarded, ListChecks, ExternalLink, ChevronLeft, ArrowLeftRight } from "lucide-react";
+import { Check, Tablet, Star, CreditCard, ArrowRight, Users, ChevronLeft, ArrowLeftRight, Download, Plus, X } from "lucide-react";
 import StepIndicator from "./StepIndicator";
 import AddStaffStep from "./AddStaffStep";
 import ClinicFeaturesStep from "./ClinicFeaturesStep";
+import StaffCredentialCards, { type AddedStaff } from "./StaffCredentialCards";
 import CountryCombobox from "@/components/CountryCombobox";
 import { COUNTRIES } from "@/lib/countries";
 
@@ -35,6 +34,18 @@ interface ExistingLocation {
   name: string;
 }
 
+// Bump when the wizard step numbering or saved shape changes. Saved state without
+// this version (or with an older one) gets put through STEP_MIGRATION on restore.
+const SCHEMA_VERSION = 2;
+
+const STEP_MIGRATION: Record<number, number> = {
+  0: 0, 1: 1,
+  2: 2,        // old Raven -> new Configure
+  3: 2,        // old Configure -> new Configure
+  4: 3,        // old Staff -> new Staff
+  5: 4, 6: 4, 7: 4,  // old Transfer / Try It / Done -> new Done
+};
+
 export default function OnboardingWizard({
   org,
   existingLocations,
@@ -48,15 +59,9 @@ export default function OnboardingWizard({
   const storageKey = `hilt_onboarding_${org.id}`;
   const [hydrated, setHydrated] = useState(false);
 
-  const [step, setStep] = useState(existingLocations.length > 0 ? 6 : 0);
+  const [step, setStep] = useState(existingLocations.length > 0 ? 4 : 0);
 
-  // Step 2 state (Raven Scheduler)
-  const [ravenApiKey, setRavenApiKey] = useState("");
-  const [savingRaven, setSavingRaven] = useState(false);
-  const [showRavenInput, setShowRavenInput] = useState(false);
-  const [ravenError, setRavenError] = useState("");
-
-  // Step 3 state (Configure Clinic)
+  // Step 2 state (Configure Clinic)
   const [nurseEnabled, setNurseEnabled] = useState(false);
 
   // Step 0 state (Profile)
@@ -64,13 +69,17 @@ export default function OnboardingWizard({
   const [profileOrgName, setProfileOrgName] = useState(org.name === "My Clinic" ? "" : org.name);
   const [profileCountry, setProfileCountry] = useState(org.country ?? detectedCountry ?? "");
   const [premiumCode, setPremiumCode] = useState("");
+  // Tracks the last code we already warned the user about. If they click Continue
+  // again with the same invalid code in the field, we skip applying it instead of
+  // blocking them, so a typo or expired link does not stall onboarding.
+  const [warnedCode, setWarnedCode] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileError, setProfileError] = useState("");
 
   // Step 1 state
   const [locationName, setLocationName] = useState("");
   const [specialty, setSpecialty] = useState("");
-  const [presetRoomsText, setPresetRoomsText] = useState("");
+  const [presetRooms, setPresetRooms] = useState<string[]>([]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
 
@@ -82,19 +91,41 @@ export default function OnboardingWizard({
     existingLocations[0]?.name ?? ""
   );
 
-  // Restore wizard state from localStorage on mount
+  // Step 3 (Staff) — lifted state so Done can render the credential cards
+  const [addedStaff, setAddedStaff] = useState<AddedStaff[]>([]);
+
+  // Step 4 (Done) — checkin mode is fetched from the location so we can tailor the
+  // QR hint. Only "approve_to_start" requires a receptionist to be logged in for
+  // QR scans to land, the other modes accept scans anytime.
+  const [doneCheckinMode, setDoneCheckinMode] = useState<string>("approve_to_start");
+
+  // Step 4 (Done) — staff list fetched from DB as a fallback for refreshed sessions
+  // where addedStaff is empty in memory. Passwords are not in the DB so this view
+  // is read only (name + login + roles), with a hint to reset from dashboard.
+  const [dbStaffList, setDbStaffList] = useState<{ id: string; full_name: string; username: string; roles: { role: string; location_id: string }[] }[]>([]);
+  const [staffListLoading, setStaffListLoading] = useState(false);
+
+  // Done screen QR canvas
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Restore wizard state from localStorage on mount. Old format (no version) is
+  // run through STEP_MIGRATION. New format (version === SCHEMA_VERSION) is trusted as is.
+  // addedStaff is intentionally NOT persisted (plaintext passwords on disk is unsafe).
+  // After a refresh the Done screen falls back to the DB staff list (no passwords).
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const s = JSON.parse(saved);
-        // Only restore if the saved location still exists on the server
         const locationValid = s.locationId && existingLocations.some((l) => l.id === s.locationId);
         if (locationValid) {
-          if (typeof s.step === "number") setStep(s.step);
+          if (typeof s.step === "number") {
+            const migrated = s.version === SCHEMA_VERSION ? s.step : (STEP_MIGRATION[s.step] ?? 0);
+            const clamped = Math.max(0, Math.min(4, migrated));
+            setStep(clamped);
+          }
           setLocationId(s.locationId);
           if (s.locationName) setCreatedLocationName(s.locationName);
-          if (s.ravenApiKey) setRavenApiKey(s.ravenApiKey);
         }
       }
     } catch {}
@@ -107,92 +138,59 @@ export default function OnboardingWizard({
     try {
       localStorage.setItem(
         storageKey,
-        JSON.stringify({ step, locationId, locationName: createdLocationName, ravenApiKey })
+        JSON.stringify({ version: SCHEMA_VERSION, step, locationId, locationName: createdLocationName })
       );
     } catch {}
-  }, [hydrated, step, locationId, createdLocationName, ravenApiKey, storageKey]);
+  }, [hydrated, step, locationId, createdLocationName, storageKey]);
 
-  // Step 6 (Try It) state
-  const [demoReady, setDemoReady] = useState(false);
-  const [demoError, setDemoError] = useState("");
-  type TryItPhase = "ready" | "detected" | "success";
-  const [tryPhase, setTryPhase] = useState<TryItPhase>("ready");
-  const [detectedVisit, setDetectedVisit] = useState<{
-    id: string;
-    patientName: string;
-  } | null>(null);
-  const [approving, setApproving] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Set up demo (create owner staff account + check in as receptionist)
+  // QR rendering on Done screen. `hydrated` is in deps so the effect re-fires
+  // when the early-return spinner flips off and the canvas finally mounts.
+  // Without that, a returning user lands on step 4 with the canvas absent
+  // during the first effect run, and nothing ever draws to it.
   useEffect(() => {
-    if (step !== 6 || !locationId || demoReady) return;
-
-    let cancelled = false;
-    setupOnboardingDemo(locationId).then((result) => {
-      if (cancelled) return;
-      if (result.success) {
-        setDemoReady(true);
-      } else {
-        setDemoError(result.error || "Failed to set up demo");
-      }
+    if (!hydrated) return;
+    if (step !== 4 || !locationId || !canvasRef.current) return;
+    QRCode.toCanvas(
+      canvasRef.current,
+      `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
+      { width: 220, margin: 2, color: { dark: "#111827", light: "#ffffff" } }
+    ).catch((err) => {
+      console.error("QR render failed", err);
     });
+  }, [hydrated, step, locationId]);
 
-    return () => { cancelled = true; };
-  }, [step, locationId, demoReady]);
-
-  // QR rendering
+  // Clear the Step 0 error message whenever we leave Step 0, so it does not
+  // persist if the user navigates back via Step 1's Back button.
   useEffect(() => {
-    if (step === 6 && locationId && demoReady && canvasRef.current) {
-      QRCode.toCanvas(
-        canvasRef.current,
-        `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`,
-        { width: 200, margin: 2, color: { dark: "#111827", light: "#ffffff" } }
-      );
-    }
-  }, [step, locationId, demoReady, tryPhase]);
+    if (step !== 0) setProfileError("");
+  }, [step]);
 
-  // Realtime subscription — starts immediately when step 6 is ready
+  // Load the location's checkin_mode when entering Done so the QR hint reflects
+  // the actual setting (a returning user may not have run through Configure).
   useEffect(() => {
-    if (step !== 6 || !locationId || !demoReady || tryPhase !== "ready") return;
-
+    if (step !== 4 || !locationId) return;
     const supabase = createClient();
-    const channel = supabase
-      .channel(`onboarding:${locationId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "visits",
-          filter: `location_id=eq.${locationId}`,
-        },
-        (payload) => {
-          const visit = payload.new as Record<string, unknown>;
-          if (visit.status === "pending_approval") {
-            supabase
-              .from("patients")
-              .select("first_name, last_name")
-              .eq("id", visit.patient_id as string)
-              .single()
-              .then(({ data: pt }) => {
-                setDetectedVisit({
-                  id: visit.id as string,
-                  patientName: pt
-                    ? `${pt.first_name} ${pt.last_name}`
-                    : "Test Patient",
-                });
-                setTryPhase("detected");
-              });
-          }
-        }
-      )
-      .subscribe();
+    supabase.rpc("get_location_detail", { p_location_id: locationId }).then(({ data }) => {
+      const mode = data?.location?.checkin_mode;
+      if (mode) setDoneCheckinMode(mode);
+    });
+  }, [step, locationId]);
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [step, locationId, demoReady, tryPhase]);
+  // Fetch the staff list from the DB when entering Done. Used as the source of
+  // truth if addedStaff is empty (refresh wipes the in memory credentials).
+  useEffect(() => {
+    if (step !== 4 || !locationId) return;
+    setStaffListLoading(true);
+    const supabase = createClient();
+    supabase
+      .rpc("get_staff_list", { p_org_id: org.id, p_location_id: locationId })
+      .then(({ data }) => {
+        if (data && Array.isArray(data)) {
+          setDbStaffList(data as typeof dbStaffList);
+        }
+        setStaffListLoading(false);
+      });
+  }, [step, locationId, org.id]);
 
   const handleCreateLocation = useCallback(async () => {
     if (!locationName.trim()) {
@@ -201,44 +199,32 @@ export default function OnboardingWizard({
     }
     setCreating(true);
     setCreateError("");
-    const presetRooms = presetRoomsText
-      .split(/\r?\n/)
+    // Trim, drop empties, drop overlong names, dedupe (case insensitive).
+    const seen = new Set<string>();
+    const allRooms = presetRooms
       .map((r) => r.trim())
-      .filter((r) => r.length > 0 && r.length <= 60);
+      .filter((r) => {
+        if (!r || r.length > 60) return false;
+        const key = r.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
     const result = await createLocation({
       orgId: org.id,
       name: locationName.trim(),
       specialty: specialty || undefined,
-      presetRooms,
+      presetRooms: allRooms,
     });
     setCreating(false);
     if (result.success && result.locationId) {
       setLocationId(result.locationId);
       setCreatedLocationName(locationName.trim());
-      setStep(2); // Raven step
+      setStep(2);
     } else {
       setCreateError(result.error || "Failed to create location");
     }
-  }, [locationName, specialty, presetRoomsText, org.id]);
-
-  const handleSaveRaven = useCallback(async () => {
-    if (!ravenApiKey.trim()) return;
-    setSavingRaven(true);
-    setRavenError("");
-    // TODO: validate against Raven API when endpoint is available
-    setSavingRaven(false);
-    setRavenError("This is not a valid Raven Scheduler API key. You can get your key from the Raven dashboard at ravenscheduler.com.");
-  }, [ravenApiKey]);
-
-  const handleApprove = useCallback(async () => {
-    if (!detectedVisit) return;
-    setApproving(true);
-    const result = await approveOnboardingVisit(detectedVisit.id);
-    setApproving(false);
-    if (result.success) {
-      setTryPhase("success");
-    }
-  }, [detectedVisit]);
+  }, [locationName, specialty, presetRooms, org.id]);
 
   const clearWizardState = useCallback(() => {
     try { localStorage.removeItem(storageKey); } catch {}
@@ -250,13 +236,15 @@ export default function OnboardingWizard({
     router.push("/d/owner");
   }, [router, clearWizardState]);
 
-  const daysRemaining = Math.max(
-    0,
-    Math.ceil(
-      (new Date(org.trial_end_date).getTime() - Date.now()) / 86400000
-    )
-  );
-  const creditsRemaining = Math.max(0, org.credits_total - org.credits_used);
+  const handleDownloadQR = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const link = document.createElement("a");
+    link.download = `${createdLocationName || "location"}-checkin-qr.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+  }, [createdLocationName]);
+
   const checkinUrl = locationId
     ? `${process.env.NEXT_PUBLIC_APP_URL || "https://hilthealth.com"}/checkin/${locationId}`
     : "";
@@ -271,7 +259,7 @@ export default function OnboardingWizard({
 
   return (
     <div>
-      <StepIndicator currentStep={step} />
+      <StepIndicator currentStep={step} onStepClick={(s) => setStep(s)} />
 
       {/* Step 0: Profile */}
       {step === 0 && (
@@ -353,16 +341,27 @@ export default function OnboardingWizard({
                 return;
               }
 
-              // Apply premium code if provided
-              if (premiumCode.trim()) {
+              // Apply premium code if provided. If the user already saw a warning
+              // for this exact code, skip it and let them through (onboarding
+              // proceeds with no code applied).
+              const trimmedPremium = premiumCode.trim();
+              if (trimmedPremium && warnedCode !== trimmedPremium) {
                 const { createClient } = await import("@/lib/supabase/client");
                 const supabase = createClient();
-                const { data: codeResult } = await supabase.rpc("apply_premium_code", {
-                  p_code: premiumCode.trim(),
+                const { data: codeResult, error: rpcError } = await supabase.rpc("apply_premium_code", {
+                  p_code: trimmedPremium,
                 });
+                if (rpcError) {
+                  setProfileSaving(false);
+                  setWarnedCode(trimmedPremium);
+                  setProfileError("Network error while checking your code. Click Continue again to proceed without it, or try again.");
+                  return;
+                }
                 if (codeResult && !codeResult.success) {
                   setProfileSaving(false);
-                  setProfileError(codeResult.error || "Invalid or already used code");
+                  setWarnedCode(trimmedPremium);
+                  const reason = codeResult.error || "That code is not valid";
+                  setProfileError(`${reason}. Click Continue again to proceed without it, or edit the code and try again.`);
                   return;
                 }
               }
@@ -458,14 +457,50 @@ export default function OnboardingWizard({
                     Exam rooms{" "}
                     <span className="font-normal text-ash">(optional)</span>
                   </label>
-                  <textarea
-                    value={presetRoomsText}
-                    onChange={(e) => setPresetRoomsText(e.target.value)}
-                    rows={3}
-                    placeholder={"Room 1\nRoom 2\nExam A"}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
-                  />
-                  <p className="mt-1 text-xs text-ash">One room per line. Doctors and nurses pick from this list at check in. Leave blank to let them type their room.</p>
+
+                  {presetRooms.length > 0 && (
+                    <div className="space-y-2 mb-2">
+                      {presetRooms.map((room, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={room}
+                            onChange={(e) =>
+                              setPresetRooms((prev) =>
+                                prev.map((r, idx) => (idx === i ? e.target.value : r))
+                              )
+                            }
+                            maxLength={60}
+                            placeholder={`Room ${i + 1}`}
+                            className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
+                          />
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPresetRooms((prev) => prev.filter((_, idx) => idx !== i))
+                            }
+                            className="rounded-md p-1.5 text-slate hover:bg-red-50 hover:text-red-600 transition-colors"
+                            aria-label={`Remove room ${i + 1}`}
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => setPresetRooms((prev) => [...prev, ""])}
+                    className="inline-flex items-center gap-1 rounded-md border border-dashed border-gray-300 px-3 py-1.5 text-sm font-medium text-slate hover:border-hilt-blue hover:text-hilt-blue transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add room
+                  </button>
+
+                  <p className="mt-2 text-xs text-ash">
+                    Doctors and nurses pick from this list when they check in. Leave blank to let them type their own room each shift.
+                  </p>
                 </div>
 
                 {createError && (
@@ -500,381 +535,200 @@ export default function OnboardingWizard({
         </div>
       )}
 
-      {/* Step 2: Raven Scheduler */}
+      {/* Step 2: Configure Clinic */}
       {step === 2 && locationId && (
-        <div className="max-w-lg mx-auto">
-          <div className="text-center mb-6">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-violet-50 border border-violet-200 px-3 py-1">
-              <Phone className="h-3.5 w-3.5 text-violet-600" />
-              <span className="text-xs font-medium text-violet-700">Recommended integration</span>
-            </div>
-            <h2 className="text-xl font-bold text-ink mb-1">
-              Add an AI Receptionist
-            </h2>
-            <p className="text-sm text-slate">
-              Raven Scheduler gives {createdLocationName} an AI phone line that books appointments, sends reminders, and recovers no shows, all without staff lifting a finger.
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-5 mb-5">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-                  <Phone className="h-3.5 w-3.5 text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-ink">24/7 call answering</p>
-                  <p className="text-xs text-slate mt-0.5">
-                    AI answers every call and books appointments in natural conversation.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-                  <MessageSquare className="h-3.5 w-3.5 text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-ink">SMS automation</p>
-                  <p className="text-xs text-slate mt-0.5">
-                    Confirmations, reminders, and two way replies. All automatic.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-                  <PhoneForwarded className="h-3.5 w-3.5 text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-ink">No show recovery</p>
-                  <p className="text-xs text-slate mt-0.5">
-                    AI calls back missed patients and reschedules them automatically.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100">
-                  <ListChecks className="h-3.5 w-3.5 text-violet-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-ink">Waitlist management</p>
-                  <p className="text-xs text-slate mt-0.5">
-                    Cancellations get filled from the waitlist without any manual work.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 mb-5 flex items-start gap-3">
-            <CalendarClock className="h-5 w-5 text-hilt-blue mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-ink">Works directly with Hilt queues</p>
-              <p className="text-xs text-slate mt-0.5">
-                When connected, Hilt knows who is coming before they walk in. Scheduled patients are prioritized in your queue automatically and the AI pre screen starts with full appointment context.
-              </p>
-            </div>
-          </div>
-
-          {showRavenInput ? (
-            <div className="rounded-xl border border-violet-200 bg-white p-4 mb-4">
-              <label className="mb-1.5 block text-sm font-medium text-ink">
-                Raven Scheduler API Key
-              </label>
-              <input
-                type="text"
-                value={ravenApiKey}
-                onChange={(e) => { setRavenApiKey(e.target.value); setRavenError(""); }}
-                placeholder="Paste your API key from Raven dashboard"
-                className={`w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-1 ${
-                  ravenError
-                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
-                    : "border-gray-200 focus:border-violet-500 focus:ring-violet-500"
-                } mb-1.5`}
-                autoFocus
-              />
-              {ravenError && (
-                <p className="text-xs text-red-600 mb-2">{ravenError}</p>
-              )}
-              <button
-                onClick={handleSaveRaven}
-                disabled={savingRaven || !ravenApiKey.trim()}
-                className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50 mt-1.5"
-              >
-                {savingRaven ? "Validating..." : "Connect and Continue"}
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setShowRavenInput(true)}
-              className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-violet-700 mb-4"
-            >
-              I have a Raven API Key
-            </button>
-          )}
-
-          <button
-            onClick={() => setStep(3)}
-            disabled={savingRaven}
-            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors mb-1.5"
-          >
-            Continue without Raven
-          </button>
-          <p className="text-xs text-ash text-center mb-3">
-            You can connect Raven anytime from location settings.
-          </p>
-
-          <div className="flex items-center justify-center gap-1.5 mb-3">
-            <a
-              href="https://ravenscheduler.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-violet-600 hover:text-violet-800 font-medium inline-flex items-center gap-1"
-            >
-              Learn more at ravenscheduler.com
-              <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
-
-          <button
-            onClick={() => setStep(1)}
-            disabled={savingRaven}
-            className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-        </div>
-      )}
-
-      {/* Step 3: Configure Clinic */}
-      {step === 3 && locationId && (
         <ClinicFeaturesStep
           locationId={locationId}
-          hasRaven={!!ravenApiKey.trim()}
-          onBack={() => setStep(2)}
+          hasRaven={false}
+          onBack={() => setStep(1)}
           onComplete={(features) => {
             setNurseEnabled(features.nurse);
-            setStep(4);
+            setStep(3);
           }}
         />
       )}
 
-      {/* Step 4: Add Staff */}
-      {step === 4 && locationId && (
+      {/* Step 3: Add Staff */}
+      {step === 3 && locationId && (
         <AddStaffStep
           orgId={org.id}
           orgSlug={org.slug}
           locationId={locationId}
           locationName={createdLocationName}
           nurseEnabled={nurseEnabled}
-          onContinue={() => setStep(5)}
-          onBack={() => setStep(3)}
+          addedStaff={addedStaff}
+          onStaffAdded={(s) => setAddedStaff((prev) => [...prev, s])}
+          onContinue={() => setStep(4)}
+          onBack={() => setStep(2)}
         />
       )}
 
-      {/* Step 5: Data Transfer */}
-      {step === 5 && (
+      {/* Step 4: Done */}
+      {step === 4 && (
         <div className="max-w-lg mx-auto">
           <div className="text-center mb-6">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1">
-              <ArrowLeftRight className="h-3.5 w-3.5 text-emerald-600" />
-              <span className="text-xs font-medium text-emerald-700">Free with every plan</span>
+            <div className="mb-3 flex justify-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-ink mb-1">
-              Data Transfer
+            <h2 className="text-2xl font-bold text-ink mb-2">
+              You Are All Set!
             </h2>
-            <p className="text-sm text-slate">
-              Switching from another system? We handle the entire migration for you, at no extra cost.
-            </p>
           </div>
 
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 mb-5">
-            <p className="text-sm text-ink mb-3 font-medium">
-              Our team will transfer all your data from your current system, including:
-            </p>
-            <ul className="space-y-2.5">
-              <li className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                  <Check className="h-3 w-3 text-emerald-600" />
-                </div>
-                <span className="text-sm text-slate">Patient records, demographics, and contact information</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                  <Check className="h-3 w-3 text-emerald-600" />
-                </div>
-                <span className="text-sm text-slate">Visit history, notes, and documents</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                  <Check className="h-3 w-3 text-emerald-600" />
-                </div>
-                <span className="text-sm text-slate">Staff accounts and role assignments</span>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
-                  <Check className="h-3 w-3 text-emerald-600" />
-                </div>
-                <span className="text-sm text-slate">Any other data from your current EMR or intake system</span>
-              </li>
-            </ul>
-          </div>
-
-          <a
-            href="https://cal.com/102937474/hilt-health-meeting"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 text-center mb-3 transition-colors"
-          >
-            Book a Meeting
-          </a>
-
-          <button
-            onClick={() => setStep(6)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-ink hover:bg-gray-50 transition-colors mb-1.5"
-          >
-            Continue without transfer
-          </button>
-
-          <button
-            onClick={() => setStep(4)}
-            className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2 mt-1"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-        </div>
-      )}
-
-      {/* Step 6: Try the Check-in */}
-      {step === 6 && (
-        <div className="max-w-md mx-auto text-center">
-          <h2 className="text-xl font-bold text-ink mb-1">
-            Try the Check in
-          </h2>
-          <p className="text-sm text-slate mb-6">
-            See how patients will check in at{" "}
-            <span className="font-medium">{createdLocationName}</span>.
-          </p>
-
-          {!demoReady && !demoError && (
-            <div className="flex items-center justify-center gap-2 py-12">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-hilt-blue" />
-              <span className="text-sm text-slate">Setting up...</span>
+          {/* Staff section: prefer in memory addedStaff (with passwords),
+              fall back to DB list (no passwords) for refreshed sessions. */}
+          {addedStaff.length > 0 ? (
+            <div className="mb-6">
+              <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 mb-3">
+                <p className="text-sm font-semibold text-ink">Your staff can log in now</p>
+                <p className="text-xs text-slate mt-0.5">
+                  Each person below can sign in with their email and password. Copy the credentials or email them now, they will not be shown again after you leave this screen.
+                </p>
+              </div>
+              <StaffCredentialCards addedStaff={addedStaff} orgSlug={org.slug} heading="Staff you created" />
             </div>
-          )}
-
-          {demoError && (
-            <div className="rounded-lg bg-red-50 border border-red-200 p-4 mb-4">
-              <p className="text-sm text-red-700">{demoError}</p>
+          ) : staffListLoading ? (
+            <div className="mb-6 flex items-center justify-center gap-2 rounded-lg border border-gray-100 bg-gray-50 p-4">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-hilt-blue" />
+              <span className="text-xs text-slate">Loading staff...</span>
             </div>
-          )}
+          ) : (() => {
+            const staffAtLocation = dbStaffList.filter((s) =>
+              s.roles.some((r) => r.location_id === locationId)
+            );
+            if (staffAtLocation.length === 0) {
+              return (
+                <div className="mb-6 rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-sm font-semibold text-ink">No staff added yet</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    You can add doctors, nurses, and receptionists anytime from the Staff page in your dashboard.
+                  </p>
+                </div>
+              );
+            }
+            return (
+              <div className="mb-6">
+                <div className="rounded-lg border border-amber-100 bg-amber-50 p-3 mb-3">
+                  <p className="text-sm font-semibold text-ink">Staff can now log in</p>
+                  <p className="text-xs text-slate mt-0.5">
+                    Passwords were shown once during setup. If you no longer have them, reset each person from the Staff page in your dashboard.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {staffAtLocation.map((staff) => (
+                    <div
+                      key={staff.id}
+                      className="rounded-xl border border-gray-200 bg-white p-3 flex items-center gap-3"
+                    >
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                        <Check className="h-3.5 w-3.5 text-gray-500" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-ink truncate">{staff.full_name}</p>
+                        <p className="text-xs text-slate font-mono">{staff.username}@{org.slug}.staff.hilt</p>
+                      </div>
+                      <div className="flex flex-wrap gap-1 shrink-0">
+                        {staff.roles
+                          .filter((r) => r.location_id === locationId)
+                          .map((r) => (
+                            <span
+                              key={r.role}
+                              className="rounded-full bg-gray-50 px-2 py-0.5 text-[10px] font-medium text-slate ring-1 ring-gray-200 capitalize"
+                            >
+                              {r.role}
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
-          {demoReady && tryPhase === "ready" && (
-            <>
-              <div className="flex justify-center mb-4">
+          {/* Location QR code */}
+          {locationId && (
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5">
+              <h3 className="text-base font-semibold text-ink mb-1">
+                Your check in QR code
+              </h3>
+              <p className="text-sm text-slate mb-4">
+                Print this and place it at your front desk.
+                {doneCheckinMode === "approve_to_start" && " A receptionist must be checked in for QR check ins to work."}
+                {doneCheckinMode === "approve_on_arrival" && " Patients can scan and chat anytime, a receptionist approves them into the queue when they arrive."}
+                {doneCheckinMode === "self_service_on_arrival" && " Patients can scan and join the queue on their own, no receptionist action needed."}
+              </p>
+              <div className="flex justify-center mb-3">
                 <canvas ref={canvasRef} className="rounded-lg" />
               </div>
-              <p className="text-xs text-slate mb-4 break-all">{checkinUrl}</p>
+              <p className="text-xs text-slate text-center mb-4 break-all">{checkinUrl}</p>
+              <button
+                onClick={handleDownloadQR}
+                className="w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark flex items-center justify-center gap-2 mb-2"
+              >
+                <Download className="h-4 w-4" />
+                Download QR code
+              </button>
+              <p className="text-center text-xs text-slate py-1.5">
+                Need a branded QR with logo or a printable PDF?{" "}
+                <a href="/d/owner/kiosk" className="text-hilt-blue hover:text-hilt-blue-dark underline">
+                  Open QR Manager
+                </a>
+              </p>
+            </div>
+          )}
+
+          {/* Data Transfer block */}
+          <div className="mb-6">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5">
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1">
+                <ArrowLeftRight className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="text-xs font-medium text-emerald-700">Free with every plan</span>
+              </div>
+              <h3 className="text-base font-semibold text-ink mb-1">Switching from another system?</h3>
+              <p className="text-sm text-slate mb-4">
+                Our team will transfer all your data from your current system, at no extra cost.
+              </p>
+              <ul className="space-y-2 mb-4">
+                <li className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                    <Check className="h-3 w-3 text-emerald-600" />
+                  </div>
+                  <span className="text-sm text-slate">Patient records, demographics, and contact information</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                    <Check className="h-3 w-3 text-emerald-600" />
+                  </div>
+                  <span className="text-sm text-slate">Visit history, notes, and documents</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                    <Check className="h-3 w-3 text-emerald-600" />
+                  </div>
+                  <span className="text-sm text-slate">Staff accounts and role assignments</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                    <Check className="h-3 w-3 text-emerald-600" />
+                  </div>
+                  <span className="text-sm text-slate">Any other data from your current EMR or intake system</span>
+                </li>
+              </ul>
               <a
-                href={checkinUrl}
+                href="https://cal.com/102937474/hilt-health-meeting"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full rounded-lg bg-hilt-blue px-4 py-2.5 text-sm font-semibold text-white hover:bg-hilt-blue-dark text-center mb-4"
+                className="block w-full rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 text-center transition-colors"
               >
-                Open Check in Page
+                Book a Meeting
               </a>
-              <div className="flex items-center justify-center gap-2 mb-3">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-hilt-blue opacity-75" />
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-hilt-blue" />
-                </span>
-                <span className="text-sm text-slate">
-                  Waiting for a check in...
-                </span>
-              </div>
-              <p className="text-xs text-ash mb-2">
-                Open the link above in another tab, fill out the form as a test patient, and submit.
-              </p>
-              <p className="text-xs text-ash">
-                This demo uses 1.5 credits from your trial ({creditsRemaining} remaining).
-              </p>
-            </>
-          )}
-
-          {demoReady && tryPhase === "detected" && detectedVisit && (
-            <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6 mb-4">
-              <p className="text-sm font-medium text-green-800 mb-1">
-                New check in detected!
-              </p>
-              <p className="text-lg font-semibold text-ink mb-4">
-                {detectedVisit.patientName}
-              </p>
-              <button
-                onClick={handleApprove}
-                disabled={approving}
-                className="rounded-lg bg-green-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                {approving ? "Approving..." : "Approve Check in"}
-              </button>
-            </div>
-          )}
-
-          {demoReady && tryPhase === "success" && (
-            <div className="rounded-xl border-2 border-green-200 bg-green-50 p-6 mb-4">
-              <div className="mb-2 flex justify-center"><Check className="h-8 w-8 text-green-600" /></div>
-              <p className="text-sm font-medium text-green-800 mb-1">
-                Your test patient is now talking with the AI!
-              </p>
-              <p className="text-xs text-green-700">
-                They will answer symptom questions, and the doctor will get a structured summary.
-              </p>
-              <p className="text-xs text-green-700 mt-2">
-                This shows the patient side. To see the full patient to doctor flow, try the{" "}
-                <a href="/demo" target="_blank" rel="noopener noreferrer" className="underline font-medium hover:text-green-900">
-                  live demo on the homepage
-                </a>.
-              </p>
-            </div>
-          )}
-
-          <div className="mt-6 space-y-3">
-            {demoReady && (
-              <button
-                onClick={() => setStep(7)}
-                className={`w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white ${
-                  tryPhase === "success"
-                    ? "bg-hilt-blue hover:bg-hilt-blue-dark"
-                    : "bg-gray-300 hover:bg-gray-400"
-                }`}
-              >
-                {tryPhase === "success" ? "Continue" : "Skip this step"}
-              </button>
-            )}
-
-            <button
-              onClick={() => setStep(5)}
-              className="w-full flex items-center justify-center gap-1 text-sm text-slate hover:text-ink transition-colors py-2"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Back
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Step 7: All Set */}
-      {step === 7 && (
-        <div className="max-w-lg mx-auto text-center">
-          <div className="mb-3 flex justify-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-              <Check className="h-6 w-6 text-green-600" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-ink mb-2">
-            You Are All Set!
-          </h2>
 
+          {/* Go to Dashboard */}
           <button
             onClick={handleFinish}
             className="w-full rounded-lg bg-hilt-blue px-6 py-3 text-sm font-semibold text-white hover:bg-hilt-blue-dark flex items-center justify-center gap-2 mb-8"
@@ -883,7 +737,7 @@ export default function OnboardingWizard({
             <ArrowRight className="h-4 w-4" />
           </button>
 
-          <p className="text-xs text-ash mb-4">
+          <p className="text-xs text-ash mb-4 text-center">
             Or jump to a specific section:
           </p>
 
@@ -938,7 +792,7 @@ export default function OnboardingWizard({
             </button>
           </div>
 
-          <p className="text-xs text-ash">
+          <p className="text-xs text-ash text-center">
             You can always find these in your dashboard sidebar.
           </p>
         </div>

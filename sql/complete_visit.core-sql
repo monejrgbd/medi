@@ -166,6 +166,32 @@ BEGIN
     NULL;
   END;
 
+  -- Onboarding milestone emails: first_completion at visit #1, graduation at visit #10
+  -- Race-safe via >= comparison + log NOT EXISTS check (equality would lose under concurrent commits)
+  BEGIN
+    DECLARE
+      v_completed_count integer;
+    BEGIN
+      SELECT COUNT(*) INTO v_completed_count
+      FROM public.visits
+      WHERE org_id = v_visit.org_id AND status = 'completed';
+
+      IF v_completed_count >= 10 AND NOT EXISTS (
+        SELECT 1 FROM public.onboarding_email_log
+        WHERE org_id = v_visit.org_id AND email_key = 'graduation'
+      ) THEN
+        PERFORM private.send_onboarding_email(v_visit.org_id, 'graduation');
+      ELSIF v_completed_count >= 1 AND NOT EXISTS (
+        SELECT 1 FROM public.onboarding_email_log
+        WHERE org_id = v_visit.org_id AND email_key = 'first_completion'
+      ) THEN
+        PERFORM private.send_onboarding_email(v_visit.org_id, 'first_completion');
+      END IF;
+    END;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Onboarding milestone email failed for visit %: %', v_visit.id, SQLERRM;
+  END;
+
   RETURN jsonb_build_object('success', true);
 END;
 $$;

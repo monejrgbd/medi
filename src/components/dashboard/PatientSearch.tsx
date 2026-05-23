@@ -78,7 +78,7 @@ export default function PatientSearch() {
   return (
     <>
       <div ref={containerRef} className="relative">
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-end">
           <div className="relative flex-1">
             <input
               type="text"
@@ -118,12 +118,18 @@ export default function PatientSearch() {
               </button>
             )}
           </div>
-          <DateInput
-            value={birthday}
-            onChange={(e) => setBirthday(e.target.value)}
-            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
-            aria-label="Filter by birthday"
-          />
+          <div>
+            <label htmlFor="patient-search-birthday" className="block text-xs font-medium text-slate mb-1">
+              Birthday
+            </label>
+            <DateInput
+              id="patient-search-birthday"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-hilt-blue focus:outline-none"
+              aria-label="Filter by birthday"
+            />
+          </div>
         </div>
 
         {/* Results dropdown */}

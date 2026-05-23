@@ -26,12 +26,6 @@
   text-align: left;
   min-width: 100%;
 }
-.date-input[data-has-value="false"]::before {
-  content: attr(placeholder);
-  color: var(--color-ash, #9ca3af);
-  position: absolute;
-  pointer-events: none;
-}
 
 @keyframes logo-scroll {
   from { transform: translateX(0); }

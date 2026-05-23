@@ -103,9 +103,10 @@ BEGIN
         v_attributed_partner_id := v_aff_code.partner_id;
         v_attributed_code_type := 'affiliate';
         v_attributed_aff_code_id := v_aff_code.id;
-      ELSE
-        RETURN jsonb_build_object('success', false, 'error', 'Invalid or already used approval code');
       END IF;
+      -- If neither table matched, fall through: org gets standard_trial defaults,
+      -- no partner attribution. Keeps ?ref= URLs from hard failing signup when
+      -- the code has expired or never existed.
     END IF;
   END IF;
 
@@ -245,6 +246,13 @@ BEGIN
       );
     END IF;
   END IF;
+
+  -- Onboarding welcome email (failures never abort signup)
+  BEGIN
+    PERFORM private.send_onboarding_email(v_org_id, 'welcome');
+  EXCEPTION WHEN OTHERS THEN
+    RAISE NOTICE 'Welcome email failed for org %: %', v_org_id, SQLERRM;
+  END;
 
   RETURN jsonb_build_object(
     'success', true,

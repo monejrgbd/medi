@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   MapPin,
   Users,
+  UserSearch,
   ClipboardList,
   Activity,
   BarChart3,
@@ -16,7 +17,6 @@ import {
   Tablet,
   Settings,
   Wrench,
-  ArrowLeftRight,
   LogOut,
   FileText,
 } from "lucide-react";
@@ -25,10 +25,11 @@ const NAV_ITEMS: { href: string; label: string; icon: ReactNode }[] = [
   { href: "/d/owner", label: "Overview", icon: <LayoutDashboard className="h-4 w-4" /> },
   { href: "/d/owner/locations", label: "Locations", icon: <MapPin className="h-4 w-4" /> },
   { href: "/d/owner/staff", label: "Staff", icon: <Users className="h-4 w-4" /> },
+  { href: "/d/patients", label: "Patients", icon: <UserSearch className="h-4 w-4" /> },
   { href: "/d/owner/audit", label: "Audit Trail", icon: <ClipboardList className="h-4 w-4" /> },
   { href: "/d/vitals-config", label: "Vitals", icon: <Activity className="h-4 w-4" /> },
   { href: "/d/manager", label: "Analytics", icon: <BarChart3 className="h-4 w-4" /> },
-  { href: "/d/owner/billing", label: "Billing", icon: <CreditCard className="h-4 w-4" /> },
+  { href: "/d/owner/billing", label: "Billing & Plans", icon: <CreditCard className="h-4 w-4" /> },
   { href: "/d/owner/templates", label: "Documents", icon: <FileText className="h-4 w-4" /> },
   { href: "/d/owner/developer", label: "Developer", icon: <Code className="h-4 w-4" /> },
   { href: "/d/owner/kiosk", label: "Tablet and TV Setup", icon: <Tablet className="h-4 w-4" /> },
@@ -50,14 +51,6 @@ export default function Sidebar() {
       <div className="p-6 border-b border-gray-100">
         <h2 className="font-semibold text-ink truncate">{org.name}</h2>
         <p className="text-xs text-slate mt-0.5">Owner Dashboard</p>
-        <Link
-          href="/d/select-role"
-          onClick={() => setMobileOpen(false)}
-          className="mt-3 flex items-center gap-2 rounded-lg bg-purple-50 px-3 py-2 text-xs font-medium text-purple-600 hover:bg-purple-100 transition-colors"
-        >
-          <ArrowLeftRight className="h-3.5 w-3.5" />
-          Switch Role
-        </Link>
       </div>
 
       <nav className="flex-1 p-4 space-y-1">

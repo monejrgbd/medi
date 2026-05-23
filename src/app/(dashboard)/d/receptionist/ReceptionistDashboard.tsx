@@ -18,7 +18,6 @@ import ApprovalQueue from "@/components/receptionist/ApprovalQueue";
 import ActivePatientsList from "@/components/receptionist/ActivePatientsList";
 import ReferralInbox from "@/components/receptionist/ReferralInbox";
 import NotificationPermission from "@/components/dashboard/NotificationPermission";
-import RoleSwitchBar from "@/components/dashboard/RoleSwitchBar";
 import NotificationBanner from "@/components/dashboard/NotificationBanner";
 import StaleSessionAlert from "@/components/dashboard/StaleSessionAlert";
 import NoDoctorsWarning from "@/components/dashboard/NoDoctorsWarning";
@@ -475,14 +474,6 @@ export default function ReceptionistDashboard({
             </p>
           )}
 
-          <div className="mt-6 text-center">
-            <button
-              onClick={() => router.push("/d/select-role")}
-              className="text-sm text-slate hover:text-ink transition-colors"
-            >
-              Back to role selection
-            </button>
-          </div>
         </div>
       </div>
     );
@@ -526,7 +517,6 @@ export default function ReceptionistDashboard({
 
   return (
     <div>
-      <RoleSwitchBar currentRole="receptionist" />
       <ReceptionistHeader
         counts={counts}
         locationName={locationName}

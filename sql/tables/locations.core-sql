@@ -26,7 +26,7 @@ CREATE TABLE public.locations (
     CHECK (ai_message_limit IS NULL OR (ai_message_limit >= 10 AND ai_message_limit <= 50)),
   skip_ai               boolean DEFAULT false,
   ask_referral_source   boolean DEFAULT false,
-  ask_discovery_source  boolean DEFAULT false,
+  ask_discovery_source  boolean DEFAULT true,
   queue_display_enabled boolean DEFAULT false,
   show_doctor_room_to_patients boolean NOT NULL DEFAULT true,
   preset_rooms          text[] NOT NULL DEFAULT '{}',

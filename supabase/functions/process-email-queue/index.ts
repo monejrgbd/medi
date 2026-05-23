@@ -1,3 +1,6 @@
+// Internal edge function — deploy with `--no-verify-jwt`. Called only by the
+// pg_net trigger on pending_emails INSERT, never by browsers. Authentication is
+// via the `x-internal-secret` header (matched against INTERNAL_EDGE_SECRET env var).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
@@ -85,8 +88,15 @@ Deno.serve(async (req) => {
       .replace(/[\n\r<>"]/g, "")
       .slice(0, 78);
 
+    // From address comes from the row's from_email column. Only @hilthealth.com addresses
+    // are accepted so a malformed row cannot spoof an external domain. Fallback to the
+    // generic notifications@ address for legacy rows that do not set from_email.
+    const fromAddress = (email.from_email && /^[^\s<>"]+@hilthealth\.com$/i.test(email.from_email))
+      ? email.from_email
+      : "notifications@hilthealth.com";
+
     const emailPayload: Record<string, unknown> = {
-      from: `${fromName} <notifications@hilthealth.com>`,
+      from: `${fromName} <${fromAddress}>`,
       to: Array.isArray(email.to_email) ? email.to_email : [email.to_email],
       subject: email.subject,
       html: email.html_body,

@@ -4,6 +4,7 @@ CREATE TABLE public.staff_users (
   auth_uid              uuid REFERENCES auth.users(id),
   full_name             text NOT NULL,
   username              text NOT NULL,
+  notification_email    text,
   is_active             boolean DEFAULT true,
   is_deleted            boolean DEFAULT false,
   deleted_at            timestamptz,

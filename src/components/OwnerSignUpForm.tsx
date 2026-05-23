@@ -26,7 +26,6 @@ export default function OwnerSignUpForm() {
   const [email, setEmail] = useState(emailParam);
   const [password, setPassword] = useState("");
   const [code, setCode] = useState(codeParam);
-  const [codeOpen, setCodeOpen] = useState(Boolean(codeParam));
   const [refBanner, setRefBanner] = useState<{ display_name: string; code_type: string } | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -47,7 +46,6 @@ export default function OwnerSignUpForm() {
       }
       if (initial) {
         setCode(initial);
-        setCodeOpen(true);
         const supabase = createClient();
         const { data } = await supabase.rpc("lookup_partner_by_code", { p_code: initial });
         if (!cancelled && data && typeof data === "object" && "display_name" in data) {
@@ -272,7 +270,7 @@ export default function OwnerSignUpForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <a
+      <Link
         href="/"
         className="inline-flex items-center gap-1 text-sm text-slate hover:text-ink transition-colors"
       >
@@ -280,7 +278,7 @@ export default function OwnerSignUpForm() {
           <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
         </svg>
         Back
-      </a>
+      </Link>
       <h1 className="text-2xl font-bold text-ink">Create your account</h1>
       <p className="text-sm text-slate">
         Start with free credits. No credit card required.
@@ -311,34 +309,6 @@ export default function OwnerSignUpForm() {
         <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)}
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
           placeholder="At least 8 characters" />
-      </div>
-
-      <div>
-        {!codeOpen ? (
-          <button
-            type="button"
-            onClick={() => setCodeOpen(true)}
-            className="text-xs text-slate hover:text-ink hover:underline"
-          >
-            Have a referral or premium trial code?
-          </button>
-        ) : (
-          <div>
-            <label className="mb-1 block text-sm font-medium text-ink">Code (optional)</label>
-            <input
-              type="text"
-              value={code}
-              onChange={(e) => {
-                const next = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
-                setCode(next);
-                if (refBanner) setRefBanner(null);
-              }}
-              maxLength={16}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm uppercase tracking-wider focus:border-hilt-blue focus:outline-none focus:ring-1 focus:ring-hilt-blue"
-              placeholder="ABCD1234"
-            />
-          </div>
-        )}
       </div>
 
       <button type="submit" disabled={loading}
