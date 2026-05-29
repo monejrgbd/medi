@@ -230,8 +230,7 @@ function Hero() {
               </h1>
               <p className="mt-5 max-w-xl text-base leading-relaxed text-slate sm:text-lg">
                 Patient intake software for clinics. Digital intake forms with QR code check in,
-                multilingual support in 130+ languages, and HIPAA compliant by default. Saves about
-                8 minutes per visit.
+                multilingual support in 130+ languages. Saves about 8 minutes per visit.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-3">
                 <TrialEmailCTA source={SOURCE} />
@@ -390,55 +389,6 @@ const NODE_BADGE: Record<Tone, string> = {
   ai: "bg-violet-600 text-white",
 };
 
-/* ── Built for every clinic ────────────────────────────── */
-
-const SPECIALTIES: { name: string; sub: string }[] = [
-  { name: "Primary Care", sub: "Family medicine and routine visits." },
-  { name: "Urgent Care", sub: "Walk in symptoms and AI triage." },
-  { name: "Pediatrics", sub: "Intake in the parent's language." },
-  { name: "Mental Health", sub: "Private, voice optional." },
-  { name: "Dental", sub: "Medical history before the chair." },
-  { name: "Specialty Clinics", sub: "Custom AI prompts per specialty." },
-  { name: "Walk In Clinics", sub: "Zero wait at the front desk." },
-  { name: "Telehealth", sub: "Symptoms captured before the call." },
-];
-
-function Specialties() {
-  return (
-    <section className="bg-white py-24">
-      <div className="mx-auto max-w-[1200px] px-6">
-        <FadeIn>
-          <div className="text-center">
-            <Eyebrow>Built for every clinic</Eyebrow>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
-              Patient intake software for any specialty
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-base text-slate sm:text-lg">
-              One platform, configured per specialty. The AI adapts to what your clinic needs to ask.
-            </p>
-          </div>
-        </FadeIn>
-
-        <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
-          {SPECIALTIES.map((s, i) => (
-            <FadeIn key={s.name} delay={(i % 4) * 0.06}>
-              <div className="h-full rounded-2xl border border-gray-200 bg-snow p-5 transition-colors hover:border-hilt-blue/30">
-                <span
-                  aria-hidden="true"
-                  className="block h-1 w-8 rounded-full"
-                  style={{ background: "linear-gradient(90deg, #2563EB, #059669)" }}
-                />
-                <h3 className="mt-4 font-semibold text-ink">{s.name}</h3>
-                <p className="mt-1.5 text-xs leading-relaxed text-slate sm:text-sm">{s.sub}</p>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 /* ── See it yourself (real homepage demo) ─────────────── */
 
 function DemoBand() {
@@ -524,10 +474,6 @@ const FAQS: { q: string; a: string; href?: string; linkText?: string }[] = [
   {
     q: "Can we customize what the AI asks per specialty?",
     a: "Yes. Intelligent intake adapts to your specialty. You add custom form fields, write custom instructions for the AI, and pick which questions matter most for your clinic.",
-  },
-  {
-    q: "What happens if a patient describes something urgent?",
-    a: "The AI flags urgent symptoms in real time. An AI triage signal goes to your receptionist and the doctor immediately, and the patient sees a clear next step. The AI never gives a diagnosis.",
   },
   {
     q: "Which EMRs does this work with?",
@@ -906,7 +852,6 @@ export default function PatientIntakeFeaturePage() {
       <Hero />
       <SocialProofSection />
       <Cost />
-      <Specialties />
       <DemoBand />
       <ObjectionBand />
       <TrustControl />
