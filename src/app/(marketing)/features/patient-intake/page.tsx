@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import Link from "next/link";
 import FadeIn from "@/components/FadeIn";
@@ -8,10 +9,74 @@ import TrialEmailCTA from "@/components/marketing/TrialEmailCTA";
 import ComplianceText from "@/components/marketing/country/ComplianceText";
 import SocialProofSection from "@/components/marketing/SocialProofSection";
 
-export const metadata = {
-  title: "AI Patient Intake Software for Clinics | Hilt Health",
-  description:
-    "Patients describe symptoms to AI in 130+ languages before the doctor walks in. Hilt saves about 8 minutes per patient, every visit. Start free, no credit card.",
+const PAGE_URL = "/features/patient-intake";
+const PAGE_TITLE = "AI Patient Intake Software for Clinics | Hilt Health";
+const PAGE_DESCRIPTION =
+  "AI patient intake software. Patients describe symptoms in 130+ languages via QR. Saves 8 min per visit. HIPAA compliant. Start free, no credit card.";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
+export const metadata: Metadata = {
+  title: PAGE_TITLE,
+  description: PAGE_DESCRIPTION,
+  keywords: [
+    "patient intake",
+    "patient intake form",
+    "patient intake forms",
+    "clinic intake",
+    "medical intake form",
+    "new patient intake form",
+    "patient intake software",
+    "hipaa compliant intake forms",
+    "digital patient intake",
+    "medical intake software",
+    "patient intake automation",
+    "best patient intake software",
+    "intake clinic",
+    "automated patient intake",
+    "ai clinic software",
+    "digital intake",
+    "ai triage software",
+    "intelligent intake",
+    "ai patient intake",
+    "hipaa compliant patient intake",
+    "ai automation for clinics",
+    "faster patient intake",
+    "clinic intake software",
+    "qr patient intake",
+    "qr code patient intake",
+    "multilingual patient intake",
+    "paperless patient check in",
+  ],
+  alternates: {
+    canonical: PAGE_URL,
+  },
+  openGraph: {
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+    type: "website",
+    url: PAGE_URL,
+    siteName: "Hilt Health",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+      "max-video-preview": -1,
+    },
+  },
 };
 
 const CAL_URL = "https://cal.com/102937474/hilt-health-meeting";
@@ -144,7 +209,7 @@ function ConsultationButton({ className = "" }: { className?: string }) {
 
 function Hero() {
   return (
-    <section className="relative overflow-hidden bg-snow pt-28 pb-24 lg:pt-36 lg:pb-28">
+    <section id="how-it-works" className="relative overflow-hidden bg-snow pt-28 pb-24 lg:pt-36 lg:pb-28">
       <Aurora />
       <GridGrain />
       <div
@@ -163,7 +228,12 @@ function Hero() {
                 AI patient intake, finished{" "}
                 <span className="text-hilt-blue">before the doctor walks in</span>
               </h1>
-              <div className="mt-9 flex flex-wrap items-center gap-3">
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-slate sm:text-lg">
+                Patient intake software for clinics. Digital intake forms with QR code check in,
+                multilingual support in 130+ languages, and HIPAA compliant by default. Saves about
+                8 minutes per visit.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
                 <TrialEmailCTA source={SOURCE} />
                 <OpenDemoButton variant="light" />
               </div>
@@ -320,6 +390,55 @@ const NODE_BADGE: Record<Tone, string> = {
   ai: "bg-violet-600 text-white",
 };
 
+/* ── Built for every clinic ────────────────────────────── */
+
+const SPECIALTIES: { name: string; sub: string }[] = [
+  { name: "Primary Care", sub: "Family medicine and routine visits." },
+  { name: "Urgent Care", sub: "Walk in symptoms and AI triage." },
+  { name: "Pediatrics", sub: "Intake in the parent's language." },
+  { name: "Mental Health", sub: "Private, voice optional." },
+  { name: "Dental", sub: "Medical history before the chair." },
+  { name: "Specialty Clinics", sub: "Custom AI prompts per specialty." },
+  { name: "Walk In Clinics", sub: "Zero wait at the front desk." },
+  { name: "Telehealth", sub: "Symptoms captured before the call." },
+];
+
+function Specialties() {
+  return (
+    <section className="bg-white py-24">
+      <div className="mx-auto max-w-[1200px] px-6">
+        <FadeIn>
+          <div className="text-center">
+            <Eyebrow>Built for every clinic</Eyebrow>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+              Patient intake software for any specialty
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-base text-slate sm:text-lg">
+              One platform, configured per specialty. The AI adapts to what your clinic needs to ask.
+            </p>
+          </div>
+        </FadeIn>
+
+        <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-5">
+          {SPECIALTIES.map((s, i) => (
+            <FadeIn key={s.name} delay={(i % 4) * 0.06}>
+              <div className="h-full rounded-2xl border border-gray-200 bg-snow p-5 transition-colors hover:border-hilt-blue/30">
+                <span
+                  aria-hidden="true"
+                  className="block h-1 w-8 rounded-full"
+                  style={{ background: "linear-gradient(90deg, #2563EB, #059669)" }}
+                />
+                <h3 className="mt-4 font-semibold text-ink">{s.name}</h3>
+                <p className="mt-1.5 text-xs leading-relaxed text-slate sm:text-sm">{s.sub}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ── See it yourself (real homepage demo) ─────────────── */
 
 function DemoBand() {
@@ -393,10 +512,34 @@ const FAQS: { q: string; a: string; href?: string; linkText?: string }[] = [
     a: "Yes. 130+ languages, by voice if they will not type, on their phone or your tablet. If one truly will not, your receptionist takes that visit the old way.",
   },
   { q: "What if a patient refuses to use it?", a: "Then they do not. Your receptionist handles that one and nothing breaks." },
-  { q: "Do patients download an app?", a: "No. They scan a QR and it opens in the phone browser. No app, no account." },
+  { q: "Do patients download an app?", a: "No. They scan a QR and it opens in the phone browser. No app, no account. Fully paperless patient check in." },
   {
-    q: "Does this work with our EMR?",
-    a: "Yes. Ask our team to enable the EMR connection for your clinic. It can be set up one way or two way.",
+    q: "How is this different from a regular online intake form?",
+    a: "A digital intake form is a static questionnaire. Hilt is patient intake automation. The AI follows up on what the patient said, asks clarifying questions, summarizes in the doctor's language, and can be customized per specialty. Automated patient intake means the doctor walks in already briefed.",
+  },
+  {
+    q: "Where is patient data stored, and is intake paperless?",
+    a: "Yes, fully paperless. Data is encrypted at rest and in transit, stored in HIPAA, PIPEDA, GDPR, and PDPA compliant regions. North American clinics get US or Canadian regions by default. Other regions on request.",
+  },
+  {
+    q: "Can we customize what the AI asks per specialty?",
+    a: "Yes. Intelligent intake adapts to your specialty. You add custom form fields, write custom instructions for the AI, and pick which questions matter most for your clinic.",
+  },
+  {
+    q: "What happens if a patient describes something urgent?",
+    a: "The AI flags urgent symptoms in real time. An AI triage signal goes to your receptionist and the doctor immediately, and the patient sees a clear next step. The AI never gives a diagnosis.",
+  },
+  {
+    q: "Which EMRs does this work with?",
+    a: "Hilt sends the approved summary in a format your EMR can ingest. Common targets include Oscar, Accuro, Telus PSS, Jane App, Epic, Athena, and Cerner. Ask our team to enable a specific connection for your clinic. One way or two way.",
+  },
+  {
+    q: "How long does setup take for a 5 doctor clinic?",
+    a: "About 20 minutes. Create the org, add locations, add staff, configure forms and AI, print the QR. You can be live before your next patient.",
+  },
+  {
+    q: "How accurate is the AI, and what if it gets something wrong?",
+    a: "The AI shows the summary back to the patient for review and approval before anything reaches the doctor. The doctor sees the approved summary plus the full transcript. If the patient corrects something, the AI updates and the audit trail captures every change.",
   },
   {
     q: "How much does it cost?",
@@ -408,7 +551,7 @@ const FAQS: { q: string; a: string; href?: string; linkText?: string }[] = [
 
 function FAQSection() {
   return (
-    <section className="bg-white py-24">
+    <section id="faq" className="bg-white py-24">
       <div className="mx-auto max-w-2xl px-6">
         <FadeIn>
           <div className="mb-10 text-center">
@@ -540,7 +683,7 @@ const SETUP_STEPS = [
 
 function Setup() {
   return (
-    <section className="bg-snow py-24">
+    <section id="setup" className="bg-snow py-24">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
           <div className="text-center">
@@ -633,7 +776,10 @@ function Footer() {
             business@hilthealth.com
           </a>
         </div>
-        <p className="mt-2 text-xs text-ash">
+        <address className="text-xs not-italic text-ash">
+          Hilt Health · Niagara region, Canada
+        </address>
+        <p className="mt-3 text-xs text-ash">
           Powered by{" "}
           <a href="https://veldsystems.com" target="_blank" rel="noopener noreferrer" className="hover:text-slate transition-colors underline">
             veldsystems.com
@@ -663,17 +809,80 @@ function StickyMobileCTA() {
 /* ── Structured data ──────────────────────────────────── */
 
 function StructuredData() {
+  const baseUrl = "https://hilthealth.com";
+  const pageUrl = `${baseUrl}${PAGE_URL}`;
+
   const data = {
     "@context": "https://schema.org",
     "@graph": [
       {
         "@type": "SoftwareApplication",
+        "@id": `${pageUrl}#software`,
         name: "Hilt Health AI Patient Intake",
         applicationCategory: "HealthApplication",
         operatingSystem: "Web",
+        url: pageUrl,
         description:
           "AI patient intake software. Patients describe symptoms to AI in 130+ languages before the doctor walks in. The doctor opens the door with a patient approved summary ready for any EMR.",
+        inLanguage: ["en", "es", "fr", "ar", "zh", "ko", "vi", "pt", "ru", "hi"],
+        featureList: [
+          "Patient intake in 130+ languages via AI translation",
+          "QR code patient check in",
+          "Digital intake forms",
+          "HIPAA compliant",
+          "EMR ready summaries",
+          "Multilingual voice and text",
+          "Customizable AI prompts per specialty",
+          "Paperless patient check in",
+          "AI triage for urgent symptoms",
+          "Patient approves summary before doctor visit",
+        ],
         offers: { "@type": "Offer", price: "0", priceCurrency: "USD", description: "Free trial, no credit card" },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${baseUrl}#org`,
+        name: "Hilt Health",
+        url: baseUrl,
+        email: "business@hilthealth.com",
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "sales",
+          email: "business@hilthealth.com",
+          areaServed: "Worldwide",
+          availableLanguage: "English",
+        },
+      },
+      {
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+          { "@type": "ListItem", position: 2, name: "Features", item: `${baseUrl}/#features` },
+          { "@type": "ListItem", position: 3, name: "Patient Intake", item: pageUrl },
+        ],
+      },
+      {
+        "@type": "HowTo",
+        name: "Set up Hilt Health Patient Intake",
+        description: "Get patient intake live at your clinic in about 20 minutes.",
+        totalTime: "PT20M",
+        step: SETUP_STEPS.map((s, i) => ({
+          "@type": "HowToStep",
+          position: i + 1,
+          name: s.title,
+          text: s.body,
+        })),
+      },
+      {
+        "@type": "MedicalWebPage",
+        "@id": pageUrl,
+        url: pageUrl,
+        name: PAGE_TITLE,
+        description: PAGE_DESCRIPTION,
+        inLanguage: "en",
+        audience: { "@type": "MedicalAudience", audienceType: "Clinicians" },
+        about: { "@type": "MedicalProcedure", name: "Patient Intake" },
+        isPartOf: { "@id": `${baseUrl}#org` },
       },
       {
         "@type": "FAQPage",
@@ -697,6 +906,7 @@ export default function PatientIntakeFeaturePage() {
       <Hero />
       <SocialProofSection />
       <Cost />
+      <Specialties />
       <DemoBand />
       <ObjectionBand />
       <TrustControl />

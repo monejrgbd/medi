@@ -11,6 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://hilthealth.com"),
   title: "Hilt Health — AI Patient Pre-Screening for Clinics",
   description:
     "Hilt Health uses AI to pre-screen patients before they see the doctor. Less time asking questions. More time treating. Now expanding to the Niagara region.",
