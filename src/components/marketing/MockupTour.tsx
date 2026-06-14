@@ -307,7 +307,7 @@ const tourSteps: TourStep[] = [
     render: () => <QueueCard />,
   },
   {
-    eyebrow: "During the visit",
+    eyebrow: "Before the visit",
     title: "Doctor walks in already briefed",
     description: "Full summary, suggested differentials, history. A 30 second read replaces 5 minutes of intake questions.",
     callout: {

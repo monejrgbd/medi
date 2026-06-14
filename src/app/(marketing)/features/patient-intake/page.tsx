@@ -371,7 +371,7 @@ const FLOW: { n: string; title: string; line: string; Icon: React.ComponentType<
   { n: "01", title: "Scan and start", line: "A QR on their phone. You can also preconfigure your clinic tablet or a kiosk. No app.", Icon: IconScan, tone: "blue" },
   { n: "02", title: "Fills standard intake form", line: "Medications, allergies, and your fields. Fully customizable.", Icon: IconForm, tone: "blue" },
   { n: "03", title: "AI asks for the details", line: "Voice or text in 130+ languages. The AI remembers past visits and you can give it custom instructions.", Icon: IconChat, tone: "blue" },
-  { n: "04", title: "Patient approves", line: "They confirm the AI summary in their language.", Icon: IconApprove, tone: "green" },
+  { n: "04", title: "AI summarizes", line: "Patient approves in their language.", Icon: IconApprove, tone: "green" },
   { n: "05", title: "Doctor is briefed", line: "The approved summary and full transcript, in the doctor's language.", Icon: IconDoctor, tone: "solid" },
   { n: "06", title: "And it keeps going", line: "Specialized agents handle paperwork, referrals, follow ups, reviews, and bringing patients back.", Icon: IconSparkle, tone: "ai", tag: "Optional" },
 ];
