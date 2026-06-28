@@ -18,6 +18,9 @@ const HeroEmailCTA = dynamic(() => import("@/components/marketing/HeroEmailCTA")
 const PainCards = dynamic(() => import("@/components/marketing/PainCards"), {
   loading: () => <div className="mt-10 h-[400px]" />,
 });
+const CostCalculator = dynamic(() => import("@/components/marketing/CostCalculator"), {
+  loading: () => <div className="h-[600px]" />,
+});
 
 /* ── Hero ─────────────────────────────────────────────── */
 
@@ -1324,25 +1327,34 @@ function TrustAndControlSection() {
   );
 }
 
-/* ── Pricing Hint ─────────────────────────────────────── */
+/* ── Pricing + Calculator ─────────────────────────────── */
 
-function PricingHintSection() {
+function PricingCalculatorSection() {
   return (
     <section className="cv-auto bg-snow py-24 lg:py-32">
       <div className="mx-auto max-w-[1200px] px-6">
         <FadeIn>
-          <p className="text-3xl font-bold text-ink sm:text-4xl">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wider text-hilt-blue">
+            Pricing
+          </p>
+          <h2 className="mb-3 text-3xl font-bold text-ink sm:text-4xl">
             As low as $79/month for unlimited patients
+          </h2>
+          <p className="mb-4 max-w-2xl text-lg text-slate">
+            See what that looks like for your clinic. Enter your numbers below.
           </p>
           <Link
             href="/pricing"
-            className="mt-3 inline-flex items-center gap-1 text-sm font-medium text-hilt-blue hover:underline"
+            className="mb-12 inline-flex items-center gap-1 text-sm font-medium text-hilt-blue hover:underline"
           >
             See full pricing
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
               <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
             </svg>
           </Link>
+        </FadeIn>
+        <FadeIn delay={0.1}>
+          <CostCalculator />
         </FadeIn>
       </div>
     </section>
@@ -1406,7 +1418,7 @@ export default async function Home() {
         <HowToSetUpSection />
         <TheDifferenceSection />
         <TrustAndControlSection />
-        <PricingHintSection />
+        <PricingCalculatorSection />
         <ApplySection />
       </main>
       <Footer />

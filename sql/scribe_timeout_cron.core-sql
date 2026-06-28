@@ -1,9 +1,11 @@
--- scribe_timeout_cron: safety net for the AI scribe transcription.
--- transcribe-encounter is fired fire-and-forget by finalize_scribe_recording;
--- if it never runs or dies mid-way, rows would sit in 'transcribing' forever.
--- Every minute: re-fire rows stuck 10-30 min (edge fn is idempotent and
--- resumes from the segment cursor), and hard-fail rows stuck > 30 min.
--- Mirrors ai_timeout_cron.
+-- scribe_timeout_cron: drives + safety-nets the AI scribe state machine.
+-- transcribe-encounter advances scribe_recordings through
+-- transcribing -> identifying -> transcribed, doing one bounded unit of work
+-- per invocation (submit to AssemblyAI, poll it, then run voice-ID + labeling).
+-- finalize_scribe_recording fires it once; this cron then re-fires any row still
+-- in flight every minute (the edge fn is idempotent: it re-checks status +
+-- provider_job_id and resumes), so polling and the identify stage progress
+-- without a long-lived webhook. Rows stuck > 30 min are hard-failed.
 
 CREATE EXTENSION IF NOT EXISTS pg_cron;
 
@@ -25,13 +27,14 @@ SELECT cron.schedule('scribe_timeout_check', '* * * * *', $$
     SELECT decrypted_secret INTO v_edge_secret FROM vault.decrypted_secrets WHERE name = 'internal_edge_secret';
     SELECT decrypted_secret INTO v_anon_key FROM vault.decrypted_secrets WHERE name = 'supabase_anon_key';
 
-    -- Re-fire rows stuck 10-30 minutes (idempotent: edge fn re-checks
-    -- status='transcribing' and resumes from transcribed_segments).
+    -- Re-fire rows in flight for > 1 minute (idempotent: the edge fn resumes
+    -- from status + provider_job_id). This is how AssemblyAI polling and the
+    -- identify stage advance between bounded invocations.
     IF v_edge_url IS NOT NULL AND v_edge_secret IS NOT NULL AND v_anon_key IS NOT NULL THEN
       FOR r IN
         SELECT id FROM public.scribe_recordings
-        WHERE status = 'transcribing'
-          AND updated_at < now() - interval '10 minutes'
+        WHERE status IN ('transcribing', 'identifying')
+          AND updated_at < now() - interval '1 minute'
           AND updated_at >= now() - interval '30 minutes'
       LOOP
         PERFORM net.http_post(
@@ -46,10 +49,10 @@ SELECT cron.schedule('scribe_timeout_check', '* * * * *', $$
       END LOOP;
     END IF;
 
-    -- Hard-fail rows stuck more than 30 minutes.
+    -- Hard-fail rows stuck more than 30 minutes in any in-flight state.
     UPDATE public.scribe_recordings
     SET status = 'failed', error = 'transcription_timeout', updated_at = now()
-    WHERE status = 'transcribing'
+    WHERE status IN ('transcribing', 'identifying')
       AND updated_at < now() - interval '30 minutes';
 
     -- Surface the failure on the associated document so the editor shows an

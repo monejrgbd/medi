@@ -1,0 +1,96 @@
+-- create_voiceprint: store a clinician's enrolled ECAPA voiceprint embedding.
+-- Called by the enroll-voiceprint edge function using the CALLER's JWT (so
+-- auth.uid() resolves to the clinician), after the ECAPA Cloud Run /enroll
+-- endpoint returns the embedding + model version. Requires explicit biometric
+-- consent. Retires any existing active voiceprint (one active per clinician).
+-- The enrollment audio is never stored, only this derived embedding.
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.create_voiceprint(
+  p_caller_auth_uid uuid,
+  p_embedding jsonb,
+  p_model_version text,
+  p_consent boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_staff_id uuid;
+  v_org_id uuid;
+  v_full_name text;
+  v_voiceprint_id uuid := gen_random_uuid();
+BEGIN
+  IF p_consent IS NOT TRUE THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Consent required');
+  END IF;
+  IF p_embedding IS NULL OR jsonb_typeof(p_embedding) <> 'array'
+     OR jsonb_array_length(p_embedding) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Invalid embedding');
+  END IF;
+  IF p_model_version IS NULL OR length(trim(p_model_version)) = 0 THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Missing model version');
+  END IF;
+
+  SELECT su.id, su.org_id, su.full_name
+  INTO v_staff_id, v_org_id, v_full_name
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  -- One active voiceprint per clinician: retire the previous one.
+  UPDATE public.voiceprints
+  SET status = 'deleted', deleted_at = now(), updated_at = now()
+  WHERE staff_user_id = v_staff_id AND status = 'active';
+
+  INSERT INTO public.voiceprints (
+    id, org_id, staff_user_id, provider, embedding, model_version,
+    display_name, consent_attested_at, consent_text_version, status
+  ) VALUES (
+    v_voiceprint_id, v_org_id, v_staff_id, 'ecapa', p_embedding, p_model_version,
+    v_full_name, now(), 'voiceprint_v1', 'active'
+  );
+
+  INSERT INTO public.audit_trail (org_id, entity_type, entity_id, actor_id, actor_type, action, details)
+  VALUES (
+    v_org_id, 'voiceprint', v_voiceprint_id, v_staff_id, 'clinician', 'voiceprint_enrolled',
+    jsonb_build_object('model_version', p_model_version, 'consent_text_version', 'voiceprint_v1')
+  );
+
+  RETURN jsonb_build_object('success', true, 'voiceprint_id', v_voiceprint_id);
+END;
+$$;
+
+-- Public wrapper: captures auth.uid() and passes it down (avoids NULL auth issues).
+CREATE OR REPLACE FUNCTION public.create_voiceprint(
+  p_embedding jsonb,
+  p_model_version text,
+  p_consent boolean
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.create_voiceprint(v_auth_uid, p_embedding, p_model_version, p_consent);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.create_voiceprint(jsonb, text, boolean) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.create_voiceprint(jsonb, text, boolean) FROM anon;
+GRANT EXECUTE ON FUNCTION public.create_voiceprint(jsonb, text, boolean) TO authenticated;

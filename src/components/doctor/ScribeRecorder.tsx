@@ -1,13 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { uploadScribeSegment } from "@/app/(dashboard)/d/_actions/scribe";
+import { uploadScribeSegment, uploadScribeFull } from "@/app/(dashboard)/d/_actions/scribe";
 
-// Each segment is a complete, self-contained WebM: we stop and restart the
-// MediaRecorder every SEGMENT_MS rather than using timeslice (timeslice yields
-// headerless cluster fragments Google STT cannot decode). The sub-second gap
-// at each boundary is clinically irrelevant for a synthesized note.
-const SEGMENT_MS = 45_000;
+// One continuous MediaRecorder with a short timeslice. AssemblyAI processes the
+// whole encounter as a single job (so speaker clusters stay consistent), so at
+// Stop we assemble every chunk into one full.webm and upload it — that is the
+// file AssemblyAI and the ECAPA voice-ID service consume. The per-timeslice
+// chunks are uploaded as they arrive purely for crash-resilience: they are
+// fragments of ONE stream, so the edge function can byte-concatenate them if a
+// crash prevents the Stop assembly. (Chrome/Firefox only; Safari records mp4,
+// which MediaRecorder cannot produce as webm here — unchanged from before.)
+const TIMESLICE_MS = 20_000;
 
 interface ScribeRecorderProps {
   recordingId: string;
@@ -27,32 +31,29 @@ export default function ScribeRecorder({
   onMicDenied,
 }: ScribeRecorderProps) {
   const [elapsed, setElapsed] = useState(0);
-  const [segments, setSegments] = useState(0);
   const [stopping, setStopping] = useState(false);
 
   const streamRef = useRef<MediaStream | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
-  const recordingRef = useRef(true);
-  const segIndexRef = useRef(0);
+  const chunksRef = useRef<Blob[]>([]);
   const startedAtRef = useRef(Date.now());
-  const segTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mimeRef = useRef("audio/webm");
   const finishedRef = useRef(false);
 
-  // Guarantee onStopped fires exactly once. Without this, clicking Stop during
-  // the async segment upload between recorders can fire it twice (recorder
-  // onstop + handleStop), double-calling finalize_scribe_recording.
+  // Guarantee onStopped fires exactly once (Stop click + recorder onstop can race).
   const finish = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
-    onStopped(segIndexRef.current, Date.now() - startedAtRef.current);
+    onStopped(chunksRef.current.length, Date.now() - startedAtRef.current);
   }, [onStopped]);
 
-  const uploadSegment = useCallback(
+  const uploadChunk = useCallback(
     async (index: number, blob: Blob) => {
+      // Re-wrap: timeslice chunks after the first can have an empty MIME type,
+      // which the upload action's audio/webm check would reject.
       const fd = new FormData();
-      fd.append("audio", blob, `${index}.webm`);
+      fd.append("audio", new Blob([blob], { type: "audio/webm" }), `${index}.webm`);
       for (let attempt = 0; attempt < 3; attempt++) {
         try {
           const r = await uploadScribeSegment(recordingId, index, fd);
@@ -62,42 +63,30 @@ export default function ScribeRecorder({
         }
         await new Promise((res) => setTimeout(res, 500 * (attempt + 1)));
       }
-      // Persistent failure: skip this segment (edge fn transcribes whatever
-      // segments landed; a gap becomes an inaudible marker).
-      console.error("scribe segment upload failed", index);
+      console.error("scribe chunk upload failed", index);
     },
     [recordingId]
   );
 
-  const startSegment = useCallback(() => {
-    const stream = streamRef.current;
-    if (!stream || !recordingRef.current) return;
-
-    const rec = new MediaRecorder(stream, { mimeType: mimeRef.current });
-    const chunks: Blob[] = [];
-    rec.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-    rec.onstop = async () => {
-      const blob = new Blob(chunks, { type: mimeRef.current });
-      if (blob.size > 0) {
-        segIndexRef.current += 1;
-        const idx = segIndexRef.current;
-        setSegments(idx);
-        await uploadSegment(idx, blob);
+  const uploadFull = useCallback(
+    async (blob: Blob) => {
+      const fd = new FormData();
+      fd.append("audio", blob, "full.webm");
+      for (let attempt = 0; attempt < 3; attempt++) {
+        try {
+          const r = await uploadScribeFull(recordingId, fd);
+          if (r.success) return;
+        } catch {
+          /* retry */
+        }
+        await new Promise((res) => setTimeout(res, 600 * (attempt + 1)));
       }
-      if (recordingRef.current) {
-        startSegment();
-      } else {
-        finish();
-      }
-    };
-    recorderRef.current = rec;
-    rec.start();
-    segTimerRef.current = setTimeout(() => {
-      if (rec.state === "recording") rec.stop();
-    }, SEGMENT_MS);
-  }, [finish, uploadSegment]);
+      // Persistent failure: the edge function falls back to byte-concatenating
+      // the resilience chunks uploaded above.
+      console.error("scribe full upload failed");
+    },
+    [recordingId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -112,12 +101,27 @@ export default function ScribeRecorder({
         mimeRef.current = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
           ? "audio/webm;codecs=opus"
           : "audio/webm";
+
+        const rec = new MediaRecorder(stream, { mimeType: mimeRef.current });
+        recorderRef.current = rec;
+        rec.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) {
+            chunksRef.current.push(e.data);
+            void uploadChunk(chunksRef.current.length, e.data);
+          }
+        };
+        rec.onstop = async () => {
+          const blob = new Blob(chunksRef.current, { type: mimeRef.current });
+          if (blob.size > 0) await uploadFull(blob);
+          finish();
+        };
+
         startedAtRef.current = Date.now();
         tickRef.current = setInterval(
           () => setElapsed(Date.now() - startedAtRef.current),
           1000
         );
-        startSegment();
+        rec.start(TIMESLICE_MS);
       } catch {
         onMicDenied();
       }
@@ -132,23 +136,20 @@ export default function ScribeRecorder({
     return () => {
       cancelled = true;
       window.removeEventListener("beforeunload", warn);
-      if (segTimerRef.current) clearTimeout(segTimerRef.current);
       if (tickRef.current) clearInterval(tickRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-    // Mount-only: recorder loop manages its own lifecycle.
+    // Mount-only: the recorder manages its own lifecycle; callbacks are stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleStop() {
     if (stopping) return;
     setStopping(true);
-    recordingRef.current = false;
-    if (segTimerRef.current) clearTimeout(segTimerRef.current);
     if (tickRef.current) clearInterval(tickRef.current);
     const rec = recorderRef.current;
-    if (rec && rec.state === "recording") {
-      rec.stop(); // onstop uploads the final segment then calls finish()
+    if (rec && rec.state !== "inactive") {
+      rec.stop(); // onstop assembles + uploads full.webm, then calls finish()
     } else {
       finish();
     }
@@ -162,9 +163,7 @@ export default function ScribeRecorder({
           {fmt(elapsed)}
         </span>
       </div>
-      <p className="text-xs text-slate">
-        Recording the encounter, {segments} segment{segments === 1 ? "" : "s"} captured
-      </p>
+      <p className="text-xs text-slate">Recording the encounter</p>
 
       <button
         type="button"

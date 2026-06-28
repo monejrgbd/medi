@@ -1,0 +1,44 @@
+-- voiceprints: per-clinician speaker embeddings for the AI scribe's voice ID.
+-- A clinician enrolls once (VoiceEnrollment UI -> enroll-voiceprint edge fn ->
+-- ECAPA Cloud Run /enroll); the derived embedding is stored here and matched
+-- against diarized speaker clusters at transcription time. The enrollment audio
+-- is NEVER stored, only the derived embedding.
+--
+-- Biometric protection: RLS is enabled with NO SELECT policy. The embedding is a
+-- biometric identifier and must never reach a browser, so all reads go through
+-- SECURITY DEFINER functions only: get_my_voiceprint (status, never the bytes)
+-- for the UI, and get_enrolled_voiceprints_for_org (service-role only) for the
+-- edge function. Mutations go through create_voiceprint / delete_my_voiceprint.
+--
+-- model_version: embeddings are only comparable within the same ECAPA model
+-- version, so the producing version is stored; /identify ignores mismatches and
+-- a model upgrade forces re-enrollment.
+
+CREATE TABLE public.voiceprints (
+  id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id               uuid NOT NULL REFERENCES public.organizations(id),
+  staff_user_id        uuid NOT NULL REFERENCES public.staff_users(id),
+  provider             text NOT NULL DEFAULT 'ecapa',
+  embedding            jsonb NOT NULL,
+  model_version        text NOT NULL,
+  display_name         text NOT NULL,
+  consent_attested_at  timestamptz NOT NULL DEFAULT now(),
+  consent_text_version text NOT NULL DEFAULT 'voiceprint_v1',
+  status               text NOT NULL DEFAULT 'active'
+    CHECK (status IN ('active', 'deleted')),
+  created_at           timestamptz NOT NULL DEFAULT now(),
+  updated_at           timestamptz NOT NULL DEFAULT now(),
+  deleted_at           timestamptz
+);
+
+ALTER TABLE public.voiceprints ENABLE ROW LEVEL SECURITY;
+
+-- No SELECT/INSERT/UPDATE/DELETE policy on purpose: all access is via SECURITY
+-- DEFINER functions (or the service role). This keeps the biometric embedding
+-- out of any browser-reachable query.
+
+-- One active voiceprint per clinician.
+CREATE UNIQUE INDEX uniq_active_voiceprint
+  ON public.voiceprints (staff_user_id) WHERE status = 'active';
+
+CREATE INDEX idx_voiceprints_org ON public.voiceprints (org_id);

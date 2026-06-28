@@ -7,6 +7,7 @@ import {
   cancelScribeRecording,
   fetchScribeRecording,
 } from "@/app/(dashboard)/d/_actions/scribe";
+import { ROOM_ROSTER_OPTIONS } from "@/lib/constants";
 import ScribeRecorder from "./ScribeRecorder";
 
 type Phase =
@@ -40,6 +41,7 @@ export default function ScribePanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lowCredits, setLowCredits] = useState(false);
+  const [roster, setRoster] = useState<string[]>(["patient"]);
 
   const recordingIdRef = useRef<string | null>(null);
   const documentIdRef = useRef<string | null>(null);
@@ -56,7 +58,7 @@ export default function ScribePanel({
     if (!attested || busy) return;
     setBusy(true);
     setError(null);
-    const r = await startScribeRecording(visitId, "en");
+    const r = await startScribeRecording(visitId, "en", roster);
     setBusy(false);
     if (!r.success || !r.recordingId) {
       setError(r.error || "Could not start the scribe");
@@ -174,6 +176,40 @@ export default function ScribePanel({
                 note for you to review and sign. It works whether or not AI
                 intake was used.
               </p>
+              <div className="rounded-lg border border-gray-200 p-3">
+                <p className="mb-2 text-xs font-semibold text-ink">
+                  Who is in the room? (besides you)
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {ROOM_ROSTER_OPTIONS.map((opt) => {
+                    const checked = roster.includes(opt.value);
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() =>
+                          setRoster((prev) =>
+                            prev.includes(opt.value)
+                              ? prev.filter((v) => v !== opt.value)
+                              : [...prev, opt.value]
+                          )
+                        }
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                          checked
+                            ? "border-hilt-blue bg-blue-50 text-hilt-blue"
+                            : "border-gray-300 text-slate hover:border-gray-400"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-[11px] text-ash">
+                  Helps the scribe label each voice. You are recognized
+                  automatically when your voice is enrolled in Settings.
+                </p>
+              </div>
               <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 cursor-pointer">
                 <input
                   type="checkbox"

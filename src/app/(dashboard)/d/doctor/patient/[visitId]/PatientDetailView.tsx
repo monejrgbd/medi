@@ -346,6 +346,7 @@ export default function PatientDetailView({
               messages={transcript}
               prescreening={detail.prescreening_data ?? null}
               scribeTranscript={detail.scribe_transcript ?? null}
+              visitId={visit.id}
               aiSkipped={visit.ai_skipped}
               manuallyAdded={visit.manually_added}
             />

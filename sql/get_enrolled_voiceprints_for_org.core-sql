@@ -1,0 +1,53 @@
+-- get_enrolled_voiceprints_for_org: returns the active clinician voiceprint
+-- embeddings for one org, for the transcribe-encounter edge function to pass to
+-- the ECAPA Cloud Run /identify endpoint.
+--
+-- This is the ONLY path that returns the biometric embedding bytes, so it is
+-- SERVICE-ROLE ONLY (the edge function calls it with the service-role key). It is
+-- never granted to anon/authenticated, and the public wrapper re-checks the role.
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_enrolled_voiceprints_for_org(p_org_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_result jsonb;
+BEGIN
+  SELECT coalesce(jsonb_agg(jsonb_build_object(
+            'staff_user_id', vp.staff_user_id,
+            'display_name', vp.display_name,
+            'embedding', vp.embedding,
+            'model_version', vp.model_version
+          )), '[]'::jsonb)
+  INTO v_result
+  FROM public.voiceprints vp
+  WHERE vp.org_id = p_org_id AND vp.status = 'active';
+
+  RETURN jsonb_build_object('success', true, 'voiceprints', v_result);
+END;
+$$;
+
+-- Public wrapper: service-role only.
+CREATE OR REPLACE FUNCTION public.get_enrolled_voiceprints_for_org(p_org_id uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Forbidden');
+  END IF;
+  RETURN private.get_enrolled_voiceprints_for_org(p_org_id);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_enrolled_voiceprints_for_org(uuid) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_enrolled_voiceprints_for_org(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_enrolled_voiceprints_for_org(uuid) FROM authenticated;
+GRANT EXECUTE ON FUNCTION public.get_enrolled_voiceprints_for_org(uuid) TO service_role;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import TranscriptView from "./TranscriptView";
+import ScribeTranscriptEditor from "./ScribeTranscriptEditor";
 import type { PrescreeningData } from "@/types/medical";
 
 interface Message {
@@ -17,6 +18,7 @@ interface TranscriptTabsProps {
   messages: Message[];
   prescreening: PrescreeningData | null;
   scribeTranscript: string | null;
+  visitId: string;
   aiSkipped?: boolean;
   manuallyAdded?: boolean;
 }
@@ -114,6 +116,7 @@ export default function TranscriptTabs({
   messages,
   prescreening,
   scribeTranscript,
+  visitId,
   aiSkipped,
   manuallyAdded,
 }: TranscriptTabsProps) {
@@ -165,16 +168,7 @@ export default function TranscriptTabs({
 
       {section === "scribe" &&
         (hasScribe ? (
-          <div>
-            <p className="text-xs text-ash mb-2">
-              AI cleaned transcript, speaker roles estimated by AI, verify against your recollection.
-            </p>
-            <div className="max-h-[600px] overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4">
-              <p className="text-sm text-ink whitespace-pre-wrap leading-relaxed">
-                {scribeTranscript}
-              </p>
-            </div>
-          </div>
+          <ScribeTranscriptEditor visitId={visitId} fallbackTranscript={scribeTranscript} />
         ) : (
           <Empty text="No scribe recording for this visit." />
         ))}

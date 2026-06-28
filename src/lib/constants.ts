@@ -134,3 +134,21 @@ export const DOCUMENT_TEMPLATES = [
   { key: "letter_custom", label: "Custom letter", icon: "edit", category: "letter" },
   { key: "clinical_note_soap", label: "SOAP note", icon: "stethoscope", category: "clinical_note" },
 ] as const;
+
+// AI scribe speaker roles (closed set). Used for Claude's allowed labels, the
+// room-roster picker, and the transcript relabel dropdown. A speaker turn renders
+// as "Label (role)" when a name label is set, else just the role.
+export const SPEAKER_ROLES = [
+  { value: "clinician", label: "Clinician" },
+  { value: "patient", label: "Patient" },
+  { value: "caregiver", label: "Caregiver" },
+  { value: "other_clinician", label: "Other clinician" },
+  { value: "unclear", label: "Speaker (unclear)" },
+] as const;
+
+// Who the doctor can declare is in the room at scribe start (besides themselves).
+export const ROOM_ROSTER_OPTIONS = [
+  { value: "patient", label: "Patient" },
+  { value: "caregiver", label: "Caregiver or family" },
+  { value: "other_clinician", label: "Another clinician" },
+] as const;

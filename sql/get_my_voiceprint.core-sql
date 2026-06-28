@@ -1,0 +1,66 @@
+-- get_my_voiceprint: enrollment status for the calling clinician's own voiceprint.
+-- Never returns the embedding bytes (the biometric). Used by the VoiceEnrollment UI.
+
+-- Private implementation
+CREATE OR REPLACE FUNCTION private.get_my_voiceprint(p_caller_auth_uid uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_staff_id uuid;
+  v_row record;
+BEGIN
+  SELECT su.id INTO v_staff_id
+  FROM public.staff_users su
+  WHERE su.auth_uid = p_caller_auth_uid
+    AND su.is_active = true
+    AND su.is_deleted = false;
+
+  IF v_staff_id IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Staff account not found');
+  END IF;
+
+  SELECT display_name, model_version, created_at
+  INTO v_row
+  FROM public.voiceprints
+  WHERE staff_user_id = v_staff_id AND status = 'active'
+  LIMIT 1;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('success', true, 'enrolled', false);
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'enrolled', true,
+    'display_name', v_row.display_name,
+    'model_version', v_row.model_version,
+    'enrolled_at', v_row.created_at
+  );
+END;
+$$;
+
+-- Public wrapper
+CREATE OR REPLACE FUNCTION public.get_my_voiceprint()
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  v_auth_uid uuid := auth.uid();
+BEGIN
+  IF v_auth_uid IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
+  END IF;
+  RETURN private.get_my_voiceprint(v_auth_uid);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_my_voiceprint() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.get_my_voiceprint() FROM anon;
+GRANT EXECUTE ON FUNCTION public.get_my_voiceprint() TO authenticated;

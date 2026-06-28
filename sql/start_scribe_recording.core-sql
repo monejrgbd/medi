@@ -2,12 +2,22 @@
 -- Creates the scribe_recordings lifecycle row and logs the consent attestation
 -- BEFORE any audio is captured. No clinical_documents row is created here (it is
 -- created at finalize, only when real audio exists) to avoid orphan drafts.
+--
+-- p_room_roster: the closed-set roles the doctor declares are in the room
+-- (besides themselves), e.g. ["patient","caregiver"]. Stored on the recording
+-- and handed to the identity/labeling stage as the expected-speaker hint.
+
+-- Signature changed (added p_room_roster); drop the prior overloads so the new
+-- argument list is unambiguous.
+DROP FUNCTION IF EXISTS public.start_scribe_recording(uuid, text);
+DROP FUNCTION IF EXISTS private.start_scribe_recording(uuid, uuid, text);
 
 -- Private implementation
 CREATE OR REPLACE FUNCTION private.start_scribe_recording(
   p_caller_auth_uid uuid,
   p_visit_id uuid,
-  p_language text DEFAULT 'en'
+  p_language text DEFAULT 'en',
+  p_room_roster jsonb DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -23,14 +33,16 @@ DECLARE
   v_has_role boolean := false;
   v_recording_id uuid := gen_random_uuid();
   v_audio_prefix text;
-  v_low_credits boolean := false;
   v_org record;
   v_lang text;
   v_location_ai_model text;
   v_model text;
   v_min numeric;
+  v_roster jsonb;
 BEGIN
   v_lang := COALESCE(NULLIF(trim(p_language), ''), 'en');
+  -- Only keep a roster that is a JSON array; anything else is ignored.
+  v_roster := CASE WHEN jsonb_typeof(p_room_roster) = 'array' THEN p_room_roster ELSE NULL END;
 
   -- Caller staff
   SELECT su.id, su.org_id
@@ -107,10 +119,10 @@ BEGIN
 
   INSERT INTO public.scribe_recordings (
     id, org_id, location_id, visit_id, patient_id, created_by,
-    status, consent_attested_at, audio_prefix, language
+    status, consent_attested_at, audio_prefix, language, room_roster
   ) VALUES (
     v_recording_id, v_caller_org_id, v_visit.location_id, v_visit.id, v_visit.patient_id,
-    v_caller_staff_id, 'consented', now(), v_audio_prefix, v_lang
+    v_caller_staff_id, 'consented', now(), v_audio_prefix, v_lang, v_roster
   );
 
   -- Consent + lifecycle audit (logged before any capture)
@@ -121,7 +133,8 @@ BEGIN
     CASE WHEN v_owner_id = p_caller_auth_uid THEN 'owner' ELSE 'doctor' END,
     'scribe_consent_attested',
     jsonb_build_object('visit_id', v_visit.id, 'patient_id', v_visit.patient_id,
-                       'consent_text_version', 'scribe_v1', 'language', v_lang)
+                       'consent_text_version', 'scribe_v1', 'language', v_lang,
+                       'room_roster', v_roster)
   );
 
   -- Passed the credit preflight (or plan_included). The hard gate above
@@ -140,7 +153,8 @@ $$;
 -- Public wrapper
 CREATE OR REPLACE FUNCTION public.start_scribe_recording(
   p_visit_id uuid,
-  p_language text DEFAULT 'en'
+  p_language text DEFAULT 'en',
+  p_room_roster jsonb DEFAULT NULL
 )
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -154,10 +168,10 @@ BEGIN
   IF v_auth_uid IS NULL THEN
     RETURN jsonb_build_object('success', false, 'error', 'Not authenticated');
   END IF;
-  RETURN private.start_scribe_recording(v_auth_uid, p_visit_id, p_language);
+  RETURN private.start_scribe_recording(v_auth_uid, p_visit_id, p_language, p_room_roster);
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.start_scribe_recording(uuid, text) FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.start_scribe_recording(uuid, text) FROM anon;
-GRANT EXECUTE ON FUNCTION public.start_scribe_recording(uuid, text) TO authenticated;
+REVOKE ALL ON FUNCTION public.start_scribe_recording(uuid, text, jsonb) FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.start_scribe_recording(uuid, text, jsonb) FROM anon;
+GRANT EXECUTE ON FUNCTION public.start_scribe_recording(uuid, text, jsonb) TO authenticated;

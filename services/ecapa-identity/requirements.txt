@@ -1,0 +1,10 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+numpy==1.26.4
+torch==2.2.2
+torchaudio==2.2.2
+speechbrain==1.0.2
+requests==2.32.3
+soundfile==0.12.1
+huggingface_hub==0.25.2

@@ -64,3 +64,9 @@ CREATE INDEX idx_clinical_docs_expiry ON public.clinical_documents (public_token
 -- scribe_transcript_raw = verbatim Google STT output, retained for audit
 ALTER TABLE public.clinical_documents ADD COLUMN IF NOT EXISTS scribe_transcript text;
 ALTER TABLE public.clinical_documents ADD COLUMN IF NOT EXISTS scribe_transcript_raw text;
+
+-- AI scribe v2: structured turns are the editable source the transcript renders
+-- from (one entry per contiguous speaker block). Per-turn edits and whole-speaker
+-- relabels update scribe_turns; scribe_transcript (flat, for display + SOAP) is
+-- derived from it. Shape: [{idx, speaker, role, label, text, start, end}]
+ALTER TABLE public.clinical_documents ADD COLUMN IF NOT EXISTS scribe_turns jsonb;

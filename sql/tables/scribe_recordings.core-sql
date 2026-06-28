@@ -36,3 +36,15 @@ CREATE INDEX idx_scribe_doc ON public.scribe_recordings (document_id);
 CREATE INDEX idx_scribe_visit ON public.scribe_recordings (visit_id);
 CREATE INDEX idx_scribe_pending ON public.scribe_recordings (status, updated_at)
   WHERE status IN ('recording', 'transcribing');
+
+-- AI scribe v2 (AssemblyAI transcription + ECAPA voice ID) columns. Idempotent.
+ALTER TABLE public.scribe_recordings ADD COLUMN IF NOT EXISTS transcript_provider text;
+ALTER TABLE public.scribe_recordings ADD COLUMN IF NOT EXISTS identified_speakers jsonb;
+ALTER TABLE public.scribe_recordings ADD COLUMN IF NOT EXISTS provider_job_id text;
+ALTER TABLE public.scribe_recordings ADD COLUMN IF NOT EXISTS room_roster jsonb;
+
+-- Add the 'identifying' lifecycle state (ECAPA voice-ID stage of the state
+-- machine: transcribing -> identifying -> transcribed). Drop+re-add the CHECK.
+ALTER TABLE public.scribe_recordings DROP CONSTRAINT IF EXISTS scribe_recordings_status_check;
+ALTER TABLE public.scribe_recordings ADD CONSTRAINT scribe_recordings_status_check
+  CHECK (status IN ('consented','recording','transcribing','identifying','transcribed','failed','mic_denied','canceled'));

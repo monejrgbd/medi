@@ -648,6 +648,7 @@ export default function FocusMode({
                 messages={detail.transcript}
                 prescreening={detail.prescreening_data ?? null}
                 scribeTranscript={detail.scribe_transcript ?? null}
+                visitId={detail.visit.id}
                 aiSkipped={detail.visit.ai_skipped}
                 manuallyAdded={detail.visit.manually_added}
               />
